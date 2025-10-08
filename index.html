@@ -1,126 +1,83 @@
-<!DOCTYPE html><!DOCTYPE html>
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="theme-color" content="#2196F3" />
+  <title>سامانه شماره صندلی</title>
 
-<html lang="fa" dir="rtl"><html lang="fa" dir="rtl">
+  <link rel="manifest" href="manifest.json" />
+  <link rel="stylesheet" href="assets/fonts/vazir/vazir.css" />
+  <link rel="stylesheet" href="assets/bootstrap/bootstrap.min.css" />
+  <link rel="stylesheet" href="assets/sweetalert2/sweetalert2.min.css" />
+  <link rel="stylesheet" href="assets/app/style.css" />
+</head>
+<body>
+  <div class="container py-5">
+    <div class="row justify-content-center">
+      <div class="col-lg-6 col-md-8">
+        <div class="card shadow-lg">
+          <div class="card-header bg-primary text-white text-center">
+            <h4 class="mb-0">مشاهده شماره صندلی امتحان</h4>
+          </div>
+          <div class="card-body p-4">
+            <form id="examForm">
+              <div class="mb-3">
+                <label for="studentId" class="form-label">شماره دانشجویی</label>
+                <input
+                  type="tel"
+                  class="form-control form-control-lg text-center"
+                  id="studentId"
+                  placeholder="مثال: ۹۷۴۵۶۱۲۳"
+                  inputmode="numeric"
+                  required
+                />
+              </div>
+              <div class="mb-4">
+                <label for="nationalId" class="form-label">کد ملی</label>
+                <input
+                  type="tel"
+                  class="form-control form-control-lg text-center"
+                  id="nationalId"
+                  placeholder="مثال: ۱۲۳۴۵۶۷۸۹۰"
+                  inputmode="numeric"
+                  required
+                />
+              </div>
+              <div class="d-grid">
+                <button type="submit" class="btn btn-primary btn-lg" id="searchBtn">
+                  <span class="spinner-border spinner-border-sm d-none" role="status" aria-hidden="true"></span>
+                  <span class="text">جستجو</span>
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      </div>
+    </div>
 
-<head><head>
+    <div id="results" class="mt-4 d-none">
+      <div class="card shadow-lg">
+        <div class="card-header bg-success text-white d-flex justify-content-between align-items-center">
+          <h5 class="mb-0">نتایج جستجو</h5>
+          <button type="button" class="btn-close btn-close-white" id="closeResults" aria-label="بستن"></button>
+        </div>
+        <div class="card-body" id="resultContent"></div>
+      </div>
+    </div>
+  </div>
 
-<meta charset="UTF-8">    <meta charset="UTF-8">
-
-<meta name="viewport" content="width=device-width, initial-scale=1.0">    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-
-<meta name="theme-color" content="#2196F3">    <meta name="theme-color" content="#2196F3">
-
-<title>سیستم مشاهده شماره صندلی امتحان</title>    <title>سیستم مشا شماره صندلی امتحان</title>
-
-<link rel="stylesheet" href="assets/fonts/vazir/vazir.css">    <link rel="stylesheet" href="assets/fonts/vazir/vazir.css">
-
-<link rel="stylesheet" href="assets/bootstrap/bootstrap.min.css">    <link rel="stylesheet" href="assets/bootstrap/bootstrap.min.css">
-
-<link rel="stylesheet" href="assets/sweetalert2/sweetalert2.min.css">    <link rel="stylesheet" href="assets/sweetalert2/sweetalert2.min.css">
-
-<link rel="stylesheet" href="assets/app/style.css">    <link rel="stylesheet" href="assets/app/style.css">
-
-<link rel="manifest" href="manifest.json">    <link rel="manifest" href="manifest.json">
-
-</head></head>
-
-<body><body>
-
-<div class="container mt-5">    <div class="container mt-5">
-
-<div class="row justify-content-center">        <div class="row justify-content-center">
-
-<div class="col-md-6">            <div class="col-md-6">
-
-<div class="card shadow">                <div class="card shadow">
-
-<div class="card-header bg-primary text-white text-center">                    <div class="card-header bg-primary text-white text-center">
-
-<h4 class="mb-0">مشاهده شماره صندلی امتحان</h4>                        <h4 class="mb-0">مشاهده شماره  امتحان</h4>
-
-</div>                    </div>
-
-<div class="card-body">                    <div class="card-body">
-
-<form id="examForm">                        <form id="examForm">
-
-<div class="mb-3">                            <div class="mb-3">
-
-<label for="studentId" class="form-label">شماره دانشجویی</label>                                <label for="studentId" class="form-label">شماره دانشجویی</label>
-
-<input type="text" class="form-control" id="studentId" placeholder="مثال: ۱۲۳۴۵" required>                                <input type="text" class="form-control" id="studentId" placeholder="مثال: ۱۲۳۴۵" required>
-
-</div>                            </div>
-
-<div class="mb-3">                            <div class="mb-3">
-
-<label for="nationalId" class="form-label">شماره ملی / شناسنامه</label>                                <label for="nationalId" class="form-label">شماره ملی / شناسنامه</label>
-
-<input type="text" class="form-control" id="nationalId" placeholder="مثال: ۱۲۳۴۵۶۷۸۹۰" required>                                <input type="text" class="form-control" id="nationalId" placeholder="مثال: ۱۲۳۴۵۶" required>
-
-</div>                            </div>
-
-<button type="submit" class="btn btn-primary w-100" id="searchBtn">                            <button type="submit" class="btn btn-primary w-100" id="searchBtn">
-
-<span class="text">جستجو</span>                                <span class="</span>
-
-<span class="spinner-border spinner-border-sm d-none ms-2"></span>                                <span class="spinner-border spinner-border-sm d-none ms-2"></span>
-
-</button>                            </button>
-
-</form>                        </form>
-
-</div>                    </div>
-
-</div>                </div>
-
-</div>            </div>
-
-</div>        </div>
-
-<div id="results" class="d-none mt-4">        
-
-<div class="row justify-content-center">        <div id="results" class="d-none mt-4">
-
-<div class="col-md-10">            <div class="row justify-content-center">
-
-<div class="card shadow">                <div class="col-md-8">
-
-<div class="card-header bg-success text-white">                    <div class="card shadow">
-
-<h5 class="mb-0">اطلاعات امتحان</h5>                        <div class="card-header bg-success text-white">
-
-</div>                            <h5 class="mb-0">اطلاعات امتحان</h5>
-
-<div class="card-body" id="resultContent"></div>                        </div>
-
-</div>                        <div class="card-body" id="resultContent"></div>
-
-</div>                    </div>
-
-</div>                </div>
-
-</div>            </div>
-
-</div>        </div>
-
-<script src="assets/bootstrap/bootstrap.bundle.min.js"></script>    </div>
-
-<script src="assets/sweetalert2/sweetalert2.min.js"></script>
-
-<script src="assets/app/app.js"></script>    <script src="assets/bootstrap/bootstrap.bundle.min.js"></script>
-
-<script>    <script src="assets/sweetalert2/sweetalert2.min.js"></script>
-
-if('serviceWorker' in navigator){navigator.serviceWorker.register('service-worker.js');}    <script src="assets/app/app.js"></script>
-
-</script>    <script>
-
-</body>        if ('serviceWorker' in navigator) {
-
-</html>            navigator.serviceWorker.register('service-worker.js');
-
-        }
-    </script>
+  <script src="assets/bootstrap/bootstrap.bundle.min.js"></script>
+  <script src="assets/sweetalert2/sweetalert2.min.js"></script>
+  <script src="assets/app/app.js"></script>
+  <script>
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker
+          .register('/service-worker.js')
+          .catch(err => console.error('Service worker registration failed:', err));
+      });
+    }
+  </script>
 </body>
 </html>

@@ -1,7 +1,7 @@
 {
-  "name": "Exam Seat System",
-  "short_name": "ExamSeat",
-  "description": "Student Exam Seat Information System",
+  "name": "سامانه شماره صندلی",
+  "short_name": "شم صندلی",
+  "description": "سیستم مشاهده شماره ص امتحانات دانشجویان",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#ffffff",
