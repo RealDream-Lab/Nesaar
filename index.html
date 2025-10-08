@@ -1,269 +1,126 @@
-<!DOCTYPE html><!DOCTYPE html><!DOCTYPE html><!DOCTYPE html>
+<!DOCTYPE html><!DOCTYPE html>
 
-<html lang="fa" dir="rtl">
+<html lang="fa" dir="rtl"><html lang="fa" dir="rtl">
 
-<head><html lang="fa" dir="rtl">
+<head><head>
 
-    <meta charset="UTF-8">
+<meta charset="UTF-8">    <meta charset="UTF-8">
 
-    <meta name="viewport" content="width=device-width, initial-scale=1.0"><head><html lang="fa" dir="rtl"><html lang="fa" dir="rtl">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">    <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-    <meta name="theme-color" content="#2196F3">
+<meta name="theme-color" content="#2196F3">    <meta name="theme-color" content="#2196F3">
 
-    <title>سیستم مشاهده شماره صندلی امتحان</title>    <meta charset="UTF-8">
+<title>سیستم مشاهده شماره صندلی امتحان</title>    <title>سیستم مشا شماره صندلی امتحان</title>
 
-    <!-- فونت وزیر -->
+<link rel="stylesheet" href="assets/fonts/vazir/vazir.css">    <link rel="stylesheet" href="assets/fonts/vazir/vazir.css">
 
-    <link rel="stylesheet" href="assets/fonts/vazir/vazir.css">    <meta name="viewport" content="width=device-width, initial-scale=1.0"><head><head>
+<link rel="stylesheet" href="assets/bootstrap/bootstrap.min.css">    <link rel="stylesheet" href="assets/bootstrap/bootstrap.min.css">
 
-    <!-- بوت‌استرپ -->
+<link rel="stylesheet" href="assets/sweetalert2/sweetalert2.min.css">    <link rel="stylesheet" href="assets/sweetalert2/sweetalert2.min.css">
 
-    <link rel="stylesheet" href="assets/bootstrap/bootstrap.min.css">    <meta name="theme-color" content="#1976d2">
+<link rel="stylesheet" href="assets/app/style.css">    <link rel="stylesheet" href="assets/app/style.css">
 
-    <!-- SweetAlert -->
+<link rel="manifest" href="manifest.json">    <link rel="manifest" href="manifest.json">
 
-    <link rel="stylesheet" href="assets/sweetalert2/sweetalert2.min.css">    <title>وب اپلیکیشن آزمون</title>    <meta charset="UTF-8">    <meta charset="UTF-8">
+</head></head>
 
-    <!-- استایل اپلیکیشن -->
+<body><body>
 
-    <link rel="stylesheet" href="assets/app/style.css">    <!-- فونت وزیر -->
+<div class="container mt-5">    <div class="container mt-5">
 
-    <link rel="manifest" href="manifest.json">
+<div class="row justify-content-center">        <div class="row justify-content-center">
 
-    <style>    <link rel="stylesheet" href="assets/fonts/vazir/vazir.css">    <meta name="viewport" content="width=device-width, initial-scale=1.0">    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<div class="col-md-6">            <div class="col-md-6">
 
-        body {
+<div class="card shadow">                <div class="card shadow">
 
-            font-family: 'Vazir', 'Tahoma', sans-serif;    <!-- متریال گوگل -->
+<div class="card-header bg-primary text-white text-center">                    <div class="card-header bg-primary text-white text-center">
 
-            background: #f8f9fa;
+<h4 class="mb-0">مشاهده شماره صندلی امتحان</h4>                        <h4 class="mb-0">مشاهده شماره  امتحان</h4>
 
-            margin: 0;    <link rel="stylesheet" href="assets/material/material.min.css">    <meta name="theme-color" content="#1976d2">    <title>سیستم مشاهده شماره صندلی امتحان</title>
+</div>                    </div>
 
-            min-height: 100vh;
+<div class="card-body">                    <div class="card-body">
 
-        }    <!-- بوت‌استرپ -->
+<form id="examForm">                        <form id="examForm">
 
-        .card {
+<div class="mb-3">                            <div class="mb-3">
 
-            border-radius: 15px;    <link rel="stylesheet" href="assets/bootstrap/bootstrap.min.css">    <title>وب اپلیکیشن آزمون</title>    
+<label for="studentId" class="form-label">شماره دانشجویی</label>                                <label for="studentId" class="form-label">شماره دانشجویی</label>
 
-            border: none;
+<input type="text" class="form-control" id="studentId" placeholder="مثال: ۱۲۳۴۵" required>                                <input type="text" class="form-control" id="studentId" placeholder="مثال: ۱۲۳۴۵" required>
 
-        }    <!-- SweetAlert -->
+</div>                            </div>
 
-        .btn {
+<div class="mb-3">                            <div class="mb-3">
 
-            border-radius: 10px;    <link rel="stylesheet" href="assets/sweetalert2/sweetalert2.min.css">    <!-- فونت وزیر -->    <!-- PWA Meta Tags -->
+<label for="nationalId" class="form-label">شماره ملی / شناسنامه</label>                                <label for="nationalId" class="form-label">شماره ملی / شناسنامه</label>
+
+<input type="text" class="form-control" id="nationalId" placeholder="مثال: ۱۲۳۴۵۶۷۸۹۰" required>                                <input type="text" class="form-control" id="nationalId" placeholder="مثال: ۱۲۳۴۵۶" required>
+
+</div>                            </div>
+
+<button type="submit" class="btn btn-primary w-100" id="searchBtn">                            <button type="submit" class="btn btn-primary w-100" id="searchBtn">
+
+<span class="text">جستجو</span>                                <span class="</span>
+
+<span class="spinner-border spinner-border-sm d-none ms-2"></span>                                <span class="spinner-border spinner-border-sm d-none ms-2"></span>
+
+</button>                            </button>
+
+</form>                        </form>
+
+</div>                    </div>
+
+</div>                </div>
+
+</div>            </div>
+
+</div>        </div>
+
+<div id="results" class="d-none mt-4">        
+
+<div class="row justify-content-center">        <div id="results" class="d-none mt-4">
+
+<div class="col-md-10">            <div class="row justify-content-center">
+
+<div class="card shadow">                <div class="col-md-8">
+
+<div class="card-header bg-success text-white">                    <div class="card shadow">
+
+<h5 class="mb-0">اطلاعات امتحان</h5>                        <div class="card-header bg-success text-white">
+
+</div>                            <h5 class="mb-0">اطلاعات امتحان</h5>
+
+<div class="card-body" id="resultContent"></div>                        </div>
+
+</div>                        <div class="card-body" id="resultContent"></div>
+
+</div>                    </div>
+
+</div>                </div>
+
+</div>            </div>
+
+</div>        </div>
+
+<script src="assets/bootstrap/bootstrap.bundle.min.js"></script>    </div>
+
+<script src="assets/sweetalert2/sweetalert2.min.js"></script>
+
+<script src="assets/app/app.js"></script>    <script src="assets/bootstrap/bootstrap.bundle.min.js"></script>
+
+<script>    <script src="assets/sweetalert2/sweetalert2.min.js"></script>
+
+if('serviceWorker' in navigator){navigator.serviceWorker.register('service-worker.js');}    <script src="assets/app/app.js"></script>
+
+</script>    <script>
+
+</body>        if ('serviceWorker' in navigator) {
+
+</html>            navigator.serviceWorker.register('service-worker.js');
 
         }
-
-        .form-control {    <!-- استایل اپلیکیشن -->
-
-            border-radius: 8px;
-
-            border: 2px solid #e9ecef;    <link rel="stylesheet" href="assets/app/style.css">    <link rel="stylesheet" href="assets/fonts/vazir/vazir.css">    <meta name="description" content="سیستم مشاهده شماره صندلی امتحان دانشگاه">
-
-            transition: border-color 0.3s;
-
-        }    <link rel="manifest" href="manifest.json">
-
-        .form-control:focus {
-
-            border-color: #2196F3;    <style>    <!-- متریال گوگل -->    <meta name="theme-color" content="#2196F3">
-
-            box-shadow: 0 0 0 0.2rem rgba(33, 150, 243, 0.25);
-
-        }        body {
-
-    </style>
-
-</head>            font-family: 'Vazir', 'Roboto', 'Tahoma', sans-serif;    <link rel="stylesheet" href="assets/material/material.min.css">    <meta name="apple-mobile-web-app-capable" content="yes">
-
-<body>
-
-    <noscript>برای استفاده از این وب‌اپلیکیشن باید جاوااسکریپت فعال باشد.</noscript>            background: #f5f5f5;
-
-    
-
-    <div id="app">            margin: 0;    <!-- بوت‌استرپ -->    <meta name="apple-mobile-web-app-status-bar-style" content="default">
-
-        <div class="container mt-5">
-
-            <div class="row justify-content-center">            min-height: 100vh;
-
-                <div class="col-md-6">
-
-                    <div class="card shadow">        }    <link rel="stylesheet" href="assets/bootstrap/bootstrap.min.css">    <meta name="apple-mobile-web-app-title" content="شماره صندلی">
-
-                        <div class="card-header bg-primary text-white text-center">
-
-                            <h4 class="mb-0">مشاهده شماره صندلی امتحان</h4>    </style>
-
-                        </div>
-
-                        <div class="card-body"></head>    <!-- SweetAlert -->    
-
-                            <form id="examForm">
-
-                                <div class="mb-3"><body>
-
-                                    <label for="studentId" class="form-label">شماره دانشجویی</label>
-
-                                    <input type="text" class="form-control" id="studentId" placeholder="مثال: ۱۲۳۴۵" required>    <noscript>برای استفاده از این وب‌اپلیکیشن باید جاوااسکریپت فعال باشد.</noscript>    <link rel="stylesheet" href="assets/sweetalert2/sweetalert2.min.css">    <!-- PWA Icons -->
-
-                                </div>
-
-                                <div class="mb-3">    <div id="app">
-
-                                    <label for="nationalId" class="form-label">شماره ملی / شناسنامه</label>
-
-                                    <input type="text" class="form-control" id="nationalId" placeholder="مثال: ۱۲۳۴۵۶۷۸۹۰" required>        <!-- محتوای PWA اینجا قرار می‌گیرد -->    <link rel="manifest" href="manifest.json">    <link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png">
-
-                                </div>
-
-                                <button type="submit" class="btn btn-primary w-100" id="searchBtn">    </div>
-
-                                    <span class="text">جستجو</span>
-
-                                    <span class="spinner-border spinner-border-sm d-none ms-2" role="status"></span>    <!-- بوت‌استرپ JS -->    <style>    <link rel="icon" type="image/png" sizes="512x512" href="icons/icon-512.png">
-
-                                </button>
-
-                            </form>    <script src="assets/bootstrap/bootstrap.bundle.min.js"></script>
-
-                        </div>
-
-                    </div>    <!-- متریال JS -->        body {    <link rel="apple-touch-icon" href="icons/icon-192.png">
-
-                </div>
-
-            </div>    <script src="assets/material/material.min.js"></script>
-
-            
-
-            <!-- نتایج -->    <!-- SweetAlert JS -->            font-family: 'Vazir', 'Roboto', 'Tahoma', sans-serif;    
-
-            <div id="results" class="d-none mt-4">
-
-                <div class="row justify-content-center">    <script src="assets/sweetalert2/sweetalert2.min.js"></script>
-
-                    <div class="col-md-8">
-
-                        <div class="card shadow">    <!-- اپلیکیشن JS -->            background: #f5f5f5;    <!-- PWA Manifest -->
-
-                            <div class="card-header bg-success text-white">
-
-                                <h5 class="mb-0">اطلاعات امتحان</h5>    <script src="assets/app/app.js"></script>
-
-                            </div>
-
-                            <div class="card-body" id="resultContent">    <!-- Service Worker registration -->            margin: 0;    <link rel="manifest" href="manifest.json">
-
-                                <!-- نتایج اینجا نمایش داده می‌شود -->
-
-                            </div>    <script>
-
-                        </div>
-
-                    </div>        if ('serviceWorker' in navigator) {            min-height: 100vh;    
-
-                </div>
-
-            </div>            navigator.serviceWorker.register('service-worker.js');
-
-        </div>
-
-    </div>        }        }    <!-- CSS -->
-
-
-
-    <!-- بوت‌استرپ JS -->    </script>
-
-    <script src="assets/bootstrap/bootstrap.bundle.min.js"></script>
-
-    <!-- SweetAlert JS --></body>    </style>    <link rel="stylesheet" href="style.css">
-
-    <script src="assets/sweetalert2/sweetalert2.min.js"></script>
-
-    <!-- اپلیکیشن JS --></html>
-
-    <script src="assets/app/app.js"></script></head></head>
-
-    
-
-    <!-- Service Worker registration --><body><body>
-
-    <script>
-
-        if ('serviceWorker' in navigator) {    <noscript>برای استفاده از این وب‌اپلیکیشن باید جاوااسکریپت فعال باشد.</noscript>    <div class="container">
-
-            navigator.serviceWorker.register('service-worker.js')
-
-                .then(registration => console.log('SW registered'))    <div id="app">        <header>
-
-                .catch(error => console.log('SW registration failed'));
-
-        }        <!-- محتوای PWA اینجا قرار می‌گیرد -->            <h1>🎓 سیستم مشاهده شماره صندلی امتحان</h1>
-
     </script>
-
-</body>    </div>            <p class="date-time">
-
-</html>
-    <!-- بوت‌استرپ JS -->                <span id="current-date"></span> - <span id="current-time"></span>
-
-    <script src="assets/bootstrap/bootstrap.bundle.min.js"></script>            </p>
-
-    <!-- متریال JS -->        </header>
-
-    <script src="assets/material/material.min.js"></script>
-
-    <!-- SweetAlert JS -->        <main>
-
-    <script src="assets/sweetalert2/sweetalert2.min.js"></script>            <form id="exam-form" class="search-form">
-
-    <!-- Service Worker registration -->                <div class="input-group">
-
-    <script>                    <label for="student-id">شماره دانشجویی:</label>
-
-        if ('serviceWorker' in navigator) {                    <input type="text" id="student-id" name="student_id" required 
-
-            navigator.serviceWorker.register('service-worker.js');                           placeholder="مثال: 12345">
-
-        }                </div>
-
-    </script>
-
-</body>                <div class="input-group">
-
-</html>                    <label for="national-id">شماره ملی (شناسنامه):</label>
-
-                    <input type="text" id="national-id" name="national_id" required 
-                           placeholder="مثال: 1234567890" maxlength="10">
-                </div>
-
-                <button type="submit" id="search-btn">
-                    <span class="btn-text">🔍 جستجو</span>
-                    <span class="loading" style="display: none;">⏳ در حال جستجو...</span>
-                </button>
-            </form>
-
-            <div id="results" class="results-container" style="display: none;">
-                <!-- نتایج اینجا نمایش داده می‌شود -->
-            </div>
-
-            <div id="error" class="error-message" style="display: none;">
-                <!-- پیام خطا اینجا نمایش داده می‌شود -->
-            </div>
-        </main>
-
-        <footer>
-            <p>© ۱۴۰۴ سیستم امتحانات دانشگاه</p>
-        </footer>
-    </div>
-
-    <!-- Service Worker Registration -->
-    <script src="app.js"></script>
 </body>
 </html>

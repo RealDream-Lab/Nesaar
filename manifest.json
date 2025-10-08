@@ -1,66 +1,22 @@
-{{
-
-  "name": "سیستم مشاهده شماره صندلی امتحان",  {
-
-  "short_name": "شماره صندلی",    "name": "وب اپلیکیشن آزمون",
-
-  "description": "سیستم مشاهده شماره صندلی امتحان دانشگاه",    "name": "سیستم مشاهده شماره صندلی امتحان",
-
-  "start_url": "/",    "short_name": "آزمون",
-
-  "display": "standalone",    "short_name": "شماره صندلی",
-
-  "background_color": "#ffffff",    "description": "وب اپلیکیشن مشاهده اطلاعات آزمون دانشجویان",
-
-  "theme_color": "#2196F3",    "description": "سیستم مشاهده شماره صندلی امتحان دانشگاه",
-
-  "orientation": "portrait",    "start_url": "/",
-
-  "icons": [    "start_url": "/",
-
-    {    "display": "standalone",
-
-      "src": "icons/icon-192.png",    "display": "standalone",
-
-      "sizes": "192x192",    "background_color": "#ffffff",
-
-      "type": "image/png"    "background_color": "#ffffff",
-
-    },    "theme_color": "#1976d2",
-
-    {    "theme_color": "#2196F3",
-
-      "src": "icons/icon-512.png",    "orientation": "portrait",
-
-      "sizes": "512x512",    "orientation": "portrait",
-
-      "type": "image/png"    "icons": [
-
-    }      "icons": [
-
-  ]        {
-
-}          {
-            "src": "icons/icon-192.png",
-            "src": "icons/icon-192.png",
-            "sizes": "192x192",
-            "sizes": "192x192",
-            "type": "image/png""type": "image/png",
-          },
-          "purpose": "any maskable"{},
-          "src": "icons/icon-512.png",
-          {
-            "sizes": "512x512",
-            "src": "icons/icon-512.png",
-            "type": "image/png""sizes": "512x512",
-          }      "type": "image/png",
-        ]      "purpose": "any maskable"
-      }
+{
+  "name": "Exam Seat System",
+  "short_name": "ExamSeat",
+  "description": "Student Exam Seat Information System",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#2196F3",
+  "orientation": "portrait",
+  "icons": [
+    {
+      "src": "icons/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png"
     }
-  ],
-  "categories": [
-    "education",
-    "utilities"
-  ],
-  "lang": "fa"
+  ]
 }
