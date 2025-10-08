@@ -1,0 +1,116 @@
+<!DOCTYPE html><!DOCTYPE html>
+
+<html lang="fa" dir="rtl"><html lang="fa" dir="rtl">
+
+<head><head>
+
+    <meta charset="UTF-8">    <meta charset="UTF-8">
+
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <meta name="theme-color" content="#1976d2">    <title>سیستم مشاهده شماره صندلی امتحان</title>
+
+    <title>وب اپلیکیشن آزمون</title>    
+
+    <!-- فونت وزیر -->    <!-- PWA Meta Tags -->
+
+    <link rel="stylesheet" href="assets/fonts/vazir/vazir.css">    <meta name="description" content="سیستم مشاهده شماره صندلی امتحان دانشگاه">
+
+    <!-- متریال گوگل -->    <meta name="theme-color" content="#2196F3">
+
+    <link rel="stylesheet" href="assets/material/material.min.css">    <meta name="apple-mobile-web-app-capable" content="yes">
+
+    <!-- بوت‌استرپ -->    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+
+    <link rel="stylesheet" href="assets/bootstrap/bootstrap.min.css">    <meta name="apple-mobile-web-app-title" content="شماره صندلی">
+
+    <!-- SweetAlert -->    
+
+    <link rel="stylesheet" href="assets/sweetalert2/sweetalert2.min.css">    <!-- PWA Icons -->
+
+    <link rel="manifest" href="manifest.json">    <link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png">
+
+    <style>    <link rel="icon" type="image/png" sizes="512x512" href="icons/icon-512.png">
+
+        body {    <link rel="apple-touch-icon" href="icons/icon-192.png">
+
+            font-family: 'Vazir', 'Roboto', 'Tahoma', sans-serif;    
+
+            background: #f5f5f5;    <!-- PWA Manifest -->
+
+            margin: 0;    <link rel="manifest" href="manifest.json">
+
+            min-height: 100vh;    
+
+        }    <!-- CSS -->
+
+    </style>    <link rel="stylesheet" href="style.css">
+
+</head></head>
+
+<body><body>
+
+    <noscript>برای استفاده از این وب‌اپلیکیشن باید جاوااسکریپت فعال باشد.</noscript>    <div class="container">
+
+    <div id="app">        <header>
+
+        <!-- محتوای PWA اینجا قرار می‌گیرد -->            <h1>🎓 سیستم مشاهده شماره صندلی امتحان</h1>
+
+    </div>            <p class="date-time">
+
+    <!-- بوت‌استرپ JS -->                <span id="current-date"></span> - <span id="current-time"></span>
+
+    <script src="assets/bootstrap/bootstrap.bundle.min.js"></script>            </p>
+
+    <!-- متریال JS -->        </header>
+
+    <script src="assets/material/material.min.js"></script>
+
+    <!-- SweetAlert JS -->        <main>
+
+    <script src="assets/sweetalert2/sweetalert2.min.js"></script>            <form id="exam-form" class="search-form">
+
+    <!-- Service Worker registration -->                <div class="input-group">
+
+    <script>                    <label for="student-id">شماره دانشجویی:</label>
+
+        if ('serviceWorker' in navigator) {                    <input type="text" id="student-id" name="student_id" required 
+
+            navigator.serviceWorker.register('service-worker.js');                           placeholder="مثال: 12345">
+
+        }                </div>
+
+    </script>
+
+</body>                <div class="input-group">
+
+</html>                    <label for="national-id">شماره ملی (شناسنامه):</label>
+
+                    <input type="text" id="national-id" name="national_id" required 
+                           placeholder="مثال: 1234567890" maxlength="10">
+                </div>
+
+                <button type="submit" id="search-btn">
+                    <span class="btn-text">🔍 جستجو</span>
+                    <span class="loading" style="display: none;">⏳ در حال جستجو...</span>
+                </button>
+            </form>
+
+            <div id="results" class="results-container" style="display: none;">
+                <!-- نتایج اینجا نمایش داده می‌شود -->
+            </div>
+
+            <div id="error" class="error-message" style="display: none;">
+                <!-- پیام خطا اینجا نمایش داده می‌شود -->
+            </div>
+        </main>
+
+        <footer>
+            <p>© ۱۴۰۴ سیستم امتحانات دانشگاه</p>
+        </footer>
+    </div>
+
+    <!-- Service Worker Registration -->
+    <script src="app.js"></script>
+</body>
+</html>
