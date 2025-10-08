@@ -1,47 +1,66 @@
 {{
 
-  "name": "وب اپلیکیشن آزمون",  "name": "سیستم مشاهده شماره صندلی امتحان",
+  "name": "سیستم مشاهده شماره صندلی امتحان",  {
 
-  "short_name": "آزمون",  "short_name": "شماره صندلی",
+  "short_name": "شماره صندلی",    "name": "وب اپلیکیشن آزمون",
 
-  "description": "وب اپلیکیشن مشاهده اطلاعات آزمون دانشجویان",  "description": "سیستم مشاهده شماره صندلی امتحان دانشگاه",
+  "description": "سیستم مشاهده شماره صندلی امتحان دانشگاه",    "name": "سیستم مشاهده شماره صندلی امتحان",
 
-  "start_url": "/",  "start_url": "/",
+  "start_url": "/",    "short_name": "آزمون",
 
-  "display": "standalone",  "display": "standalone",
+  "display": "standalone",    "short_name": "شماره صندلی",
 
-  "background_color": "#ffffff",  "background_color": "#ffffff",
+  "background_color": "#ffffff",    "description": "وب اپلیکیشن مشاهده اطلاعات آزمون دانشجویان",
 
-  "theme_color": "#1976d2",  "theme_color": "#2196F3",
+  "theme_color": "#2196F3",    "description": "سیستم مشاهده شماره صندلی امتحان دانشگاه",
 
-  "orientation": "portrait",  "orientation": "portrait",
+  "orientation": "portrait",    "start_url": "/",
 
-  "icons": [  "icons": [
+  "icons": [    "start_url": "/",
 
-    {    {
+    {    "display": "standalone",
 
-      "src": "icons/icon-192.png",      "src": "icons/icon-192.png",
+      "src": "icons/icon-192.png",    "display": "standalone",
 
-      "sizes": "192x192",      "sizes": "192x192",
+      "sizes": "192x192",    "background_color": "#ffffff",
 
-      "type": "image/png"      "type": "image/png",
+      "type": "image/png"    "background_color": "#ffffff",
 
-    },      "purpose": "any maskable"
+    },    "theme_color": "#1976d2",
 
-    {    },
+    {    "theme_color": "#2196F3",
 
-      "src": "icons/icon-512.png",    {
+      "src": "icons/icon-512.png",    "orientation": "portrait",
 
-      "sizes": "512x512",      "src": "icons/icon-512.png",
+      "sizes": "512x512",    "orientation": "portrait",
 
-      "type": "image/png"      "sizes": "512x512",
+      "type": "image/png"    "icons": [
 
-    }      "type": "image/png",
+    }      "icons": [
 
-  ]      "purpose": "any maskable"
+  ]        {
 
-}    }
+}          {
+            "src": "icons/icon-192.png",
+            "src": "icons/icon-192.png",
+            "sizes": "192x192",
+            "sizes": "192x192",
+            "type": "image/png""type": "image/png",
+          },
+          "purpose": "any maskable"{},
+          "src": "icons/icon-512.png",
+          {
+            "sizes": "512x512",
+            "src": "icons/icon-512.png",
+            "type": "image/png""sizes": "512x512",
+          }      "type": "image/png",
+        ]      "purpose": "any maskable"
+      }
+    }
   ],
-  "categories": ["education", "utilities"],
+  "categories": [
+    "education",
+    "utilities"
+  ],
   "lang": "fa"
 }
