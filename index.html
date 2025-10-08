@@ -1,51 +1,98 @@
-<!DOCTYPE html><!DOCTYPE html>
+<!DOCTYPE html><!DOCTYPE html><!DOCTYPE html>
 
-<html lang="fa" dir="rtl"><html lang="fa" dir="rtl">
+<html lang="fa" dir="rtl">
 
-<head><head>
+<head><html lang="fa" dir="rtl"><html lang="fa" dir="rtl">
 
-    <meta charset="UTF-8">    <meta charset="UTF-8">
+    <meta charset="UTF-8">
 
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"><head><head>
 
-    <meta name="theme-color" content="#1976d2">    <title>سیستم مشاهده شماره صندلی امتحان</title>
+    <meta name="theme-color" content="#1976d2">
 
-    <title>وب اپلیکیشن آزمون</title>    
+    <title>وب اپلیکیشن آزمون</title>    <meta charset="UTF-8">    <meta charset="UTF-8">
 
-    <!-- فونت وزیر -->    <!-- PWA Meta Tags -->
+    <!-- فونت وزیر -->
 
-    <link rel="stylesheet" href="assets/fonts/vazir/vazir.css">    <meta name="description" content="سیستم مشاهده شماره صندلی امتحان دانشگاه">
+    <link rel="stylesheet" href="assets/fonts/vazir/vazir.css">    <meta name="viewport" content="width=device-width, initial-scale=1.0">    <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-    <!-- متریال گوگل -->    <meta name="theme-color" content="#2196F3">
+    <!-- متریال گوگل -->
 
-    <link rel="stylesheet" href="assets/material/material.min.css">    <meta name="apple-mobile-web-app-capable" content="yes">
+    <link rel="stylesheet" href="assets/material/material.min.css">    <meta name="theme-color" content="#1976d2">    <title>سیستم مشاهده شماره صندلی امتحان</title>
 
-    <!-- بوت‌استرپ -->    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <!-- بوت‌استرپ -->
 
-    <link rel="stylesheet" href="assets/bootstrap/bootstrap.min.css">    <meta name="apple-mobile-web-app-title" content="شماره صندلی">
+    <link rel="stylesheet" href="assets/bootstrap/bootstrap.min.css">    <title>وب اپلیکیشن آزمون</title>    
 
-    <!-- SweetAlert -->    
+    <!-- SweetAlert -->
 
-    <link rel="stylesheet" href="assets/sweetalert2/sweetalert2.min.css">    <!-- PWA Icons -->
+    <link rel="stylesheet" href="assets/sweetalert2/sweetalert2.min.css">    <!-- فونت وزیر -->    <!-- PWA Meta Tags -->
 
-    <link rel="manifest" href="manifest.json">    <link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png">
+    <!-- استایل اپلیکیشن -->
 
-    <style>    <link rel="icon" type="image/png" sizes="512x512" href="icons/icon-512.png">
+    <link rel="stylesheet" href="assets/app/style.css">    <link rel="stylesheet" href="assets/fonts/vazir/vazir.css">    <meta name="description" content="سیستم مشاهده شماره صندلی امتحان دانشگاه">
 
-        body {    <link rel="apple-touch-icon" href="icons/icon-192.png">
+    <link rel="manifest" href="manifest.json">
 
-            font-family: 'Vazir', 'Roboto', 'Tahoma', sans-serif;    
+    <style>    <!-- متریال گوگل -->    <meta name="theme-color" content="#2196F3">
 
-            background: #f5f5f5;    <!-- PWA Manifest -->
+        body {
 
-            margin: 0;    <link rel="manifest" href="manifest.json">
+            font-family: 'Vazir', 'Roboto', 'Tahoma', sans-serif;    <link rel="stylesheet" href="assets/material/material.min.css">    <meta name="apple-mobile-web-app-capable" content="yes">
 
-            min-height: 100vh;    
+            background: #f5f5f5;
 
-        }    <!-- CSS -->
+            margin: 0;    <!-- بوت‌استرپ -->    <meta name="apple-mobile-web-app-status-bar-style" content="default">
 
-    </style>    <link rel="stylesheet" href="style.css">
+            min-height: 100vh;
 
+        }    <link rel="stylesheet" href="assets/bootstrap/bootstrap.min.css">    <meta name="apple-mobile-web-app-title" content="شماره صندلی">
+
+    </style>
+
+</head>    <!-- SweetAlert -->    
+
+<body>
+
+    <noscript>برای استفاده از این وب‌اپلیکیشن باید جاوااسکریپت فعال باشد.</noscript>    <link rel="stylesheet" href="assets/sweetalert2/sweetalert2.min.css">    <!-- PWA Icons -->
+
+    <div id="app">
+
+        <!-- محتوای PWA اینجا قرار می‌گیرد -->    <link rel="manifest" href="manifest.json">    <link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png">
+
+    </div>
+
+    <!-- بوت‌استرپ JS -->    <style>    <link rel="icon" type="image/png" sizes="512x512" href="icons/icon-512.png">
+
+    <script src="assets/bootstrap/bootstrap.bundle.min.js"></script>
+
+    <!-- متریال JS -->        body {    <link rel="apple-touch-icon" href="icons/icon-192.png">
+
+    <script src="assets/material/material.min.js"></script>
+
+    <!-- SweetAlert JS -->            font-family: 'Vazir', 'Roboto', 'Tahoma', sans-serif;    
+
+    <script src="assets/sweetalert2/sweetalert2.min.js"></script>
+
+    <!-- اپلیکیشن JS -->            background: #f5f5f5;    <!-- PWA Manifest -->
+
+    <script src="assets/app/app.js"></script>
+
+    <!-- Service Worker registration -->            margin: 0;    <link rel="manifest" href="manifest.json">
+
+    <script>
+
+        if ('serviceWorker' in navigator) {            min-height: 100vh;    
+
+            navigator.serviceWorker.register('service-worker.js');
+
+        }        }    <!-- CSS -->
+
+    </script>
+
+</body>    </style>    <link rel="stylesheet" href="style.css">
+
+</html>
 </head></head>
 
 <body><body>
