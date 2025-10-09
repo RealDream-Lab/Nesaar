@@ -58,6 +58,32 @@ body {
   filter: invert(1) grayscale(100%) brightness(200%);
 }
 
+.form-check-inline {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin-left: 1rem !important;
+  flex-direction: row-reverse;
+}
+
+.form-check-input {
+  margin: 0 !important;
+  float: none !important;
+}
+
+.logo-container {
+  position: fixed;
+  top:  20px;
+  left: 20px;
+  z-index: 1000;
+}
+
+.logo-image {
+  max-width: 120px;
+  height: auto;
+  border-radius: 0.5rem;
+}
+
 @media (max-width: 576px) {
   .card-body {
     padding: 1.5rem;

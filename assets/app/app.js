@@ -4,6 +4,42 @@ document.addEventListener('DOMContentLoaded', () => {
     const results = document.getElementById('results');
     const resultContent = document.getElementById('resultContent');
     const closeResults = document.getElementById('closeResults');
+    const studentTypeRadio = document.getElementById('studentType');
+    const staffTypeRadio = document.getElementById('staffType');
+    const firstFieldLabel = document.getElementById('firstFieldLabel');
+    const secondFieldLabel = document.getElementById('secondFieldLabel');
+    const studentIdInput = document.getElementById('studentId');
+    const nationalIdInput = document.getElementById('nationalId');
+
+    // Handle user type change
+    function handleUserTypeChange() {
+        // Clear input fields
+        studentIdInput.value = '';
+        nationalIdInput.value = '';
+
+        if (studentTypeRadio.checked) {
+            // Student mode
+            firstFieldLabel.textContent = 'شماره دانشجویی';
+            secondFieldLabel.textContent = 'کد ملی / شماره شناسنامه';
+            studentIdInput.placeholder = 'مثال: 403254321';
+            nationalIdInput.placeholder = 'مثال: 3781985569';
+            nationalIdInput.type = 'tel';
+        } else if (staffTypeRadio.checked) {
+            // Staff mode
+            firstFieldLabel.textContent = 'نام کاربری';
+            secondFieldLabel.textContent = 'رمز عبور';
+            studentIdInput.placeholder = '';
+            nationalIdInput.placeholder = '';
+            nationalIdInput.type = 'password';
+        }
+    }
+
+    // Add event listeners for radio buttons
+    studentTypeRadio.addEventListener('change', handleUserTypeChange);
+    staffTypeRadio.addEventListener('change', handleUserTypeChange);
+
+    // Initialize with default state
+    handleUserTypeChange();
 
     form.addEventListener('submit', async event => {
         event.preventDefault();
