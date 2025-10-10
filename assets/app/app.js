@@ -10,9 +10,6 @@ document.addEventListener('DOMContentLoaded', () => {
     const nationalIdInput = document.getElementById('nationalId');
     const loginRow = document.getElementById('loginRow');
     const loginSection = document.getElementById('loginSection');
-    const refreshProgress = document.getElementById('refreshProgress');
-    const refreshProgressBar = document.getElementById('refreshProgressBar');
-    const REFRESH_INTERVAL_MS = 60000;
 
     // Temporarily disable staff mode (only student mode active for now)
     if (staffTypeRadio) {
@@ -185,25 +182,6 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    async function fetchExamPayload(studentId, nationalId) {
-        const credentials = { student_id: studentId, national_id: nationalId };
-        const encryptedData = encryptData(credentials);
-
-        if (!encryptedData) {
-            throw new Error('Failed to encrypt data');
-        }
-
-        const body = new FormData();
-        body.append('encrypted_data', encryptedData);
-
-        const response = await fetch('API/getStudentExams.php', { method: 'POST', body });
-        if (!response.ok) throw new Error(`HTTP ${response.status}`);
-        const payload = await response.json();
-        if (payload.error) throw new Error(payload.error);
-        if (!Array.isArray(payload)) throw new Error('Invalid response format');
-        return payload;
-    }
-
     // Session helpers
     function setCookie(name, value, days) {
         const d = new Date();
@@ -226,126 +204,6 @@ document.addEventListener('DOMContentLoaded', () => {
     function eraseCookie(name) {
         document.cookie = name + '=; Max-Age=-99999999; path=/';
     }
-
-    let refreshTimer = null;
-    let currentCredentials = null;
-    let lastSnapshot = '';
-    let progressAnimationFrame = null;
-    let hasInitialData = false;
-
-    function showRefreshToast() {
-        Swal.fire({
-            toast: true,
-            position: 'top-end',
-            icon: 'success',
-            title: 'داده‌ها به‌روزرسانی شد.',
-            timer: 3000,
-            timerProgressBar: true,
-            showConfirmButton: false
-        });
-    }
-
-    function stopProgressAnimation(reset = true) {
-        if (progressAnimationFrame) {
-            cancelAnimationFrame(progressAnimationFrame);
-            progressAnimationFrame = null;
-        }
-        if (refreshProgressBar) {
-            refreshProgressBar.style.width = '0%';
-        }
-        if (refreshProgress && reset) {
-            refreshProgress.classList.remove('active');
-        }
-    }
-
-    function startProgressAnimation(duration = REFRESH_INTERVAL_MS) {
-        if (!refreshProgress || !refreshProgressBar) return;
-        stopProgressAnimation(false);
-        const start = performance.now();
-        refreshProgress.classList.add('active');
-
-        const step = (timestamp) => {
-            const elapsed = timestamp - start;
-            const ratio = Math.min(elapsed / duration, 1);
-            refreshProgressBar.style.width = `${ratio * 100}%`;
-            if (ratio < 1) {
-                progressAnimationFrame = requestAnimationFrame(step);
-            } else {
-                progressAnimationFrame = null;
-            }
-        };
-
-        progressAnimationFrame = requestAnimationFrame(step);
-    }
-
-    function stopAutoRefresh() {
-        if (refreshTimer) {
-            clearInterval(refreshTimer);
-            refreshTimer = null;
-        }
-        stopProgressAnimation();
-    }
-
-    function scheduleRefreshInterval() {
-        if (!currentCredentials) return;
-        if (refreshTimer) {
-            clearInterval(refreshTimer);
-        }
-        refreshTimer = setInterval(() => refreshExamData(false), REFRESH_INTERVAL_MS);
-    }
-
-    function startAutoRefresh(studentId, nationalId) {
-        currentCredentials = { studentId, nationalId };
-        scheduleRefreshInterval();
-        startProgressAnimation();
-    }
-
-    async function refreshExamData(restartInterval = false) {
-        if (!currentCredentials) return;
-        if (document.visibilityState && document.visibilityState !== 'visible') {
-            stopProgressAnimation();
-            return;
-        }
-
-        stopProgressAnimation(false);
-
-        try {
-            const payload = await fetchExamPayload(currentCredentials.studentId, currentCredentials.nationalId);
-            const snapshot = JSON.stringify(payload || []);
-            if (snapshot !== lastSnapshot) {
-                lastSnapshot = snapshot;
-                const first = payload[0] || {};
-                const fullName = `${first.first_name || ''} ${first.last_name || ''}`.trim();
-                renderResults(payload, fullName);
-                ensureLogoutButton(fullName, currentCredentials.studentId);
-                if (hasInitialData) {
-                    showRefreshToast();
-                } else {
-                    hasInitialData = true;
-                }
-            }
-        } catch (error) {
-            console.warn('Auto refresh failed:', error);
-        } finally {
-            if (currentCredentials && (!document.visibilityState || document.visibilityState === 'visible')) {
-                if (restartInterval) {
-                    scheduleRefreshInterval();
-                }
-                startProgressAnimation();
-            }
-        }
-    }
-
-    document.addEventListener('visibilitychange', () => {
-        if (document.visibilityState === 'visible') {
-            if (currentCredentials) {
-                stopAutoRefresh();
-                refreshExamData(true);
-            }
-        } else if (currentCredentials) {
-            stopAutoRefresh();
-        }
-    });
 
     function hideLogin() {
         const target = document.getElementById('loginRow') || loginSection;
@@ -396,10 +254,6 @@ document.addEventListener('DOMContentLoaded', () => {
         document.body.appendChild(btn);
 
         btn.addEventListener('click', () => {
-            stopAutoRefresh();
-            currentCredentials = null;
-            lastSnapshot = '';
-            hasInitialData = false;
             eraseCookie('userSession');
             clearResults();
             showLogin();
@@ -435,23 +289,39 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
         }
 
-        stopAutoRefresh();
-        currentCredentials = null;
-        lastSnapshot = '';
-        hasInitialData = false;
-
         toggleLoading(true);
-        clearResults();
-        try {
-            const payload = await fetchExamPayload(studentId, nationalId);
+        clearResults(); try {
+            // Encrypt sensitive data before sending
+            const credentials = { student_id: studentId, national_id: nationalId };
+            const encryptedData = encryptData(credentials);
 
-            if (payload.length === 0) {
+            if (!encryptedData) {
+                throw new Error('Failed to encrypt data');
+            }
+
+            const body = new FormData();
+            body.append('encrypted_data', encryptedData);
+
+            const response = await fetch('API/getStudentExams.php', { method: 'POST', body });
+
+            if (!response.ok) {
+                throw new Error(`HTTP ${response.status}`);
+            }
+
+            const payload = await response.json();
+
+            if (payload.error) {
+                showAlert('error', 'خطا!', payload.error);
+                return;
+            }
+
+            if (!Array.isArray(payload) || payload.length === 0) {
                 showAlert('info', 'توجه', 'هیچ امتحانی برای اطلاعات وارد شده یافت نشد.');
                 return;
             }
 
             // Save session (30 days)
-            const first = payload[0] || null;
+            const first = Array.isArray(payload) && payload[0] ? payload[0] : null;
             const fullName = first ? `${first.first_name || ''} ${first.last_name || ''}`.trim() : '';
             const session = {
                 student_id: studentId,
@@ -467,9 +337,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
             renderResults(payload, fullName);
             ensureLogoutButton(fullName, studentId);
-            lastSnapshot = JSON.stringify(payload || []);
-            hasInitialData = true;
-            startAutoRefresh(studentId, nationalId);
         } catch (error) {
             console.error('Fetch error:', error);
             showAlert('error', 'خطا در اتصال!', 'مشکلی در ارتباط با سرور رخ داده است. لطفاً بعداً تلاش کنید.');
@@ -483,14 +350,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // Auto login via cookie
     (async function autoLoginFromCookie() {
         const raw = getCookie('userSession');
-        if (!raw) {
-            stopAutoRefresh();
-            currentCredentials = null;
-            lastSnapshot = '';
-            hasInitialData = false;
-            showLogin();
-            return;
-        }
+        if (!raw) { showLogin(); return; }
         try {
             const data = JSON.parse(decodeURIComponent(raw));
             const sid = (data.student_id || '').toString().trim();
@@ -501,22 +361,28 @@ document.addEventListener('DOMContentLoaded', () => {
             toggleLoading(true);
             clearResults();
 
-            const payload = await fetchExamPayload(sid, nid);
-            if (payload.length === 0) throw new Error('هیچ امتحانی یافت نشد');
+            // Encrypt credentials for auto-login
+            const credentials = { student_id: sid, national_id: nid };
+            const encryptedData = encryptData(credentials);
 
-            const first = payload[0] || {};
+            if (!encryptedData) {
+                throw new Error('Failed to encrypt data');
+            }
+
+            const body = new FormData();
+            body.append('encrypted_data', encryptedData);
+            const response = await fetch('API/getStudentExams.php', { method: 'POST', body });
+            if (!response.ok) throw new Error(`HTTP ${response.status}`);
+            const payload = await response.json();
+            if (payload.error) throw new Error(payload.error);
+            if (!Array.isArray(payload) || payload.length === 0) throw new Error('هیچ امتحانی یافت نشد');
+
+            const first = payload[0];
             const fullName = `${first.first_name || ''} ${first.last_name || ''}`.trim();
             renderResults(payload, fullName);
             ensureLogoutButton(fullName, sid);
-            lastSnapshot = JSON.stringify(payload || []);
-            hasInitialData = true;
-            startAutoRefresh(sid, nid);
         } catch (e) {
             console.warn('Auto-login failed:', e);
-            stopAutoRefresh();
-            currentCredentials = null;
-            lastSnapshot = '';
-            hasInitialData = false;
             eraseCookie('userSession');
             showLogin();
         } finally {
@@ -548,6 +414,8 @@ document.addEventListener('DOMContentLoaded', () => {
             const seatNum = exam.seat_number || '';
             const isNumericSeat = /^\d+$/.test(seatNum.toString().trim());
             const cardClass = isNumericSeat ? 'exam-card seat-available' : 'exam-card seat-hidden';
+            const countdownText = getCountdownText(exam.exam_date, exam.exam_time);
+            const countdownMarkup = countdownText ? `<div class="exam-countdown">${countdownText}</div>` : '';
 
             return `
             <div class="${cardClass}" tabindex="0" data-exam-idx="${idx}">
@@ -555,6 +423,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     <span class="exam-name">${escapeHtml(exam.course_name)}</span>
                 </div>
                 <div class="exam-meta">${toPersianDigits(exam.exam_date)} | ${toPersianDigits(exam.exam_time)}</div>
+                ${countdownMarkup}
                 <div class="exam-detail seat-info"><span class="exam-label">شماره صندلی:</span><span class="exam-value">${toPersianDigits(exam.seat_number)}</span></div>
             </div>
         `;
@@ -629,6 +498,89 @@ document.addEventListener('DOMContentLoaded', () => {
         return value
             .toString()
             .replace(/\d/g, d => digits[Number(d)]);
+    }
+
+    function getCountdownText(examDate, examTime) {
+        const target = createExamDateTime(examDate, examTime);
+        if (!target) return '';
+        const diff = target.getTime() - Date.now();
+        if (diff <= 0) return '';
+
+        const totalMinutes = Math.floor(diff / 60000);
+        const days = Math.floor(totalMinutes / (60 * 24));
+        let remainingMinutes = totalMinutes - (days * 60 * 24);
+        const hours = Math.floor(remainingMinutes / 60);
+        remainingMinutes -= hours * 60;
+        const minutes = remainingMinutes;
+
+        const parts = [];
+        if (days > 0) parts.push(`${toPersianDigits(days)} روز`);
+        if (hours > 0) parts.push(`${toPersianDigits(hours)} ساعت`);
+        if (minutes > 0 && days < 3) parts.push(`${toPersianDigits(minutes)} دقیقه`);
+        if (!parts.length) parts.push('کمتر از یک دقیقه');
+
+        return `${parts.join(' و ')} مانده تا زمان آزمون`;
+    }
+
+    function createExamDateTime(examDateStr, examTimeStr) {
+        if (!examDateStr) return null;
+        const normalizedDate = toEnglishDigits(String(examDateStr).trim()).replace(/-/g, '/');
+        const segments = normalizedDate.split('/').map(part => parseInt(part, 10));
+        if (segments.length !== 3 || segments.some(Number.isNaN)) return null;
+        let [year, month, day] = segments;
+
+        if (year < 1700) {
+            const gregorian = jalaliToGregorian(year, month, day);
+            if (!gregorian) return null;
+            [year, month, day] = gregorian;
+        }
+
+        const timeString = examTimeStr ? toEnglishDigits(String(examTimeStr).trim()) : '00:00';
+        const timeParts = timeString.split(':').map(part => parseInt(part, 10));
+        const hour = timeParts[0] ?? 0;
+        const minute = timeParts[1] ?? 0;
+        if (Number.isNaN(hour) || Number.isNaN(minute)) return null;
+
+        return new Date(year, month - 1, day, hour, minute, 0);
+    }
+
+    function jalaliToGregorian(jy, jm, jd) {
+        jy = parseInt(jy, 10);
+        jm = parseInt(jm, 10);
+        jd = parseInt(jd, 10);
+        if ([jy, jm, jd].some(Number.isNaN)) return null;
+
+        jy += 1595;
+        let days = -355668 + (365 * jy) + Math.floor(jy / 33) * 8 + Math.floor(((jy % 33) + 3) / 4) + jd + (jm < 7 ? (jm - 1) * 31 : ((jm - 7) * 30) + 186);
+
+        let gy = 400 * Math.floor(days / 146097);
+        days %= 146097;
+
+        if (days > 36524) {
+            gy += 100 * Math.floor(--days / 36524);
+            days %= 36524;
+            if (days >= 365) days++;
+        }
+
+        gy += 4 * Math.floor(days / 1461);
+        days %= 1461;
+
+        if (days > 365) {
+            gy += Math.floor((days - 1) / 365);
+            days = (days - 1) % 365;
+        }
+
+        const gd = days + 1;
+        const monthDays = [0, 31, ((gy % 4 === 0 && gy % 100 !== 0) || (gy % 400 === 0)) ? 29 : 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
+
+        let gm = 1;
+        let remaining = gd;
+        while (gm <= 12 && remaining > monthDays[gm]) {
+            remaining -= monthDays[gm];
+            gm += 1;
+        }
+
+        return [gy, gm, remaining];
     }
 
     function escapeHtml(value) {

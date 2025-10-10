@@ -6,32 +6,6 @@ body {
   min-height: 100vh;
 }
 
-.refresh-progress {
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  height: 4px;
-  background: rgba(255, 255, 255, 0.35);
-  z-index: 1100;
-  visibility: hidden;
-  opacity: 0;
-  transition: opacity 0.2s ease;
-  pointer-events: none;
-}
-
-.refresh-progress.active {
-  visibility: visible;
-  opacity: 1;
-}
-
-.refresh-progress__bar {
-  height: 100%;
-  background: linear-gradient(90deg, #1e88e5, #42a5f5);
-  width: 0%;
-  transform-origin: left;
-}
-
 .card {
   border: none;
   border-radius: 1.25rem;
@@ -151,6 +125,12 @@ body.login-active #loginRow {
   font-size: 1.1rem;
   color: #2196F3;
   margin-bottom: 1.1rem;
+}
+.exam-countdown {
+  font-size: 0.95rem;
+  color: #d84315;
+  margin-bottom: 1rem;
+  font-weight: 500;
 }
 .exam-detail {
   font-size: 1rem;
