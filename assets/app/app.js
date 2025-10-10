@@ -10,6 +10,9 @@ document.addEventListener('DOMContentLoaded', () => {
     const nationalIdInput = document.getElementById('nationalId');
     const loginRow = document.getElementById('loginRow');
     const loginSection = document.getElementById('loginSection');
+    const refreshProgress = document.getElementById('refreshProgress');
+    const refreshProgressBar = document.getElementById('refreshProgressBar');
+    const REFRESH_INTERVAL_MS = 60000;
 
     // Temporarily disable staff mode (only student mode active for now)
     if (staffTypeRadio) {
@@ -227,42 +230,89 @@ document.addEventListener('DOMContentLoaded', () => {
     let refreshTimer = null;
     let currentCredentials = null;
     let lastSnapshot = '';
+    let progressAnimationFrame = null;
+
+    function stopProgressAnimation(reset = true) {
+        if (progressAnimationFrame) {
+            cancelAnimationFrame(progressAnimationFrame);
+            progressAnimationFrame = null;
+        }
+        if (refreshProgressBar) {
+            refreshProgressBar.style.width = '0%';
+        }
+        if (refreshProgress && reset) {
+            refreshProgress.classList.remove('active');
+        }
+    }
+
+    function startProgressAnimation(duration = REFRESH_INTERVAL_MS) {
+        if (!refreshProgress || !refreshProgressBar) return;
+        stopProgressAnimation(false);
+        const start = performance.now();
+        refreshProgress.classList.add('active');
+
+        const step = (timestamp) => {
+            const elapsed = timestamp - start;
+            const ratio = Math.min(elapsed / duration, 1);
+            refreshProgressBar.style.width = `${ratio * 100}%`;
+            if (ratio < 1) {
+                progressAnimationFrame = requestAnimationFrame(step);
+            } else {
+                progressAnimationFrame = null;
+            }
+        };
+
+        progressAnimationFrame = requestAnimationFrame(step);
+    }
 
     function stopAutoRefresh() {
         if (refreshTimer) {
             clearInterval(refreshTimer);
             refreshTimer = null;
         }
+        stopProgressAnimation();
     }
 
     function startAutoRefresh(studentId, nationalId) {
         currentCredentials = { studentId, nationalId };
         stopAutoRefresh();
-        refreshTimer = setInterval(refreshExamData, 60000); // 1 minute cadence
+        refreshTimer = setInterval(refreshExamData, REFRESH_INTERVAL_MS);
+        startProgressAnimation();
     }
 
     async function refreshExamData() {
         if (!currentCredentials) return;
-        if (document.visibilityState && document.visibilityState !== 'visible') return;
+        if (document.visibilityState && document.visibilityState !== 'visible') {
+            stopProgressAnimation();
+            return;
+        }
+
+        stopProgressAnimation(false);
 
         try {
             const payload = await fetchExamPayload(currentCredentials.studentId, currentCredentials.nationalId);
             const snapshot = JSON.stringify(payload || []);
-            if (snapshot === lastSnapshot) return;
-
-            lastSnapshot = snapshot;
-            const first = payload[0] || {};
-            const fullName = `${first.first_name || ''} ${first.last_name || ''}`.trim();
-            renderResults(payload, fullName);
-            ensureLogoutButton(fullName, currentCredentials.studentId);
+            if (snapshot !== lastSnapshot) {
+                lastSnapshot = snapshot;
+                const first = payload[0] || {};
+                const fullName = `${first.first_name || ''} ${first.last_name || ''}`.trim();
+                renderResults(payload, fullName);
+                ensureLogoutButton(fullName, currentCredentials.studentId);
+            }
         } catch (error) {
             console.warn('Auto refresh failed:', error);
+        } finally {
+            if (currentCredentials && (!document.visibilityState || document.visibilityState === 'visible')) {
+                startProgressAnimation();
+            }
         }
     }
 
     document.addEventListener('visibilitychange', () => {
         if (document.visibilityState === 'visible') {
             refreshExamData();
+        } else {
+            stopProgressAnimation();
         }
     });
 
@@ -353,12 +403,13 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
         }
 
-    stopAutoRefresh();
-    currentCredentials = null;
-    lastSnapshot = '';
+        stopAutoRefresh();
+        currentCredentials = null;
+        lastSnapshot = '';
 
-    toggleLoading(true);
-        clearResults(); try {
+        toggleLoading(true);
+        clearResults();
+        try {
             const payload = await fetchExamPayload(studentId, nationalId);
 
             if (payload.length === 0) {
