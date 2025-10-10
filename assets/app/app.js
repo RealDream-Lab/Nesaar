@@ -104,7 +104,7 @@ document.addEventListener('DOMContentLoaded', () => {
             text: 'اپلیکیشن «نسار» با موفقیت به صفحه اصلی شما اضافه شد.',
             confirmButtonText: 'باشه',
             buttonsStyling: false,
-            customClass: { popup: 'swal2-rtl', confirmButton: 'btn btn-primary btn-lg px-4' }
+            customClass: { confirmButton: 'btn btn-primary btn-lg px-4' }
         });
     });
 
@@ -124,7 +124,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 confirmButtonText: 'نصب کن',
                 cancelButtonText: 'بعداً',
                 buttonsStyling: false,
-                customClass: { popup: 'swal2-rtl', confirmButton: 'btn btn-primary mx-2', cancelButton: 'btn btn-light mx-2' }
+                customClass: { confirmButton: 'btn btn-primary mx-2', cancelButton: 'btn btn-light mx-2' }
             }).then(async (result) => {
                 if (result.isConfirmed && deferredPrompt) {
                     deferredPrompt.prompt();
@@ -149,7 +149,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 icon: 'info',
                 confirmButtonText: 'متوجه شدم',
                 buttonsStyling: false,
-                customClass: { popup: 'swal2-rtl', confirmButton: 'btn btn-primary btn-lg px-4' }
+                customClass: { confirmButton: 'btn btn-primary btn-lg px-4' }
             });
         }
     }
@@ -473,7 +473,9 @@ document.addEventListener('DOMContentLoaded', () => {
             text,
             confirmButtonText: 'باشه',
             buttonsStyling: false,
-            customClass: { popup: 'swal2-rtl', confirmButton: 'btn btn-primary btn-lg px-4' }
+            customClass: {
+                confirmButton: 'btn btn-primary btn-lg px-4'
+            }
         });
     }
 

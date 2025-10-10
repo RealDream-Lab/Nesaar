@@ -1,39 +1,9 @@
 body {
-  background: 
-    radial-gradient(circle at top, #f0f4ff 0%, #dbe4ff 45%, #cfd8ff 100%),
-    url('logo.png');
-  background-size: 
-    100% 100%,
-    120px 120px;
-  background-repeat: 
-    no-repeat,
-    repeat;
-  background-position: 
-    center,
-    0 0;
-  background-blend-mode: normal, overlay;
+  background: radial-gradient(circle at top, #f0f4ff 0%, #dbe4ff 45%, #cfd8ff 100%);
   font-family: 'Vazir', sans-serif;
   direction: rtl;
   text-align: right;
   min-height: 100vh;
-  position: relative;
-}
-
-/* Tiled watermark overlay */
-body::before {
-  content: '';
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  background-image: url('logo.png');
-  background-size: 150px 150px;
-  background-repeat: repeat;
-  opacity: 0.03;
-  transform: rotate(-15deg);
-  z-index: -1;
-  pointer-events: none;
 }
 
 .card {
