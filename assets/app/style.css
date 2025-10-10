@@ -79,6 +79,18 @@ body {
   padding-bottom: 54px; /* approximate footer height */
 }
 
+/* When login is visible, keep page fixed (no scroll) and account for footer height */
+body.login-active {
+  overflow: hidden;       /* prevent page scrolling */
+  padding-bottom: 0;      /* remove global safe padding to avoid overflow */
+}
+
+body.login-active #loginRow {
+  min-height: calc(100vh - 54px); /* fit exactly above fixed footer */
+  display: flex;
+  align-items: center;    /* vertically center the card */
+}
+
 .exam-card {
   background: #fff;
   border-radius: 1.25rem;

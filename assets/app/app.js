@@ -208,11 +208,13 @@ document.addEventListener('DOMContentLoaded', () => {
     function hideLogin() {
         const target = document.getElementById('loginRow') || loginSection;
         if (target) target.classList.add('d-none');
+        document.body.classList.remove('login-active');
     }
 
     function showLogin() {
         const target = document.getElementById('loginRow') || loginSection;
         if (target) target.classList.remove('d-none');
+        document.body.classList.add('login-active');
     }
 
     function ensureLogoutButton(fullName, studentId) {
