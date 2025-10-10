@@ -231,6 +231,19 @@ document.addEventListener('DOMContentLoaded', () => {
     let currentCredentials = null;
     let lastSnapshot = '';
     let progressAnimationFrame = null;
+    let hasInitialData = false;
+
+    function showRefreshToast() {
+        Swal.fire({
+            toast: true,
+            position: 'top-end',
+            icon: 'success',
+            title: 'داده‌ها به‌روزرسانی شد.',
+            timer: 3000,
+            timerProgressBar: true,
+            showConfirmButton: false
+        });
+    }
 
     function stopProgressAnimation(reset = true) {
         if (progressAnimationFrame) {
@@ -273,14 +286,21 @@ document.addEventListener('DOMContentLoaded', () => {
         stopProgressAnimation();
     }
 
+    function scheduleRefreshInterval() {
+        if (!currentCredentials) return;
+        if (refreshTimer) {
+            clearInterval(refreshTimer);
+        }
+        refreshTimer = setInterval(() => refreshExamData(false), REFRESH_INTERVAL_MS);
+    }
+
     function startAutoRefresh(studentId, nationalId) {
         currentCredentials = { studentId, nationalId };
-        stopAutoRefresh();
-        refreshTimer = setInterval(refreshExamData, REFRESH_INTERVAL_MS);
+        scheduleRefreshInterval();
         startProgressAnimation();
     }
 
-    async function refreshExamData() {
+    async function refreshExamData(restartInterval = false) {
         if (!currentCredentials) return;
         if (document.visibilityState && document.visibilityState !== 'visible') {
             stopProgressAnimation();
@@ -298,11 +318,19 @@ document.addEventListener('DOMContentLoaded', () => {
                 const fullName = `${first.first_name || ''} ${first.last_name || ''}`.trim();
                 renderResults(payload, fullName);
                 ensureLogoutButton(fullName, currentCredentials.studentId);
+                if (hasInitialData) {
+                    showRefreshToast();
+                } else {
+                    hasInitialData = true;
+                }
             }
         } catch (error) {
             console.warn('Auto refresh failed:', error);
         } finally {
             if (currentCredentials && (!document.visibilityState || document.visibilityState === 'visible')) {
+                if (restartInterval) {
+                    scheduleRefreshInterval();
+                }
                 startProgressAnimation();
             }
         }
@@ -310,9 +338,12 @@ document.addEventListener('DOMContentLoaded', () => {
 
     document.addEventListener('visibilitychange', () => {
         if (document.visibilityState === 'visible') {
-            refreshExamData();
-        } else {
-            stopProgressAnimation();
+            if (currentCredentials) {
+                stopAutoRefresh();
+                refreshExamData(true);
+            }
+        } else if (currentCredentials) {
+            stopAutoRefresh();
         }
     });
 
@@ -368,6 +399,7 @@ document.addEventListener('DOMContentLoaded', () => {
             stopAutoRefresh();
             currentCredentials = null;
             lastSnapshot = '';
+            hasInitialData = false;
             eraseCookie('userSession');
             clearResults();
             showLogin();
@@ -406,6 +438,7 @@ document.addEventListener('DOMContentLoaded', () => {
         stopAutoRefresh();
         currentCredentials = null;
         lastSnapshot = '';
+        hasInitialData = false;
 
         toggleLoading(true);
         clearResults();
@@ -435,6 +468,7 @@ document.addEventListener('DOMContentLoaded', () => {
             renderResults(payload, fullName);
             ensureLogoutButton(fullName, studentId);
             lastSnapshot = JSON.stringify(payload || []);
+            hasInitialData = true;
             startAutoRefresh(studentId, nationalId);
         } catch (error) {
             console.error('Fetch error:', error);
@@ -453,6 +487,7 @@ document.addEventListener('DOMContentLoaded', () => {
             stopAutoRefresh();
             currentCredentials = null;
             lastSnapshot = '';
+            hasInitialData = false;
             showLogin();
             return;
         }
@@ -474,12 +509,14 @@ document.addEventListener('DOMContentLoaded', () => {
             renderResults(payload, fullName);
             ensureLogoutButton(fullName, sid);
             lastSnapshot = JSON.stringify(payload || []);
+            hasInitialData = true;
             startAutoRefresh(sid, nid);
         } catch (e) {
             console.warn('Auto-login failed:', e);
             stopAutoRefresh();
             currentCredentials = null;
             lastSnapshot = '';
+            hasInitialData = false;
             eraseCookie('userSession');
             showLogin();
         } finally {
