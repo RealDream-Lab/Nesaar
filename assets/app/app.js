@@ -78,6 +78,85 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
+    // --- Add to Home Screen (A2HS) prompts ---
+    let deferredPrompt = null;
+    let shownInstallHint = false;
+
+    // Detect if already installed (standalone display mode)
+    const isStandalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true;
+
+    window.addEventListener('beforeinstallprompt', (e) => {
+        // Chrome/Android fires this when eligible
+        e.preventDefault();
+        deferredPrompt = e;
+        if (!isStandalone) {
+            // Offer install via a subtle toast/button
+            showInstallToast();
+        }
+    });
+
+    window.addEventListener('appinstalled', () => {
+        deferredPrompt = null;
+        // Inform user installed successfully
+        Swal.fire({
+            icon: 'success',
+            title: 'نصب شد',
+            text: 'اپلیکیشن «نسار» با موفقیت به صفحه اصلی شما اضافه شد.',
+            confirmButtonText: 'باشه',
+            buttonsStyling: false,
+            customClass: { confirmButton: 'btn btn-primary btn-lg px-4' }
+        });
+    });
+
+    function showInstallToast() {
+        // Only once per session
+        if (shownInstallHint) return; shownInstallHint = true;
+
+        const isIOS = /iphone|ipad|ipod/i.test(window.navigator.userAgent);
+        const isAndroid = /android/i.test(window.navigator.userAgent);
+
+        if (isAndroid && deferredPrompt) {
+            Swal.fire({
+                title: 'نصب به‌عنوان اپلیکیشن',
+                html: 'می‌توانید «نسار» را به صفحه اصلی اضافه کنید تا مثل یک اپ اجرا شود.',
+                icon: 'info',
+                showCancelButton: true,
+                confirmButtonText: 'نصب کن',
+                cancelButtonText: 'بعداً',
+                buttonsStyling: false,
+                customClass: { confirmButton: 'btn btn-primary mx-2', cancelButton: 'btn btn-light mx-2' }
+            }).then(async (result) => {
+                if (result.isConfirmed && deferredPrompt) {
+                    deferredPrompt.prompt();
+                    const choice = await deferredPrompt.userChoice;
+                    deferredPrompt = null;
+                    if (choice.outcome === 'accepted') {
+                        // user accepted; nothing else needed
+                    }
+                }
+            });
+        } else if (isIOS && !isStandalone) {
+            // iOS Safari doesn't support beforeinstallprompt; show manual steps
+            Swal.fire({
+                title: 'افزودن به صفحه اصلی (iOS)',
+                html: `
+                    <div style="text-align:right;line-height:1.9">
+                      1) دکمه Share در Safari را بزنید.<br>
+                      2) گزینه <b>Add to Home Screen</b> را انتخاب کنید.<br>
+                      3) روی <b>Add</b> بزنید تا «نسار» به صفحه اصلی اضافه شود.
+                    </div>
+                `,
+                icon: 'info',
+                confirmButtonText: 'متوجه شدم',
+                buttonsStyling: false,
+                customClass: { confirmButton: 'btn btn-primary btn-lg px-4' }
+            });
+        }
+    }
+
+    // Offer install hint shortly after load if eligible
+    setTimeout(() => { if (!isStandalone) showInstallToast(); }, 1500);
+
     // Encryption helpers
     const ENCRYPTION_KEY = 'PNU_EXAM_SEAT_2025_SECRET_KEY'; // In production, this should be more secure
 
