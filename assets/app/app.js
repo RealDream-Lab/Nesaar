@@ -56,7 +56,7 @@ document.addEventListener('DOMContentLoaded', () => {
     if (copyrightFooter) {
         copyrightFooter.addEventListener('click', () => {
             Swal.fire({
-                title: 'دانشگاه پیام نور مرکز بیجار',
+                title: 'مرکز سنجش و آزمون دانشگاه پیام نور',
                 text: 'مهدی حسنی',
                 timer: 30000,
                 timerProgressBar: true,
