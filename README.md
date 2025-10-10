@@ -15,64 +15,92 @@
 
 ## نیازمندی‌های سرور
 
-### نرم‌افزارهای مورد نیاز
+<div dir="rtl">
 
+برای راه‌اندازی سریع سرویس، مراحل زیر را به ترتیب اجرا کنید. توضیح هر مرحله بیرون از بلوک کد آمده تا جهت متن به‌درستی نمایش داده شود.
+
+### ۱️⃣ به‌روزرسانی سیستم
 </div>
 
 ```bash
-# Apache Web Server
-sudo apt update
-sudo apt install apache2
-
-# PHP 7.4 or newer
-sudo apt install php php-cli php-mysql php-mbstring php-xml php-zip
-
-# MySQL Server
-sudo apt install mysql-server
-
-# phpMyAdmin (optional)
-sudo apt install phpmyadmin
+sudo apt update -y
+sudo apt upgrade -y
 ```
 
 <div dir="rtl">
 
-### تنظیمات Apache
-
+### ۲️⃣ نصب Apache و فعال‌سازی
 </div>
 
 ```bash
-# Enable mod_rewrite
-sudo a2enmod rewrite
-
-# Restart Apache
-sudo systemctl restart apache2
-
-# Check status
-sudo systemctl status apache2
+sudo apt install apache2 -y
+sudo systemctl enable apache2
+sudo systemctl start apache2
 ```
 
 <div dir="rtl">
 
-### تنظیمات MySQL
-
+### ۳️⃣ نصب MySQL
 </div>
 
 ```bash
-# Secure MySQL
+sudo apt install mysql-server -y
+sudo systemctl enable mysql
+sudo systemctl start mysql
 sudo mysql_secure_installation
+```
 
-# Sign in to MySQL
-sudo mysql -u root -p
+<div dir="rtl">
 
-# Create database
-CREATE DATABASE PnuExamsSeatNumber CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+### ۴️⃣ نصب PHP و افزونه‌های مورد نیاز
+</div>
 
-# Create user
-CREATE USER 'pnu_user'@'localhost' IDENTIFIED BY 'your_secure_password';
+```bash
+sudo apt install php libapache2-mod-php php-mysql php-mbstring php-xml php-curl php-zip php-cli php-bcmath php-json unzip git -y
+```
 
-# Grant privileges
-GRANT ALL PRIVILEGES ON PnuExamsSeatNumber.* TO 'pnu_user'@'localhost';
-FLUSH PRIVILEGES;
+<div dir="rtl">
+
+### ۵️⃣ تنظیم Apache برای PHP
+</div>
+
+```bash
+sudo a2enmod php*
+sudo systemctl restart apache2
+```
+
+<div dir="rtl">
+
+### ۶️⃣ نصب phpMyAdmin
+</div>
+
+```bash
+sudo apt install phpmyadmin -y
+sudo phpenmod mbstring
+sudo systemctl restart apache2
+```
+
+<div dir="rtl">
+
+### ۷️⃣ نصب Node.js و npm
+</div>
+
+```bash
+sudo apt install curl -y
+curl -fsSL https://deb.nodesource.com/setup_20.x | sudo -E bash -
+sudo apt install -y nodejs
+node -v
+npm -v
+```
+
+<div dir="rtl">
+
+### ۸️⃣ اطمینان از فعال بودن سرویس‌ها
+</div>
+
+```bash
+sudo systemctl status apache2
+sudo systemctl status mysql
 ```
 
 <div dir="rtl">
