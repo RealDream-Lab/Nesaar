@@ -228,6 +228,7 @@ document.addEventListener('DOMContentLoaded', () => {
     let refreshTimer = null;
     let currentCredentials = null;
     let lastSnapshot = '';
+    let lastPayload = [];
 
     function stopAutoRefresh() {
         if (refreshTimer) {
@@ -243,7 +244,10 @@ document.addEventListener('DOMContentLoaded', () => {
             try {
                 const payload = await fetchExamPayload(currentCredentials.studentId, currentCredentials.nationalId);
                 const snapshot = JSON.stringify(payload || []);
-                if (snapshot === lastSnapshot) return;
+                if (snapshot === lastSnapshot) {
+                    updateCountdowns();
+                    return;
+                }
                 lastSnapshot = snapshot;
                 const first = payload[0] || {};
                 const fullName = `${first.first_name || ''} ${first.last_name || ''}`.trim();
@@ -307,6 +311,7 @@ document.addEventListener('DOMContentLoaded', () => {
             stopAutoRefresh();
             currentCredentials = null;
             lastSnapshot = '';
+            lastPayload = [];
             eraseCookie('userSession');
             clearResults();
             showLogin();
@@ -321,6 +326,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const btn = document.getElementById('logoutBtn');
         if (btn) btn.remove();
         document.body.classList.remove('has-logout');
+        lastPayload = [];
     }
 
     form.addEventListener('submit', async event => {
@@ -345,6 +351,7 @@ document.addEventListener('DOMContentLoaded', () => {
         stopAutoRefresh();
         currentCredentials = null;
         lastSnapshot = '';
+        lastPayload = [];
 
         toggleLoading(true);
         clearResults(); try {
@@ -391,6 +398,7 @@ document.addEventListener('DOMContentLoaded', () => {
             stopAutoRefresh();
             currentCredentials = null;
             lastSnapshot = '';
+            lastPayload = [];
             showLogin();
             return;
         }
@@ -431,6 +439,7 @@ document.addEventListener('DOMContentLoaded', () => {
             stopAutoRefresh();
             currentCredentials = null;
             lastSnapshot = '';
+            lastPayload = [];
             eraseCookie('userSession');
             showLogin();
         } finally {
@@ -478,6 +487,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }).join('');
 
         examCards.innerHTML = html;
+        lastPayload = exams.slice();
 
         // Add click event for SweetAlert details
         exams.forEach((exam, idx) => {
@@ -510,6 +520,33 @@ document.addEventListener('DOMContentLoaded', () => {
         });
 
         hideLogin();
+    }
+
+    function updateCountdowns(payload = lastPayload) {
+        if (!Array.isArray(payload) || payload.length === 0) return;
+        payload.forEach((exam, idx) => {
+            const card = examCards?.querySelector(`.exam-card[data-exam-idx='${idx}']`);
+            if (!card) return;
+            const text = getCountdownText(exam.exam_date, exam.exam_time);
+            let countdown = card.querySelector('.exam-countdown');
+            if (!text) {
+                if (countdown) countdown.remove();
+                return;
+            }
+            if (countdown) {
+                countdown.textContent = text;
+                return;
+            }
+            const meta = card.querySelector('.exam-meta');
+            countdown = document.createElement('div');
+            countdown.className = 'exam-countdown';
+            countdown.textContent = text;
+            if (meta && meta.parentNode) {
+                meta.parentNode.insertBefore(countdown, meta.nextSibling);
+            } else {
+                card.appendChild(countdown);
+            }
+        });
     }
 
     function hideResults() {
