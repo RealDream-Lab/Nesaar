@@ -60,7 +60,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 text: 'مهدی حسنی',
                 timer: 30000,
                 timerProgressBar: true,
-                showConfirmButton: true,
+                showConfirmButton: false,
                 confirmButtonText: 'بستن',
                 allowOutsideClick: true,
                 allowEscapeKey: true,
