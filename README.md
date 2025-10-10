@@ -1,5 +1,7 @@
 # نسار - سامانه مشاهده شماره صندلی آزمون‌های پیام نور
 
+<div dir="rtl">
+
 سامانه‌ای برای مشاهده شماره صندلی و جزئیات امتحانات دانشجویان دانشگاه پیام نور
 
 ## ویژگی‌های سامانه
@@ -14,6 +16,8 @@
 ## نیازمندی‌های سرور
 
 ### نرم‌افزارهای مورد نیاز
+
+</div>
 
 ```bash
 # Apache Web Server
@@ -30,7 +34,11 @@ sudo apt install mysql-server
 sudo apt install phpmyadmin
 ```
 
+<div dir="rtl">
+
 ### تنظیمات Apache
+
+</div>
 
 ```bash
 # فعال‌سازی mod_rewrite
@@ -43,7 +51,11 @@ sudo systemctl restart apache2
 sudo systemctl status apache2
 ```
 
+<div dir="rtl">
+
 ### تنظیمات MySQL
+
+</div>
 
 ```bash
 # ایمن‌سازی MySQL
@@ -63,9 +75,13 @@ GRANT ALL PRIVILEGES ON PnuExamsSeatNumber.* TO 'pnu_user'@'localhost';
 FLUSH PRIVILEGES;
 ```
 
+<div dir="rtl">
+
 ## نصب و راه‌اندازی
 
 ### 1. دانلود پروژه
+
+</div>
 
 ```bash
 # رفتن به مسیر وب سرور
@@ -80,7 +96,11 @@ unzip master.zip
 mv PnuSeat-master/* ./
 ```
 
+<div dir="rtl">
+
 ### 2. تنظیم مجوزها
+
+</div>
 
 ```bash
 # مالکیت فایل‌ها
@@ -91,9 +111,13 @@ sudo chmod -R 755 /var/www/html
 sudo chmod -R 644 /var/www/html/*.php
 ```
 
+<div dir="rtl">
+
 ### 3. تنظیم پایگاه داده
 
 #### ساختار جداول مورد نیاز:
+
+</div>
 
 ```sql
 -- ساخت دیتابیس
@@ -144,9 +168,13 @@ CREATE TABLE exam_seats (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 ```
 
+<div dir="rtl">
+
 ### 4. تنظیم متغیرهای محیطی
 
-فایل `.env` ایجاد کنید (اختیاری):
+فایل <code>.env</code> ایجاد کنید (اختیاری):
+
+</div>
 
 ```bash
 DB_HOST=localhost
@@ -155,14 +183,22 @@ DB_USER=pnu_user
 DB_PASS=your_secure_password
 ```
 
+<div dir="rtl">
+
 ### 5. تنظیم Virtual Host (اختیاری)
+
+</div>
 
 ```bash
 # ایجاد فایل تنظیمات
 sudo nano /etc/apache2/sites-available/pnuseat.conf
 ```
 
+<div dir="rtl">
+
 محتوای فایل:
+
+</div>
 
 ```apache
 <VirtualHost *:80>
@@ -179,16 +215,24 @@ sudo nano /etc/apache2/sites-available/pnuseat.conf
 </VirtualHost>
 ```
 
+<div dir="rtl">
+
 فعال‌سازی:
+
+</div>
 
 ```bash
 sudo a2ensite pnuseat.conf
 sudo systemctl reload apache2
 ```
 
+<div dir="rtl">
+
 ## تست سامانه
 
 ### 1. بررسی دسترسی
+
+</div>
 
 ```bash
 # بررسی وضعیت Apache
@@ -201,13 +245,17 @@ sudo systemctl status mysql
 php -v
 ```
 
+<div dir="rtl">
+
 ### 2. تست در مرورگر
 
-- آدرس: `http://localhost` یا `http://your-server-ip`
+- آدرس: <code>http://localhost</code> یا <code>http://your-server-ip</code>
 - بررسی کنسول Developer Tools برای خطاها
 - تست قابلیت PWA (نصب روی دسکتاپ/موبایل)
 
 ### 3. تست API
+
+</div>
 
 ```bash
 # تست endpoint اصلی
@@ -216,6 +264,8 @@ curl -X POST http://localhost/API/getStudentExams.php \
 
 # باید پاسخ JSON برگرداند
 ```
+
+<div dir="rtl">
 
 ## امنیت
 
@@ -227,6 +277,8 @@ curl -X POST http://localhost/API/getStudentExams.php \
 4. **بک‌آپ**: مرتب از پایگاه داده بک‌آپ بگیرید
 
 ### راه‌اندازی SSL:
+
+</div>
 
 ```bash
 # نصب Certbot
@@ -241,9 +293,13 @@ sudo crontab -e
 0 12 * * * /usr/bin/certbot renew --quiet
 ```
 
+<div dir="rtl">
+
 ## پشتیبانی و توسعه
 
 ### لاگ‌ها:
+
+</div>
 
 ```bash
 # لاگ‌های Apache
@@ -253,7 +309,11 @@ sudo tail -f /var/log/apache2/error.log
 sudo tail -f /var/log/apache2/error.log
 ```
 
+<div dir="rtl">
+
 ### بک‌آپ:
+
+</div>
 
 ```bash
 # بک‌آپ پایگاه داده
@@ -263,11 +323,15 @@ mysqldump -u pnu_user -p PnuExamsSeatNumber > backup_$(date +%Y%m%d).sql
 tar -czf pnuseat_backup_$(date +%Y%m%d).tar.gz /var/www/html
 ```
 
+<div dir="rtl">
+
 ## مشارکت و توسعه
 
 این پروژه توسط **مهدی حسنی** در **مرکز سنجش و آزمون دانشگاه پیام نور** توسعه یافته است.
 
 ### ساختار پروژه:
+
+</div>
 
 ```
 /var/www/html/
@@ -286,6 +350,8 @@ tar -czf pnuseat_backup_$(date +%Y%m%d).tar.gz /var/www/html
 └── icons/                 # آیکون‌های PWA
 ```
 
+<div dir="rtl">
+
 ## مجوز
 
 این پروژه تحت مجوز MIT منتشر شده است.
@@ -293,3 +359,5 @@ tar -czf pnuseat_backup_$(date +%Y%m%d).tar.gz /var/www/html
 ---
 
 **نسار** - مرکز سنجش و آزمون دانشگاه پیام نور
+
+</div>
