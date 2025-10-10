@@ -1,5 +1,5 @@
 // Bump cache to force refresh of updated assets (app.js, style.css, index.html)
-const CACHE_NAME = 'exam-seat-v2025-10-10-13';
+const CACHE_NAME = 'exam-seat-v2025-10-10-14';
 const urlsToCache = [
   '/',
   '/index.html',
