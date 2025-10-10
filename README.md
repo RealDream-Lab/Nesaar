@@ -96,39 +96,52 @@ sudo chmod -R 644 /var/www/html/*.php
 #### ساختار جداول مورد نیاز:
 
 ```sql
+-- ساخت دیتابیس
+CREATE DATABASE IF NOT EXISTS PnuExamsSeatNumber
+CHARACTER SET utf8mb4
+COLLATE utf8mb4_general_ci;
+
+-- انتخاب دیتابیس
+USE PnuExamsSeatNumber;
+
 -- جدول دانشجویان
 CREATE TABLE students (
-    student_id VARCHAR(20) PRIMARY KEY,
-    national_id VARCHAR(20) NOT NULL,
-    first_name VARCHAR(50) NOT NULL,
-    last_name VARCHAR(50) NOT NULL,
-    degree VARCHAR(50),
-    INDEX idx_national_id (national_id)
-);
+    student_id CHAR(9) PRIMARY KEY,              -- شماره دانشجویی (۹ رقم)
+    national_id CHAR(10) NOT NULL,               -- شماره ملی / شناسنامه (۱۰ رقم)
+    source_center CHAR(4) NOT NULL,              -- کد مرکز مبدأ
+    destination_center CHAR(4) NOT NULL,         -- کد مرکز مقصد
+    first_name VARCHAR(50) NOT NULL,             -- نام
+    last_name VARCHAR(50) NOT NULL,              -- نام خانوادگی
+    degree VARCHAR(15) NOT NULL,                 -- مدرک (کارشناسی، ارشد و ...)
+    INDEX idx_name (last_name, first_name),
+    INDEX idx_source_dest (source_center, destination_center)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 -- جدول دروس
 CREATE TABLE courses (
-    course_id INT AUTO_INCREMENT PRIMARY KEY,
-    course_code VARCHAR(20) NOT NULL,
-    course_name VARCHAR(100) NOT NULL,
-    exam_date VARCHAR(10),
-    exam_time VARCHAR(10),
-    exam_type VARCHAR(50),
-    course_type VARCHAR(50)
-);
+    course_code CHAR(7) PRIMARY KEY,             -- کد درس ۷ رقمی
+    course_name VARCHAR(100) NOT NULL,           -- نام درس
+    exam_date CHAR(10) NOT NULL,                 -- تاریخ آزمون (شمسی، مثل 1404/10/25)
+    exam_time CHAR(5) NOT NULL,                  -- ساعت آزمون (HH:MM)
+    exam_type VARCHAR(15) NOT NULL,              -- نوع آزمون (حضوری / مجازی)
+    course_type VARCHAR(15) NOT NULL,            -- نوع درس (نظری / عملی)
+    INDEX idx_exam_date (exam_date)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
--- جدول صندلی‌های امتحان
+-- جدول ارتباطی صندلی‌ها (اصلی)
 CREATE TABLE exam_seats (
-    id INT AUTO_INCREMENT PRIMARY KEY,
-    student_id VARCHAR(20),
-    course_id INT,
-    seat_number VARCHAR(20),
-    building VARCHAR(50),
-    class_name VARCHAR(50),
-    seat_row VARCHAR(10),
-    FOREIGN KEY (student_id) REFERENCES students(student_id),
-    FOREIGN KEY (course_id) REFERENCES courses(course_id)
-);
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    student_id CHAR(9) NOT NULL,
+    course_code CHAR(7) NOT NULL,
+    seat_number INT NOT NULL,                    -- شماره صندلی
+    building VARCHAR(100) NOT NULL,              -- ساختمان
+    class_name VARCHAR(50) NOT NULL,             -- کلاس
+    seat_row INT NOT NULL,                       -- ردیف در کلاس
+    FOREIGN KEY (student_id) REFERENCES students(student_id) ON DELETE CASCADE,
+    FOREIGN KEY (course_code) REFERENCES courses(course_code) ON DELETE CASCADE,
+    UNIQUE KEY uniq_student_course (student_id, course_code),
+    INDEX idx_building_class (building, class_name)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 ```
 
 ### 4. تنظیم متغیرهای محیطی
