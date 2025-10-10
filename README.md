@@ -24,13 +24,13 @@
 sudo apt update
 sudo apt install apache2
 
-# PHP 7.4 یا بالاتر
+# PHP 7.4 or newer
 sudo apt install php php-cli php-mysql php-mbstring php-xml php-zip
 
 # MySQL Server
 sudo apt install mysql-server
 
-# phpMyAdmin (اختیاری)
+# phpMyAdmin (optional)
 sudo apt install phpmyadmin
 ```
 
@@ -41,13 +41,13 @@ sudo apt install phpmyadmin
 </div>
 
 ```bash
-# فعال‌سازی mod_rewrite
+# Enable mod_rewrite
 sudo a2enmod rewrite
 
-# راه‌اندازی مجدد Apache
+# Restart Apache
 sudo systemctl restart apache2
 
-# بررسی وضعیت
+# Check status
 sudo systemctl status apache2
 ```
 
@@ -58,19 +58,19 @@ sudo systemctl status apache2
 </div>
 
 ```bash
-# ایمن‌سازی MySQL
+# Secure MySQL
 sudo mysql_secure_installation
 
-# ورود به MySQL
+# Sign in to MySQL
 sudo mysql -u root -p
 
-# ایجاد پایگاه داده
+# Create database
 CREATE DATABASE PnuExamsSeatNumber CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 
-# ایجاد کاربر
+# Create user
 CREATE USER 'pnu_user'@'localhost' IDENTIFIED BY 'your_secure_password';
 
-# اعطای دسترسی
+# Grant privileges
 GRANT ALL PRIVILEGES ON PnuExamsSeatNumber.* TO 'pnu_user'@'localhost';
 FLUSH PRIVILEGES;
 ```
@@ -84,13 +84,13 @@ FLUSH PRIVILEGES;
 </div>
 
 ```bash
-# رفتن به مسیر وب سرور
+# Navigate to web root
 cd /var/www/html
 
-# دانلود از GitHub
+# Clone from GitHub
 git clone https://github.com/MehdiHassaniir/PnuSeat.git
 
-# یا دانلود zip و استخراج
+# Or download zip and extract
 wget https://github.com/MehdiHassaniir/PnuSeat/archive/master.zip
 unzip master.zip
 mv PnuSeat-master/* ./
@@ -103,10 +103,10 @@ mv PnuSeat-master/* ./
 </div>
 
 ```bash
-# مالکیت فایل‌ها
+# Set ownership
 sudo chown -R www-data:www-data /var/www/html
 
-# مجوزهای مناسب
+# Set permissions
 sudo chmod -R 755 /var/www/html
 sudo chmod -R 644 /var/www/html/*.php
 ```
@@ -120,47 +120,47 @@ sudo chmod -R 644 /var/www/html/*.php
 </div>
 
 ```sql
--- ساخت دیتابیس
+-- Create database
 CREATE DATABASE IF NOT EXISTS PnuExamsSeatNumber
 CHARACTER SET utf8mb4
 COLLATE utf8mb4_general_ci;
 
--- انتخاب دیتابیس
+-- Select database
 USE PnuExamsSeatNumber;
 
--- جدول دانشجویان
+-- Students table
 CREATE TABLE students (
-    student_id CHAR(9) PRIMARY KEY,              -- شماره دانشجویی (۹ رقم)
-    national_id CHAR(10) NOT NULL,               -- شماره ملی / شناسنامه (۱۰ رقم)
-    source_center CHAR(4) NOT NULL,              -- کد مرکز مبدأ
-    destination_center CHAR(4) NOT NULL,         -- کد مرکز مقصد
-    first_name VARCHAR(50) NOT NULL,             -- نام
-    last_name VARCHAR(50) NOT NULL,              -- نام خانوادگی
-    degree VARCHAR(15) NOT NULL,                 -- مدرک (کارشناسی، ارشد و ...)
+    student_id CHAR(9) PRIMARY KEY,              -- Student ID (9 digits)
+    national_id CHAR(10) NOT NULL,               -- National ID (10 digits)
+    source_center CHAR(4) NOT NULL,              -- Source center code
+    destination_center CHAR(4) NOT NULL,         -- Destination center code
+    first_name VARCHAR(50) NOT NULL,             -- First name
+    last_name VARCHAR(50) NOT NULL,              -- Last name
+    degree VARCHAR(15) NOT NULL,                 -- Degree level
     INDEX idx_name (last_name, first_name),
     INDEX idx_source_dest (source_center, destination_center)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
--- جدول دروس
+-- Courses table
 CREATE TABLE courses (
-    course_code CHAR(7) PRIMARY KEY,             -- کد درس ۷ رقمی
-    course_name VARCHAR(100) NOT NULL,           -- نام درس
-    exam_date CHAR(10) NOT NULL,                 -- تاریخ آزمون (شمسی، مثل 1404/10/25)
-    exam_time CHAR(5) NOT NULL,                  -- ساعت آزمون (HH:MM)
-    exam_type VARCHAR(15) NOT NULL,              -- نوع آزمون (حضوری / مجازی)
-    course_type VARCHAR(15) NOT NULL,            -- نوع درس (نظری / عملی)
+    course_code CHAR(7) PRIMARY KEY,             -- Course code (7 digits)
+    course_name VARCHAR(100) NOT NULL,           -- Course name
+    exam_date CHAR(10) NOT NULL,                 -- Exam date (e.g., 1404/10/25)
+    exam_time CHAR(5) NOT NULL,                  -- Exam time (HH:MM)
+    exam_type VARCHAR(15) NOT NULL,              -- Exam type (in-person / virtual)
+    course_type VARCHAR(15) NOT NULL,            -- Course type (theory / practical)
     INDEX idx_exam_date (exam_date)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
--- جدول ارتباطی صندلی‌ها (اصلی)
+-- Exam seats mapping table
 CREATE TABLE exam_seats (
     id BIGINT AUTO_INCREMENT PRIMARY KEY,
     student_id CHAR(9) NOT NULL,
     course_code CHAR(7) NOT NULL,
-    seat_number INT NOT NULL,                    -- شماره صندلی
-    building VARCHAR(100) NOT NULL,              -- ساختمان
-    class_name VARCHAR(50) NOT NULL,             -- کلاس
-    seat_row INT NOT NULL,                       -- ردیف در کلاس
+    seat_number INT NOT NULL,                    -- Seat number
+    building VARCHAR(100) NOT NULL,              -- Building name
+    class_name VARCHAR(50) NOT NULL,             -- Classroom
+    seat_row INT NOT NULL,                       -- Seat row
     FOREIGN KEY (student_id) REFERENCES students(student_id) ON DELETE CASCADE,
     FOREIGN KEY (course_code) REFERENCES courses(course_code) ON DELETE CASCADE,
     UNIQUE KEY uniq_student_course (student_id, course_code),
@@ -190,7 +190,7 @@ DB_PASS=your_secure_password
 </div>
 
 ```bash
-# ایجاد فایل تنظیمات
+# Create vhost config
 sudo nano /etc/apache2/sites-available/pnuseat.conf
 ```
 
@@ -235,13 +235,13 @@ sudo systemctl reload apache2
 </div>
 
 ```bash
-# بررسی وضعیت Apache
+# Check Apache status
 sudo systemctl status apache2
 
-# بررسی وضعیت MySQL
+# Check MySQL status
 sudo systemctl status mysql
 
-# بررسی PHP
+# Check PHP version
 php -v
 ```
 
@@ -258,11 +258,11 @@ php -v
 </div>
 
 ```bash
-# تست endpoint اصلی
+# Test main endpoint
 curl -X POST http://localhost/API/getStudentExams.php \
   -d "encrypted_data=test"
 
-# باید پاسخ JSON برگرداند
+# Expected: JSON response
 ```
 
 <div dir="rtl">
@@ -281,15 +281,15 @@ curl -X POST http://localhost/API/getStudentExams.php \
 </div>
 
 ```bash
-# نصب Certbot
+# Install Certbot
 sudo apt install certbot python3-certbot-apache
 
-# دریافت گواهی SSL
+# Obtain SSL certificate
 sudo certbot --apache -d your-domain.com
 
-# تمدید خودکار
+# Configure auto-renewal
 sudo crontab -e
-# اضافه کردن خط زیر:
+# Add the following line:
 0 12 * * * /usr/bin/certbot renew --quiet
 ```
 
@@ -302,10 +302,10 @@ sudo crontab -e
 </div>
 
 ```bash
-# لاگ‌های Apache
+# Apache logs
 sudo tail -f /var/log/apache2/error.log
 
-# لاگ‌های PHP
+# PHP logs
 sudo tail -f /var/log/apache2/error.log
 ```
 
@@ -316,10 +316,10 @@ sudo tail -f /var/log/apache2/error.log
 </div>
 
 ```bash
-# بک‌آپ پایگاه داده
+# Database backup
 mysqldump -u pnu_user -p PnuExamsSeatNumber > backup_$(date +%Y%m%d).sql
 
-# بک‌آپ فایل‌ها
+# Files backup
 tar -czf pnuseat_backup_$(date +%Y%m%d).tar.gz /var/www/html
 ```
 
@@ -335,19 +335,19 @@ tar -czf pnuseat_backup_$(date +%Y%m%d).tar.gz /var/www/html
 
 ```
 /var/www/html/
-├── index.html              # صفحه اصلی
-├── manifest.json           # تنظیمات PWA
+├── index.html              # Main page
+├── manifest.json           # PWA manifest
 ├── service-worker.js       # Service Worker
-├── API/                    # فایل‌های PHP
-│   ├── getStudentExams.php # دریافت اطلاعات امتحان
-│   ├── index.php          # API اصلی
-│   └── jdf.php            # کتابخانه تاریخ جلالی
-├── assets/                 # فایل‌های استاتیک
-│   ├── app/               # JS و CSS اصلی
-│   ├── bootstrap/         # فریمورک CSS
-│   ├── fonts/             # فونت‌های فارسی
-│   └── sweetalert2/       # کتابخانه نمایش پیام
-└── icons/                 # آیکون‌های PWA
+├── API/                    # PHP endpoints
+│   ├── getStudentExams.php # Fetch exam details
+│   ├── index.php           # API index
+│   └── jdf.php             # Jalali date helper
+├── assets/                 # Static assets
+│   ├── app/                # Core JS and CSS
+│   ├── bootstrap/          # Bootstrap framework
+│   ├── fonts/              # Persian fonts
+│   └── sweetalert2/        # SweetAlert2 assets
+└── icons/                  # PWA icons
 ```
 
 <div dir="rtl">
