@@ -216,3 +216,25 @@ body.login-active #loginRow {
     padding: 1.5rem;
   }
 }
+
+/* SweetAlert2: make popups same size feel as cards */
+.swal2-rtl {
+  width: min(90vw, 420px) !important; /* close to one card width */
+  border-radius: 1.25rem !important;
+  text-align: right;
+  direction: rtl;
+  box-shadow: 0 6px 24px 0 rgba(33,150,243,0.18) !important; /* match card shadow */
+}
+.swal2-rtl .swal2-title {
+  font-weight: 700;
+  color: #1565c0;
+}
+.swal2-rtl .swal2-html-container {
+  text-align: right;
+}
+
+/* Force SweetAlert container to center popup */
+.swal2-container {
+  justify-content: center !important;
+  align-items: center !important;
+}
