@@ -10,6 +10,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const nationalIdInput = document.getElementById('nationalId');
     const loginRow = document.getElementById('loginRow');
     const loginSection = document.getElementById('loginSection');
+    const REFRESH_INTERVAL_MS = 60000;
 
     // Temporarily disable staff mode (only student mode active for now)
     if (staffTypeRadio) {
@@ -182,6 +183,25 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
+    async function fetchExamPayload(studentId, nationalId) {
+        const credentials = { student_id: studentId, national_id: nationalId };
+        const encryptedData = encryptData(credentials);
+
+        if (!encryptedData) {
+            throw new Error('Failed to encrypt data');
+        }
+
+        const body = new FormData();
+        body.append('encrypted_data', encryptedData);
+
+        const response = await fetch('API/getStudentExams.php', { method: 'POST', body });
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+        const payload = await response.json();
+        if (payload.error) throw new Error(payload.error);
+        if (!Array.isArray(payload)) throw new Error('Invalid response format');
+        return payload;
+    }
+
     // Session helpers
     function setCookie(name, value, days) {
         const d = new Date();
@@ -203,6 +223,36 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function eraseCookie(name) {
         document.cookie = name + '=; Max-Age=-99999999; path=/';
+    }
+
+    let refreshTimer = null;
+    let currentCredentials = null;
+    let lastSnapshot = '';
+
+    function stopAutoRefresh() {
+        if (refreshTimer) {
+            clearInterval(refreshTimer);
+            refreshTimer = null;
+        }
+    }
+
+    function startAutoRefresh(studentId, nationalId) {
+        currentCredentials = { studentId, nationalId };
+        stopAutoRefresh();
+        refreshTimer = setInterval(async () => {
+            try {
+                const payload = await fetchExamPayload(currentCredentials.studentId, currentCredentials.nationalId);
+                const snapshot = JSON.stringify(payload || []);
+                if (snapshot === lastSnapshot) return;
+                lastSnapshot = snapshot;
+                const first = payload[0] || {};
+                const fullName = `${first.first_name || ''} ${first.last_name || ''}`.trim();
+                renderResults(payload, fullName);
+                ensureLogoutButton(fullName, currentCredentials.studentId);
+            } catch (error) {
+                console.warn('Auto-refresh failed:', error);
+            }
+        }, REFRESH_INTERVAL_MS);
     }
 
     function hideLogin() {
@@ -254,6 +304,9 @@ document.addEventListener('DOMContentLoaded', () => {
         document.body.appendChild(btn);
 
         btn.addEventListener('click', () => {
+            stopAutoRefresh();
+            currentCredentials = null;
+            lastSnapshot = '';
             eraseCookie('userSession');
             clearResults();
             showLogin();
@@ -289,39 +342,21 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
         }
 
+        stopAutoRefresh();
+        currentCredentials = null;
+        lastSnapshot = '';
+
         toggleLoading(true);
         clearResults(); try {
-            // Encrypt sensitive data before sending
-            const credentials = { student_id: studentId, national_id: nationalId };
-            const encryptedData = encryptData(credentials);
+            const payload = await fetchExamPayload(studentId, nationalId);
 
-            if (!encryptedData) {
-                throw new Error('Failed to encrypt data');
-            }
-
-            const body = new FormData();
-            body.append('encrypted_data', encryptedData);
-
-            const response = await fetch('API/getStudentExams.php', { method: 'POST', body });
-
-            if (!response.ok) {
-                throw new Error(`HTTP ${response.status}`);
-            }
-
-            const payload = await response.json();
-
-            if (payload.error) {
-                showAlert('error', 'خطا!', payload.error);
-                return;
-            }
-
-            if (!Array.isArray(payload) || payload.length === 0) {
+            if (payload.length === 0) {
                 showAlert('info', 'توجه', 'هیچ امتحانی برای اطلاعات وارد شده یافت نشد.');
                 return;
             }
 
             // Save session (30 days)
-            const first = Array.isArray(payload) && payload[0] ? payload[0] : null;
+            const first = payload[0] || null;
             const fullName = first ? `${first.first_name || ''} ${first.last_name || ''}`.trim() : '';
             const session = {
                 student_id: studentId,
@@ -337,6 +372,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
             renderResults(payload, fullName);
             ensureLogoutButton(fullName, studentId);
+            lastSnapshot = JSON.stringify(payload || []);
+            startAutoRefresh(studentId, nationalId);
         } catch (error) {
             console.error('Fetch error:', error);
             showAlert('error', 'خطا در اتصال!', 'مشکلی در ارتباط با سرور رخ داده است. لطفاً بعداً تلاش کنید.');
@@ -350,7 +387,13 @@ document.addEventListener('DOMContentLoaded', () => {
     // Auto login via cookie
     (async function autoLoginFromCookie() {
         const raw = getCookie('userSession');
-        if (!raw) { showLogin(); return; }
+        if (!raw) {
+            stopAutoRefresh();
+            currentCredentials = null;
+            lastSnapshot = '';
+            showLogin();
+            return;
+        }
         try {
             const data = JSON.parse(decodeURIComponent(raw));
             const sid = (data.student_id || '').toString().trim();
@@ -381,8 +424,13 @@ document.addEventListener('DOMContentLoaded', () => {
             const fullName = `${first.first_name || ''} ${first.last_name || ''}`.trim();
             renderResults(payload, fullName);
             ensureLogoutButton(fullName, sid);
+            lastSnapshot = JSON.stringify(payload || []);
+            startAutoRefresh(sid, nid);
         } catch (e) {
             console.warn('Auto-login failed:', e);
+            stopAutoRefresh();
+            currentCredentials = null;
+            lastSnapshot = '';
             eraseCookie('userSession');
             showLogin();
         } finally {
