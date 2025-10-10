@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <meta name="theme-color" content="#2196F3" />
-  <title>گروس - سامانه مشاهده شماره صندلی آزمون های پیام نور</title>
+  <title>نسار - سامانه مشاهده شماره صندلی آزمون های پیام نور</title>
 
   <link rel="manifest" href="manifest.json" />
   <link rel="icon" type="image/png" href="assets/app/logo.png" />
@@ -21,82 +21,84 @@
     <img src="assets/app/logo.png" alt="لوگو پیام نور" class="logo-image" />
   </div>
   
-  <div class="container d-flex align-items-center justify-content-center min-vh-100">
-    <div class="row justify-content-center w-100">
-      <div class="col-lg-5 col-md-7 col-sm-9">
-        <div class="card shadow-lg">
-          <div class="card-header bg-primary text-white text-center">
-            <h4 class="mb-0">اعتبار سنجی</h4>
-          </div>
-          <div class="card-body p-4">
-            <form id="examForm">
-              <!-- User Type Selection -->
-              <div class="mb-4">
-                <div class="form-check form-check-inline">
-                  <label class="form-check-label" for="studentType">
-                    دانشجو
-                  </label>
-                  <input class="form-check-input" type="radio" name="userType" id="studentType" value="student" checked>
-                </div>
-                <div class="form-check form-check-inline">
-                  <label class="form-check-label" for="staffType">
-                    همکار
-                  </label>
-                  <input class="form-check-input" type="radio" name="userType" id="staffType" value="staff">
-                </div>
+  <div class="container-fluid">
+    <div id="loginRow" class="row min-vh-100 d-none">
+      <!-- Login Form Section -->
+      <div id="loginSection" class="col-12 d-flex align-items-center justify-content-center">
+        <div class="row justify-content-center w-100">
+          <div class="col-lg-4 col-md-6 col-sm-8">
+            <div class="card shadow-lg">
+              <div class="card-header bg-primary text-white text-center">
+                <h4 class="mb-0">اعتبار سنجی</h4>
               </div>
-              
-              <div class="mb-3">
-                <label for="studentId" class="form-label" id="firstFieldLabel">شماره دانشجویی</label>
-                <input
-                  type="tel"
-                  class="form-control form-control-lg text-center"
-                  id="studentId"
-                  placeholder="مثال: 403254321"
-                  inputmode="numeric"
-                  required
-                />
+              <div class="card-body p-4">
+                <form id="examForm">
+                  <!-- User Type Selection -->
+                  <div class="mb-4">
+                    <div class="form-check form-check-inline">
+                      <label class="form-check-label" for="studentType">
+                        دانشجو
+                      </label>
+                      <input class="form-check-input" type="radio" name="userType" id="studentType" value="student" checked>
+                    </div>
+                    <div class="form-check form-check-inline">
+                      <label class="form-check-label text-muted" for="staffType" title="به‌زودی">
+                        همکار (به‌زودی)
+                      </label>
+                      <input class="form-check-input" type="radio" name="userType" id="staffType" value="staff" disabled>
+                    </div>
+                  </div>
+                  
+                  <div class="mb-3">
+                    <label for="studentId" class="form-label" id="firstFieldLabel">شماره دانشجویی</label>
+                    <input
+                      type="tel"
+                      class="form-control form-control-lg text-center"
+                      id="studentId"
+                      placeholder="مثال: 403254321"
+                      inputmode="numeric"
+                      required
+                    />
+                  </div>
+                  <div class="mb-4">
+                    <label for="nationalId" class="form-label" id="secondFieldLabel">کد ملی / شماره شناسنامه</label>
+                    <input
+                      type="tel"
+                      class="form-control form-control-lg text-center"
+                      id="nationalId"
+                      placeholder="مثال: 3781985569"
+                      inputmode="numeric"
+                      required
+                    />
+                  </div>
+                  <div class="d-grid">
+                    <button type="submit" class="btn btn-primary btn-lg" id="searchBtn">
+                      <span class="spinner-border spinner-border-sm d-none" role="status" aria-hidden="true"></span>
+                      <span class="text">ورود به سیستم</span>
+                    </button>
+                  </div>
+                </form>
               </div>
-              <div class="mb-4">
-                <label for="nationalId" class="form-label" id="secondFieldLabel">کد ملی / شماره شناسنامه</label>
-                <input
-                  type="tel"
-                  class="form-control form-control-lg text-center"
-                  id="nationalId"
-                  placeholder="مثال: 3781985569"
-                  inputmode="numeric"
-                  required
-                />
-              </div>
-              <div class="d-grid">
-                <button type="submit" class="btn btn-primary btn-lg" id="searchBtn">
-                  <span class="spinner-border spinner-border-sm d-none" role="status" aria-hidden="true"></span>
-                  <span class="text">ورود به سیستم</span>
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <div id="results" class="mt-4 d-none">
-      <div class="row justify-content-center">
-        <div class="col-lg-8 col-md-10">
-          <div class="card shadow-lg">
-        <div class="card-header bg-success text-white d-flex justify-content-between align-items-center">
-          <h5 class="mb-0">نتایج جستجو</h5>
-          <button type="button" class="btn-close btn-close-white" id="closeResults" aria-label="بستن"></button>
-        </div>
-        <div class="card-body" id="resultContent"></div>
+            </div>
           </div>
         </div>
       </div>
     </div>
+    
+    <!-- Cards Section -->
+    <section id="cardsSection" class="container py-4 px-0">
+      <div id="examCards" class="exam-cards-container"></div>
+    </section>
   </div>
+
+  <!-- Fixed Footer -->
+  <footer class="fixed-footer text-white text-center">
+    نسار - گروه آزمون دانشگاه پیام نور
+  </footer>
 
   <script src="assets/bootstrap/bootstrap.bundle.min.js"></script>
   <script src="assets/sweetalert2/sweetalert2.min.js"></script>
+  <script src="assets/crypto-js.min.js"></script>
   <script src="assets/app/app.js"></script>
   <script>
     if ('serviceWorker' in navigator) {

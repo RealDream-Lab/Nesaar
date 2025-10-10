@@ -1,4 +1,5 @@
-const CACHE_NAME = 'exam-seat-v1';
+// Bump cache to force refresh of updated assets (app.js, style.css, index.html)
+const CACHE_NAME = 'exam-seat-v2025-10-10-4';
 const urlsToCache = [
   '/',
   '/index.html',
@@ -9,12 +10,15 @@ const urlsToCache = [
   '/assets/app/style.css',
   '/assets/bootstrap/bootstrap.bundle.min.js',
   '/assets/sweetalert2/sweetalert2.min.js',
+  '/assets/crypto-js.min.js',
   '/assets/app/app.js',
   '/icons/icon-192.png',
   '/icons/icon-512.png'
 ];
 
 self.addEventListener('install', event => {
+  // Activate updated SW immediately
+  self.skipWaiting();
   event.waitUntil(
     caches.open(CACHE_NAME).then(cache => cache.addAll(urlsToCache))
   );
@@ -32,6 +36,6 @@ self.addEventListener('activate', event => {
       Promise.all(
         keys.filter(key => key !== CACHE_NAME).map(key => caches.delete(key))
       )
-    )
+    ).then(() => self.clients.claim())
   );
 });
