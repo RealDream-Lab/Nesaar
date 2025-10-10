@@ -51,6 +51,31 @@ document.addEventListener('DOMContentLoaded', () => {
     // Initialize with default state
     handleUserTypeChange();
 
+    // Copyright footer click event
+    const copyrightFooter = document.getElementById('copyrightFooter');
+    if (copyrightFooter) {
+        copyrightFooter.addEventListener('click', () => {
+            Swal.fire({
+                title: 'دانشگاه پیام نور مرکز بیجار',
+                text: 'مهدی حسنی',
+                timer: 30000,
+                timerProgressBar: true,
+                showConfirmButton: false,
+                allowOutsideClick: false,
+                allowEscapeKey: false,
+                customClass: {
+                    popup: 'swal2-rtl'
+                },
+                didOpen: () => {
+                    const timerProgressBar = Swal.getTimerProgressBar();
+                    if (timerProgressBar) {
+                        timerProgressBar.style.background = 'linear-gradient(to right, #2196F3, #1976d2)';
+                    }
+                }
+            });
+        });
+    }
+
     // Encryption helpers
     const ENCRYPTION_KEY = 'PNU_EXAM_SEAT_2025_SECRET_KEY'; // In production, this should be more secure
 
@@ -239,23 +264,17 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // remove obsolete closeResults handler (results panel removed)
 
-    // Auto login via cookie - run immediately to prevent logo flash
+    // Auto login via cookie
     (async function autoLoginFromCookie() {
         const raw = getCookie('userSession');
         if (!raw) { showLogin(); return; }
-        
-        // Hide login immediately if cookie exists
-        hideLogin();
-        
         try {
             const data = JSON.parse(decodeURIComponent(raw));
             const sid = (data.student_id || '').toString().trim();
             const nid = (data.national_id || '').toString().trim();
-            if (!sid || !nid) {
-                showLogin();
-                return;
-            }
+            if (!sid || !nid) return;
 
+            hideLogin();
             toggleLoading(true);
             clearResults();
 
