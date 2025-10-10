@@ -361,6 +361,8 @@ tar -czf pnuseat_backup_$(date +%Y%m%d).tar.gz /var/www/html
 
 </div>
 
+<div dir="ltr">
+
 ```
 /var/www/html/
 ├── index.html              # Main page
@@ -377,6 +379,8 @@ tar -czf pnuseat_backup_$(date +%Y%m%d).tar.gz /var/www/html
 │   └── sweetalert2/        # SweetAlert2 assets
 └── icons/                  # PWA icons
 ```
+
+</div>
 
 <div dir="rtl">
 
