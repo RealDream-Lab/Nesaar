@@ -60,11 +60,13 @@ document.addEventListener('DOMContentLoaded', () => {
                 text: 'مهدی حسنی',
                 timer: 30000,
                 timerProgressBar: true,
-                showConfirmButton: false,
-                allowOutsideClick: false,
-                allowEscapeKey: false,
+                showConfirmButton: true,
+                confirmButtonText: 'بستن',
+                allowOutsideClick: true,
+                allowEscapeKey: true,
                 customClass: {
-                    popup: 'swal2-rtl'
+                    popup: 'swal2-rtl',
+                    confirmButton: 'btn btn-primary btn-lg px-4'
                 },
                 didOpen: () => {
                     const timerProgressBar = Swal.getTimerProgressBar();
