@@ -34,7 +34,7 @@ body {
   direction: rtl;
   max-width: 90vw;
   margin: 0 auto;
-  padding-bottom: 8rem; /* Increased bottom padding */
+  padding-bottom: 12rem; /* Increased bottom padding further */
 }
 
 body.has-logout {

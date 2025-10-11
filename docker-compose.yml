@@ -48,10 +48,7 @@ services:
       - "18081:80"
     environment:
       PMA_HOST: db
-      PMA_USER: root
-      PMA_PASSWORD: ${MYSQL_ROOT_PASSWORD:-super_secure_root}
-      PMA_ARBITRARY: 0
-      UPLOAD_LIMIT: 256M
+      PMA_ABSOLUTE_URI: http://localhost:18081/ # Ensure no auto-login by removing PMA_USER and PMA_PASSWORD
     depends_on:
       - db
     networks:
