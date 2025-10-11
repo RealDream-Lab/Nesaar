@@ -8,9 +8,9 @@ services:
       - "18080:80"
     environment:
       DB_HOST: db
-      #DB_NAME: PnuExamsSeatNumber
-      #DB_USER: pnu_user
-      #DB_PASS: change_me
+      DB_NAME: ${DB_NAME:-PnuExamsSeatNumber}
+      DB_USER: ${DB_USER:-pnu_user}
+      DB_PASS: ${DB_PASS:-change_me}
     depends_on:
       - db
     volumes:
@@ -23,10 +23,10 @@ services:
     image: mysql:8.0
     container_name: pnuseat_db
     environment:
-      MYSQL_ROOT_PASSWORD: super_secure_root
-      #MYSQL_DATABASE: PnuExamsSeatNumber
-      #MYSQL_USER: pnu_user
-      #MYSQL_PASSWORD: change_me
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-super_secure_root}
+      MYSQL_DATABASE: ${MYSQL_DATABASE:-PnuExamsSeatNumber}
+      MYSQL_USER: ${MYSQL_USER:-pnu_user}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD:-change_me}
     command: >
       --default-authentication-plugin=mysql_native_password
       --character-set-server=utf8mb4
