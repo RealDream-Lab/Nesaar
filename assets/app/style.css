@@ -1,3 +1,8 @@
+html, body {
+  overscroll-behavior-y: contain;
+  touch-action: pan-y;
+}
+
 body {
   background: radial-gradient(circle at top, #f0f4ff 0%, #dbe4ff 45%, #cfd8ff 100%);
   font-family: 'Vazir', sans-serif;
@@ -21,8 +26,6 @@ body {
   letter-spacing: 0.5px;
 }
 
-
-
 .exam-cards-container {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
@@ -31,6 +34,7 @@ body {
   direction: rtl;
   max-width: 90vw;
   margin: 0 auto;
+  padding-bottom: 5.5rem; /* keep content clear of footer */
 }
 
 body.has-logout {
@@ -43,9 +47,6 @@ body.has-logout .logo-container {
 }
 
 @media (max-width: 576px) {
-  body.has-logout {
-    padding-top: 104px;
-  }
 }
 
 @media (max-width: 768px) {
@@ -70,23 +71,18 @@ body.has-logout .logo-container {
   bottom: 0;
   background: rgba(25, 118, 210, 0.95);
   padding: 0.6rem 1rem;
+  padding-bottom: calc(0.6rem + env(safe-area-inset-bottom, 0px));
   font-size: 0.95rem;
   z-index: 1040;
-}
-
-/* Add bottom safe padding so content won't be hidden behind footer */
-body {
-  padding-bottom: 54px; /* approximate footer height */
 }
 
 /* When login is visible, keep page fixed (no scroll) and account for footer height */
 body.login-active {
   overflow: hidden;       /* prevent page scrolling */
-  padding-bottom: 0;      /* remove global safe padding to avoid overflow */
 }
 
 body.login-active #loginRow {
-  min-height: calc(100vh - 54px); /* fit exactly above fixed footer */
+  min-height: calc(100vh - 54px - env(safe-area-inset-bottom, 0px)); /* fit exactly above fixed footer */
   display: flex;
   align-items: center;    /* vertically center the card */
 }
@@ -237,6 +233,9 @@ body.login-active #loginRow {
 }
 
 @media (max-width: 576px) {
+  body.has-logout {
+    padding-top: 104px;
+  }
   .card-body {
     padding: 1.5rem;
   }

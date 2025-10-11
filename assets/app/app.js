@@ -478,7 +478,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function renderResults(exams, fullName) {
         // Skip user info banner (removed per request)
-
+        const previousScroll = window.scrollY || 0;
         const now = Date.now();
         const decorated = exams.map((exam, idx) => {
             const target = createExamDateTime(exam.exam_date, exam.exam_time);
@@ -540,6 +540,12 @@ document.addEventListener('DOMContentLoaded', () => {
         examCards.innerHTML = htmlParts.join('');
         lastPayload = exams.slice();
         lastFullName = fullName || lastFullName;
+
+        const maxScroll = Math.max(0, document.body.scrollHeight - window.innerHeight);
+        const targetScroll = Math.min(previousScroll, maxScroll);
+        if (Math.abs(window.scrollY - targetScroll) > 1) {
+            window.scrollTo(0, targetScroll);
+        }
 
         const attachModal = (exam, status) => {
             return () => {
