@@ -5,7 +5,7 @@ services:
     build: .
     container_name: pnuseat_web
     ports:
-      - "8080:80"
+      - "18080:80"
     environment:
       DB_HOST: db
       DB_NAME: PnuExamsSeatNumber
@@ -16,6 +16,8 @@ services:
     volumes:
       - .:/var/www/html:delegated
     restart: unless-stopped
+    networks:
+      - pnuseat_network
 
   db:
     image: mysql:8.0
@@ -25,13 +27,37 @@ services:
       MYSQL_DATABASE: PnuExamsSeatNumber
       MYSQL_USER: pnu_user
       MYSQL_PASSWORD: change_me
-    command: --default-authentication-plugin=mysql_native_password --character-set-server=utf8mb4 --collation-server=utf8mb4_general_ci
+    command: >
+      --default-authentication-plugin=mysql_native_password
+      --character-set-server=utf8mb4
+      --collation-server=utf8mb4_general_ci
     ports:
       - "3306:3306"
     volumes:
       - db_data:/var/lib/mysql
       - ./docker/mysql-init:/docker-entrypoint-initdb.d:ro
     restart: unless-stopped
+    networks:
+      - pnuseat_network
+
+  phpmyadmin:
+    image: phpmyadmin:latest
+    container_name: pnuseat_phpmyadmin
+    restart: unless-stopped
+    ports:
+      - "18081:80"
+    environment:
+      PMA_HOST: db
+      PMA_USER: pnu_user
+      PMA_PASSWORD: change_me
+      UPLOAD_LIMIT: 256M
+    depends_on:
+      - db
+    networks:
+      - pnuseat_network
 
 volumes:
   db_data:
+
+networks:
+  pnuseat_network:
