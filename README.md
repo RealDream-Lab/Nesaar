@@ -200,18 +200,18 @@ CREATE TABLE exam_seats (
 
 ### 4. تنظیم متغیرهای محیطی
 
-فایل <code>.env</code> ایجاد کنید (اختیاری):
+فایل `.env.example` را به `.env` کپی کرده و مقادیر آن را با اطلاعات صحیح پر کنید.
 
 </div>
 
 ```bash
-DB_HOST=localhost
-DB_NAME=PnuExamsSeatNumber
-DB_USER=pnu_user
-DB_PASS=your_secure_password
+cp .env.example .env
+nano .env
 ```
 
 <div dir="rtl">
+
+> **نکته مهم:** فایل `.env` حاوی اطلاعات حساس است و نباید در Git کامیت شود. این فایل به طور پیش‌فرض در `.gitignore` قرار گرفته است.
 
 ### 5. تنظیم Virtual Host (اختیاری)
 

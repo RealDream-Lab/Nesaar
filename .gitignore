@@ -1,0 +1,9 @@
+# Ignore environment files with sensitive credentials
+.env
+
+# Ignore local development artifacts
+/vendor/
+/node_modules/
+
+# Ignore Docker data volumes
+db_data/

@@ -1,13 +1,5 @@
-CREATE DATABASE IF NOT EXISTS PnuExamsSeatNumber
-    CHARACTER SET utf8mb4
-    COLLATE utf8mb4_general_ci;
-
-USE PnuExamsSeatNumber;
-
 SET NAMES utf8mb4;
-SET CHARACTER SET utf8mb4;
-
-CREATE TABLE IF NOT EXISTS students (
+SET CHARACTER SET utf8mb4;CREATE TABLE IF NOT EXISTS students (
     student_id CHAR(9) PRIMARY KEY,
     national_id CHAR(10) NOT NULL,
     source_center CHAR(4) NOT NULL,
