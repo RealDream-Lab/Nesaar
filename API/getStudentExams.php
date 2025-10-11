@@ -4,6 +4,41 @@ $current_persian_date = jdate('Y/m/d', '', '', 'Asia/Tehran', 'en');
 $current_time = jdate('H:i', '', '', 'Asia/Tehran', 'en');
 header('Content-Type: application/json; charset=utf-8');
 
+// Load .env file when present so Docker/local configs stay in sync
+(function () {
+    $root = realpath(__DIR__ . '/../');
+    $envFile = $root ? $root . '/.env' : null;
+    if (!$envFile || !is_file($envFile)) {
+        return;
+    }
+    $lines = file($envFile, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
+    if (!$lines) {
+        return;
+    }
+    foreach ($lines as $line) {
+        $trimmed = trim($line);
+        if ($trimmed === '' || str_starts_with($trimmed, '#') || str_starts_with($trimmed, '//')) {
+            continue;
+        }
+        $parts = explode('=', $trimmed, 2);
+        if (count($parts) !== 2) {
+            continue;
+        }
+        [$key, $value] = $parts;
+        $key = trim($key);
+        if ($key === '') {
+            continue;
+        }
+        $value = trim($value);
+        if (!array_key_exists($key, $_ENV)) {
+            $_ENV[$key] = $value;
+        }
+        if (getenv($key) === false) {
+            putenv($key . '=' . $value);
+        }
+    }
+})();
+
 // Encryption settings
 const ENCRYPTION_KEY = 'PNU_EXAM_SEAT_2025_SECRET_KEY'; // Should match frontend
 
@@ -25,7 +60,7 @@ function decryptData($encryptedData, $key) {
 $host = getenv('DB_HOST') ?: 'localhost';
 $db   = getenv('DB_NAME') ?: 'PnuExamsSeatNumber';
 $user = getenv('DB_USER') ?: 'root';
-$pass = getenv('DB_PASS') ?: '01012556360043214'; // Fallback for development only
+$pass = getenv('DB_PASS') ?: '01012556360043214'; // Fallback for legacy dev only
 $charset = 'utf8mb4';
 $dsn = "mysql:host=$host;dbname=$db;charset=$charset";
 $options = [
