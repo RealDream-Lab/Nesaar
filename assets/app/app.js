@@ -11,7 +11,6 @@ document.addEventListener('DOMContentLoaded', () => {
     const loginRow = document.getElementById('loginRow');
     const loginSection = document.getElementById('loginSection');
     const REFRESH_INTERVAL_MS = 60000;
-    const DAILY_ALERT_KEY = 'dailyExamReminderShown';
 
     // Temporarily disable staff mode (only student mode active for now)
     if (staffTypeRadio) {
@@ -231,7 +230,6 @@ document.addEventListener('DOMContentLoaded', () => {
     let lastSnapshot = '';
     let lastPayload = [];
     let lastFullName = '';
-    let dailyReminderStamp = '';
 
     function stopAutoRefresh() {
         if (refreshTimer) {
@@ -549,8 +547,6 @@ document.addEventListener('DOMContentLoaded', () => {
             window.scrollTo(0, targetScroll);
         }
 
-        maybeShowDailyReminder(upcoming.length);
-
         const attachModal = (exam, status) => {
             return () => {
                 if (status === 'past') {
@@ -660,68 +656,6 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         });
         return needsReorder;
-    }
-
-    function maybeShowDailyReminder(upcomingCount) {
-        if (!upcomingCount) return;
-
-        const todayStamp = getTodayStamp();
-        if (dailyReminderStamp === todayStamp) return;
-
-        let storedStamp = null;
-        try {
-            storedStamp = localStorage.getItem(DAILY_ALERT_KEY);
-        } catch (e) {
-            storedStamp = null;
-        }
-
-        if (storedStamp === todayStamp) {
-            dailyReminderStamp = todayStamp;
-            return;
-        }
-
-        const reminderHtml = `
-            <div style="text-align:justify;direction:rtl;line-height:1.9;font-size:1.05em;">
-                <b style="color:#006600">نکاتی که دانشجویان ملزم به رعایت آن می‌باشند:</b><br><br>
-                ۱- از آوردن کتاب، جزوه، یادداشت، هندزفری، تلفن همراه و هرگونه وسیله الکترونیکی دیگر به جلسه خودداری کنید.<br>
-                ۲- در حین برگزاری امتحان از صحبت، نگاه به اطراف و همراه داشتن یادداشت خودداری کرده و در غیر این صورت با فرد خاطی طبق آیین‌نامه انضباطی برخورد می‌شود.<br>
-                ۳- ۳۰ دقیقه قبل از آزمون در محل برگزاری حضور داشته باشید.<br>
-                ۴- پاسخ‌نامه‌های تستی را فقط با مداد مشکی پر کنید.<br>
-                ۵- پاسخ‌نامه‌های تشریحی را فقط با خودکار آبی تکمیل کنید.<br>
-                ۶- همراه داشتن کارت دانشجویی و کارت ورود به جلسه الزامی است.<br>
-                ۷- تکمیل کد سری سوال روی پاسخ‌نامه‌های تستی الزامی است؛ عواقب اشتباه بر عهده دانشجو است.<br>
-                ۸- دانشجویان باید برگه حضور و غیاب را با خودکار امضا کنند.<br>
-                ۹- بر اساس نوع سوال، استفاده از ماشین حساب و کتاب قانونی ممکن است مجاز باشد.<br>
-            </div>
-        `;
-
-        dailyReminderStamp = todayStamp;
-        try {
-            localStorage.setItem(DAILY_ALERT_KEY, todayStamp);
-        } catch (e) { /* ignore */ }
-
-        Swal.fire({
-            title: 'توجه مهم',
-            html: reminderHtml,
-            timer: 60000,
-            timerProgressBar: true,
-            showConfirmButton: false,
-            allowOutsideClick: false,
-            allowEscapeKey: false,
-            allowEnterKey: false,
-            buttonsStyling: false,
-            customClass: {
-                popup: 'swal2-rtl'
-            }
-        });
-    }
-
-    function getTodayStamp() {
-        const today = new Date();
-        const year = today.getFullYear();
-        const month = String(today.getMonth() + 1).padStart(2, '0');
-        const day = String(today.getDate()).padStart(2, '0');
-        return `${year}-${month}-${day}`;
     }
 
     function hideResults() {
