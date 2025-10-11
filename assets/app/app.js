@@ -229,6 +229,7 @@ document.addEventListener('DOMContentLoaded', () => {
     let currentCredentials = null;
     let lastSnapshot = '';
     let lastPayload = [];
+    let lastFullName = '';
 
     function stopAutoRefresh() {
         if (refreshTimer) {
@@ -245,12 +246,20 @@ document.addEventListener('DOMContentLoaded', () => {
                 const payload = await fetchExamPayload(currentCredentials.studentId, currentCredentials.nationalId);
                 const snapshot = JSON.stringify(payload || []);
                 if (snapshot === lastSnapshot) {
-                    updateCountdowns();
+                    const needsReorder = updateCountdowns();
+                    if (needsReorder) {
+                        const firstExam = payload[0] || {};
+                        const refreshedName = `${firstExam.first_name || ''} ${firstExam.last_name || ''}`.trim();
+                        lastFullName = refreshedName || lastFullName;
+                        renderResults(payload, lastFullName);
+                        ensureLogoutButton(lastFullName, currentCredentials.studentId);
+                    }
                     return;
                 }
                 lastSnapshot = snapshot;
                 const first = payload[0] || {};
                 const fullName = `${first.first_name || ''} ${first.last_name || ''}`.trim();
+                lastFullName = fullName;
                 renderResults(payload, fullName);
                 ensureLogoutButton(fullName, currentCredentials.studentId);
             } catch (error) {
@@ -312,6 +321,7 @@ document.addEventListener('DOMContentLoaded', () => {
             currentCredentials = null;
             lastSnapshot = '';
             lastPayload = [];
+            lastFullName = '';
             eraseCookie('userSession');
             clearResults();
             showLogin();
@@ -352,6 +362,7 @@ document.addEventListener('DOMContentLoaded', () => {
         currentCredentials = null;
         lastSnapshot = '';
         lastPayload = [];
+        lastFullName = '';
 
         toggleLoading(true);
         clearResults(); try {
@@ -365,6 +376,7 @@ document.addEventListener('DOMContentLoaded', () => {
             // Save session (30 days)
             const first = payload[0] || null;
             const fullName = first ? `${first.first_name || ''} ${first.last_name || ''}`.trim() : '';
+            lastFullName = fullName;
             const session = {
                 student_id: studentId,
                 national_id: nationalId,
@@ -430,6 +442,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
             const first = payload[0];
             const fullName = `${first.first_name || ''} ${first.last_name || ''}`.trim();
+            lastFullName = fullName;
             renderResults(payload, fullName);
             ensureLogoutButton(fullName, sid);
             lastSnapshot = JSON.stringify(payload || []);
@@ -440,6 +453,7 @@ document.addEventListener('DOMContentLoaded', () => {
             currentCredentials = null;
             lastSnapshot = '';
             lastPayload = [];
+            lastFullName = '';
             eraseCookie('userSession');
             showLogin();
         } finally {
@@ -465,68 +479,141 @@ document.addEventListener('DOMContentLoaded', () => {
     function renderResults(exams, fullName) {
         // Skip user info banner (removed per request)
 
-        // Beautiful cards grid
-        const html = exams.map((exam, idx) => {
-            // Check if seat number is numeric (green) or text (red)
-            const seatNum = exam.seat_number || '';
-            const isNumericSeat = /^\d+$/.test(seatNum.toString().trim());
-            const cardClass = isNumericSeat ? 'exam-card seat-available' : 'exam-card seat-hidden';
-            const countdownText = getCountdownText(exam.exam_date, exam.exam_time);
-            const countdownMarkup = countdownText ? `<div class="exam-countdown">${countdownText}</div>` : '';
+        const now = Date.now();
+        const decorated = exams.map((exam, idx) => {
+            const target = createExamDateTime(exam.exam_date, exam.exam_time);
+            const timeValue = target ? target.getTime() : 0;
+            const isUpcoming = target ? timeValue > now : false;
+            return { exam, idx, target, timeValue, isUpcoming };
+        });
 
-            return `
-            <div class="${cardClass}" tabindex="0" data-exam-idx="${idx}">
-                <div class="exam-title">
-                    <span class="exam-name">${escapeHtml(exam.course_name)}</span>
+        const upcoming = decorated
+            .filter(item => item.isUpcoming)
+            .sort((a, b) => (a.timeValue || Infinity) - (b.timeValue || Infinity));
+
+        const past = decorated
+            .filter(item => !item.isUpcoming)
+            .sort((a, b) => (b.timeValue || -Infinity) - (a.timeValue || -Infinity));
+
+        const htmlParts = [];
+
+        if (upcoming.length) {
+            const upcomingMarkup = upcoming.map(({ exam, idx }) => {
+                const seatNum = exam.seat_number || '';
+                const isNumericSeat = /^\d+$/.test(seatNum.toString().trim());
+                const seatClass = isNumericSeat ? 'seat-available' : 'seat-hidden';
+                const countdownText = getCountdownText(exam.exam_date, exam.exam_time);
+                const countdownMarkup = countdownText ? `<div class="exam-countdown">${countdownText}</div>` : '';
+                return `
+                <div class="exam-card ${seatClass} upcoming" tabindex="0" data-exam-origin="${idx}" data-exam-status="upcoming">
+                    <div class="exam-title">
+                        <span class="exam-name">${escapeHtml(exam.course_name)}</span>
+                    </div>
+                    <div class="exam-meta">${toPersianDigits(exam.exam_date)} | ${toPersianDigits(exam.exam_time)}</div>
+                    ${countdownMarkup}
                 </div>
-                <div class="exam-meta">${toPersianDigits(exam.exam_date)} | ${toPersianDigits(exam.exam_time)}</div>
-                ${countdownMarkup}
-                <div class="exam-detail seat-info"><span class="exam-label">شماره صندلی:</span><span class="exam-value">${toPersianDigits(exam.seat_number)}</span></div>
-            </div>
-        `;
-        }).join('');
+            `;
+            }).join('');
+            htmlParts.push(upcomingMarkup);
+        }
 
-        examCards.innerHTML = html;
+        if (upcoming.length && past.length) {
+            htmlParts.push('<div class="exam-divider" role="presentation"></div>');
+        }
+
+        if (past.length) {
+            const pastMarkup = past.map(({ exam, idx }) => `
+                <div class="exam-card past" tabindex="0" data-exam-origin="${idx}" data-exam-status="past">
+                    <div class="exam-title">
+                        <span class="exam-name">${escapeHtml(exam.course_name)}</span>
+                    </div>
+                </div>
+            `).join('');
+            htmlParts.push(pastMarkup);
+        }
+
+        examCards.innerHTML = htmlParts.join('');
         lastPayload = exams.slice();
+        lastFullName = fullName || lastFullName;
 
-        // Add click event for SweetAlert details
-        exams.forEach((exam, idx) => {
-            const card = examCards.querySelector(`.exam-card[data-exam-idx='${idx}']`);
-            if (card) {
-                card.addEventListener('click', () => {
+        const attachModal = (exam, status) => {
+            return () => {
+                if (status === 'past') {
                     Swal.fire({
-                        title: `${escapeHtml(exam.course_name)} (${toPersianDigits(exam.course_code)})`,
+                        title: escapeHtml(exam.course_name),
                         html: `
                             <div style='text-align:right;font-size:1.1em;'>
-                                <b>نوع درس:</b> ${escapeHtml(exam.course_type)}<br>
-                                <b>نوع امتحان:</b> ${escapeHtml(exam.exam_type)}<br>
-                                <b>تاریخ:</b> ${toPersianDigits(exam.exam_date)}<br>
-                                <b>ساعت:</b> ${toPersianDigits(exam.exam_time)}<br>
-                                <b>شماره صندلی:</b> ${toPersianDigits(exam.seat_number)}<br>
-                                <b>ساختمان:</b> ${escapeHtml(exam.building) || '-'}<br>
-                                <b>کلاس:</b> ${escapeHtml(exam.class_name) || '-'}<br>
-                                <b>ردیف:</b> ${toPersianDigits(exam.seat_row) || '-'}<br>
+                                آزمون درس <b>${escapeHtml(exam.course_name)}</b> (${toPersianDigits(exam.course_code)}) در تاریخ ${toPersianDigits(exam.exam_date)} ساعت ${toPersianDigits(exam.exam_time)} به صورت ${escapeHtml(exam.exam_type)} از نوع ${escapeHtml(exam.course_type)} برگزار گردیده است.<br><br>
+                                شماره صندلی شما در این آزمون <b>${toPersianDigits(exam.seat_number)}</b> بوده است.
                             </div>
                         `,
-                        confirmButtonText: 'بستن',
+                        timer: 15000,
+                        timerProgressBar: true,
+                        showConfirmButton: false,
+                        allowOutsideClick: true,
+                        allowEscapeKey: true,
+                        allowEnterKey: false,
                         buttonsStyling: false,
                         customClass: {
-                            popup: 'swal2-rtl',
-                            confirmButton: 'btn btn-primary btn-lg px-4'
+                            popup: 'swal2-rtl'
                         }
                     });
+                    return;
+                }
+
+                Swal.fire({
+                    title: `${escapeHtml(exam.course_name)} (${toPersianDigits(exam.course_code)})`,
+                    html: `
+                        <div style='text-align:right;font-size:1.1em;'>
+                            <b>نوع درس:</b> ${escapeHtml(exam.course_type)}<br>
+                            <b>نوع امتحان:</b> ${escapeHtml(exam.exam_type)}<br>
+                            <b>تاریخ:</b> ${toPersianDigits(exam.exam_date)}<br>
+                            <b>ساعت:</b> ${toPersianDigits(exam.exam_time)}<br>
+                            <b>شماره صندلی:</b> ${toPersianDigits(exam.seat_number)}<br>
+                            <b>ساختمان:</b> ${escapeHtml(exam.building) || '-'}<br>
+                            <b>کلاس:</b> ${escapeHtml(exam.class_name) || '-'}<br>
+                            <b>ردیف:</b> ${toPersianDigits(exam.seat_row) || '-'}<br>
+                        </div>
+                    `,
+                    confirmButtonText: 'بستن',
+                    buttonsStyling: false,
+                    customClass: {
+                        popup: 'swal2-rtl',
+                        confirmButton: 'btn btn-primary btn-lg px-4'
+                    }
                 });
-            }
+            };
+        };
+
+        const cards = examCards.querySelectorAll('.exam-card');
+        cards.forEach(card => {
+            const origin = parseInt(card.getAttribute('data-exam-origin'), 10);
+            if (Number.isNaN(origin) || !lastPayload[origin]) return;
+            const status = card.getAttribute('data-exam-status');
+            card.addEventListener('click', attachModal(lastPayload[origin], status));
         });
 
         hideLogin();
     }
 
     function updateCountdowns(payload = lastPayload) {
-        if (!Array.isArray(payload) || payload.length === 0) return;
+        if (!Array.isArray(payload) || payload.length === 0) return false;
+        let needsReorder = false;
+        const now = Date.now();
         payload.forEach((exam, idx) => {
-            const card = examCards?.querySelector(`.exam-card[data-exam-idx='${idx}']`);
+            const card = examCards?.querySelector(`.exam-card[data-exam-origin='${idx}']`);
             if (!card) return;
+            const status = card.getAttribute('data-exam-status');
+            const target = createExamDateTime(exam.exam_date, exam.exam_time);
+            if (!target || target.getTime() <= now) {
+                if (status === 'upcoming') {
+                    needsReorder = true;
+                }
+                const countdownExisting = card.querySelector('.exam-countdown');
+                if (countdownExisting) countdownExisting.remove();
+                return;
+            }
+
             const text = getCountdownText(exam.exam_date, exam.exam_time);
             let countdown = card.querySelector('.exam-countdown');
             if (!text) {
@@ -547,6 +634,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 card.appendChild(countdown);
             }
         });
+        return needsReorder;
     }
 
     function hideResults() {

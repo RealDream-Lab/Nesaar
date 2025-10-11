@@ -112,6 +112,26 @@ body.login-active #loginRow {
 .exam-card.seat-hidden {
   border-right-color: #f44336;
 }
+.exam-card.past {
+  border-right-color: rgba(0, 0, 0, 0.12);
+  background: rgba(255, 255, 255, 0.88);
+  opacity: 0.88;
+}
+.exam-card.past:hover {
+  transform: translateY(-4px) scale(1.01);
+  box-shadow: 0 4px 18px 0 rgba(33,150,243,0.12);
+}
+.exam-card.past .exam-meta,
+.exam-card.past .exam-countdown,
+.exam-card.past .exam-detail {
+  display: none !important;
+}
+.exam-divider {
+  grid-column: 1 / -1;
+  border-top: 2px dashed rgba(33, 150, 243, 0.3);
+  margin: 1.5rem 0 0.5rem;
+  height: 0;
+}
 .exam-title {
   font-size: 1.3rem;
   font-weight: 700;
