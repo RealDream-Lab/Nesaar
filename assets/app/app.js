@@ -522,13 +522,18 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         if (past.length) {
-            const pastMarkup = past.map(({ exam, idx }) => `
-                <div class="exam-card past" tabindex="0" data-exam-origin="${idx}" data-exam-status="past">
+            const pastMarkup = past.map(({ exam, idx }) => {
+                const seatNum = exam.seat_number || '';
+                const isNumericSeat = /^\d+$/.test(seatNum.toString().trim());
+                const seatClass = isNumericSeat ? 'seat-available' : 'seat-hidden';
+                return `
+                <div class="exam-card ${seatClass} past" tabindex="0" data-exam-origin="${idx}" data-exam-status="past">
                     <div class="exam-title">
                         <span class="exam-name">${escapeHtml(exam.course_name)}</span>
                     </div>
                 </div>
-            `).join('');
+            `;
+            }).join('');
             htmlParts.push(pastMarkup);
         }
 
@@ -539,12 +544,22 @@ document.addEventListener('DOMContentLoaded', () => {
         const attachModal = (exam, status) => {
             return () => {
                 if (status === 'past') {
+                    const seatValue = (exam.seat_number ?? '').toString().trim();
+                    const typeParts = [];
+                    if (exam.exam_type) typeParts.push(escapeHtml(exam.exam_type));
+                    if (exam.course_type) typeParts.push(escapeHtml(exam.course_type));
+                    const typeSentence = typeParts.length ? ` به صورت ${typeParts.join(' و ')}` : '';
+                    let message = `آزمون درس ${escapeHtml(exam.course_name)} در تاریخ ${toPersianDigits(exam.exam_date)} ساعت ${toPersianDigits(exam.exam_time)}${typeSentence} برگزار گردیده`;
+                    if (seatValue) {
+                        message += ` و شماره صندلی شما در این آزمون ${toPersianDigits(seatValue)} بوده است.`;
+                    } else {
+                        message += ' است.';
+                    }
                     Swal.fire({
                         title: escapeHtml(exam.course_name),
                         html: `
-                            <div style='text-align:right;font-size:1.1em;'>
-                                آزمون درس <b>${escapeHtml(exam.course_name)}</b> (${toPersianDigits(exam.course_code)}) در تاریخ ${toPersianDigits(exam.exam_date)} ساعت ${toPersianDigits(exam.exam_time)} به صورت ${escapeHtml(exam.exam_type)} از نوع ${escapeHtml(exam.course_type)} برگزار گردیده است.<br><br>
-                                شماره صندلی شما در این آزمون <b>${toPersianDigits(exam.seat_number)}</b> بوده است.
+                            <div style="text-align:justify;direction:rtl;line-height:1.9;font-size:1.05em;">
+                                ${message}
                             </div>
                         `,
                         timer: 15000,
@@ -564,15 +579,15 @@ document.addEventListener('DOMContentLoaded', () => {
                 Swal.fire({
                     title: `${escapeHtml(exam.course_name)} (${toPersianDigits(exam.course_code)})`,
                     html: `
-                        <div style='text-align:right;font-size:1.1em;'>
-                            <b>نوع درس:</b> ${escapeHtml(exam.course_type)}<br>
-                            <b>نوع امتحان:</b> ${escapeHtml(exam.exam_type)}<br>
-                            <b>تاریخ:</b> ${toPersianDigits(exam.exam_date)}<br>
-                            <b>ساعت:</b> ${toPersianDigits(exam.exam_time)}<br>
-                            <b>شماره صندلی:</b> ${toPersianDigits(exam.seat_number)}<br>
-                            <b>ساختمان:</b> ${escapeHtml(exam.building) || '-'}<br>
-                            <b>کلاس:</b> ${escapeHtml(exam.class_name) || '-'}<br>
-                            <b>ردیف:</b> ${toPersianDigits(exam.seat_row) || '-'}<br>
+                        <div style="text-align:justify;direction:rtl;line-height:1.9;font-size:1.05em;">
+                            نوع درس: ${escapeHtml(exam.course_type)}<br>
+                            نوع امتحان: ${escapeHtml(exam.exam_type)}<br>
+                            تاریخ: ${toPersianDigits(exam.exam_date)}<br>
+                            ساعت: ${toPersianDigits(exam.exam_time)}<br>
+                            شماره صندلی: ${toPersianDigits(exam.seat_number)}<br>
+                            ساختمان: ${escapeHtml(exam.building) || '-'}<br>
+                            کلاس: ${escapeHtml(exam.class_name) || '-'}<br>
+                            ردیف: ${toPersianDigits(exam.seat_row) || '-'}
                         </div>
                     `,
                     confirmButtonText: 'بستن',

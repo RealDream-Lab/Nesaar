@@ -113,9 +113,8 @@ body.login-active #loginRow {
   border-right-color: #f44336;
 }
 .exam-card.past {
-  border-right-color: rgba(0, 0, 0, 0.12);
-  background: rgba(255, 255, 255, 0.88);
-  opacity: 0.88;
+  background: rgba(255, 255, 255, 0.9);
+  opacity: 0.9;
 }
 .exam-card.past:hover {
   transform: translateY(-4px) scale(1.01);
