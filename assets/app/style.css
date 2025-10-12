@@ -78,20 +78,17 @@ body.has-logout .logo-container {
   grid-template-columns: auto 1fr auto;
   align-items: center;
   column-gap: 0.5rem;
-  direction: ltr;
-}
-
-.fixed-footer .footer-clock {
-  font-weight: 500;
-  white-space: nowrap;
-  direction: ltr;
-  text-align: left;
-  justify-self: start;
 }
 
 .fixed-footer .footer-text {
-  text-align: center;
   direction: rtl;
+  white-space: nowrap;
+}
+
+.fixed-footer .footer-clock {
+  direction: ltr;
+  white-space: nowrap;
+  text-align: left;
 }
 
 .fixed-footer .footer-spacer {

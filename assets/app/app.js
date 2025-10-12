@@ -61,6 +61,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Initialize with default state
     handleUserTypeChange();
+    updateServerClock();
     if (footerClock && footerSpacer) footerSpacer.textContent = footerClock.textContent;
     startClockRefresh();
 
@@ -234,9 +235,21 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function startClockRefresh() {
-        updateServerClock();
-        if (clockTimer) clearInterval(clockTimer);
-        clockTimer = setInterval(updateServerClock, CLOCK_REFRESH_MS);
+        if (clockTimer) clearTimeout(clockTimer);
+
+        const scheduleNextTick = () => {
+            const now = new Date();
+            const elapsed = (now.getSeconds() * 1000) + now.getMilliseconds();
+            const remainder = elapsed % CLOCK_REFRESH_MS;
+            const delay = remainder === 0 ? CLOCK_REFRESH_MS : CLOCK_REFRESH_MS - remainder;
+
+            clockTimer = setTimeout(async () => {
+                await updateServerClock();
+                scheduleNextTick();
+            }, delay);
+        };
+
+        scheduleNextTick();
     }
 
     // Session helpers
@@ -265,7 +278,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function stopAutoRefresh() {
         if (refreshTimer) {
-            clearInterval(refreshTimer);
+            clearTimeout(refreshTimer);
             refreshTimer = null;
         }
     }
@@ -273,32 +286,43 @@ document.addEventListener('DOMContentLoaded', () => {
     function startAutoRefresh(studentId, nationalId) {
         currentCredentials = { studentId, nationalId };
         stopAutoRefresh();
-        refreshTimer = setInterval(async () => {
-            updateServerClock();
-            try {
-                const payload = await fetchExamPayload(currentCredentials.studentId, currentCredentials.nationalId);
-                const snapshot = JSON.stringify(payload || []);
-                if (snapshot === lastSnapshot) {
-                    const needsReorder = updateCountdowns();
-                    if (needsReorder) {
-                        const firstExam = payload[0] || {};
-                        const refreshedName = `${firstExam.first_name || ''} ${firstExam.last_name || ''}`.trim();
-                        lastFullName = refreshedName || lastFullName;
-                        renderResults(payload, lastFullName);
-                        ensureLogoutButton(lastFullName, currentCredentials.studentId);
+        const scheduleNextRefresh = () => {
+            const now = new Date();
+            const elapsed = (now.getSeconds() * 1000) + now.getMilliseconds();
+            const remainder = elapsed % REFRESH_INTERVAL_MS;
+            const delay = remainder === 0 ? REFRESH_INTERVAL_MS : REFRESH_INTERVAL_MS - remainder;
+
+            refreshTimer = setTimeout(async () => {
+                updateServerClock();
+                try {
+                    const payload = await fetchExamPayload(currentCredentials.studentId, currentCredentials.nationalId);
+                    const snapshot = JSON.stringify(payload || []);
+                    if (snapshot === lastSnapshot) {
+                        const needsReorder = updateCountdowns();
+                        if (needsReorder) {
+                            const firstExam = payload[0] || {};
+                            const refreshedName = `${firstExam.first_name || ''} ${firstExam.last_name || ''}`.trim();
+                            lastFullName = refreshedName || lastFullName;
+                            renderResults(payload, lastFullName);
+                            ensureLogoutButton(lastFullName, currentCredentials.studentId);
+                        }
+                        return;
                     }
-                    return;
+                    lastSnapshot = snapshot;
+                    const first = payload[0] || {};
+                    const fullName = `${first.first_name || ''} ${first.last_name || ''}`.trim();
+                    lastFullName = fullName;
+                    renderResults(payload, fullName);
+                    ensureLogoutButton(fullName, currentCredentials.studentId);
+                } catch (error) {
+                    console.warn('Auto-refresh failed:', error);
+                } finally {
+                    scheduleNextRefresh();
                 }
-                lastSnapshot = snapshot;
-                const first = payload[0] || {};
-                const fullName = `${first.first_name || ''} ${first.last_name || ''}`.trim();
-                lastFullName = fullName;
-                renderResults(payload, fullName);
-                ensureLogoutButton(fullName, currentCredentials.studentId);
-            } catch (error) {
-                console.warn('Auto-refresh failed:', error);
-            }
-        }, REFRESH_INTERVAL_MS);
+            }, delay);
+        };
+
+        scheduleNextRefresh();
     }
 
     function hideLogin() {
