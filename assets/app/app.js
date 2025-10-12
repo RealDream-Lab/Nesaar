@@ -209,8 +209,17 @@ document.addEventListener('DOMContentLoaded', () => {
 
         const response = await fetch('API/getStudentExams.php', { method: 'POST', body });
         if (!response.ok) throw new Error(`HTTP ${response.status}`);
-        const payload = await response.json();
-        if (payload.error) throw new Error(payload.error);
+        let payload;
+        try {
+            payload = await response.json();
+        } catch (e) {
+            throw new Error('Invalid JSON response');
+        }
+        if (payload && typeof payload === 'object' && 'error' in payload) {
+            const userError = new Error(payload.error || 'درخواست نامعتبر');
+            userError.isUserError = true;
+            throw userError;
+        }
         if (!Array.isArray(payload)) throw new Error('Invalid response format');
         return payload;
     }
@@ -406,7 +415,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         if (mode === 'student') {
             if (!studentId || !nationalId) {
-                showAlert('warning', 'خطا!', 'لطفاً شماره دانشجویی و کد ملی را وارد کنید.');
+                showAlert('warning', 'خطا!', 'وارد کردن نام کاربری و رمز عبور الزامی است.');
                 return;
             }
         } else {
@@ -454,7 +463,11 @@ document.addEventListener('DOMContentLoaded', () => {
             startAutoRefresh(studentId, nationalId);
         } catch (error) {
             console.error('Fetch error:', error);
-            showAlert('error', 'خطا در اتصال!', 'مشکلی در ارتباط با سرور رخ داده است. لطفاً بعداً تلاش کنید.');
+            if (error && error.isUserError) {
+                showAlert('warning', 'ورود ناموفق', 'رمز عبور و شماره دانشجویی صحیح نیست یا اطلاعاتی برای این شماره وجود ندارد.');
+            } else {
+                showAlert('error', 'خطا در اتصال!', 'مشکلی در ارتباط با سرور رخ داده است. لطفاً بعداً تلاش کنید.');
+            }
         } finally {
             toggleLoading(false);
         }
@@ -497,7 +510,11 @@ document.addEventListener('DOMContentLoaded', () => {
             const response = await fetch('API/getStudentExams.php', { method: 'POST', body });
             if (!response.ok) throw new Error(`HTTP ${response.status}`);
             const payload = await response.json();
-            if (payload.error) throw new Error(payload.error);
+            if (payload.error) {
+                const userError = new Error(payload.error);
+                userError.isUserError = true;
+                throw userError;
+            }
             if (!Array.isArray(payload) || payload.length === 0) throw new Error('هیچ امتحانی یافت نشد');
 
             const first = payload[0];
@@ -515,6 +532,9 @@ document.addEventListener('DOMContentLoaded', () => {
             lastPayload = [];
             lastFullName = '';
             eraseCookie('userSession');
+            if (!e?.isUserError) {
+                showAlert('error', 'خطا در اتصال!', 'مشکلی در ارتباط با سرور رخ داده است. لطفاً بعداً تلاش کنید.');
+            }
             showLogin();
         } finally {
             toggleLoading(false);
