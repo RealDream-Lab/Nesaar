@@ -10,7 +10,17 @@ document.addEventListener('DOMContentLoaded', () => {
     const nationalIdInput = document.getElementById('nationalId');
     const loginRow = document.getElementById('loginRow');
     const loginSection = document.getElementById('loginSection');
+    const footerClock = document.getElementById('footerClock');
+    const footerSpacer = document.querySelector('.footer-spacer');
     const REFRESH_INTERVAL_MS = 60000;
+    const CLOCK_REFRESH_MS = REFRESH_INTERVAL_MS;
+
+    let refreshTimer = null;
+    let clockTimer = null;
+    let currentCredentials = null;
+    let lastSnapshot = '';
+    let lastPayload = [];
+    let lastFullName = '';
 
     // Temporarily disable staff mode (only student mode active for now)
     if (staffTypeRadio) {
@@ -51,6 +61,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Initialize with default state
     handleUserTypeChange();
+    if (footerClock && footerSpacer) footerSpacer.textContent = footerClock.textContent;
+    startClockRefresh();
 
     // Copyright footer click event
     const copyrightFooter = document.getElementById('copyrightFooter');
@@ -202,6 +214,31 @@ document.addEventListener('DOMContentLoaded', () => {
         return payload;
     }
 
+    async function updateServerClock() {
+        if (!footerClock) return;
+        try {
+            const response = await fetch('API/serverTime.php', { cache: 'no-store' });
+            if (!response.ok) throw new Error(`HTTP ${response.status}`);
+            const payload = await response.json();
+            if (!payload || !payload.date || !payload.time) {
+                throw new Error('Invalid payload structure');
+            }
+            const formattedDate = toPersianDigits(payload.date);
+            const formattedTime = toPersianDigits(payload.time);
+            const formattedStamp = `${formattedDate} | ${formattedTime}`;
+            footerClock.textContent = formattedStamp;
+            if (footerSpacer) footerSpacer.textContent = formattedStamp;
+        } catch (error) {
+            console.warn('Clock update failed:', error);
+        }
+    }
+
+    function startClockRefresh() {
+        updateServerClock();
+        if (clockTimer) clearInterval(clockTimer);
+        clockTimer = setInterval(updateServerClock, CLOCK_REFRESH_MS);
+    }
+
     // Session helpers
     function setCookie(name, value, days) {
         const d = new Date();
@@ -225,11 +262,6 @@ document.addEventListener('DOMContentLoaded', () => {
         document.cookie = name + '=; Max-Age=-99999999; path=/';
     }
 
-    let refreshTimer = null;
-    let currentCredentials = null;
-    let lastSnapshot = '';
-    let lastPayload = [];
-    let lastFullName = '';
 
     function stopAutoRefresh() {
         if (refreshTimer) {
@@ -242,6 +274,7 @@ document.addEventListener('DOMContentLoaded', () => {
         currentCredentials = { studentId, nationalId };
         stopAutoRefresh();
         refreshTimer = setInterval(async () => {
+            updateServerClock();
             try {
                 const payload = await fetchExamPayload(currentCredentials.studentId, currentCredentials.nationalId);
                 const snapshot = JSON.stringify(payload || []);
@@ -365,7 +398,9 @@ document.addEventListener('DOMContentLoaded', () => {
         lastFullName = '';
 
         toggleLoading(true);
-        clearResults(); try {
+        clearResults();
+        updateServerClock();
+        try {
             const payload = await fetchExamPayload(studentId, nationalId);
 
             if (payload.length === 0) {
@@ -423,6 +458,7 @@ document.addEventListener('DOMContentLoaded', () => {
             hideLogin();
             toggleLoading(true);
             clearResults();
+            updateServerClock();
 
             // Encrypt credentials for auto-login
             const credentials = { student_id: sid, national_id: nid };

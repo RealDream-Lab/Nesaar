@@ -1,5 +1,5 @@
 // Bump cache to force refresh of updated assets (app.js, style.css, index.html)
-const CACHE_NAME = 'exam-seat-v2025-10-12-02';
+const CACHE_NAME = 'exam-seat-v2025-10-12-05';
 const urlsToCache = [
   '/',
   '/index.html',
@@ -25,8 +25,18 @@ self.addEventListener('install', event => {
 });
 
 self.addEventListener('fetch', event => {
+  const request = event.request;
+  const url = new URL(request.url);
+
+  if (url.pathname.startsWith('/API/')) {
+    event.respondWith(
+      fetch(request).catch(() => caches.match(request))
+    );
+    return;
+  }
+
   event.respondWith(
-    caches.match(event.request).then(response => response || fetch(event.request))
+    caches.match(request).then(response => response || fetch(request))
   );
 });
 

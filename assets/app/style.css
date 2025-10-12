@@ -74,6 +74,28 @@ body.has-logout .logo-container {
   padding-bottom: calc(0.6rem + env(safe-area-inset-bottom, 0px));
   font-size: 0.95rem;
   z-index: 1040;
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  column-gap: 0.5rem;
+  direction: ltr;
+}
+
+.fixed-footer .footer-clock {
+  font-weight: 500;
+  white-space: nowrap;
+  direction: ltr;
+  text-align: left;
+  justify-self: start;
+}
+
+.fixed-footer .footer-text {
+  text-align: center;
+  direction: rtl;
+}
+
+.fixed-footer .footer-spacer {
+  visibility: hidden;
 }
 
 /* When login is visible, keep page fixed (no scroll) and account for footer height */
