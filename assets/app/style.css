@@ -4,11 +4,94 @@ html, body {
 }
 
 body {
-  background: radial-gradient(circle at top, #f0f4ff 0%, #dbe4ff 45%, #cfd8ff 100%);
+  background: linear-gradient(180deg, #061c32 0%, #0d3f63 60%, #0f4f7b 100%);
   font-family: 'Vazir', sans-serif;
   direction: rtl;
   text-align: right;
   min-height: 100vh;
+}
+
+.waves-header {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  width: 100%;
+  height: 55vh;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  text-align: center;
+  background: transparent;
+  z-index: -2;
+  pointer-events: none;
+}
+
+.waves-inner-header {
+  flex: 1 0 auto;
+  width: 100%;
+}
+
+.waves {
+  position: relative;
+  width: 100%;
+  height: 35vh;
+  margin-bottom: -12px;
+  min-height: 180px;
+  max-height: 320px;
+}
+
+.parallax > use {
+  animation: move-forever 25s cubic-bezier(0.55, 0.5, 0.45, 0.5) infinite;
+}
+
+.parallax > use:nth-child(1) {
+  animation-delay: -2s;
+  animation-duration: 4s;
+  opacity: 0.2;
+}
+
+.parallax > use:nth-child(2) {
+  animation-delay: -3s;
+  animation-duration: 7s;
+  opacity: 0.4;
+}
+
+.parallax > use:nth-child(3) {
+  animation-delay: -4s;
+  animation-duration: 10s;
+  opacity: 0.6;
+}
+
+.parallax > use:nth-child(4) {
+  animation-delay: -5s;
+  animation-duration: 13s;
+}
+
+@keyframes move-forever {
+  0% {
+    transform: translate3d(-90px, 0, 0);
+  }
+
+  100% {
+    transform: translate3d(85px, 0, 0);
+  }
+}
+
+@media (max-width: 768px) {
+  .waves-header {
+    height: 45vh;
+  }
+
+  .waves {
+    height: 120px;
+    min-height: 120px;
+    max-height: 180px;
+  }
+}
+
+.container-fluid {
+  position: relative;
+  z-index: 1;
 }
 
 .card {
@@ -69,7 +152,7 @@ body.has-logout .logo-container {
   left: 0;
   right: 0;
   bottom: 0;
-  background: rgba(25, 118, 210, 0.95);
+  background: linear-gradient(90deg, rgba(6, 91, 140, 0.1), rgba(2, 72, 111, 0.1));
   padding: 0.6rem 1rem;
   padding-bottom: calc(0.6rem + env(safe-area-inset-bottom, 0px));
   font-size: 0.95rem;
@@ -107,7 +190,8 @@ body.login-active #loginRow {
 }
 
 .exam-card {
-  background: #fff;
+  background: rgba(255, 255, 255, 0.75);
+  backdrop-filter: blur(8px);
   border-radius: 1.25rem;
   box-shadow: 0 2px 16px 0 rgba(33,150,243,0.08);
   padding: 2rem 1.5rem 1.5rem 1.5rem;
@@ -125,11 +209,11 @@ body.login-active #loginRow {
   border-right-color: #4caf50;
 }
 .exam-card.seat-hidden {
-  border-right-color: #f44336;
+  border-right-color: #ff7043;
 }
 .exam-card.past {
-  background: rgba(255, 255, 255, 0.9);
-  opacity: 0.9;
+  background: rgba(255, 255, 255, 0.75);
+  opacity: 0.95;
   border-right-color: #1976d2;
 }
 .exam-card.past:hover {
@@ -250,6 +334,19 @@ body.login-active #loginRow {
   border-radius: 10px;
   padding: 8px 18px;
   font-size: 1rem; /* same base font size as screenshot */
+  color: #ffede7;
+  border-color: #ff7043;
+  background-color: rgba(255, 112, 67, 0.28);
+  font-weight: 600;
+  box-shadow: 0 4px 14px rgba(255, 112, 67, 0.22);
+}
+
+#logoutBtn.btn-outline-danger:hover,
+#logoutBtn.btn-outline-danger:focus {
+  color: #ffffff;
+  background-color: #ff7043;
+  border-color: #ff7043;
+  box-shadow: 0 6px 18px rgba(255, 112, 67, 0.35);
 }
 
 @media (max-width: 576px) {
