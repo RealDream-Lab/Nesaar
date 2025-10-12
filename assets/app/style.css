@@ -152,7 +152,7 @@ body.has-logout .logo-container {
   left: 0;
   right: 0;
   bottom: 0;
-  background: linear-gradient(90deg, rgba(6, 91, 140, 0.1), rgba(2, 72, 111, 0.1));
+  background: linear-gradient(90deg, rgba(6, 91, 140, 0), rgba(2, 72, 111, 0));
   padding: 0.6rem 1rem;
   padding-bottom: calc(0.6rem + env(safe-area-inset-bottom, 0px));
   font-size: 0.95rem;
@@ -190,7 +190,7 @@ body.login-active #loginRow {
 }
 
 .exam-card {
-  background: rgba(255, 255, 255, 0.75);
+  background: rgba(255, 255, 255, 0.95);
   backdrop-filter: blur(8px);
   border-radius: 1.25rem;
   box-shadow: 0 2px 16px 0 rgba(33,150,243,0.08);
@@ -234,7 +234,7 @@ body.login-active #loginRow {
 .exam-title {
   font-size: 1.3rem;
   font-weight: 700;
-  color: #1565c0;
+  color: #006dff;
   margin-bottom: 0.7rem;
   display: flex;
   align-items: center;
