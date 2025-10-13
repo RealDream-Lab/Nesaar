@@ -1,5 +1,5 @@
 // Bump cache to force refresh of updated assets (app.js, style.css, index.html)
-const CACHE_NAME = 'exam-seat-v2025-10-13-06';
+const CACHE_NAME = 'exam-seat-v2025-10-13-07';
 const urlsToCache = [
   '/',
   '/index.html',
@@ -12,15 +12,23 @@ const urlsToCache = [
   '/assets/sweetalert2/sweetalert2.min.js',
   '/assets/crypto-js.min.js',
   '/assets/app/app.js',
-  '/icons/icon-192.png',
-  '/icons/icon-512.png'
+  '/assets/app/icon-192.png',
+  '/assets/app/icon-512.png'
 ];
 
 self.addEventListener('install', event => {
   // Activate updated SW immediately
   self.skipWaiting();
   event.waitUntil(
-    caches.open(CACHE_NAME).then(cache => cache.addAll(urlsToCache))
+    caches.open(CACHE_NAME).then(async cache => {
+      for (const url of urlsToCache) {
+        try {
+          await cache.add(url);
+        } catch (error) {
+          console.warn('[SW] Skipping cache for', url, error);
+        }
+      }
+    })
   );
 });
 
