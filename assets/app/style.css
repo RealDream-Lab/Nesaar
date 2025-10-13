@@ -355,6 +355,32 @@ body.login-active #loginRow {
   box-shadow: 0 6px 18px rgba(255, 112, 67, 0.35);
 }
 
+.swal2-popup.swal2-rtl {
+  direction: rtl;
+  text-align: right;
+  width: min(420px, calc(100vw - 32px));
+  border-radius: 20px;
+  padding: 1.75rem 1.75rem 1.5rem;
+  box-shadow: 0 10px 36px rgba(0, 60, 120, 0.18);
+}
+
+.swal2-popup.swal2-rtl .swal2-title {
+  font-size: 1.35rem;
+  font-weight: 700;
+  color: #0d47a1;
+}
+
+.swal2-popup.swal2-rtl .swal2-html-container,
+.swal2-popup.swal2-rtl .swal2-content {
+  font-size: 1.05rem;
+  line-height: 1.9;
+  color: #102027;
+}
+
+.swal2-popup.swal2-rtl .swal2-actions {
+  margin: 1.75rem 0 0;
+}
+
 @media (max-width: 576px) {
   body.has-logout {
     padding-top: 104px;
