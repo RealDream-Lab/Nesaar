@@ -69,23 +69,41 @@ document.addEventListener('DOMContentLoaded', () => {
     const copyrightFooter = document.getElementById('copyrightFooter');
     if (copyrightFooter) {
         copyrightFooter.addEventListener('click', () => {
+            let countdownInterval;
             Swal.fire({
                 title: 'مرکز سنجش و آزمون دانشگاه پیام نور',
-                text: 'درباره برنامه اینجا میاد',
+                html: `
+                    <div style="line-height:1.9;font-size:1.05rem;">
+                        درباره برنامه اینجا میاد
+                    </div>
+                    <div class="swal2-countdown">
+                        بسته می‌شود در
+                        <span class="swal2-countdown-value">${toPersianDigits(30)}</span>
+                        ثانیه
+                    </div>
+                `,
                 timer: 30000,
-                timerProgressBar: true,
                 showConfirmButton: false,
-                confirmButtonText: 'بستن',
                 allowOutsideClick: true,
                 allowEscapeKey: true,
                 customClass: {
-                    popup: 'swal2-rtl swal2-glass',
-                    confirmButton: 'btn btn-primary btn-lg px-4'
+                    popup: 'swal2-rtl swal2-glass'
                 },
                 didOpen: () => {
-                    const timerProgressBar = Swal.getTimerProgressBar();
-                    if (timerProgressBar) {
-                        timerProgressBar.style.background = 'linear-gradient(to right, #2196F3, #1976d2)';
+                    const valueEl = Swal.getHtmlContainer()?.querySelector('.swal2-countdown-value');
+                    if (!valueEl) return;
+                    const updateCountdown = () => {
+                        const remaining = Swal.getTimerLeft();
+                        if (typeof remaining !== 'number') return;
+                        const seconds = Math.max(0, Math.ceil(remaining / 1000));
+                        valueEl.textContent = toPersianDigits(seconds);
+                    };
+                    updateCountdown();
+                    countdownInterval = window.setInterval(updateCountdown, 250);
+                },
+                willClose: () => {
+                    if (countdownInterval) {
+                        window.clearInterval(countdownInterval);
                     }
                 }
             });
@@ -101,10 +119,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
     window.addEventListener('beforeinstallprompt', (e) => {
         // Chrome/Android fires this when eligible
+        // We must call preventDefault to show our custom prompt later
         e.preventDefault();
         deferredPrompt = e;
         if (!isStandalone) {
-            // Offer install via a subtle toast/button
+            // Show our custom install prompt
             showInstallToast();
         }
     });
@@ -655,15 +674,20 @@ document.addEventListener('DOMContentLoaded', () => {
                     } else {
                         message += ' است.';
                     }
+                    let countdownInterval;
                     Swal.fire({
                         title: escapeHtml(exam.course_name),
                         html: `
                             <div style="text-align:justify;direction:rtl;line-height:1.9;font-size:1.05em;">
                                 ${message}
                             </div>
+                            <div class="swal2-countdown">
+                                این پیام تا
+                                <span class="swal2-countdown-value">${toPersianDigits(15)}</span>
+                                ثانیه دیگر بسته می‌شود
+                            </div>
                         `,
                         timer: 15000,
-                        timerProgressBar: true,
                         showConfirmButton: false,
                         allowOutsideClick: true,
                         allowEscapeKey: true,
@@ -671,6 +695,23 @@ document.addEventListener('DOMContentLoaded', () => {
                         buttonsStyling: false,
                         customClass: {
                             popup: 'swal2-rtl swal2-glass'
+                        },
+                        didOpen: () => {
+                            const valueEl = Swal.getHtmlContainer()?.querySelector('.swal2-countdown-value');
+                            if (!valueEl) return;
+                            const updateCountdown = () => {
+                                const remaining = Swal.getTimerLeft();
+                                if (typeof remaining !== 'number') return;
+                                const seconds = Math.max(0, Math.ceil(remaining / 1000));
+                                valueEl.textContent = toPersianDigits(seconds);
+                            };
+                            updateCountdown();
+                            countdownInterval = window.setInterval(updateCountdown, 250);
+                        },
+                        willClose: () => {
+                            if (countdownInterval) {
+                                window.clearInterval(countdownInterval);
+                            }
                         }
                     });
                     return;
