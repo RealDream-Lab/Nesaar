@@ -1,6 +1,7 @@
 html, body {
   overscroll-behavior-y: contain;
   touch-action: pan-y;
+  height: 100%;
 }
 
 body {
@@ -9,6 +10,8 @@ body {
   direction: rtl;
   text-align: right;
   min-height: 100vh;
+  padding-bottom: calc(80px + env(safe-area-inset-bottom, 0px));
+  margin: 0;
 }
 
 .waves-header {
@@ -161,6 +164,8 @@ body.has-logout .logo-container {
   grid-template-columns: auto 1fr auto;
   align-items: center;
   column-gap: 0.5rem;
+  transform: translateZ(0);
+  will-change: transform;
 }
 
 .fixed-footer .footer-text {
@@ -181,6 +186,7 @@ body.has-logout .logo-container {
 /* When login is visible, keep page fixed (no scroll) and account for footer height */
 body.login-active {
   overflow: hidden;       /* prevent page scrolling */
+  padding-bottom: 0;
 }
 
 body.login-active #loginRow {
