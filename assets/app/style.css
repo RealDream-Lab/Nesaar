@@ -462,18 +462,11 @@ body.login-active #loginRow {
   top:  20px;
   left: 20px;
   z-index: 1000;
-  padding: 0.85rem 1.1rem;
-  border-radius: 1.15rem;
-  background: rgba(10, 30, 55, 0.42);
-  border: 1px solid rgba(255, 255, 255, 0.18);
-  backdrop-filter: blur(14px);
-  box-shadow: 0 20px 45px rgba(6, 18, 40, 0.4);
 }
 
 .logo-image {
   max-width: 120px;
   height: auto;
-  border-radius: 0.75rem;
 }
 
 /* Logout button style */
