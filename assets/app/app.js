@@ -79,7 +79,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 allowOutsideClick: true,
                 allowEscapeKey: true,
                 customClass: {
-                    popup: 'swal2-rtl',
+                    popup: 'swal2-rtl swal2-glass',
                     confirmButton: 'btn btn-primary btn-lg px-4'
                 },
                 didOpen: () => {
@@ -118,7 +118,10 @@ document.addEventListener('DOMContentLoaded', () => {
             text: 'اپلیکیشن «نسار» با موفقیت به صفحه اصلی شما اضافه شد.',
             confirmButtonText: 'باشه',
             buttonsStyling: false,
-            customClass: { confirmButton: 'btn btn-primary btn-lg px-4' }
+            customClass: {
+                popup: 'swal2-rtl swal2-glass',
+                confirmButton: 'btn btn-primary btn-lg px-4'
+            }
         });
     });
 
@@ -138,7 +141,11 @@ document.addEventListener('DOMContentLoaded', () => {
                 confirmButtonText: 'نصب کن',
                 cancelButtonText: 'بعداً',
                 buttonsStyling: false,
-                customClass: { confirmButton: 'btn btn-primary mx-2', cancelButton: 'btn btn-light mx-2' }
+                customClass: {
+                    popup: 'swal2-rtl swal2-glass',
+                    confirmButton: 'btn btn-primary mx-2',
+                    cancelButton: 'btn btn-light mx-2'
+                }
             }).then(async (result) => {
                 if (result.isConfirmed && deferredPrompt) {
                     deferredPrompt.prompt();
@@ -163,7 +170,10 @@ document.addEventListener('DOMContentLoaded', () => {
                 icon: 'info',
                 confirmButtonText: 'متوجه شدم',
                 buttonsStyling: false,
-                customClass: { confirmButton: 'btn btn-primary btn-lg px-4' }
+                customClass: {
+                    popup: 'swal2-rtl swal2-glass',
+                    confirmButton: 'btn btn-primary btn-lg px-4'
+                }
             });
         }
     }
@@ -656,7 +666,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         allowEnterKey: false,
                         buttonsStyling: false,
                         customClass: {
-                            popup: 'swal2-rtl'
+                            popup: 'swal2-rtl swal2-glass'
                         }
                     });
                     return;
@@ -679,7 +689,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     confirmButtonText: 'بستن',
                     buttonsStyling: false,
                     customClass: {
-                        popup: 'swal2-rtl',
+                        popup: 'swal2-rtl swal2-glass',
                         confirmButton: 'btn btn-primary btn-lg px-4'
                     }
                 });
@@ -751,6 +761,7 @@ document.addEventListener('DOMContentLoaded', () => {
             confirmButtonText: 'باشه',
             buttonsStyling: false,
             customClass: {
+                popup: 'swal2-rtl swal2-glass',
                 confirmButton: 'btn btn-primary btn-lg px-4'
             }
         });

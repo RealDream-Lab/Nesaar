@@ -165,24 +165,24 @@ body::after {
   font-size: 1.1rem;
   letter-spacing: 0.5px;
   border-radius: 1rem;
-  border: 1px solid rgba(255, 255, 255, 0.2);
-  background: rgba(10, 30, 58, 0.38);
-  color: var(--heading-color);
+  border: 1px solid rgba(255, 255, 255, 0.32);
+  background: rgba(16, 44, 78, 0.54);
+  color: rgba(236, 246, 255, 0.96);
+  caret-color: rgba(210, 232, 255, 0.95);
   transition: border-color 0.2s ease, box-shadow 0.2s ease, background-color 0.2s ease;
 }
 
 #examForm .form-label {
   color: var(--heading-color);
 }
-
 #examForm .form-control-lg::placeholder {
-  color: var(--text-muted);
+  color: rgba(232, 244, 255, 0.75);
 }
 
 #examForm .form-control-lg:focus {
-  border-color: rgba(91, 176, 255, 0.6);
-  background: rgba(15, 44, 80, 0.55);
-  box-shadow: 0 0 0 3px rgba(91, 176, 255, 0.15);
+  border-color: rgba(91, 176, 255, 0.68);
+  background: rgba(20, 56, 96, 0.62);
+  box-shadow: 0 0 0 3px rgba(91, 176, 255, 0.18);
 }
 
 .btn.btn-primary {
@@ -497,6 +497,9 @@ body.login-active #loginRow {
 .swal2-popup.swal2-rtl {
   direction: rtl;
   text-align: right;
+}
+
+.swal2-popup.swal2-glass {
   width: min(420px, calc(100vw - 32px));
   border-radius: var(--glass-radius-md);
   padding: 1.9rem 1.85rem 1.6rem;
@@ -506,24 +509,24 @@ body.login-active #loginRow {
   backdrop-filter: blur(18px);
 }
 
-.swal2-popup.swal2-rtl .swal2-title {
+.swal2-popup.swal2-glass .swal2-title {
   font-size: 1.35rem;
   font-weight: 700;
   color: var(--heading-color);
 }
 
-.swal2-popup.swal2-rtl .swal2-html-container,
-.swal2-popup.swal2-rtl .swal2-content {
+.swal2-popup.swal2-glass .swal2-html-container,
+.swal2-popup.swal2-glass .swal2-content {
   font-size: 1.05rem;
   line-height: 1.9;
   color: var(--text-color);
 }
 
-.swal2-popup.swal2-rtl .swal2-actions {
+.swal2-popup.swal2-glass .swal2-actions {
   margin: 1.75rem 0 0;
 }
 
-.swal2-popup.swal2-rtl .swal2-confirm {
+.swal2-popup.swal2-glass .swal2-confirm {
   border-radius: 0.8rem;
   padding: 0.65rem 2.5rem;
   background: linear-gradient(135deg, rgba(91, 176, 255, 0.9), rgba(45, 120, 219, 0.8)) !important;
