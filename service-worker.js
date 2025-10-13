@@ -1,5 +1,5 @@
 // Bump cache to force refresh of updated assets (app.js, style.css, index.html)
-const CACHE_NAME = 'exam-seat-v2025-10-13-07';
+const CACHE_NAME = 'exam-seat-v2025-10-13-08';
 const urlsToCache = [
   '/',
   '/index.html',
@@ -12,8 +12,8 @@ const urlsToCache = [
   '/assets/sweetalert2/sweetalert2.min.js',
   '/assets/crypto-js.min.js',
   '/assets/app/app.js',
-  '/assets/app/icon-192.png',
-  '/assets/app/icon-512.png'
+  '/icons/icon-192.png',
+  '/icons/icon-512.png'
 ];
 
 self.addEventListener('install', event => {
