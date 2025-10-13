@@ -77,9 +77,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         درباره برنامه اینجا میاد
                     </div>
                     <div class="swal2-countdown">
-                        بسته می‌شود در
                         <span class="swal2-countdown-value">${toPersianDigits(30)}</span>
-                        ثانیه
                     </div>
                 `,
                 timer: 30000,
@@ -682,9 +680,7 @@ document.addEventListener('DOMContentLoaded', () => {
                                 ${message}
                             </div>
                             <div class="swal2-countdown">
-                                این پیام تا
                                 <span class="swal2-countdown-value">${toPersianDigits(15)}</span>
-                                ثانیه دیگر بسته می‌شود
                             </div>
                         `,
                         timer: 15000,
