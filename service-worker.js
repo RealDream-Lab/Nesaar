@@ -1,5 +1,5 @@
 // Bump cache to force refresh of updated assets (app.js, style.css, index.html)
-const CACHE_NAME = 'exam-seat-v2025-10-13-12';
+const CACHE_NAME = 'exam-seat-v2025-10-13-13';
 const urlsToCache = [
   '/',
   '/index.html',
@@ -23,7 +23,8 @@ self.addEventListener('install', event => {
     caches.open(CACHE_NAME).then(async cache => {
       for (const url of urlsToCache) {
         try {
-          await cache.add(url);
+          const request = new Request(url, { cache: 'reload' });
+          await cache.add(request);
         } catch (error) {
           console.warn('[SW] Skipping cache for', url, error);
         }
@@ -34,7 +35,16 @@ self.addEventListener('install', event => {
 
 self.addEventListener('fetch', event => {
   const request = event.request;
+
+  if (request.method !== 'GET') {
+    return;
+  }
+
   const url = new URL(request.url);
+
+  if (url.origin !== self.location.origin) {
+    return;
+  }
 
   if (url.pathname.startsWith('/API/')) {
     event.respondWith(
@@ -43,9 +53,12 @@ self.addEventListener('fetch', event => {
     return;
   }
 
-  event.respondWith(
-    caches.match(request).then(response => response || fetch(request))
-  );
+  if (request.mode === 'navigate' || shouldUseNetworkFirst(url.pathname)) {
+    event.respondWith(networkFirst(request));
+    return;
+  }
+
+  event.respondWith(cacheFirst(request));
 });
 
 self.addEventListener('activate', event => {
@@ -57,3 +70,34 @@ self.addEventListener('activate', event => {
     ).then(() => self.clients.claim())
   );
 });
+
+function shouldUseNetworkFirst(pathname) {
+  const networkFirstExts = ['.html', '.js', '.mjs', '.css', '.json', '.wasm'];
+  return networkFirstExts.some(ext => pathname.endsWith(ext));
+}
+
+async function networkFirst(request) {
+  const cache = await caches.open(CACHE_NAME);
+  try {
+    const fresh = await fetch(request);
+    cache.put(request, fresh.clone());
+    return fresh;
+  } catch (error) {
+    const cached = await cache.match(request);
+    if (cached) {
+      return cached;
+    }
+    throw error;
+  }
+}
+
+async function cacheFirst(request) {
+  const cache = await caches.open(CACHE_NAME);
+  const cached = await cache.match(request);
+  if (cached) {
+    return cached;
+  }
+  const fresh = await fetch(request);
+  cache.put(request, fresh.clone());
+  return fresh;
+}
