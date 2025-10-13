@@ -22,6 +22,20 @@
   <link rel="stylesheet" href="assets/bootstrap/bootstrap.min.css" />
   <link rel="stylesheet" href="assets/sweetalert2/sweetalert2.min.css" />
   <link rel="stylesheet" href="assets/app/style.css" />
+  <script>
+    (function () {
+      try {
+        var cookies = document.cookie ? document.cookie.split(';') : [];
+        for (var i = 0; i < cookies.length; i++) {
+          var c = cookies[i].trim();
+          if (c.indexOf('userSession=') === 0) {
+            document.documentElement.classList.add('session-cookie-detected');
+            break;
+          }
+        }
+      } catch (err) {}
+    })();
+  </script>
 </head>
 <body>
   <!-- Logo Section - Fixed at top left of page -->

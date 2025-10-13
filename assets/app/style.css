@@ -222,6 +222,10 @@ body.has-logout .logo-container {
   display: none;
 }
 
+html.session-cookie-detected .logo-container {
+  display: none;
+}
+
 @media (max-width: 576px) {
 }
 

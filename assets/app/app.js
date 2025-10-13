@@ -354,12 +354,15 @@ document.addEventListener('DOMContentLoaded', () => {
         const target = document.getElementById('loginRow') || loginSection;
         if (target) target.classList.remove('d-none');
         document.body.classList.add('login-active');
+        document.documentElement.classList.remove('session-cookie-detected');
     }
 
     function ensureLogoutButton(fullName, studentId) {
         // Remove old button if exists
         const old = document.getElementById('logoutBtn');
         if (old) old.remove();
+
+        document.documentElement.classList.add('session-cookie-detected');
 
         // Create logout button in top right corner
         const btn = document.createElement('button');
@@ -399,6 +402,7 @@ document.addEventListener('DOMContentLoaded', () => {
             lastPayload = [];
             lastFullName = '';
             eraseCookie('userSession');
+            document.documentElement.classList.remove('session-cookie-detected');
             clearResults();
             showLogin();
         });
