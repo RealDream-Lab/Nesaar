@@ -504,6 +504,18 @@ body.login-active #loginRow {
   background: linear-gradient(140deg, rgba(25, 55, 95, 0.62), rgba(12, 32, 60, 0.45));
   border: 1px solid rgba(255, 255, 255, 0.18);
   backdrop-filter: blur(18px);
+  overflow: hidden; /* keep timer/progress visuals inside rounded shell */
+}
+
+.swal2-popup.swal2-glass .swal2-timer-progress-bar-container {
+  border-bottom-left-radius: calc(var(--glass-radius-md) - 0.4rem);
+  border-bottom-right-radius: calc(var(--glass-radius-md) - 0.4rem);
+  overflow: hidden;
+}
+
+.swal2-popup.swal2-glass .swal2-timer-progress-bar {
+  height: 0.3rem;
+  background: linear-gradient(90deg, rgba(123, 213, 255, 0.95), rgba(60, 166, 255, 0.8));
 }
 
 .swal2-popup.swal2-glass .swal2-title {
