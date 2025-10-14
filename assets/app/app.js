@@ -59,10 +59,10 @@ document.addEventListener('DOMContentLoaded', () => {
     let lastPayload = [];
     let lastFullName = '';
 
-    // Enable staff mode (coming soon)
+    // Temporarily disable staff mode (only student mode active for now)
     if (staffTypeRadio) {
-        staffTypeRadio.disabled = false;
-        // Optional: ensure student is selected by default
+        staffTypeRadio.disabled = true;
+        // Optional: ensure student is selected
         if (studentTypeRadio) studentTypeRadio.checked = true;
     }
 
@@ -72,7 +72,7 @@ document.addEventListener('DOMContentLoaded', () => {
         studentIdInput.value = '';
         nationalIdInput.value = '';
 
-        // Student mode
+        // Only student mode is active for now
         if (studentTypeRadio.checked || (staffTypeRadio && staffTypeRadio.disabled)) {
             // Student mode
             firstFieldLabel.textContent = 'شماره دانشجویی';
@@ -81,7 +81,7 @@ document.addEventListener('DOMContentLoaded', () => {
             nationalIdInput.placeholder = 'مثال: 3781985569';
             nationalIdInput.type = 'tel';
         } else if (staffTypeRadio && staffTypeRadio.checked) {
-            // Staff mode (coming soon)
+            // Staff mode (disabled for now)
             firstFieldLabel.textContent = 'نام کاربری';
             secondFieldLabel.textContent = 'رمز عبور';
             studentIdInput.placeholder = '';
