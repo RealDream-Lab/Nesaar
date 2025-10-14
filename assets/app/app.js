@@ -1,4 +1,41 @@
 document.addEventListener('DOMContentLoaded', () => {
+    // Listen for service worker update messages and show SweetAlert
+    if (navigator.serviceWorker) {
+        navigator.serviceWorker.addEventListener('message', event => {
+            if (event.data?.type === 'sw-update') {
+                const { version, changes } = event.data;
+                let countdownInterval;
+                Swal.fire({
+                    icon: 'info',
+                    title: `نسخه جدید فعال شد`,
+                    html: `<ul style=\"text-align:right;line-height:2;margin-bottom:1rem;font-size:0.92em;font-family:inherit;\">${(changes || []).map(c => `<li>${c}</li>`).join('')}</ul><div class=\"swal2-countdown\"><span class=\"swal2-countdown-value\">۱۵</span></div>`,
+                    timer: 15000,
+                    showConfirmButton: false,
+                    allowOutsideClick: true,
+                    allowEscapeKey: true,
+                    customClass: { popup: 'swal2-rtl swal2-glass' },
+                    width: 520,
+                    didOpen: () => {
+                        const valueEl = Swal.getHtmlContainer()?.querySelector('.swal2-countdown-value');
+                        if (!valueEl) return;
+                        const updateCountdown = () => {
+                            const remaining = Swal.getTimerLeft();
+                            if (typeof remaining !== 'number') return;
+                            const seconds = Math.max(0, Math.ceil(remaining / 1000));
+                            valueEl.textContent = seconds;
+                        };
+                        updateCountdown();
+                        countdownInterval = window.setInterval(updateCountdown, 250);
+                    },
+                    willClose: () => {
+                        if (countdownInterval) {
+                            window.clearInterval(countdownInterval);
+                        }
+                    }
+                });
+            }
+        });
+    }
     const form = document.getElementById('examForm');
     const searchBtn = document.getElementById('searchBtn');
     const examCards = document.getElementById('examCards');

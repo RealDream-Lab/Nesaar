@@ -528,6 +528,7 @@ body.login-active #loginRow {
   display: inline-block;
   min-width: 2.2ch;
   text-align: center;
+  font-weight: 400;
 }
 
 .swal2-popup.swal2-glass .swal2-title {
