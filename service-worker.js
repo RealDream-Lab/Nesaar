@@ -1,5 +1,5 @@
 // Bump cache to force refresh of updated assets (app.js, style.css, index.html)
-const CACHE_NAME = 'exam-seat-v2025-10-13-13';
+const CACHE_NAME = 'exam-seat-v2025-10-14-00';
 const urlsToCache = [
   '/',
   '/index.html',
@@ -67,7 +67,22 @@ self.addEventListener('activate', event => {
       Promise.all(
         keys.filter(key => key !== CACHE_NAME).map(key => caches.delete(key))
       )
-    ).then(() => self.clients.claim())
+    ).then(() => {
+      self.clients.claim();
+      // Notify all clients about SW update
+      self.clients.matchAll().then(clients => {
+        clients.forEach(client => {
+          client.postMessage({
+            type: 'sw-update',
+            version: CACHE_NAME,
+            changes: [
+              'فونت شمارنده معکوس سبک‌تر شد',
+              'آخرین تغییرات UI اعمال شد'
+            ]
+          });
+        });
+      });
+    })
   );
 });
 
