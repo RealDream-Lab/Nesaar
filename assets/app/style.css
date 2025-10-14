@@ -439,10 +439,6 @@ body.login-active #loginRow {
   margin-left: 6px;
 }
 
-.btn-close-white {
-  filter: invert(1) grayscale(100%) brightness(200%);
-}
-
 .form-check-inline {
   display: inline-flex;
   align-items: center;

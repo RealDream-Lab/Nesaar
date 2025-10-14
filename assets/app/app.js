@@ -618,7 +618,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 return `
                 <div class="exam-card ${seatClass} upcoming" tabindex="0" data-exam-origin="${idx}" data-exam-status="upcoming">
                     <div class="exam-title">
-                        <span class="exam-name">${escapeHtml(exam.course_name)}</span>
+                        <span>${escapeHtml(exam.course_name)}</span>
                     </div>
                     <div class="exam-meta">${toPersianDigits(exam.exam_date)} | ${toPersianDigits(exam.exam_time)}</div>
                     ${countdownMarkup}
@@ -640,7 +640,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 return `
                 <div class="exam-card ${seatClass} past" tabindex="0" data-exam-origin="${idx}" data-exam-status="past">
                     <div class="exam-title">
-                        <span class="exam-name">${escapeHtml(exam.course_name)}</span>
+                        <span>${escapeHtml(exam.course_name)}</span>
                     </div>
                 </div>
             `;
@@ -787,11 +787,6 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         });
         return needsReorder;
-    }
-
-    function hideResults() {
-        // obsolete - results now render directly on page
-        clearResults();
     }
 
     function showAlert(icon, title, text) {
