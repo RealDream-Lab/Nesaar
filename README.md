@@ -37,10 +37,8 @@ sudo chown -R www-data:www-data /var/www/html
 
 ### ۳. پیکربندی پایگاه داده
 
-<div dir="ltr">
-
 ```sql
--- ساخت دیتابیس
+
 CREATE DATABASE IF NOT EXISTS PnuExamsSeatNumber
 CHARACTER SET utf8mb4
 COLLATE utf8mb4_general_ci;
@@ -110,8 +108,6 @@ VALUES
 -- جداول students، courses و exam_seats مطابق فایل docker/mysql-init/schema.sql
 -- (نمونه ساختار در پوشه docker/mysql-init آمده است)
 ```
-
-</div>
 
 ### ۴. تنظیم .env
 
