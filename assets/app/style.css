@@ -18,7 +18,6 @@
 html, body {
   overscroll-behavior-y: contain;
   touch-action: pan-y;
-  overflow-y: scroll;
   height: 100%;
 }
 
@@ -553,4 +552,9 @@ body.login-active #loginRow {
     max-width: 100%;
     padding: 0 1rem 5rem;
   }
+}
+
+/* Prevent page shift when SweetAlert opens */
+.swal2-shown body {
+  padding-right: calc(100vw - 100%);
 }
