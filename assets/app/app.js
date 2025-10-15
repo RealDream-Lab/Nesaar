@@ -103,11 +103,12 @@ document.addEventListener('DOMContentLoaded', () => {
                 </div>
             `,
             focusConfirm: false,
-            showCancelButton: true,
+            showCancelButton: false,
             confirmButtonText: 'ذخیره',
-            cancelButtonText: 'لغو',
             width: 600,
             buttonsStyling: false,
+            allowOutsideClick: false,
+            allowEscapeKey: false,
             preConfirm: () => {
                 const order = document.getElementById('swal-order').value.trim();
                 const university = document.getElementById('swal-university').value.trim();
@@ -119,8 +120,7 @@ document.addEventListener('DOMContentLoaded', () => {
             },
             customClass: {
                 popup: 'swal2-rtl swal2-glass',
-                confirmButton: 'btn btn-primary mx-2',
-                cancelButton: 'btn btn-outline-secondary mx-2'
+                confirmButton: 'btn btn-primary mx-2'
             }
         });
 
