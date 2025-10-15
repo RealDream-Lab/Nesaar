@@ -3,34 +3,48 @@ document.addEventListener('DOMContentLoaded', () => {
     if (navigator.serviceWorker) {
         navigator.serviceWorker.addEventListener('message', event => {
             if (event.data?.type === 'sw-update') {
-                const { version, changes } = event.data;
-                let countdownInterval;
+                const { version, changes } = event.data || {};
+                // Short list (in case SW sent verbose) and show reload button
+                const items = (changes || []).slice(0, 5);
+                let countdownInterval = null;
+                let autoSeconds = 10;
+                const html = `
+                    <div style="text-align:right;direction:rtl;">
+                        <ul style="margin:0 0 0.6rem 0;padding-inline-start:1rem;">${items.map(c => `<li>${c}</li>`).join('')}</ul>
+                        <div class="swal2-countdown">بارگذاری خودکار در <strong class="swal2-countdown-value">${autoSeconds}</strong> ثانیه...</div>
+                    </div>`;
+
                 Swal.fire({
                     icon: 'info',
-                    title: `نسخه جدید فعال شد`,
-                    html: `<ul style=\"text-align:right;line-height:2;margin-bottom:1rem;font-size:0.92em;font-family:inherit;\">${(changes || []).map(c => `<li>${c}</li>`).join('')}</ul><div class=\"swal2-countdown\"><span class=\"swal2-countdown-value\">۱۵</span></div>`,
-                    timer: 15000,
-                    showConfirmButton: false,
-                    allowOutsideClick: true,
-                    allowEscapeKey: true,
-                    customClass: { popup: 'swal2-rtl swal2-glass' },
+                    title: 'نسخه جدید آماده است',
+                    html,
+                    showCancelButton: true,
+                    confirmButtonText: 'بارگذاری مجدد',
+                    cancelButtonText: 'بعدا',
+                    buttonsStyling: false,
+                    customClass: { popup: 'swal2-rtl swal2-glass', confirmButton: 'btn btn-primary', cancelButton: 'btn btn-secondary' },
                     width: 520,
                     didOpen: () => {
                         const valueEl = Swal.getHtmlContainer()?.querySelector('.swal2-countdown-value');
                         if (!valueEl) return;
-                        const updateCountdown = () => {
-                            const remaining = Swal.getTimerLeft();
-                            if (typeof remaining !== 'number') return;
-                            const seconds = Math.max(0, Math.ceil(remaining / 1000));
-                            valueEl.textContent = seconds;
+                        const tick = () => {
+                            autoSeconds -= 1;
+                            valueEl.textContent = autoSeconds;
+                            if (autoSeconds <= 0) {
+                                clearInterval(countdownInterval);
+                                // force reload to pick up new SW
+                                window.location.reload(true);
+                            }
                         };
-                        updateCountdown();
-                        countdownInterval = window.setInterval(updateCountdown, 250);
+                        countdownInterval = window.setInterval(tick, 1000);
                     },
                     willClose: () => {
-                        if (countdownInterval) {
-                            window.clearInterval(countdownInterval);
-                        }
+                        if (countdownInterval) clearInterval(countdownInterval);
+                    }
+                }).then(result => {
+                    if (countdownInterval) clearInterval(countdownInterval);
+                    if (result.isConfirmed) {
+                        window.location.reload(true);
                     }
                 });
             }
