@@ -95,11 +95,11 @@ document.addEventListener('DOMContentLoaded', () => {
         const { value: formValues } = await Swal.fire({
             title: 'تنظیمات اولیه',
             html: `
-                <div style="text-align:right; direction:rtl; line-height:2; max-width: 500px; margin: 0 auto;">
+                <div style="text-align:right; direction:rtl; line-height:2; max-width: 400px; margin: 0 auto;">
                     <label for="swal-order">سفارش‌دهنده:</label><br>
-                    <input id="swal-order" class="swal2-input" value="${escapeHtml(currentConfig.Order || '')}" style="width:100%; max-width: 450px; margin-bottom:10px;"><br>
+                    <input id="swal-order" class="swal2-input" value="${escapeHtml(currentConfig.Order || '')}" style="width:100%; max-width: 380px; margin-bottom:10px;"><br>
                     <label for="swal-university">دانشگاه:</label><br>
-                    <input id="swal-university" class="swal2-input" value="${escapeHtml(currentConfig.University || '')}" style="width:100%; max-width: 450px;">
+                    <input id="swal-university" class="swal2-input" value="${escapeHtml(currentConfig.University || '')}" style="width:100%; max-width: 380px;">
                 </div>
             `,
             focusConfirm: false,
@@ -120,7 +120,7 @@ document.addEventListener('DOMContentLoaded', () => {
             customClass: {
                 popup: 'swal2-rtl swal2-glass',
                 confirmButton: 'btn btn-primary mx-2',
-                cancelButton: 'btn btn-light mx-2'
+                cancelButton: 'btn btn-outline-secondary mx-2'
             }
         });
 

@@ -130,8 +130,8 @@ CREATE TABLE Config (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 INSERT INTO Config (ID, ConfigName, ConfigValue) VALUES
-(1, 'Order', 'اداره آموزش، پژوهش، فرهنگی و دانشجوئی دانشگاه پیام نور مرکز بیجار'),
-(2, 'University', 'دانشگاه پیام نور مرکز بیجار'),
+(1, 'Order', ''),
+(2, 'University', ''),
 (3, 'IsInit', 'NO');
 
 ALTER TABLE Config

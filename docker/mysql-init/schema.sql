@@ -99,8 +99,8 @@ ON DUPLICATE KEY UPDATE
     seat_row = VALUES(seat_row);
 
 INSERT INTO Config (ID, ConfigName, ConfigValue) VALUES
-(1, 'Order', 'اداره آموزش، پژوهش، فرهنگی و دانشجوئی دانشگاه پیام نور مرکز بیجار'),
-(2, 'University', 'دانشگاه پیام نور مرکز بیجار'),
+(1, 'Order', ''),
+(2, 'University', ''),
 (3, 'IsInit', 'NO')
 ON DUPLICATE KEY UPDATE
     ConfigValue = VALUES(ConfigValue);
