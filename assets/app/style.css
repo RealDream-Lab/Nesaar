@@ -231,14 +231,14 @@ html.session-cookie-detected .logo-container {
   right: 0;
   bottom: 0;
   /*background: linear-gradient(120deg, rgba(18, 54, 92, 0.72), rgba(12, 32, 60, 0.58));*/
-  padding: 0.6rem 1rem;
+  padding: 0.6rem 0.5rem;
   padding-bottom: calc(0.6rem + env(safe-area-inset-bottom, 0px));
   font-size: 0.95rem;
   z-index: 1040;
-  display: grid;
-  grid-template-columns: auto 1fr auto;
+  display: flex;
+  flex-direction: column;
   align-items: center;
-  column-gap: 0.5rem;
+  justify-content: center;
   /*border-top: 1px solid rgba(255, 255, 255, 0.18);
   backdrop-filter: blur(20px);
   box-shadow: 0 -18px 40px rgba(4, 14, 30, 0.45);*/
@@ -247,18 +247,19 @@ html.session-cookie-detected .logo-container {
 .fixed-footer .footer-text {
   direction: rtl;
   white-space: nowrap;
+  text-align: center;
   color: var(--heading-color);
 }
 
 .fixed-footer .footer-clock {
   direction: ltr;
   white-space: nowrap;
-  text-align: left;
+  text-align: center;
   color: var(--accent-secondary);
 }
 
 .fixed-footer .footer-spacer {
-  visibility: hidden;
+  display: none;
 }
 
 /* When login is visible, keep page fixed (no scroll) and account for footer height */
