@@ -59,6 +59,13 @@ document.addEventListener('DOMContentLoaded', () => {
     let lastPayload = [];
     let lastFullName = '';
 
+    function getPersianMonthName(dateStr) {
+        const parts = dateStr.split('/');
+        const month = parseInt(parts[1], 10);
+        const months = ['', 'فروردین', 'اردیبهشت', 'خرداد', 'تیر', 'مرداد', 'شهریور', 'مهر', 'آبان', 'آذر', 'دی', 'بهمن', 'اسفند'];
+        return months[month] || '';
+    }
+
     // Fetch and cache config
     async function loadConfig() {
         try {
@@ -865,12 +872,14 @@ document.addEventListener('DOMContentLoaded', () => {
                     return;
                 }
 
+                const parts = exam.exam_date.split('/');
+                const formattedDate = `${toPersianDigits(parts[2])} ${getPersianMonthName(exam.exam_date)} ${toPersianDigits(parts[0])}`;
                 Swal.fire({
                     title: `${toPersianDigits(exam.course_code)}`,
                     html: `
                         <div lang="fa" style="text-align:justify;direction:rtl;line-height:1.9;font-size:1.05em; hyphens: auto; -webkit-hyphens: auto; -moz-hyphens: auto;">
                             <div style="text-align:center;"><strong>${escapeHtml(exam.course_name)}</strong></div><br>
-                            آزمون ${escapeHtml(exam.course_type)} این درس راس ساعت ${toPersianDigits(exam.exam_time)} روز ${exam.exam_day} ${toPersianDigits(exam.exam_date)} به شیوه ${escapeHtml(exam.exam_type)} برگزار خواهد شد. ${/^\d+$/.test(exam.seat_number) ? `شماره صندلی شما ${toPersianDigits(exam.seat_number)} می‌باشد.` : exam.seat_number}${/^\d+$/.test(exam.seat_number) ? `<br><br>ساختمان: <span style="color: #007bff;">${escapeHtml(exam.building) || '-'}</span><br>کلاس: <span style="color: #007bff;">${escapeHtml(exam.class_name) || '-'}</span><br>ردیف: <span style="color: #007bff;">${toPersianDigits(exam.seat_row) || '-'}</span>` : ''}
+                            آزمون ${escapeHtml(exam.course_type)} این درس راس ساعت ${toPersianDigits(exam.exam_time)} روز ${exam.exam_day} ${formattedDate} به شیوه ${escapeHtml(exam.exam_type)} برگزار خواهد شد. ${/^\d+$/.test(exam.seat_number) ? `شماره صندلی شما ${toPersianDigits(exam.seat_number)} می‌باشد.` : exam.seat_number}${/^\d+$/.test(exam.seat_number) ? `<br><br>ساختمان: <span style="color: #007bff;">${escapeHtml(exam.building) || '-'}</span><br>کلاس: <span style="color: #007bff;">${escapeHtml(exam.class_name) || '-'}</span><br>ردیف: <span style="color: #007bff;">${toPersianDigits(exam.seat_row) || '-'}</span>` : ''}
                         </div>
                     `,
                     confirmButtonText: 'بستن',
