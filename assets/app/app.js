@@ -3,50 +3,13 @@ document.addEventListener('DOMContentLoaded', () => {
     if (navigator.serviceWorker) {
         navigator.serviceWorker.addEventListener('message', event => {
             if (event.data?.type === 'sw-update') {
-                const { version, changes } = event.data || {};
-                // Short list (in case SW sent verbose) and show reload button
-                const items = (changes || []).slice(0, 5);
-                let countdownInterval = null;
-                let autoSeconds = 10;
-                const html = `
-                    <div style="text-align:right;direction:rtl;">
-                        <ul style="margin:0 0 0.6rem 0;padding-inline-start:1rem;">${items.map(c => `<li>${c}</li>`).join('')}</ul>
-                        <div class="swal2-countdown">بارگذاری خودکار در <strong class="swal2-countdown-value">${autoSeconds}</strong> ثانیه...</div>
-                    </div>`;
-
-                Swal.fire({
-                    icon: 'info',
-                    title: 'نسخه جدید آماده است',
-                    html,
-                    showCancelButton: true,
-                    confirmButtonText: 'بارگذاری مجدد',
-                    cancelButtonText: 'بعدا',
-                    buttonsStyling: false,
-                    customClass: { popup: 'swal2-rtl swal2-glass', confirmButton: 'btn btn-primary', cancelButton: 'btn btn-secondary' },
-                    width: 520,
-                    didOpen: () => {
-                        const valueEl = Swal.getHtmlContainer()?.querySelector('.swal2-countdown-value');
-                        if (!valueEl) return;
-                        const tick = () => {
-                            autoSeconds -= 1;
-                            valueEl.textContent = autoSeconds;
-                            if (autoSeconds <= 0) {
-                                clearInterval(countdownInterval);
-                                // force reload to pick up new SW
-                                window.location.reload(true);
-                            }
-                        };
-                        countdownInterval = window.setInterval(tick, 1000);
-                    },
-                    willClose: () => {
-                        if (countdownInterval) clearInterval(countdownInterval);
-                    }
-                }).then(result => {
-                    if (countdownInterval) clearInterval(countdownInterval);
-                    if (result.isConfirmed) {
-                        window.location.reload(true);
-                    }
-                });
+                // Immediately reload to activate the new service worker and fetch updated assets
+                try {
+                    window.location.reload(true);
+                } catch (e) {
+                    // fallback for browsers that ignore the boolean
+                    window.location.reload();
+                }
             }
         });
     }
