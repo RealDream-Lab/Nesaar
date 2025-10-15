@@ -139,8 +139,8 @@ foreach ($results as &$row) {
                 if ($minutes_difference > 30) {
                     $exam_datetime = DateTime::createFromFormat('H:i', $row['exam_time']);
                     $exam_datetime->modify('-30 minutes');
-                        $visible_time = $exam_datetime->format('H:i');
-                        $row['seat_number'] = 'مخفی تا ' . $visible_time . ' | ' . $row['exam_date'];
+                    $visible_time = $exam_datetime->format('H:i');
+                    $row['seat_number'] = 'صندلی تا ساعت ' . $visible_time . ' تاریخ ' . $row['exam_date'] . ' مخفی می‌باشد.';
                     $row['building'] = '';
                     $row['class_name'] = '';
                     $row['seat_row'] = '';
@@ -150,8 +150,8 @@ foreach ($results as &$row) {
             // اگر امتحان در آینده است (تاریخ بعدی)
             $exam_datetime = DateTime::createFromFormat('H:i', $row['exam_time']);
             $exam_datetime->modify('-30 minutes');
-                $visible_time = $exam_datetime->format('H:i');
-                $row['seat_number'] = 'مخفی تا ' . $visible_time . ' | ' . $row['exam_date'];
+            $visible_time = $exam_datetime->format('H:i');
+            $row['seat_number'] = 'صندلی تا ساعت ' . $visible_time . ' تاریخ ' . $row['exam_date'] . ' مخفی می‌باشد.';
             $row['building'] = '';
             $row['class_name'] = '';
             $row['seat_row'] = '';
