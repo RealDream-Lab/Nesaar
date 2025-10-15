@@ -230,7 +230,7 @@ html.session-cookie-detected .logo-container {
   left: 0;
   right: 0;
   bottom: 0;
-  background: linear-gradient(120deg, rgba(18, 54, 92, 0.72), rgba(12, 32, 60, 0.58));
+  /*background: linear-gradient(120deg, rgba(18, 54, 92, 0.72), rgba(12, 32, 60, 0.58));*/
   padding: 0.6rem 1rem;
   padding-bottom: calc(0.6rem + env(safe-area-inset-bottom, 0px));
   font-size: 0.95rem;
@@ -239,9 +239,9 @@ html.session-cookie-detected .logo-container {
   grid-template-columns: auto 1fr auto;
   align-items: center;
   column-gap: 0.5rem;
-  border-top: 1px solid rgba(255, 255, 255, 0.18);
+  /*border-top: 1px solid rgba(255, 255, 255, 0.18);
   backdrop-filter: blur(20px);
-  box-shadow: 0 -18px 40px rgba(4, 14, 30, 0.45);
+  box-shadow: 0 -18px 40px rgba(4, 14, 30, 0.45);*/
 }
 
 .fixed-footer .footer-text {
