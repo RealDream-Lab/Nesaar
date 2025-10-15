@@ -555,6 +555,6 @@ body.login-active #loginRow {
 }
 
 /* Prevent page shift when SweetAlert opens */
-.swal2-shown body {
-  padding-right: calc(100vw - 100%);
+body.swal2-shown {
+  padding-right: calc(100vw - 100%) !important;
 }
