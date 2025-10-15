@@ -131,13 +131,14 @@ CREATE TABLE Config (
 
 INSERT INTO Config (ID, ConfigName, ConfigValue) VALUES
 (1, 'Order', 'اداره آموزش، پژوهش، فرهنگی و دانشجوئی دانشگاه پیام نور مرکز بیجار'),
-(2, 'University', 'دانشگاه پیام نور مرکز بیجار');
+(2, 'University', 'دانشگاه پیام نور مرکز بیجار'),
+(3, 'IsInit', 'NO');
 
 ALTER TABLE Config
   ADD PRIMARY KEY (ID);
 
 ALTER TABLE Config
-  MODIFY ID int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=3;
+  MODIFY ID int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=4;
         ";
         $pdo->exec($initSQL);
     }

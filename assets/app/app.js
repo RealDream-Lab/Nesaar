@@ -84,7 +84,83 @@ document.addEventListener('DOMContentLoaded', () => {
         if (footerText) {
             footerText.textContent = `نسار - ${config.University || 'دانشگاه پیام نور مرکز بیجار'}`;
         }
+
+        // Check IsInit
+        if (config.IsInit !== 'YES') {
+            showInitModal(config);
+        }
     });
+
+    async function showInitModal(currentConfig) {
+        const { value: formValues } = await Swal.fire({
+            title: 'تنظیمات اولیه',
+            html: `
+                <div style="text-align:right; direction:rtl; line-height:2;">
+                    <label for="swal-order">سفارش‌دهنده:</label><br>
+                    <input id="swal-order" class="swal2-input" value="${escapeHtml(currentConfig.Order || '')}" style="width:100%; margin-bottom:10px;"><br>
+                    <label for="swal-university">دانشگاه:</label><br>
+                    <input id="swal-university" class="swal2-input" value="${escapeHtml(currentConfig.University || '')}" style="width:100%;">
+                </div>
+            `,
+            focusConfirm: false,
+            showCancelButton: true,
+            confirmButtonText: 'ذخیره',
+            cancelButtonText: 'لغو',
+            preConfirm: () => {
+                const order = document.getElementById('swal-order').value.trim();
+                const university = document.getElementById('swal-university').value.trim();
+                if (!order || !university) {
+                    Swal.showValidationMessage('هر دو فیلد باید پر شوند');
+                    return false;
+                }
+                return { Order: order, University: university };
+            },
+            customClass: {
+                popup: 'swal2-rtl swal2-glass'
+            }
+        });
+
+        if (formValues) {
+            try {
+                const response = await fetch('API/updateConfig.php', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(formValues)
+                });
+                const result = await response.json();
+                if (result.success) {
+                    Swal.fire({
+                        icon: 'success',
+                        title: 'ذخیره شد',
+                        text: 'تنظیمات آپدیت شد.',
+                        confirmButtonText: 'باشه',
+                        customClass: {
+                            popup: 'swal2-rtl swal2-glass'
+                        }
+                    });
+                    // Reload config
+                    const newConfig = await loadConfig();
+                    appConfig = newConfig;
+                    const footerText = document.getElementById('footerText');
+                    if (footerText) {
+                        footerText.textContent = `نسار - ${newConfig.University || 'دانشگاه پیام نور مرکز بیجار'}`;
+                    }
+                } else {
+                    throw new Error(result.error || 'خطا در آپدیت');
+                }
+            } catch (error) {
+                Swal.fire({
+                    icon: 'error',
+                    title: 'خطا',
+                    text: 'خطا در ذخیره تنظیمات.',
+                    confirmButtonText: 'باشه',
+                    customClass: {
+                        popup: 'swal2-rtl swal2-glass'
+                    }
+                });
+            }
+        }
+    }
 
     // Temporarily disable staff mode (only student mode active for now)
     if (staffTypeRadio) {
