@@ -870,10 +870,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     html: `
                         <div style="text-align:justify;direction:rtl;line-height:1.9;font-size:1.05em;">
                             <div style="text-align:center;"><strong>${escapeHtml(exam.course_name)}</strong></div><br>
-                            آزمون ${escapeHtml(exam.course_type)} این درس راس ساعت ${toPersianDigits(exam.exam_time)} روز ${exam.exam_day} ${toPersianDigits(exam.exam_date)} به شیوه ${escapeHtml(exam.exam_type)} برگزار خواهد شد. ${/^\d+$/.test(exam.seat_number) ? `شماره صندلی شما ${toPersianDigits(exam.seat_number)} می‌باشد.` : exam.seat_number}<br><br>
-                            ساختمان: ${escapeHtml(exam.building) || '-'}<br>
-                            کلاس: ${escapeHtml(exam.class_name) || '-'}<br>
-                            ردیف: ${toPersianDigits(exam.seat_row) || '-'}
+                            آزمون ${escapeHtml(exam.course_type)} این درس راس ساعت ${toPersianDigits(exam.exam_time)} روز ${exam.exam_day} ${toPersianDigits(exam.exam_date)} به شیوه ${escapeHtml(exam.exam_type)} برگزار خواهد شد. ${/^\d+$/.test(exam.seat_number) ? `شماره صندلی شما ${toPersianDigits(exam.seat_number)} می‌باشد.` : exam.seat_number}${/^\d+$/.test(exam.seat_number) ? `<br><br>ساختمان: ${escapeHtml(exam.building) || '-'}<br>کلاس: ${escapeHtml(exam.class_name) || '-'}<br>ردیف: ${toPersianDigits(exam.seat_row) || '-'}` : ''}
                         </div>
                     `,
                     confirmButtonText: 'بستن',
