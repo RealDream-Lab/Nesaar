@@ -137,7 +137,7 @@ foreach ($results as &$row) {
                 
                 // اگر بیشتر از 30 دقیقه تا امتحان باقی مانده
                 if ($minutes_difference > 30) {
-                    $row['seat_number'] = 'مخفی تا نیم ساعت قبل آزمون';
+                    $row['seat_number'] = 'مخفی تا ' . $row['exam_date'] . ' ساعت ' . $row['exam_time'];
                     $row['building'] = '';
                     $row['class_name'] = '';
                     $row['seat_row'] = '';
@@ -145,7 +145,7 @@ foreach ($results as &$row) {
             }
         } elseif ($row['exam_date'] > $current_persian_date) {
             // اگر امتحان در آینده است (تاریخ بعدی)
-            $row['seat_number'] = 'مخفی تا نیم ساعت قبل آزمون';
+            $row['seat_number'] = 'مخفی تا ' . $row['exam_date'] . ' ساعت ' . $row['exam_time'];
             $row['building'] = '';
             $row['class_name'] = '';
             $row['seat_row'] = '';

@@ -59,45 +59,7 @@ document.addEventListener('DOMContentLoaded', () => {
     let lastPayload = [];
     let lastFullName = '';
 
-    // Check for university center name
-    let universityCenterName = localStorage.getItem('universityCenterName');
-    if (!universityCenterName) {
-        // Ask for center name
-        Swal.fire({
-            title: 'راه‌اندازی اولیه',
-            text: 'نام مرکز دانشگاهی را به صورت کامل وارد کنید',
-            input: 'text',
-            inputPlaceholder: 'مثال: دانشگاه پیام نور مرکز بیجار',
-            showCancelButton: false,
-            allowOutsideClick: false,
-            allowEscapeKey: false,
-            confirmButtonText: 'تایید',
-            customClass: { popup: 'swal2-rtl swal2-glass' },
-            inputValidator: (value) => {
-                if (!value) {
-                    return 'نام مرکز الزامی است';
-                }
-            }
-        }).then((result) => {
-            if (result.isConfirmed) {
-                universityCenterName = result.value.trim();
-                localStorage.setItem('universityCenterName', universityCenterName);
-                // Update footer
-                updateFooterText();
-            }
-        });
-    } else {
-        // Update footer
-        updateFooterText();
-    }
-
-    function updateFooterText() {
-        const footerText = document.querySelector('.footer-text');
-        const centerName = localStorage.getItem('universityCenterName');
-        if (footerText && centerName) {
-            footerText.textContent = 'نسار - ' + centerName;
-        }
-    }
+    // Temporarily disable staff mode (only student mode active for now)
     if (staffTypeRadio) {
         staffTypeRadio.disabled = true;
         // Optional: ensure student is selected
@@ -144,7 +106,6 @@ document.addEventListener('DOMContentLoaded', () => {
     const copyrightFooter = document.getElementById('copyrightFooter');
     if (copyrightFooter) {
         copyrightFooter.addEventListener('click', () => {
-            const centerName = localStorage.getItem('universityCenterName') || 'دانشگاه پیام نور مرکز بیجار';
             let countdownInterval;
             Swal.fire({
                 title: 'درباره اپلیکیشن',
@@ -152,7 +113,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     <div style="line-height:1.9;font-size:1.05rem;text-align:justify;">
                        نسار سامانه‌ای تحت وب و PWA است که با رویکرد تجربه کاربری مدرن و ظاهر شیشه‌ای (Glassmorphism) به دانشجویان پیام نور کمک می‌کند تا برنامه‌ی امتحانات، شماره صندلی، محل برگزاری و وضعیت آزمون‌های خود را یک‌جا مشاهده کنند.
 <br>
-                       این برنامه به سفارش ${centerName} و توسط مهدی حسنی توسعه یافته است
+                       این برنامه به سفارش دانشگاه پیام نور مرکز بیجار و توسط مهدی حسنی توسعه یافته است
                     </div>
                     <div class="swal2-countdown">
                         <span class="swal2-countdown-value">${toPersianDigits(30)}</span>
