@@ -140,7 +140,7 @@ foreach ($results as &$row) {
                     $exam_datetime = DateTime::createFromFormat('H:i', $row['exam_time']);
                     $exam_datetime->modify('-30 minutes');
                     $visible_time = $exam_datetime->format('H:i');
-                    $row['seat_number'] = 'صندلی تا ساعت ' . $visible_time . ' تاریخ ' . $row['exam_date'] . ' مخفی می‌باشد.';
+                    $row['seat_number'] = 'شماره صندلی شما تا ساعت ' . $visible_time . ' همان روز مخفی می‌باشد.';
                     $row['building'] = '';
                     $row['class_name'] = '';
                     $row['seat_row'] = '';
@@ -151,7 +151,7 @@ foreach ($results as &$row) {
             $exam_datetime = DateTime::createFromFormat('H:i', $row['exam_time']);
             $exam_datetime->modify('-30 minutes');
             $visible_time = $exam_datetime->format('H:i');
-            $row['seat_number'] = 'صندلی تا ساعت ' . $visible_time . ' تاریخ ' . $row['exam_date'] . ' مخفی می‌باشد.';
+            $row['seat_number'] = 'شماره صندلی شما تا ساعت ' . $visible_time . ' همان روز مخفی می‌باشد.';
             $row['building'] = '';
             $row['class_name'] = '';
             $row['seat_row'] = '';
