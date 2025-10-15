@@ -1,5 +1,6 @@
 // Bump cache to force refresh of updated assets (app.js, style.css, index.html)
-const CACHE_NAME = 'exam-seat-v2025-10-15-06';
+// Increment this when you want clients to fetch the new assets.
+const CACHE_NAME = 'exam-seat-v2025-10-16-02';
 const urlsToCache = [
   '/',
   '/index.html',
@@ -76,8 +77,9 @@ self.addEventListener('activate', event => {
             type: 'sw-update',
             version: CACHE_NAME,
             changes: [
-              'فونت شمارنده معکوس سبک‌تر شد',
-              'آخرین تغییرات UI اعمال شد'
+              'دکمه خروج در موبایل وسط شد',
+              'تاریخ‌ها با نام ماه فارسی نمایش داده می‌شوند',
+              'پیام صندلی مخفی خواناتر شد'
             ]
           });
         });
