@@ -141,7 +141,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     <div style="line-height:1.9;font-size:1.05rem;text-align:justify;">
                        نسار یک نرم افزار وب اپلیکیشن پیشرو است که با رویکرد تجربه کاربری مدرن و ظاهر شیشه‌ای (گلس مورفیسم) به دانشجویان پیام نور کمک می‌کند تا برنامه‌ی امتحانات، شماره صندلی، محل برگزاری و وضعیت آزمون‌های خود را یک‌جا مشاهده کنند.
 <br>
-                       این برنامه به سفارش <span style="color: gold; font-weight: bold;">${escapeHtml(order)}</span> و توسط <span style="color: gold; font-weight: bold;">مهدی حسنی</span> توسعه یافته است
+                       این برنامه به سفارش <span style="color: lime; font-weight: bold;">${escapeHtml(order)}</span> و توسط <span style="color: gold; font-weight: bold;">مهدی حسنی</span> توسعه یافته است
                     </div>
                     <div class="swal2-countdown">
                         <span class="swal2-countdown-value">${toPersianDigits(30)}</span>
