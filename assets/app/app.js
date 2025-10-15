@@ -59,6 +59,28 @@ document.addEventListener('DOMContentLoaded', () => {
     let lastPayload = [];
     let lastFullName = '';
 
+    // Fetch and cache config
+    async function loadConfig() {
+        try {
+            const response = await fetch('API/getConfig.php');
+            if (!response.ok) throw new Error(`HTTP ${response.status}`);
+            const config = await response.json();
+            localStorage.setItem('appConfig', JSON.stringify(config));
+            return config;
+        } catch (error) {
+            console.warn('Failed to load config:', error);
+            // Fallback to cached config
+            const cached = localStorage.getItem('appConfig');
+            return cached ? JSON.parse(cached) : { University: 'دانشگاه پیام نور مرکز بیجار', Order: 'اداره آموزش، پژوهش، فرهنگی و دانشجوئی دانشگاه پیام نور مرکز بیجار' };
+        }
+    }
+
+    // Load config on start
+    let appConfig = null;
+    loadConfig().then(config => {
+        appConfig = config;
+    });
+
     // Temporarily disable staff mode (only student mode active for now)
     if (staffTypeRadio) {
         staffTypeRadio.disabled = true;
@@ -105,15 +127,21 @@ document.addEventListener('DOMContentLoaded', () => {
     // Copyright footer click event
     const copyrightFooter = document.getElementById('copyrightFooter');
     if (copyrightFooter) {
-        copyrightFooter.addEventListener('click', () => {
+        copyrightFooter.addEventListener('click', async () => {
             let countdownInterval;
+            // Ensure config is loaded
+            if (!appConfig) {
+                appConfig = await loadConfig();
+            }
+            const university = appConfig.University || 'دانشگاه پیام نور مرکز بیجار';
+            const order = appConfig.Order || 'اداره آموزش، پژوهش، فرهنگی و دانشجوئی دانشگاه پیام نور مرکز بیجار';
             Swal.fire({
                 title: 'درباره اپلیکیشن',
                 html: `
                     <div style="line-height:1.9;font-size:1.05rem;text-align:justify;">
                        نسار یک نرم افزار وب اپلیکیشن پیشرو است که با رویکرد تجربه کاربری مدرن و ظاهر شیشه‌ای (گلس مورفیسم) به دانشجویان پیام نور کمک می‌کند تا برنامه‌ی امتحانات، شماره صندلی، محل برگزاری و وضعیت آزمون‌های خود را یک‌جا مشاهده کنند.
 <br>
-                       این برنامه به سفارش <span style="color: gold; font-weight: bold;">دانشگاه پیام نور مرکز بیجار</span> و توسط <span style="color: gold; font-weight: bold;">مهدی حسنی</span> توسعه یافته است
+                       این برنامه به سفارش <span style="color: gold; font-weight: bold;">${escapeHtml(order)}</span> و توسط <span style="color: gold; font-weight: bold;">مهدی حسنی</span> توسعه یافته است
                     </div>
                     <div class="swal2-countdown">
                         <span class="swal2-countdown-value">${toPersianDigits(30)}</span>
