@@ -756,11 +756,8 @@ document.addEventListener('DOMContentLoaded', () => {
                     title: `${escapeHtml(exam.course_name)} (${toPersianDigits(exam.course_code)})`,
                     html: `
                         <div style="text-align:justify;direction:rtl;line-height:1.9;font-size:1.05em;">
-                            نوع درس: ${escapeHtml(exam.course_type)}<br>
-                            نوع امتحان: ${escapeHtml(exam.exam_type)}<br>
-                            تاریخ: ${toPersianDigits(exam.exam_date)}<br>
-                            ساعت: ${toPersianDigits(exam.exam_time)}<br>
-                            شماره صندلی: ${toPersianDigits(exam.seat_number)}<br>
+                            آزمون این درس راس ساعت ${toPersianDigits(exam.exam_time)} تاریخ ${toPersianDigits(exam.exam_date)} (${exam.exam_day}) به صورت ${escapeHtml(exam.course_type)} و ${escapeHtml(exam.exam_type)} برگزار خواهد شد.<br><br>
+                            صندلی: ${exam.seat_number}<br>
                             ساختمان: ${escapeHtml(exam.building) || '-'}<br>
                             کلاس: ${escapeHtml(exam.class_name) || '-'}<br>
                             ردیف: ${toPersianDigits(exam.seat_row) || '-'}

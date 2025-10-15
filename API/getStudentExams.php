@@ -157,6 +157,26 @@ foreach ($results as &$row) {
             $row['seat_row'] = '';
         }
     }
+    // اضافه کردن روز هفته
+    $row['exam_day'] = getPersianDayOfWeek($row['exam_date']);
+}
+
+// تابع برای گرفتن روز هفته پارسی
+function getPersianDayOfWeek($jalali_date) {
+    list($jy, $jm, $jd) = explode('/', $jalali_date);
+    list($gy, $gm, $gd) = jalali_to_gregorian($jy, $jm, $jd);
+    $timestamp = mktime(0, 0, 0, $gm, $gd, $gy);
+    $day = date('l', $timestamp);
+    $days = [
+        'Saturday' => 'شنبه',
+        'Sunday' => 'یکشنبه',
+        'Monday' => 'دوشنبه',
+        'Tuesday' => 'سه‌شنبه',
+        'Wednesday' => 'چهارشنبه',
+        'Thursday' => 'پنج‌شنبه',
+        'Friday' => 'جمعه'
+    ];
+    return $days[$day] ?? '';
 }
 
 // خروجی JSON
