@@ -35,6 +35,12 @@ CREATE TABLE IF NOT EXISTS exam_seats (
     INDEX idx_building_class (building, class_name)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
+CREATE TABLE IF NOT EXISTS Config (
+  ID int NOT NULL,
+  ConfigName varchar(20) COLLATE utf8mb4_general_ci NOT NULL,
+  ConfigValue varchar(100) COLLATE utf8mb4_general_ci NOT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
 INSERT INTO students (student_id, national_id, source_center, destination_center, first_name, last_name, degree)
 VALUES
     ('970100001', '1234567890', '1101', '1201', 'مهدی', 'حسنی', 'کارشناسی'),
@@ -91,3 +97,15 @@ ON DUPLICATE KEY UPDATE
     building = VALUES(building),
     class_name = VALUES(class_name),
     seat_row = VALUES(seat_row);
+
+INSERT INTO Config (ID, ConfigName, ConfigValue) VALUES
+(1, 'Order', 'اداره آموزش، پژوهش، فرهنگی و دانشجوئی دانشگاه پیام نور مرکز بیجار'),
+(2, 'University', 'دانشگاه پیام نور مرکز بیجار')
+ON DUPLICATE KEY UPDATE
+    ConfigValue = VALUES(ConfigValue);
+
+ALTER TABLE Config
+  ADD PRIMARY KEY (ID);
+
+ALTER TABLE Config
+  MODIFY ID int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=3;

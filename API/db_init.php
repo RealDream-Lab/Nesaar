@@ -122,6 +122,22 @@ VALUES
 ('970100001', '1100002', 8, 'ساختمان A', 'کلاس 205', 1),
 ('970100002', '1100001', 12, 'ساختمان B', 'کلاس 101', 1),
 ('970100003', '1100003', 3, 'ساختمان مجازی', 'کلاس آنلاین', 0);
+
+CREATE TABLE Config (
+  ID int NOT NULL,
+  ConfigName varchar(20) COLLATE utf8mb4_general_ci NOT NULL,
+  ConfigValue varchar(100) COLLATE utf8mb4_general_ci NOT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+INSERT INTO Config (ID, ConfigName, ConfigValue) VALUES
+(1, 'Order', 'اداره آموزش، پژوهش، فرهنگی و دانشجوئی دانشگاه پیام نور مرکز بیجار'),
+(2, 'University', 'دانشگاه پیام نور مرکز بیجار');
+
+ALTER TABLE Config
+  ADD PRIMARY KEY (ID);
+
+ALTER TABLE Config
+  MODIFY ID int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=3;
         ";
         $pdo->exec($initSQL);
     }
