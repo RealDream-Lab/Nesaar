@@ -473,6 +473,32 @@ body.login-active #loginRow {
   box-shadow: 0 22px 45px rgba(255, 112, 67, 0.45);
 }
 
+/* Mobile: center logout button horizontally and give it full-with-ish layout */
+@media (max-width: 575.98px) {
+  #logoutBtn.btn-outline-danger {
+    /* override inline style `right: 20px; top: 20px` set by JS */
+    position: fixed !important;
+    left: 50% !important;
+    transform: translateX(-50%) !important;
+  /* place the button respecting safe-area insets on iOS and Android; slightly lower for comfort */
+  top: calc(env(safe-area-inset-top, 14px) + 18px) !important;
+  /* fallback for older iOS */
+  top: calc(constant(safe-area-inset-top, 14px) + 18px) !important;
+    right: auto !important;
+    z-index: 1001;
+    width: calc(100% - 40px);
+    max-width: 420px;
+    padding-left: 12px;
+    padding-right: 12px;
+    text-align: center;
+  }
+
+  /* if layout uses body.has-logout padding, reduce it slightly on very small screens */
+  body.has-logout {
+    padding-top: 72px;
+  }
+}
+
 .swal2-popup.swal2-rtl {
   direction: rtl;
   text-align: right;
