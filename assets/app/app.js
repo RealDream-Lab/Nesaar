@@ -777,7 +777,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 return `
                 <div class="exam-card ${seatClass} upcoming" tabindex="0" data-exam-origin="${idx}" data-exam-status="upcoming">
                     <div class="exam-title">
-                        <span>${escapeHtml(exam.course_name)}</span>
+                        <span>${toPersianDigits(exam.course_code)}</span>
                     </div>
                     <div class="exam-meta">${toPersianDigits(exam.exam_date)} | ${toPersianDigits(exam.exam_time)}</div>
                     ${countdownMarkup}
@@ -833,7 +833,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     }
                     let countdownInterval;
                     Swal.fire({
-                        title: escapeHtml(exam.course_name),
+                        title: toPersianDigits(exam.course_code),
                         html: `
                             <div style="text-align:justify;direction:rtl;line-height:1.9;font-size:1.05em;">
                                 ${message}
