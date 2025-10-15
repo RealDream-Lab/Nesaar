@@ -777,7 +777,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 return `
                 <div class="exam-card ${seatClass} upcoming" tabindex="0" data-exam-origin="${idx}" data-exam-status="upcoming">
                     <div class="exam-title">
-                        <span>${toPersianDigits(exam.course_code)}</span>
+                        <span>${escapeHtml(exam.course_name)}</span>
                     </div>
                     <div class="exam-meta">${toPersianDigits(exam.exam_date)} | ${toPersianDigits(exam.exam_time)}</div>
                     ${countdownMarkup}
@@ -878,7 +878,6 @@ document.addEventListener('DOMContentLoaded', () => {
                     title: `${toPersianDigits(exam.course_code)}`,
                     html: `
                         <div lang="fa" style="text-align:justify;direction:rtl;line-height:1.9;font-size:1.05em; hyphens: auto; -webkit-hyphens: auto; -moz-hyphens: auto;">
-                            <div style="text-align:center;"><strong>${escapeHtml(exam.course_name)}</strong></div><br>
                             آزمون ${escapeHtml(exam.course_type)} این درس راس ساعت ${toPersianDigits(exam.exam_time)} روز ${exam.exam_day} ${formattedDate} به شیوه ${escapeHtml(exam.exam_type)} برگزار خواهد شد. ${/^\d+$/.test(exam.seat_number) ? `شماره صندلی شما ${toPersianDigits(exam.seat_number)} می‌باشد.` : exam.seat_number}${/^\d+$/.test(exam.seat_number) ? `<br><br>ساختمان: <span style="color: #007bff;">${escapeHtml(exam.building) || '-'}</span><br>کلاس: <span style="color: #007bff;">${escapeHtml(exam.class_name) || '-'}</span><br>ردیف: <span style="color: #007bff;">${toPersianDigits(exam.seat_row) || '-'}</span>` : ''}
                         </div>
                     `,
