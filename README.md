@@ -105,7 +105,25 @@ VALUES
 ('970100002', '1100001', 12, 'ساختمان B', 'کلاس 101', 1),
 ('970100003', '1100003', 3, 'ساختمان مجازی', 'کلاس آنلاین', 0);
 
--- جداول students، courses و exam_seats مطابق فایل docker/mysql-init/schema.sql
+-- جدول تنظیمات
+CREATE TABLE Config (
+    ID int NOT NULL,
+    ConfigName varchar(20) COLLATE utf8mb4_general_ci NOT NULL,
+    ConfigValue varchar(100) COLLATE utf8mb4_general_ci NOT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+INSERT INTO Config (ID, ConfigName, ConfigValue) VALUES
+(1, 'Order', ''),
+(2, 'University', ''),
+(3, 'IsInit', 'NO');
+
+ALTER TABLE Config
+  ADD PRIMARY KEY (ID);
+
+ALTER TABLE Config
+  MODIFY ID int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=4;
+
+-- جداول students، courses، exam_seats و Config مطابق فایل docker/mysql-init/schema.sql
 -- (نمونه ساختار در پوشه docker/mysql-init آمده است)
 ```
 
