@@ -18,6 +18,7 @@
 html, body {
   overscroll-behavior-y: contain;
   touch-action: pan-y;
+  overflow-y: scroll;
   height: 100%;
 }
 
