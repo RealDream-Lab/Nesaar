@@ -71,7 +71,7 @@ document.addEventListener('DOMContentLoaded', () => {
             console.warn('Failed to load config:', error);
             // Fallback to cached config
             const cached = localStorage.getItem('appConfig');
-            return cached ? JSON.parse(cached) : { University: 'دانشگاه پیام نور مرکز بیجار', Order: 'اداره آموزش، پژوهش، فرهنگی و دانشجوئی دانشگاه پیام نور مرکز بیجار' };
+            return cached ? JSON.parse(cached) : { University: '', Order: '', IsInit: 'NO' };
         }
     }
 
@@ -95,11 +95,11 @@ document.addEventListener('DOMContentLoaded', () => {
         const { value: formValues } = await Swal.fire({
             title: 'تنظیمات اولیه',
             html: `
-                <div style="text-align:right; direction:rtl; line-height:2;">
+                <div style="text-align:right; direction:rtl; line-height:2; max-width: 500px; margin: 0 auto;">
                     <label for="swal-order">سفارش‌دهنده:</label><br>
-                    <input id="swal-order" class="swal2-input" value="${escapeHtml(currentConfig.Order || '')}" style="width:100%; margin-bottom:10px;"><br>
+                    <input id="swal-order" class="swal2-input" value="${escapeHtml(currentConfig.Order || '')}" style="width:100%; max-width: 450px; margin-bottom:10px;"><br>
                     <label for="swal-university">دانشگاه:</label><br>
-                    <input id="swal-university" class="swal2-input" value="${escapeHtml(currentConfig.University || '')}" style="width:100%;">
+                    <input id="swal-university" class="swal2-input" value="${escapeHtml(currentConfig.University || '')}" style="width:100%; max-width: 450px;">
                 </div>
             `,
             focusConfirm: false,
@@ -107,6 +107,7 @@ document.addEventListener('DOMContentLoaded', () => {
             confirmButtonText: 'ذخیره',
             cancelButtonText: 'لغو',
             width: 600,
+            buttonsStyling: false,
             preConfirm: () => {
                 const order = document.getElementById('swal-order').value.trim();
                 const university = document.getElementById('swal-university').value.trim();
