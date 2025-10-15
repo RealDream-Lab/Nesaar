@@ -97,9 +97,9 @@ document.addEventListener('DOMContentLoaded', () => {
             html: `
                 <div style="text-align:right; direction:rtl; line-height:2; max-width: 400px; margin: 0 auto;">
                     <label for="swal-order">سفارش‌دهنده:</label><br>
-                    <input id="swal-order" class="swal2-input" value="${escapeHtml(currentConfig.Order || '')}" style="width:100%; max-width: 380px; margin-bottom:10px;"><br>
+                    <input id="swal-order" class="swal2-input" value="" style="width:100%; max-width: 380px; margin-bottom:10px;"><br>
                     <label for="swal-university">دانشگاه:</label><br>
-                    <input id="swal-university" class="swal2-input" value="${escapeHtml(currentConfig.University || '')}" style="width:100%; max-width: 380px;">
+                    <input id="swal-university" class="swal2-input" value="" style="width:100%; max-width: 380px;">
                 </div>
             `,
             focusConfirm: false,
