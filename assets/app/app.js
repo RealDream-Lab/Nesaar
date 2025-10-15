@@ -5,17 +5,18 @@ document.addEventListener('DOMContentLoaded', () => {
             if (event.data?.type === 'sw-update') {
                 const { changes } = event.data || {};
                 const items = (changes || []).slice(0, 5);
-                // Show a brief info popup so user can read the short changes, then reload
+                // Show a confirmation popup. Reload only when the user clicks OK.
                 Swal.fire({
                     icon: 'info',
                     title: 'نسخه جدید آماده است',
-                    html: `<ul style="text-align:right;margin:0;padding-inline-start:1rem;">${items.map(c => `<li>${c}</li>`).join('')}</ul>`,
-                    timer: 2500,
-                    showConfirmButton: false,
+                    html: `<div style="text-align:right;">${items.map(c => `• ${c}`).join('<br>')}</div>`,
+                    showConfirmButton: true,
+                    confirmButtonText: 'اوکی',
+                    showCancelButton: false,
                     allowOutsideClick: true,
-                    customClass: { popup: 'swal2-rtl swal2-glass' },
-                    willClose: () => {
-                        // After popup disappears, reload to pick up new assets
+                    customClass: { popup: 'swal2-rtl swal2-glass', confirmButton: 'btn btn-primary' }
+                }).then((result) => {
+                    if (result.isConfirmed) {
                         try { window.location.reload(true); } catch (e) { window.location.reload(); }
                     }
                 });
