@@ -868,7 +868,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 Swal.fire({
                     title: `${toPersianDigits(exam.course_code)}`,
                     html: `
-                        <div style="text-align:justify;direction:rtl;line-height:1.9;font-size:1.05em;">
+                        <div style="text-align:right;direction:rtl;line-height:1.9;font-size:1.05em;">
                             <div style="text-align:center;"><strong>${escapeHtml(exam.course_name)}</strong></div><br>
                             آزمون ${escapeHtml(exam.course_type)} این درس راس ساعت ${toPersianDigits(exam.exam_time)} روز ${exam.exam_day} ${toPersianDigits(exam.exam_date)} به شیوه ${escapeHtml(exam.exam_type)} برگزار خواهد شد. ${/^\d+$/.test(exam.seat_number) ? `شماره صندلی شما ${toPersianDigits(exam.seat_number)} می‌باشد.` : exam.seat_number}${/^\d+$/.test(exam.seat_number) ? `<br><br>ساختمان: <span style="color: #007bff;">${escapeHtml(exam.building) || '-'}</span><br>کلاس: <span style="color: #007bff;">${escapeHtml(exam.class_name) || '-'}</span><br>ردیف: <span style="color: #007bff;">${toPersianDigits(exam.seat_row) || '-'}</span>` : ''}
                         </div>
