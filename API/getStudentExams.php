@@ -57,27 +57,8 @@ function decryptData($encryptedData, $key) {
     }
 }
 
-$host = getenv('DB_HOST') ?: 'localhost';
-$db   = getenv('DB_NAME') ?: 'PnuExamsSeatNumber';
-$user = getenv('DB_USER') ?: 'root';
-$pass = getenv('DB_PASS') ?: '01012556360043214'; // Fallback for legacy dev only
-$charset = 'utf8mb4';
-$dsn = "mysql:host=$host;dbname=$db;charset=$charset";
-$options = [
-    PDO::ATTR_ERRMODE            => PDO::ERRMODE_EXCEPTION,
-    PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
-    PDO::ATTR_EMULATE_PREPARES   => false,
-];
-try {
-    $pdo = new PDO($dsn, $user, $pass, $options);
-} catch (\PDOException $e) {
-    // Log the actual error for debugging (in production, log to file)
-    error_log('Database connection failed: ' . $e->getMessage());
-    
-    // Return generic error message to user
-    echo json_encode(['error' => 'خطا در اتصال به پایگاه داده']);
-    exit;
-}
+// Database initialization and connection
+require_once 'db_init.php';
 
 // دریافت و رمزگشایی ورودی
 $encrypted_data = $_POST['encrypted_data'] ?? $_GET['encrypted_data'] ?? '';
