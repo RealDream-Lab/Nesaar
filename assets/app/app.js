@@ -3,13 +3,22 @@ document.addEventListener('DOMContentLoaded', () => {
     if (navigator.serviceWorker) {
         navigator.serviceWorker.addEventListener('message', event => {
             if (event.data?.type === 'sw-update') {
-                // Immediately reload to activate the new service worker and fetch updated assets
-                try {
-                    window.location.reload(true);
-                } catch (e) {
-                    // fallback for browsers that ignore the boolean
-                    window.location.reload();
-                }
+                const { changes } = event.data || {};
+                const items = (changes || []).slice(0, 5);
+                // Show a brief info popup so user can read the short changes, then reload
+                Swal.fire({
+                    icon: 'info',
+                    title: 'نسخه جدید آماده است',
+                    html: `<ul style="text-align:right;margin:0;padding-inline-start:1rem;">${items.map(c => `<li>${c}</li>`).join('')}</ul>`,
+                    timer: 2500,
+                    showConfirmButton: false,
+                    allowOutsideClick: true,
+                    customClass: { popup: 'swal2-rtl swal2-glass' },
+                    willClose: () => {
+                        // After popup disappears, reload to pick up new assets
+                        try { window.location.reload(true); } catch (e) { window.location.reload(); }
+                    }
+                });
             }
         });
     }
