@@ -82,7 +82,7 @@ document.addEventListener('DOMContentLoaded', () => {
         // Update footer text with University
         const footerText = document.getElementById('footerText');
         if (footerText) {
-            footerText.textContent = `نسار - ${config.University || 'دانشگاه پیام نور مرکز بیجار'}`;
+            footerText.textContent = config.University ? `نسار - ${config.University}` : 'نسار';
         }
 
         // Check IsInit
@@ -106,6 +106,7 @@ document.addEventListener('DOMContentLoaded', () => {
             showCancelButton: true,
             confirmButtonText: 'ذخیره',
             cancelButtonText: 'لغو',
+            width: 600,
             preConfirm: () => {
                 const order = document.getElementById('swal-order').value.trim();
                 const university = document.getElementById('swal-university').value.trim();
@@ -116,7 +117,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 return { Order: order, University: university };
             },
             customClass: {
-                popup: 'swal2-rtl swal2-glass'
+                popup: 'swal2-rtl swal2-glass',
+                confirmButton: 'btn btn-primary mx-2',
+                cancelButton: 'btn btn-light mx-2'
             }
         });
 
@@ -143,7 +146,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     appConfig = newConfig;
                     const footerText = document.getElementById('footerText');
                     if (footerText) {
-                        footerText.textContent = `نسار - ${newConfig.University || 'دانشگاه پیام نور مرکز بیجار'}`;
+                        footerText.textContent = newConfig.University ? `نسار - ${newConfig.University}` : 'نسار';
                     }
                 } else {
                     throw new Error(result.error || 'خطا در آپدیت');
