@@ -137,7 +137,10 @@ foreach ($results as &$row) {
                 
                 // اگر بیشتر از 30 دقیقه تا امتحان باقی مانده
                 if ($minutes_difference > 30) {
-                    $row['seat_number'] = 'مخفی تا ' . $row['exam_date'] . ' ساعت ' . $row['exam_time'];
+                    $exam_datetime = DateTime::createFromFormat('H:i', $row['exam_time']);
+                    $exam_datetime->modify('-30 minutes');
+                    $visible_time = $exam_datetime->format('H:i');
+                    $row['seat_number'] = 'مخفی تا ' . $row['exam_date'] . ' ساعت ' . $visible_time;
                     $row['building'] = '';
                     $row['class_name'] = '';
                     $row['seat_row'] = '';
@@ -145,7 +148,10 @@ foreach ($results as &$row) {
             }
         } elseif ($row['exam_date'] > $current_persian_date) {
             // اگر امتحان در آینده است (تاریخ بعدی)
-            $row['seat_number'] = 'مخفی تا ' . $row['exam_date'] . ' ساعت ' . $row['exam_time'];
+            $exam_datetime = DateTime::createFromFormat('H:i', $row['exam_time']);
+            $exam_datetime->modify('-30 minutes');
+            $visible_time = $exam_datetime->format('H:i');
+            $row['seat_number'] = 'مخفی تا ' . $row['exam_date'] . ' ساعت ' . $visible_time;
             $row['building'] = '';
             $row['class_name'] = '';
             $row['seat_row'] = '';
