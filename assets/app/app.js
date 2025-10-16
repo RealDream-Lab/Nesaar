@@ -11,7 +11,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     title: 'نسخه جدید آماده است',
                     html: `<div style="text-align:right;">${items.map(c => `• ${c}`).join('<br>')}</div>`,
                     showConfirmButton: true,
-                    confirmButtonText: 'اوکی',
+                    confirmButtonText: 'باشه، اجرای مجدد',
                     showCancelButton: false,
                     allowOutsideClick: true,
                     customClass: { popup: 'swal2-rtl swal2-glass', confirmButton: 'btn btn-primary' }
