@@ -822,7 +822,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     Swal.fire({
                         title: toPersianDigits(exam.course_code),
                         html: `
-                                <div style="text-align:justify;direction:rtl;color:#d63333;font-weight:600;margin-bottom:0.6rem;">
+                                <div style="text-align:justify;direction:rtl;color:#d63333;font-weight:600;margin-bottom:0.6rem;font-size:0.95rem;">
                                     همواره معیار شما برای حضور در جلسات آزمون باید گزارش ۴۲۸ سامانه گلستان باشد
                                 </div>
                                 <div style="text-align:justify;direction:rtl;line-height:1.9;font-size:1.05em;">
@@ -867,7 +867,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 Swal.fire({
                     title: `${toPersianDigits(exam.course_code)}`,
                     html: `
-                        <div style="text-align:justify;direction:rtl;color:#d63333;font-weight:600;margin-bottom:0.6rem;">
+                        <div style="text-align:justify;direction:rtl;color:#d63333;font-weight:600;margin-bottom:0.6rem;font-size:0.95rem;">
                             همواره معیار شما برای حضور در جلسات آزمون باید گزارش ۴۲۸ سامانه گلستان باشد
                         </div>
                         <div lang="fa" style="text-align:justify;direction:rtl;line-height:1.9;font-size:1.05em; hyphens: auto; -webkit-hyphens: auto; -moz-hyphens: auto;">
