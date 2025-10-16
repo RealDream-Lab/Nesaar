@@ -41,6 +41,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
     let refreshTimer = null;
     let clockTimer = null;
+    // Server-based clock sync for seconds display
+    let baseServerMs = Date.now();
+    let basePerf = (typeof performance !== 'undefined' && performance.now) ? performance.now() : Date.now();
+    let secondTimer = null;
     let currentCredentials = null;
     let lastSnapshot = '';
     let lastPayload = [];
@@ -199,7 +203,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Initialize with default state
     handleUserTypeChange();
-    updateServerClock();
+    // Initial server clock sync and then start per-second ticker (no extra server requests)
+    updateServerClock().then(() => {
+        try { startSecondTicker(); } catch (e) { /* ignore */ }
+    });
     if (footerClock && footerSpacer) footerSpacer.textContent = footerClock.textContent;
     startClockRefresh();
 
@@ -406,15 +413,71 @@ document.addEventListener('DOMContentLoaded', () => {
             if (!payload || !payload.date || !payload.time) {
                 throw new Error('Invalid payload structure');
             }
+            // payload.date expected like YYYY/MM/DD and payload.time like HH:MM
             const formattedDate = toPersianDigits(payload.date);
             const formattedTime = toPersianDigits(payload.time);
             const formattedStamp = `${formattedDate} | ${formattedTime}`;
             footerClock.textContent = formattedStamp;
             if (footerSpacer) footerSpacer.textContent = formattedStamp;
+
+            // Sync base time for per-second updates
+            try {
+                const [h, m] = String(payload.time).split(':').map(s => parseInt(toEnglishDigits(s), 10));
+                const parts = String(payload.date).split('/').map(p => parseInt(p, 10));
+                if (parts.length === 3 && !Number.isNaN(h) && !Number.isNaN(m)) {
+                    // Create a Date object in local tz using server-provided values
+                    const [y, mm, d] = parts;
+                    const serverDate = new Date(y, mm - 1, d, h, m, 0, 0);
+                    baseServerMs = serverDate.getTime();
+                    basePerf = (typeof performance !== 'undefined' && performance.now) ? performance.now() : Date.now();
+                }
+            } catch (e) {
+                // ignore parsing errors; leave previous baseServerMs
+            }
         } catch (error) {
             console.warn('Clock update failed:', error);
         }
     }
+
+    function formatWithSeconds(ms) {
+        const d = new Date(ms);
+        const datePart = `${toPersianDigits(d.getFullYear())}/${toPersianDigits(String(d.getMonth() + 1).padStart(2, '0'))}/${toPersianDigits(String(d.getDate()).padStart(2, '0'))}`;
+        const timePart = `${toPersianDigits(String(d.getHours()).padStart(2, '0'))}:${toPersianDigits(String(d.getMinutes()).padStart(2, '0'))}:${toPersianDigits(String(d.getSeconds()).padStart(2, '0'))}`;
+        return `${datePart} | ${timePart}`;
+    }
+
+    function startSecondTicker() {
+        if (secondTimer) return;
+        const tick = () => {
+            const perfNow = (typeof performance !== 'undefined' && performance.now) ? performance.now() : Date.now();
+            const elapsed = perfNow - basePerf;
+            const nowMs = baseServerMs + Math.round(elapsed);
+            if (footerClock) footerClock.textContent = formatWithSeconds(nowMs);
+            if (footerSpacer) footerSpacer.textContent = footerClock.textContent;
+        };
+        // run immediately and then every 1000ms
+        tick();
+        secondTimer = setInterval(() => {
+            if (document.hidden) return; // avoid background updates
+            tick();
+        }, 1000);
+    }
+
+    function stopSecondTicker() {
+        if (secondTimer) {
+            clearInterval(secondTimer);
+            secondTimer = null;
+        }
+    }
+
+    document.addEventListener('visibilitychange', () => {
+        if (document.hidden) {
+            stopSecondTicker();
+        } else {
+            // resync from server on visibility resume to avoid drift
+            updateServerClock().then(() => startSecondTicker());
+        }
+    });
 
     function startClockRefresh() {
         if (clockTimer) clearTimeout(clockTimer);

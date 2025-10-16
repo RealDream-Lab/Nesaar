@@ -258,6 +258,20 @@ html.session-cookie-detected .logo-container {
   color: var(--accent-secondary);
 }
 
+/* Use tabular (fixed-width) numbers for the footer clock and spacer so
+   the date/time width doesn't jump when seconds change. Vazir supports
+   OpenType numeric features; enable tabular figures and zeroing. */
+.fixed-footer .footer-clock,
+.fixed-footer .footer-spacer {
+  /* prefer Vazir (already used globally) and enable tabular numbers */
+  font-variant-numeric: tabular-nums;
+  -webkit-font-feature-settings: "tnum" 1, "zero" 1;
+  -moz-font-feature-settings: "tnum" 1, "zero" 1;
+  font-feature-settings: "tnum" 1, "zero" 1;
+  /* ensure a monospace-like numeric fallback if font doesn't support tnum */
+  font-family: 'Vazir', "Noto Nastaliq Urdu", sans-serif;
+}
+
 .fixed-footer .footer-spacer {
   display: none;
 }
