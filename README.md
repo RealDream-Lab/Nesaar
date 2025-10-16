@@ -170,24 +170,26 @@ sudo tail -f /var/log/apache2/access.log
 
 ```
 /var/www/html/
-├── index.html              # صفحه اصلی (فرم ورود، کارت آزمون‌ها)
-├── manifest.json           # تنظیمات PWA و آیکن‌ها
-├── service-worker.js       # مدیریت کش و آفلاین
+├── index.html                  # صفحه اصلی (فرم ورود، کارت آزمون‌ها)
+├── manifest.json               # تنظیمات PWA و آیکن‌ها
+├── service-worker.js           # مدیریت کش و آفلاین (CACHE_NAME = exam-seat-v2025-10-16-09)
+├── CHANGELOG.md                # یادداشت‌های انتشار
 ├── API/
-│   ├── getStudentExams.php # دریافت اطلاعات آزمون از پایگاه داده
+│   ├── getStudentExams.php     # دریافت اطلاعات آزمون از پایگاه داده (محتوای صندلی/مخفی‌سازی)
 │   ├── index.php
-│   └── jdf.php             # کمکی تقویم جلالی
+│   └── jdf.php                 # توابع کمکی تقویم جلالی
 ├── assets/
 │   ├── app/
-│   │   ├── app.js          # منطق UI، SweetAlert، مدیریت نشست
-│   │   └── style.css       # تم شیشه‌ای و استایل‌ها
+│   │   ├── app.js              # منطق UI، SweetAlert، مدیریت نشست، تیکر ثانیه‌ای فوتر
+│   │   └── style.css           # تم شیشه‌ای، استایل‌ها و تنظیمات فونت (tabular-nums)
 │   ├── bootstrap/
 │   ├── fonts/
+│   │   └── vazir/              # فونت Vazir و تنظیمات فارسی
 │   └── sweetalert2/
 ├── docker/
 │   └── mysql-init/
-│       └── schema.sql      # نمونه ساختار پایگاه داده
-└── pwa-icons/              # آیکن‌های PWA (192px، 512px)
+│       └── schema.sql          # نمونه ساختار پایگاه داده
+└── pwa-icons/                  # آیکن‌های PWA (192px، 512px)
 ```
 
 </div>
