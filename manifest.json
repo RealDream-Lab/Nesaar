@@ -6,7 +6,11 @@
   "description": "نسار؛ مرکز سنجش و آزمون برای مشاهده اطلاعات آزمون‌ها و شماره صندلی",
   "start_url": "/",
   "scope": "/",
-  "display": "standalone",
+  "display": "fullscreen",
+  "display_override": [
+    "fullscreen",
+    "standalone"
+  ],
   "background_color": "#ffffff",
   "theme_color": "#2196F3",
   "orientation": "portrait",
