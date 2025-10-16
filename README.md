@@ -169,27 +169,39 @@ sudo tail -f /var/log/apache2/access.log
 <div dir="ltr">
 
 ```
-/var/www/html/
-├── index.html                  # صفحه اصلی (فرم ورود، کارت آزمون‌ها)
-├── manifest.json               # تنظیمات PWA و آیکن‌ها
-├── service-worker.js           # مدیریت کش و آفلاین (CACHE_NAME = exam-seat-v2025-10-16-09)
-├── CHANGELOG.md                # یادداشت‌های انتشار
-├── API/
-│   ├── getStudentExams.php     # دریافت اطلاعات آزمون از پایگاه داده (محتوای صندلی/مخفی‌سازی)
-│   ├── index.php
-│   └── jdf.php                 # توابع کمکی تقویم جلالی
-├── assets/
-│   ├── app/
-│   │   ├── app.js              # منطق UI، SweetAlert، مدیریت نشست، تیکر ثانیه‌ای فوتر
-│   │   └── style.css           # تم شیشه‌ای، استایل‌ها و تنظیمات فونت (tabular-nums)
-│   ├── bootstrap/
-│   ├── fonts/
-│   │   └── vazir/              # فونت Vazir و تنظیمات فارسی
-│   └── sweetalert2/
-├── docker/
-│   └── mysql-init/
-│       └── schema.sql          # نمونه ساختار پایگاه داده
-└── pwa-icons/                  # آیکن‌های PWA (192px، 512px)
+/var/www/html
+|-- .dockerignore
+|-- .env.example
+|-- .git
+|   |-- ... (git internal files)
+|-- .gitignore
+|-- API
+|   |-- db_init.php
+|   |-- getConfig.php
+|   |-- getStudentExams.php
+|   |-- index.php
+|   |-- jdf.php
+|   `-- serverTime.php
+|-- CHANGELOG.md
+|-- Dockerfile
+|-- README.md
+|-- assets
+|   |-- app
+|   |-- bootstrap
+|   |-- crypto-js.min.js
+|   |-- fonts
+|   `-- sweetalert2
+|-- docker
+|   `-- mysql-init
+|-- docker-compose.yml
+|-- index.html
+|-- manifest.json
+|-- pwa-icons
+|   |-- icon-192.png
+|   `-- icon-512.png
+`-- service-worker.js
+
+17 directories, 29 files
 ```
 
 </div>
