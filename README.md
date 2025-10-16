@@ -144,41 +144,42 @@ sudo systemctl reload apache2
 
 ## نکات فنی مهم
 
-**توضیحات** 
-- **سروس ورکر**: فایل `service-worker.js` با شناسهٔ کش نسخه‌دار (`exam-seat-YYYY-MM-DD-nn`) مدیریت می‌شود تا با هر انتشار، کاربران آخرین نسخه را بگیرند. مسیرهای HTML، CSS، JS و manifest به صورت *network-first* کش می‌شوند تا در هر بار انتشار ظاهر تازه نمایش داده شود.
-- **PWA نصب‌پذیر**: تمامی ارجاعات آیکن به مسیر `pwa-icons/` منتقل شده تا با Alias پیش‌فرض Apache تداخل نداشته باشد.
-- **SweetAlert2**: هشدارهای زمان‌دار علاوه بر شمارنده‌ی معکوس عددی در گوشه‌ی بالا-چپ، نوار پیشرفت پیش‌فرض را حذف می‌کنند تا یکدستی طراحی حفظ شود.
-- **فونت‌ها**: فونت Vazir با ارقام فارسی هم‌عرض (tabular-nums) برای نمایش دقیق تایمر و داده‌های عددی فعال شده است.
-- **تم شیشه‌ای**: فایل `assets/app/style.css` شامل متغیرهای CSS و لایه‌های پس‌زمینه با فیلتر بلور، آیکن‌های نورانی و کارت‌های شیشه‌ای است.
-
-## تست و نگهداری
-
-- برای ریست کش کاربران پس از انتشار، فقط کافی است نسخهٔ `CACHE_NAME` را افزایش دهید؛ Service Worker بلافاصله فعال می‌شود و نسخه‌های قدیمی حذف می‌گردد.
-- جهت بررسی، از ابزار Lighthouse در مرورگر استفاده کنید؛ سامانه برای PWA، دسترس‌پذیری RTL و عملکرد بهینه‌سازی شده است.
-- لاگ‌های مهم:
-
-```bash
-sudo tail -f /var/log/apache2/error.log
-sudo tail -f /var/log/apache2/access.log
-```
-
-## ساختار پروژه
-
-</div>
-
-<div dir="ltr">
-
 ```
 /var/www/html
-|-- .dockerignore
-|-- .env.example
-|-- .git
-|   |-- ... (git internal files)
-|-- .gitignore
-|-- API
-|   |-- db_init.php
-|   |-- getConfig.php
-|   |-- getStudentExams.php
+|-- .dockerignore               # فایل نادیده‌گرفتن برای Docker
+|-- .env.example                # نمونه متغیرهای محیطی برای پیکربندی
+|-- .git                       # اطلاعات داخلی گیت (حذف/تغییر نشود)
+|-- .gitignore                 # فایل‌های نادیده‌گرفته‌شده توسط گیت
+|-- API                        # endpointهای بک‌اند (PHP)
+|   |-- db_init.php            # اسکریپت نمونه ایجاد جداول/دیتابیس
+|   |-- getConfig.php          # خواندن پیکربندی اپ از DB
+|   |-- getStudentExams.php    # API اصلی: بازگشت اطلاعات امتحان/صندلی
+|   |-- index.php              # نقطه ورود API (اختیاری)
+|   |-- jdf.php                # توابع تقویم جلالی (Jalali)
+|   `-- serverTime.php         # بازگرداندن تاریخ/زمان سرور برای همگام‌سازی
+|-- CHANGELOG.md               # یادداشت‌های انتشار (نسخه‌ها و تغییرات)
+|-- Dockerfile                 # تعریف ایمیج داکر (اختیاری)
+|-- README.md                  # این فایل
+|-- assets                     # فایل‌های استاتیک فرانت‌اند
+|   |-- app                    # کد اپلیکیشن کاربری
+|   |   |-- app.js             # منطق UI، SweetAlert، فوتر ثانیه‌ای
+|   |   `-- style.css          # استایل‌ها و تنظیمات فونت (tabular-nums)
+|   |-- bootstrap              # فایل‌های بوت‌استرپ محلی
+|   |-- crypto-js.min.js       # کتابخانه رمزنگاری (درکلاینت)
+|   |-- fonts                  # فونت‌ها (Vazir و زیرپوشه‌ها)
+|   `-- sweetalert2            # اسکریپت‌ها و CSS مربوط به SweetAlert2
+|-- docker                     # تنظیمات داکر محلی
+|   `-- mysql-init             # اسکریپت‌های نمونه برای init دیتابیس
+|-- docker-compose.yml         # کانفیگ داکر-کامپوز (اختیاری)
+|-- index.html                 # صفحه اصلی PWA
+|-- manifest.json              # تنظیمات نصب PWA و آیکن‌ها
+|-- pwa-icons                  # آیکن‌های PWA (اندازه‌های مختلف)
+|   |-- icon-192.png
+|   `-- icon-512.png
+`-- service-worker.js          # سرویس‌ورکر: مدیریت کش و بروزرسانی (CACHE_NAME = exam-seat-v2025-10-16-09)
+
+17 directories, 29 files
+```
 |   |-- index.php
 |   |-- jdf.php
 |   `-- serverTime.php
