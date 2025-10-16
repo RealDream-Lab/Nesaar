@@ -49,6 +49,7 @@ document.addEventListener('DOMContentLoaded', () => {
     let lastSnapshot = '';
     let lastPayload = [];
     let lastFullName = '';
+    let backgroundRetryTimer = null;
 
     function getPersianMonthName(dateStr) {
         const parts = dateStr.split('/');
@@ -705,8 +706,29 @@ document.addEventListener('DOMContentLoaded', () => {
             console.error('Fetch error:', error);
             if (error && error.isUserError) {
                 showAlert('warning', 'ورود ناموفق', 'رمز عبور و شماره دانشجویی صحیح نیست یا اطلاعاتی برای این شماره وجود ندارد.');
+                eraseCookie('userSession');
+                showLogin();
             } else {
-                showAlert('error', 'خطا در اتصال!', 'مشکلی در ارتباط با سرور رخ داده است. لطفاً بعداً تلاش کنید.');
+                // تلاش پس‌زمینه برای اتصال مجدد
+                showAlert('error', 'خطا در اتصال!', 'تلاش برای اتصال مجدد به سرور در پس زمینه در حال انجام است این پیام را می‌توانید ببندید.');
+                if (!backgroundRetryTimer) {
+                    backgroundRetryTimer = setInterval(async () => {
+                        try {
+                            const payload = await fetchExamPayload(studentId, nationalId);
+                            if (payload.length > 0) {
+                                clearInterval(backgroundRetryTimer);
+                                backgroundRetryTimer = null;
+                                renderResults(payload, lastFullName);
+                                ensureLogoutButton(lastFullName, studentId);
+                                lastSnapshot = JSON.stringify(payload || []);
+                                startAutoRefresh(studentId, nationalId);
+                                Swal.close();
+                            }
+                        } catch (e) {
+                            // هنوز ارتباط برقرار نشده، تلاش ادامه دارد
+                        }
+                    }, 10000); // هر ۱۰ ثانیه تلاش مجدد
+                }
             }
         } finally {
             toggleLoading(false);
@@ -767,18 +789,55 @@ document.addEventListener('DOMContentLoaded', () => {
         } catch (e) {
             console.warn('Auto-login failed:', e);
             stopAutoRefresh();
-            currentCredentials = null;
-            lastSnapshot = '';
-            lastPayload = [];
-            lastFullName = '';
-            eraseCookie('userSession');
-            if (!e?.isUserError) {
-                showAlert('error', 'خطا در اتصال!', 'مشکلی در ارتباط با سرور رخ داده است. لطفاً بعداً تلاش کنید.');
+            if (e && e.isUserError) {
+                currentCredentials = null;
+                lastSnapshot = '';
+                lastPayload = [];
+                lastFullName = '';
+                eraseCookie('userSession');
+                showAlert('warning', 'ورود ناموفق', 'رمز عبور و شماره دانشجویی صحیح نیست یا اطلاعاتی برای این شماره وجود ندارد.');
+                showLogin();
+            } else {
+                // تلاش پس‌زمینه برای اتصال مجدد
+                showAlert('error', 'خطا در اتصال!', 'تلاش برای اتصال مجدد به سرور در پس زمینه در حال انجام است این پیام را می‌توانید ببندید.');
+                if (!backgroundRetryTimer) {
+                    backgroundRetryTimer = setInterval(async () => {
+                        try {
+                            const raw = getCookie('userSession');
+                            if (!raw) return;
+                            const data = JSON.parse(decodeURIComponent(raw));
+                            const sid = (data.student_id || '').toString().trim();
+                            const nid = (data.national_id || '').toString().trim();
+                            if (!sid || !nid) return;
+                            const payload = await fetchExamPayload(sid, nid);
+                            if (payload.length > 0) {
+                                clearInterval(backgroundRetryTimer);
+                                backgroundRetryTimer = null;
+                                const first = payload[0];
+                                const fullName = `${first.first_name || ''} ${first.last_name || ''}`.trim();
+                                lastFullName = fullName;
+                                renderResults(payload, fullName);
+                                ensureLogoutButton(fullName, sid);
+                                lastSnapshot = JSON.stringify(payload || []);
+                                startAutoRefresh(sid, nid);
+                                Swal.close();
+                            }
+                        } catch (err) {
+                            // هنوز ارتباط برقرار نشده، تلاش ادامه دارد
+                        }
+                    }, 10000); // هر ۱۰ ثانیه تلاش مجدد
+                }
             }
-            showLogin();
         } finally {
             toggleLoading(false);
         }
+        // اگر کاربر logout کند یا صفحه را رفرش کند، تلاش پس‌زمینه متوقف شود
+        window.addEventListener('beforeunload', () => {
+            if (backgroundRetryTimer) {
+                clearInterval(backgroundRetryTimer);
+                backgroundRetryTimer = null;
+            }
+        });
     })();
 
     function toggleLoading(isLoading) {

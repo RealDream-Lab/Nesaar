@@ -1,6 +1,6 @@
 // Bump cache to force refresh of updated assets (app.js, style.css, index.html)
 // Increment this when you want clients to fetch the new assets.
-const CACHE_NAME = 'exam-seat-v2025-10-16-11';
+const CACHE_NAME = 'exam-seat-v2025-10-17-04';
 const urlsToCache = [
   '/',
   '/index.html',
@@ -77,6 +77,7 @@ self.addEventListener('activate', event => {
             type: 'sw-update',
             version: CACHE_NAME,
             changes: [
+              'به‌روزرسانی سرویس‌ورکر و کش برای آخرین تغییرات اپ و رفع باگ سشن آفلاین',
               'اضافه شدن هشدار استفاده از گزارش ۴۲۸ گلستان'
             ]
           });
