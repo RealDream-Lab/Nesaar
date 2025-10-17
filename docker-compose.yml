@@ -11,6 +11,7 @@ services:
       DB_NAME: PnuExamsSeatNumber
       DB_USER: pnu_user
       DB_PASS: change_me
+      TZ: Asia/Tehran
     depends_on:
       - db
     restart: unless-stopped
@@ -25,6 +26,7 @@ services:
       MYSQL_DATABASE: PnuExamsSeatNumber
       MYSQL_USER: pnu_user
       MYSQL_PASSWORD: change_me
+      TZ: Asia/Tehran
     command: >
       --default-authentication-plugin=mysql_native_password
       --character-set-server=utf8mb4
@@ -47,8 +49,38 @@ services:
     environment:
       PMA_HOST: db
       PMA_ABSOLUTE_URI: http://localhost:18081/
+      TZ: Asia/Tehran
     depends_on:
       - db
+    networks:
+      - PnuSeat_Network
+
+  watchtower:
+    image: containrrr/watchtower:latest
+    container_name: WatchTower
+    hostname: watchtower
+    mem_limit: 512m
+    mem_reservation: 128m
+    cpu_shares: 512
+    security_opt:
+      - no-new-privileges=true
+    read_only: true
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    environment:
+      TZ: Asia/Tehran
+      DOCKER_API_VERSION: 1.43
+      WATCHTOWER_CLEANUP: true
+      WATCHTOWER_REMOVE_VOLUMES: false
+      WATCHTOWER_INCLUDE_RESTARTING: true
+      WATCHTOWER_INCLUDE_STOPPED: true
+      WATCHTOWER_SCHEDULE: "0 0 14 * * *"
+      WATCHTOWER_LABEL_ENABLE: false
+      WATCHTOWER_ROLLING_RESTART: true
+      WATCHTOWER_TIMEOUT: 30s
+      WATCHTOWER_LOG_FORMAT: pretty
+      WATCHTOWER_NOTIFICATIONS_LEVEL: info
+    restart: on-failure:5
     networks:
       - PnuSeat_Network
 
