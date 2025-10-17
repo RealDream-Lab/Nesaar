@@ -59,12 +59,22 @@
    EOF
    ```
 
-3. **ساخت و اجرای کانتینرها**:
+3. **ساخت ایمیج (اختیاری، برای استفاده مجدد یا production)**:
+   اگر می‌خواهید ایمیج را بسازید و به registry push کنید:
+   ```bash
+   cd /root/docker/pnu
+   git clone git@github.com:MehdiHassaniir/PnuSeat.git
+   cd PnuSeat
+   docker build -t ghcr.io/mehdihassaniir/pnuseat .
+   docker push ghcr.io/mehdihassaniir/pnuseat:latest
+   ```
+
+4. **ساخت و اجرای کانتینرها**:
    ```bash
    docker-compose up --build
    ```
 
-4. **دسترسی**:
+5. **دسترسی**:
    - وب‌سایت: http://localhost:18080
    - phpMyAdmin: http://localhost:18081 (نام کاربری: `root` یا `pnu_user`، رمز: مطابق `.env`)
    - MySQL: localhost:3306
