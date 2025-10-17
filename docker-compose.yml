@@ -2,7 +2,7 @@ version: "3.9"
 
 services:
   web:
-    image: pnuseat-web:latest
+    image: ghcr.io/mehdihassaniir/pnuseat:latest
     container_name: PnuSeatWeb
     ports:
       - "18080:80"

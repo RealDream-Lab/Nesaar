@@ -77,7 +77,6 @@ self.addEventListener('activate', event => {
             type: 'sw-update',
             version: CACHE_NAME,
             changes: [
-              'به‌روزرسانی سرویس‌ورکر برای رفع باگ‌های UI و بهبود عملکرد',
               'رفع جابجایی صفحه هنگام نمایش SweetAlert',
               'بهبود راه‌اندازی Docker و اضافه کردن دستورات نصب'
             ]
