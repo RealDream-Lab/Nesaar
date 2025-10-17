@@ -79,6 +79,7 @@ sudo systemctl enable docker
    cd PnuSeat
    docker build -t ghcr.io/mehdihassaniir/pnuseat .
    docker push ghcr.io/mehdihassaniir/pnuseat:latest
+   docker rmi $(docker images -f "dangling=true" -q)
    ```
 
 4. **ساخت و اجرای کانتینرها**:
