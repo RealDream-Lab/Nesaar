@@ -2,7 +2,7 @@ version: "3.9"
 
 services:
   web:
-    build: .
+    image: pnuseat-web:latest
     container_name: pnuseat_web
     ports:
       - "18080:80"
@@ -13,8 +13,6 @@ services:
       DB_PASS: ${DB_PASS:-change_me}
     depends_on:
       - db
-    volumes:
-      - .:/var/www/html:delegated
     restart: unless-stopped
     networks:
       - pnuseat_network
@@ -34,8 +32,8 @@ services:
     ports:
       - "3306:3306"
     volumes:
-      - ./db_data:/var/lib/mysql
-      - ./docker/mysql-init:/docker-entrypoint-initdb.d:ro
+      - /root/docker/Nesaar/db_data:/var/lib/mysql
+      - /root/docker/Nesaar/docker/mysql-init:/docker-entrypoint-initdb.d:ro
     restart: unless-stopped
     networks:
       - pnuseat_network

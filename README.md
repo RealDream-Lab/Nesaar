@@ -15,6 +15,64 @@
 
 ## معماری و راه‌اندازی سریع
 
+### راه‌اندازی با Docker (توصیه‌شده)
+
+اگر Docker و Docker Compose روی سیستم شما نصب است، این روش سریع‌ترین راه برای راه‌اندازی است. تمام وابستگی‌ها (PHP، MySQL، phpMyAdmin) در کانتینرها اجرا می‌شوند.
+
+#### پیش‌نیازها
+
+- Docker و Docker Compose نصب باشند.
+- پورت‌های 18080 (وب‌سایت)، 3306 (MySQL)، 18081 (phpMyAdmin) آزاد باشند.
+
+#### مراحل راه‌اندازی
+
+1. **کلون کردن ریپازیتوری**:
+   ```bash
+   git clone https://github.com/MehdiHassaniir/PnuSeat.git
+   cd PnuSeat
+   ```
+
+2. **تنظیم متغیرهای محیطی**:
+   فایل `.env` را ایجاد کنید و مقادیر دلخواه خود را قرار دهید (برای امنیت، رمزهای قوی انتخاب کنید):
+   ```bash
+   cat > .env << EOF
+   # نام دیتابیس (اختیاری، پیش‌فرض: PnuExamsSeatNumber)
+   DB_NAME=PnuExamsSeatNumber
+
+   # نام کاربری دیتابیس (اختیاری، پیش‌فرض: pnu_user)
+   DB_USER=pnu_user
+
+   # رمز عبور دیتابیس (تغییر دهید!)
+   DB_PASS=رمز_قوی_انتخابی_شما
+
+   # رمز عبور root MySQL (تغییر دهید!)
+   MYSQL_ROOT_PASSWORD=رمز_قوی_root
+
+   # نام دیتابیس MySQL (اختیاری، پیش‌فرض: PnuExamsSeatNumber)
+   MYSQL_DATABASE=PnuExamsSeatNumber
+
+   # نام کاربری MySQL (اختیاری، پیش‌فرض: pnu_user)
+   MYSQL_USER=pnu_user
+
+   # رمز عبور MySQL (تغییر دهید!)
+   MYSQL_PASSWORD=رمز_قوی_انتخابی_شما
+   EOF
+   ```
+
+3. **ساخت و اجرای کانتینرها**:
+   ```bash
+   docker-compose up --build
+   ```
+
+4. **دسترسی**:
+   - وب‌سایت: http://localhost:18080
+   - phpMyAdmin: http://localhost:18081 (نام کاربری: `root` یا `pnu_user`، رمز: مطابق `.env`)
+   - MySQL: localhost:3306
+
+برای توقف: `Ctrl+C` سپس `docker-compose down`. برای پاک کردن داده‌ها: `docker-compose down -v`.
+
+### راه‌اندازی دستی روی سرور (Ubuntu 22.04)
+
 برای استقرار روی Ubuntu 22.04 به Apache، PHP 8، MySQL و git نیاز دارید. مراحل زیر خلاصه شده‌اند؛ در صورت داشتن سرور آماده می‌توانید بخش‌های غیرضروری را حذف کنید.
 
 ### ۱. پیش‌نیازها
