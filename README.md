@@ -38,7 +38,18 @@ sudo systemctl enable docker
 
 #### مراحل راه‌اندازی
 
-1. **کلون کردن ریپازیتوری**:
+**گزینه سریع**: اجرای اسکریپت خودکار:
+```bash
+curl -fsSL https://raw.githubusercontent.com/MehdiHassaniir/PnuSeat/master/setup.sh | bash
+```
+یا دانلود و اجرای دستی:
+```bash
+wget https://raw.githubusercontent.com/MehdiHassaniir/PnuSeat/master/setup.sh
+chmod +x setup.sh
+./setup.sh
+```
+
+**راه‌اندازی دستی**:
    ```bash
    git clone https://github.com/MehdiHassaniir/PnuSeat.git
    cd PnuSeat
