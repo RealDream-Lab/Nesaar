@@ -2,31 +2,29 @@ version: "3.9"
 
 services:
   web:
-    build: .
-    container_name: pnuseat_web
+    image: pnuseat-web:latest
+    container_name: PnuSeatWeb
     ports:
       - "18080:80"
     environment:
       DB_HOST: db
-      DB_NAME: ${DB_NAME:-PnuExamsSeatNumber}
-      DB_USER: ${DB_USER:-pnu_user}
-      DB_PASS: ${DB_PASS:-change_me}
+      DB_NAME: PnuExamsSeatNumber
+      DB_USER: pnu_user
+      DB_PASS: change_me
     depends_on:
       - db
-    volumes:
-      - .:/var/www/html:delegated
     restart: unless-stopped
     networks:
-      - pnuseat_network
+      - PnuSeat_Network
 
   db:
     image: mysql:8.0
-    container_name: pnuseat_db
+    container_name: PnuSeatDB
     environment:
-      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-super_secure_root}
-      MYSQL_DATABASE: ${MYSQL_DATABASE:-PnuExamsSeatNumber}
-      MYSQL_USER: ${MYSQL_USER:-pnu_user}
-      MYSQL_PASSWORD: ${MYSQL_PASSWORD:-change_me}
+      MYSQL_ROOT_PASSWORD: super_secure_root
+      MYSQL_DATABASE: PnuExamsSeatNumber
+      MYSQL_USER: pnu_user
+      MYSQL_PASSWORD: change_me
     command: >
       --default-authentication-plugin=mysql_native_password
       --character-set-server=utf8mb4
@@ -34,15 +32,15 @@ services:
     ports:
       - "3306:3306"
     volumes:
-      - ./db_data:/var/lib/mysql
-      - ./docker/mysql-init:/docker-entrypoint-initdb.d:ro
+      - /root/docker/Nesaar/db_data:/var/lib/mysql
+      - /root/docker/Nesaar/docker/mysql-init:/docker-entrypoint-initdb.d:ro
     restart: unless-stopped
     networks:
-      - pnuseat_network
+      - PnuSeat_Network
 
   phpmyadmin:
     image: phpmyadmin:latest
-    container_name: pnuseat_phpmyadmin
+    container_name: PnuSeatPhpMyAdmin
     restart: unless-stopped
     ports:
       - "18081:80"
@@ -52,10 +50,10 @@ services:
     depends_on:
       - db
     networks:
-      - pnuseat_network
+      - PnuSeat_Network
 
 volumes:
   db_data:
 
 networks:
-  pnuseat_network:
+  PnuSeat_Network:
