@@ -23,17 +23,6 @@ else
     echo "✅ Docker is already installed."
 fi
 
-# Clone the repository (optional, for local development)
-# Comment out the following lines if you want to use pre-built image only
-# if [ ! -d "PnuSeat" ]; then
-#     echo "📥 Cloning PnuSeat repository..."
-#     git clone https://github.com/MehdiHassaniir/PnuSeat.git
-#     cd PnuSeat
-# else
-#     echo "📁 PnuSeat directory already exists. Skipping clone."
-#     cd PnuSeat
-# fi
-
 # Create .env file if it doesn't exist
 if [ ! -f ".env" ]; then
     echo "🔧 Creating .env file..."
@@ -55,7 +44,7 @@ fi
 
 # Build and start services using production compose file
 echo "🐳 Starting Docker services with pre-built image..."
-docker-compose -f docker-compose.prod.yml up -d
+docker-compose -f docker-compose.yml up -d
 
 echo "🎉 Setup complete!"
 echo "🌐 Web app: http://localhost:18080"
