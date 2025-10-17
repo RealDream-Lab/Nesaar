@@ -21,6 +21,10 @@ html, body {
   height: 100%;
 }
 
+html {
+  overflow-y: scroll; /* Always show scrollbar to prevent layout shift */
+}
+
 body {
   font-family: 'Vazir', sans-serif;
   direction: rtl;
