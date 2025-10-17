@@ -3,12 +3,12 @@ document.addEventListener('DOMContentLoaded', () => {
     if (navigator.serviceWorker) {
         navigator.serviceWorker.addEventListener('message', event => {
             if (event.data?.type === 'sw-update') {
-                const { changes } = event.data || {};
+                const { changes, tagVersion } = event.data || {};
                 const items = (changes || []).slice(0, 5);
                 // Show a confirmation popup. Reload only when the user clicks OK.
                 Swal.fire({
                     icon: 'info',
-                    title: 'نسخه جدید آماده است',
+                    title: `${tagVersion || 'نسخه جدید'} آماده است`,
                     html: `<div style="text-align:right;">${items.map(c => `• ${c}`).join('<br>')}</div>`,
                     showConfirmButton: true,
                     confirmButtonText: 'باشه، اجرای مجدد',
