@@ -14,7 +14,7 @@ services:
       TZ: Asia/Tehran
     depends_on:
       - db
-    restart: unless-stopped
+    restart: always
     networks:
       - PnuSeat_Network
 
@@ -36,14 +36,14 @@ services:
     volumes:
       - /root/docker/Nesaar/db_data:/var/lib/mysql
       - /root/docker/Nesaar/docker/mysql-init:/docker-entrypoint-initdb.d:ro
-    restart: unless-stopped
+    restart: always
     networks:
       - PnuSeat_Network
 
   phpmyadmin:
     image: phpmyadmin:latest
     container_name: PnuSeatPhpMyAdmin
-    restart: unless-stopped
+    restart: always
     ports:
       - "18081:80"
     environment:
@@ -57,30 +57,13 @@ services:
 
   watchtower:
     image: containrrr/watchtower:latest
-    container_name: WatchTower
-    hostname: watchtower
-    mem_limit: 512m
-    mem_reservation: 128m
-    cpu_shares: 512
-    security_opt:
-      - no-new-privileges=true
-    read_only: true
+    container_name: PnuSeatWatchTower
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock:ro
     environment:
       TZ: Asia/Tehran
-      DOCKER_API_VERSION: 1.43
-      WATCHTOWER_CLEANUP: true
-      WATCHTOWER_REMOVE_VOLUMES: false
-      WATCHTOWER_INCLUDE_RESTARTING: true
-      WATCHTOWER_INCLUDE_STOPPED: true
       WATCHTOWER_SCHEDULE: "0 0 14 * * *"
-      WATCHTOWER_LABEL_ENABLE: false
-      WATCHTOWER_ROLLING_RESTART: true
-      WATCHTOWER_TIMEOUT: 30s
-      WATCHTOWER_LOG_FORMAT: pretty
-      WATCHTOWER_NOTIFICATIONS_LEVEL: info
-    restart: on-failure:5
+    restart: always
     networks:
       - PnuSeat_Network
 
