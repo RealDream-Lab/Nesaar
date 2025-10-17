@@ -15,6 +15,8 @@ services:
     depends_on:
       - db
     restart: always
+    labels:
+      - "com.centurylinklabs.watchtower.enable=true"
     networks:
       - PnuSeat_Network
 
@@ -37,6 +39,8 @@ services:
       - /root/docker/Nesaar/db_data:/var/lib/mysql
       - /root/docker/Nesaar/docker/mysql-init:/docker-entrypoint-initdb.d:ro
     restart: always
+    labels:
+      - "com.centurylinklabs.watchtower.enable=true"
     networks:
       - PnuSeat_Network
 
@@ -52,6 +56,8 @@ services:
       TZ: Asia/Tehran
     depends_on:
       - db
+    labels:
+      - "com.centurylinklabs.watchtower.enable=true"
     networks:
       - PnuSeat_Network
 
@@ -70,6 +76,7 @@ services:
       WATCHTOWER_ROLLING_RESTART: true
       WATCHTOWER_INCLUDE_STOPPED: true
       WATCHTOWER_TIMEOUT: 30s
+      WATCHTOWER_LABEL_ENABLE: true
     restart: always
     networks:
       - PnuSeat_Network
