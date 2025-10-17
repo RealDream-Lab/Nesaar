@@ -44,7 +44,8 @@ document.addEventListener('DOMContentLoaded', () => {
     // Server-based clock sync for seconds display
     let baseServerMs = Date.now();
     let basePerf = (typeof performance !== 'undefined' && performance.now) ? performance.now() : Date.now();
-    let secondTimer = null;
+    let secondTimer = null; // for setInterval
+    let secondTimeout = null; // for initial setTimeout
     let currentCredentials = null;
     let lastSnapshot = '';
     let lastPayload = [];
@@ -414,26 +415,39 @@ document.addEventListener('DOMContentLoaded', () => {
             if (!payload || !payload.date || !payload.time) {
                 throw new Error('Invalid payload structure');
             }
+
             // payload.date expected like YYYY/MM/DD and payload.time like HH:MM
-            const formattedDate = toPersianDigits(payload.date);
-            const formattedTime = toPersianDigits(payload.time);
-            const formattedStamp = `${formattedDate} | ${formattedTime}`;
+            // Parse date/time to ms and use formatWithSeconds for initial value
+            // If seconds are not present in payload.time, use current seconds
+            let h = 0, m = 0, s = 0;
+            const timeParts = String(payload.time).split(':').map(s => parseInt(toEnglishDigits(s), 10));
+            if (timeParts.length >= 2) {
+                h = timeParts[0];
+                m = timeParts[1];
+                if (timeParts.length >= 3 && !Number.isNaN(timeParts[2])) {
+                    s = timeParts[2];
+                } else {
+                    // Use current seconds if not provided
+                    s = new Date().getSeconds();
+                }
+            }
+            const parts = String(payload.date).split('/').map(p => parseInt(p, 10));
+            let ms = Date.now();
+            if (parts.length === 3 && !Number.isNaN(h) && !Number.isNaN(m) && !Number.isNaN(s)) {
+                const [y, mm, d] = parts;
+                ms = new Date(y, mm - 1, d, h, m, s, 0).getTime();
+            }
+            const formattedStamp = formatWithSeconds(ms);
             footerClock.textContent = formattedStamp;
             if (footerSpacer) footerSpacer.textContent = formattedStamp;
 
-            // Sync base time for per-second updates
-            try {
-                const [h, m] = String(payload.time).split(':').map(s => parseInt(toEnglishDigits(s), 10));
-                const parts = String(payload.date).split('/').map(p => parseInt(p, 10));
-                if (parts.length === 3 && !Number.isNaN(h) && !Number.isNaN(m)) {
-                    // Create a Date object in local tz using server-provided values
-                    const [y, mm, d] = parts;
-                    const serverDate = new Date(y, mm - 1, d, h, m, 0, 0);
-                    baseServerMs = serverDate.getTime();
-                    basePerf = (typeof performance !== 'undefined' && performance.now) ? performance.now() : Date.now();
-                }
-            } catch (e) {
-                // ignore parsing errors; leave previous baseServerMs
+            // Set baseServerMs and basePerf with correct ms (including seconds)
+            baseServerMs = ms;
+            basePerf = (typeof performance !== 'undefined' && performance.now) ? performance.now() : Date.now();
+
+            // Start ticker (no need to pass ms)
+            if (typeof startSecondTicker === 'function') {
+                startSecondTicker();
             }
         } catch (error) {
             console.warn('Clock update failed:', error);
@@ -448,7 +462,16 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function startSecondTicker() {
-        if (secondTimer) return;
+        // Always clear previous timers
+        if (secondTimer) {
+            clearInterval(secondTimer);
+            secondTimer = null;
+        }
+        if (secondTimeout) {
+            clearTimeout(secondTimeout);
+            secondTimeout = null;
+        }
+
         const tick = () => {
             const perfNow = (typeof performance !== 'undefined' && performance.now) ? performance.now() : Date.now();
             const elapsed = perfNow - basePerf;
@@ -456,18 +479,35 @@ document.addEventListener('DOMContentLoaded', () => {
             if (footerClock) footerClock.textContent = formatWithSeconds(nowMs);
             if (footerSpacer) footerSpacer.textContent = footerClock.textContent;
         };
-        // run immediately and then every 1000ms
+
+        // Run immediately
         tick();
-        secondTimer = setInterval(() => {
-            if (document.hidden) return; // avoid background updates
+
+        // Calculate ms to next full second
+        const perfNow = (typeof performance !== 'undefined' && performance.now) ? performance.now() : Date.now();
+        const elapsed = perfNow - basePerf;
+        const msSinceLastSecond = (baseServerMs + Math.round(elapsed)) % 1000;
+        const msToNextSecond = msSinceLastSecond === 0 ? 1000 : 1000 - msSinceLastSecond;
+
+        // Set a timeout to align to the next second, then start interval
+        secondTimeout = setTimeout(() => {
             tick();
-        }, 1000);
+            secondTimer = setInterval(() => {
+                if (document.hidden) return;
+                tick();
+            }, 1000);
+            secondTimeout = null;
+        }, msToNextSecond);
     }
 
     function stopSecondTicker() {
         if (secondTimer) {
             clearInterval(secondTimer);
             secondTimer = null;
+        }
+        if (secondTimeout) {
+            clearTimeout(secondTimeout);
+            secondTimeout = null;
         }
     }
 
