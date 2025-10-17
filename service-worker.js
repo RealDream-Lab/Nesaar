@@ -1,6 +1,6 @@
 // Bump cache to force refresh of updated assets (app.js, style.css, index.html)
 // Increment this when you want clients to fetch the new assets.
-const CACHE_NAME = 'exam-seat-v2025-10-17-13';
+const CACHE_NAME = 'exam-seat-v2025-10-17-14';
 const urlsToCache = [
   '/',
   '/index.html',
@@ -76,11 +76,12 @@ self.addEventListener('activate', event => {
           client.postMessage({
             type: 'sw-update',
             version: CACHE_NAME,
-            tagVersion: 'v1.4.1',
+            tagVersion: 'نسخه ۱.۴.۱',
             changes: [
               'رفع جابجایی صفحه هنگام نمایش SweetAlert',
               'بهبود راه‌اندازی Docker و اضافه کردن دستورات نصب',
-              'اضافه کردن GitHub Actions برای ساخت خودکار ایمیج Docker'
+              'اضافه کردن GitHub Actions برای ساخت خودکار ایمیج Docker',
+              'بهبود نمایش شماره نسخه در پیام آپدیت'
             ]
           });
         });
