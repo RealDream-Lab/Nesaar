@@ -58,11 +58,18 @@ services:
   watchtower:
     image: containrrr/watchtower:latest
     container_name: PnuSeatWatchTower
+    security_opt:
+      - no-new-privileges=true
+    read_only: true
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock:ro
     environment:
       TZ: Asia/Tehran
       WATCHTOWER_SCHEDULE: "0 0 14 * * *"
+      WATCHTOWER_CLEANUP: true
+      WATCHTOWER_ROLLING_RESTART: true
+      WATCHTOWER_INCLUDE_STOPPED: true
+      WATCHTOWER_TIMEOUT: 30s
     restart: always
     networks:
       - PnuSeat_Network
