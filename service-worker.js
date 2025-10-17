@@ -76,6 +76,7 @@ self.addEventListener('activate', event => {
           client.postMessage({
             type: 'sw-update',
             version: CACHE_NAME,
+            tagVersion: 'v1.4.1',
             changes: [
               'رفع جابجایی صفحه هنگام نمایش SweetAlert',
               'بهبود راه‌اندازی Docker و اضافه کردن دستورات نصب',
