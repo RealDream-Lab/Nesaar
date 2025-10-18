@@ -1,6 +1,6 @@
 // Bump cache to force refresh of updated assets (app.js, style.css, index.html)
 // Increment this when you want clients to fetch the new assets.
-const CACHE_NAME = 'exam-seat-v2025-10-18-03';
+const CACHE_NAME = 'exam-seat-v2025-10-19-01';
 const urlsToCache = [
   '/',
   '/index.html',
@@ -75,15 +75,14 @@ self.addEventListener('activate', event => {
       // Notify all clients about SW update
       self.clients.matchAll().then(clients => {
         clients.forEach(client => {
-          client.postMessage({
-            type: 'sw-update',
-            version: CACHE_NAME,
-            tagVersion: 'نسخه ۱.۴.۵',
-            changes: [
-              'رفع جابجایی صفحه هنگام نمایش SweetAlert',
-              'بهبود نمایش شماره نسخه در پیام آپدیت'
-            ]
-          });
+              client.postMessage({
+                type: 'sw-update',
+                version: CACHE_NAME,
+                tagVersion: 'نسخه ۱.۵.۰',
+                changes: [
+                  'رفع ایرادات جزئی'
+                ]
+              });
         });
       });
     })
