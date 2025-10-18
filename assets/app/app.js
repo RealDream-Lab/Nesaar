@@ -3,12 +3,12 @@ document.addEventListener('DOMContentLoaded', () => {
     if (navigator.serviceWorker) {
         navigator.serviceWorker.addEventListener('message', event => {
             if (event.data?.type === 'sw-update') {
-                const { changes, tagVersion } = event.data || {};
+                const { changes } = event.data || {};
                 const items = (changes || []).slice(0, 5);
                 // Show a confirmation popup. Reload only when the user clicks OK.
                 Swal.fire({
                     icon: 'info',
-                    title: `${tagVersion || 'نسخه جدید'} آماده است`,
+                    title: 'نسخه جدید آماده است',
                     html: `<div style="text-align:right;">${items.map(c => `• ${c}`).join('<br>')}</div>`,
                     showConfirmButton: true,
                     confirmButtonText: 'باشه، اجرای مجدد',
@@ -44,13 +44,11 @@ document.addEventListener('DOMContentLoaded', () => {
     // Server-based clock sync for seconds display
     let baseServerMs = Date.now();
     let basePerf = (typeof performance !== 'undefined' && performance.now) ? performance.now() : Date.now();
-    let secondTimer = null; // for setInterval
-    let secondTimeout = null; // for initial setTimeout
+    let secondTimer = null;
     let currentCredentials = null;
     let lastSnapshot = '';
     let lastPayload = [];
     let lastFullName = '';
-    let backgroundRetryTimer = null;
 
     function getPersianMonthName(dateStr) {
         const parts = dateStr.split('/');
@@ -71,7 +69,8 @@ document.addEventListener('DOMContentLoaded', () => {
             console.warn('Failed to load config:', error);
             // Fallback to cached config
             const cached = localStorage.getItem('appConfig');
-            return cached ? JSON.parse(cached) : { University: '', Order: '', IsInit: 'NO' };
+            // Note: default now contains SaadCode instead of Order
+            return cached ? JSON.parse(cached) : { University: '', SaadCode: '', IsInit: 'NO' };
         }
     }
 
@@ -96,8 +95,8 @@ document.addEventListener('DOMContentLoaded', () => {
             title: 'تنظیمات اولیه',
             html: `
                 <div style="text-align:right; direction:rtl; line-height:2; max-width: 400px; margin: 0 auto;">
-                    <label for="swal-order">سفارش‌دهنده:</label><br>
-                    <input id="swal-order" class="swal2-input" value="" style="width:100%; max-width: 380px; margin-bottom:10px;"><br>
+                    <label for="swal-saadcode">کد ساد مرکز:</label><br>
+                    <input id="swal-saadcode" class="swal2-input" value="" style="width:100%; max-width: 380px; margin-bottom:10px;"><br>
                     <label for="swal-university">دانشگاه:</label><br>
                     <input id="swal-university" class="swal2-input" value="" style="width:100%; max-width: 380px;">
                 </div>
@@ -110,13 +109,13 @@ document.addEventListener('DOMContentLoaded', () => {
             allowOutsideClick: false,
             allowEscapeKey: false,
             preConfirm: () => {
-                const order = document.getElementById('swal-order').value.trim();
+                const saad = document.getElementById('swal-saadcode').value.trim();
                 const university = document.getElementById('swal-university').value.trim();
-                if (!order || !university) {
+                if (!saad || !university) {
                     Swal.showValidationMessage('هر دو فیلد باید پر شوند');
                     return false;
                 }
-                return { Order: order, University: university };
+                return { SaadCode: saad, University: university };
             },
             customClass: {
                 popup: 'swal2-rtl swal2-glass',
@@ -222,14 +221,13 @@ document.addEventListener('DOMContentLoaded', () => {
                 appConfig = await loadConfig();
             }
             const university = appConfig.University || 'دانشگاه پیام نور مرکز بیجار';
-            const order = appConfig.Order || 'اداره آموزش، پژوهش، فرهنگی و دانشجوئی دانشگاه پیام نور مرکز بیجار';
             Swal.fire({
                 title: 'درباره اپلیکیشن',
                 html: `
                     <div style="line-height:1.9;font-size:1.05rem;text-align:justify;">
                        نسار یک نرم افزار وب اپلیکیشن پیشرو است که با رویکرد تجربه کاربری مدرن و ظاهر شیشه‌ای (گلس مورفیسم) به دانشجویان پیام نور کمک می‌کند تا برنامه‌ی امتحانات، شماره صندلی، محل برگزاری و وضعیت آزمون‌های خود را یک‌جا مشاهده کنند.
 <br>
-                       این برنامه به سفارش <span style="color: lime; font-weight: bold;">${escapeHtml(order)}</span> و توسط <span style="color: gold; font-weight: bold;">مهدی حسنی</span> توسعه یافته است
+                       این برنام به سفارش <span style="color: lime; font-weight: bold;">${escapeHtml(university)}</span> و توسط <span style="color: gold; font-weight: bold;">مهدی حسنی</span> توسعه یافته است
                     </div>
                     <div class="swal2-countdown">
                         <span class="swal2-countdown-value">${toPersianDigits(30)}</span>
@@ -415,39 +413,26 @@ document.addEventListener('DOMContentLoaded', () => {
             if (!payload || !payload.date || !payload.time) {
                 throw new Error('Invalid payload structure');
             }
-
             // payload.date expected like YYYY/MM/DD and payload.time like HH:MM
-            // Parse date/time to ms and use formatWithSeconds for initial value
-            // If seconds are not present in payload.time, use current seconds
-            let h = 0, m = 0, s = 0;
-            const timeParts = String(payload.time).split(':').map(s => parseInt(toEnglishDigits(s), 10));
-            if (timeParts.length >= 2) {
-                h = timeParts[0];
-                m = timeParts[1];
-                if (timeParts.length >= 3 && !Number.isNaN(timeParts[2])) {
-                    s = timeParts[2];
-                } else {
-                    // Use current seconds if not provided
-                    s = new Date().getSeconds();
-                }
-            }
-            const parts = String(payload.date).split('/').map(p => parseInt(p, 10));
-            let ms = Date.now();
-            if (parts.length === 3 && !Number.isNaN(h) && !Number.isNaN(m) && !Number.isNaN(s)) {
-                const [y, mm, d] = parts;
-                ms = new Date(y, mm - 1, d, h, m, s, 0).getTime();
-            }
-            const formattedStamp = formatWithSeconds(ms);
+            const formattedDate = toPersianDigits(payload.date);
+            const formattedTime = toPersianDigits(payload.time);
+            const formattedStamp = `${formattedDate} | ${formattedTime}`;
             footerClock.textContent = formattedStamp;
             if (footerSpacer) footerSpacer.textContent = formattedStamp;
 
-            // Set baseServerMs and basePerf with correct ms (including seconds)
-            baseServerMs = ms;
-            basePerf = (typeof performance !== 'undefined' && performance.now) ? performance.now() : Date.now();
-
-            // Start ticker (no need to pass ms)
-            if (typeof startSecondTicker === 'function') {
-                startSecondTicker();
+            // Sync base time for per-second updates
+            try {
+                const [h, m] = String(payload.time).split(':').map(s => parseInt(toEnglishDigits(s), 10));
+                const parts = String(payload.date).split('/').map(p => parseInt(p, 10));
+                if (parts.length === 3 && !Number.isNaN(h) && !Number.isNaN(m)) {
+                    // Create a Date object in local tz using server-provided values
+                    const [y, mm, d] = parts;
+                    const serverDate = new Date(y, mm - 1, d, h, m, 0, 0);
+                    baseServerMs = serverDate.getTime();
+                    basePerf = (typeof performance !== 'undefined' && performance.now) ? performance.now() : Date.now();
+                }
+            } catch (e) {
+                // ignore parsing errors; leave previous baseServerMs
             }
         } catch (error) {
             console.warn('Clock update failed:', error);
@@ -456,22 +441,15 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function formatWithSeconds(ms) {
         const d = new Date(ms);
-        const datePart = `${toPersianDigits(d.getFullYear())}/${toPersianDigits(String(d.getMonth() + 1).padStart(2, '0'))}/${toPersianDigits(String(d.getDate()).padStart(2, '0'))}`;
-        const timePart = `${toPersianDigits(String(d.getHours()).padStart(2, '0'))}:${toPersianDigits(String(d.getMinutes()).padStart(2, '0'))}:${toPersianDigits(String(d.getSeconds()).padStart(2, '0'))}`;
+        // Use English digits for numeric parts (year/time) as requested
+        const pad = (n) => String(n).padStart(2, '0');
+        const datePart = `${d.getFullYear()}/${pad(d.getMonth() + 1)}/${pad(d.getDate())}`;
+        const timePart = `${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
         return `${datePart} | ${timePart}`;
     }
 
     function startSecondTicker() {
-        // Always clear previous timers
-        if (secondTimer) {
-            clearInterval(secondTimer);
-            secondTimer = null;
-        }
-        if (secondTimeout) {
-            clearTimeout(secondTimeout);
-            secondTimeout = null;
-        }
-
+        if (secondTimer) return;
         const tick = () => {
             const perfNow = (typeof performance !== 'undefined' && performance.now) ? performance.now() : Date.now();
             const elapsed = perfNow - basePerf;
@@ -479,35 +457,18 @@ document.addEventListener('DOMContentLoaded', () => {
             if (footerClock) footerClock.textContent = formatWithSeconds(nowMs);
             if (footerSpacer) footerSpacer.textContent = footerClock.textContent;
         };
-
-        // Run immediately
+        // run immediately and then every 1000ms
         tick();
-
-        // Calculate ms to next full second
-        const perfNow = (typeof performance !== 'undefined' && performance.now) ? performance.now() : Date.now();
-        const elapsed = perfNow - basePerf;
-        const msSinceLastSecond = (baseServerMs + Math.round(elapsed)) % 1000;
-        const msToNextSecond = msSinceLastSecond === 0 ? 1000 : 1000 - msSinceLastSecond;
-
-        // Set a timeout to align to the next second, then start interval
-        secondTimeout = setTimeout(() => {
+        secondTimer = setInterval(() => {
+            if (document.hidden) return; // avoid background updates
             tick();
-            secondTimer = setInterval(() => {
-                if (document.hidden) return;
-                tick();
-            }, 1000);
-            secondTimeout = null;
-        }, msToNextSecond);
+        }, 1000);
     }
 
     function stopSecondTicker() {
         if (secondTimer) {
             clearInterval(secondTimer);
             secondTimer = null;
-        }
-        if (secondTimeout) {
-            clearTimeout(secondTimeout);
-            secondTimeout = null;
         }
     }
 
@@ -746,29 +707,8 @@ document.addEventListener('DOMContentLoaded', () => {
             console.error('Fetch error:', error);
             if (error && error.isUserError) {
                 showAlert('warning', 'ورود ناموفق', 'رمز عبور و شماره دانشجویی صحیح نیست یا اطلاعاتی برای این شماره وجود ندارد.');
-                eraseCookie('userSession');
-                showLogin();
             } else {
-                // تلاش پس‌زمینه برای اتصال مجدد
-                showAlert('error', 'خطا در اتصال!', 'تلاش برای اتصال مجدد به سرور در پس زمینه در حال انجام است این پیام را می‌توانید ببندید.');
-                if (!backgroundRetryTimer) {
-                    backgroundRetryTimer = setInterval(async () => {
-                        try {
-                            const payload = await fetchExamPayload(studentId, nationalId);
-                            if (payload.length > 0) {
-                                clearInterval(backgroundRetryTimer);
-                                backgroundRetryTimer = null;
-                                renderResults(payload, lastFullName);
-                                ensureLogoutButton(lastFullName, studentId);
-                                lastSnapshot = JSON.stringify(payload || []);
-                                startAutoRefresh(studentId, nationalId);
-                                Swal.close();
-                            }
-                        } catch (e) {
-                            // هنوز ارتباط برقرار نشده، تلاش ادامه دارد
-                        }
-                    }, 10000); // هر ۱۰ ثانیه تلاش مجدد
-                }
+                showAlert('error', 'خطا در اتصال!', 'مشکلی در ارتباط با سرور رخ داده است. لطفاً بعداً تلاش کنید.');
             }
         } finally {
             toggleLoading(false);
@@ -829,55 +769,18 @@ document.addEventListener('DOMContentLoaded', () => {
         } catch (e) {
             console.warn('Auto-login failed:', e);
             stopAutoRefresh();
-            if (e && e.isUserError) {
-                currentCredentials = null;
-                lastSnapshot = '';
-                lastPayload = [];
-                lastFullName = '';
-                eraseCookie('userSession');
-                showAlert('warning', 'ورود ناموفق', 'رمز عبور و شماره دانشجویی صحیح نیست یا اطلاعاتی برای این شماره وجود ندارد.');
-                showLogin();
-            } else {
-                // تلاش پس‌زمینه برای اتصال مجدد
-                showAlert('error', 'خطا در اتصال!', 'تلاش برای اتصال مجدد به سرور در پس زمینه در حال انجام است این پیام را می‌توانید ببندید.');
-                if (!backgroundRetryTimer) {
-                    backgroundRetryTimer = setInterval(async () => {
-                        try {
-                            const raw = getCookie('userSession');
-                            if (!raw) return;
-                            const data = JSON.parse(decodeURIComponent(raw));
-                            const sid = (data.student_id || '').toString().trim();
-                            const nid = (data.national_id || '').toString().trim();
-                            if (!sid || !nid) return;
-                            const payload = await fetchExamPayload(sid, nid);
-                            if (payload.length > 0) {
-                                clearInterval(backgroundRetryTimer);
-                                backgroundRetryTimer = null;
-                                const first = payload[0];
-                                const fullName = `${first.first_name || ''} ${first.last_name || ''}`.trim();
-                                lastFullName = fullName;
-                                renderResults(payload, fullName);
-                                ensureLogoutButton(fullName, sid);
-                                lastSnapshot = JSON.stringify(payload || []);
-                                startAutoRefresh(sid, nid);
-                                Swal.close();
-                            }
-                        } catch (err) {
-                            // هنوز ارتباط برقرار نشده، تلاش ادامه دارد
-                        }
-                    }, 10000); // هر ۱۰ ثانیه تلاش مجدد
-                }
+            currentCredentials = null;
+            lastSnapshot = '';
+            lastPayload = [];
+            lastFullName = '';
+            eraseCookie('userSession');
+            if (!e?.isUserError) {
+                showAlert('error', 'خطا در اتصال!', 'مشکلی در ارتباط با سرور رخ داده است. لطفاً بعداً تلاش کنید.');
             }
+            showLogin();
         } finally {
             toggleLoading(false);
         }
-        // اگر کاربر logout کند یا صفحه را رفرش کند، تلاش پس‌زمینه متوقف شود
-        window.addEventListener('beforeunload', () => {
-            if (backgroundRetryTimer) {
-                clearInterval(backgroundRetryTimer);
-                backgroundRetryTimer = null;
-            }
-        });
     })();
 
     function toggleLoading(isLoading) {

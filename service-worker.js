@@ -1,6 +1,6 @@
 // Bump cache to force refresh of updated assets (app.js, style.css, index.html)
 // Increment this when you want clients to fetch the new assets.
-const CACHE_NAME = 'exam-seat-v2025-10-17-18';
+const CACHE_NAME = 'exam-seat-v2025-10-18-03';
 const urlsToCache = [
   '/',
   '/index.html',
@@ -13,6 +13,8 @@ const urlsToCache = [
   '/assets/sweetalert2/sweetalert2.min.js',
   '/assets/crypto-js.min.js',
   '/assets/app/app.js',
+  '/assets/app/logo.png',
+  '/assets/app/Pnulogo.png',
   '/pwa-icons/icon-192.png',
   '/pwa-icons/icon-512.png'
 ];
@@ -76,7 +78,7 @@ self.addEventListener('activate', event => {
           client.postMessage({
             type: 'sw-update',
             version: CACHE_NAME,
-            tagVersion: 'نسخه ۱.۴.۴',
+            tagVersion: 'نسخه ۱.۴.۵',
             changes: [
               'رفع جابجایی صفحه هنگام نمایش SweetAlert',
               'بهبود نمایش شماره نسخه در پیام آپدیت'
