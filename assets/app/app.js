@@ -441,10 +441,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function formatWithSeconds(ms) {
         const d = new Date(ms);
-        // Use English digits for numeric parts (year/time) as requested
-        const pad = (n) => String(n).padStart(2, '0');
-        const datePart = `${d.getFullYear()}/${pad(d.getMonth() + 1)}/${pad(d.getDate())}`;
-        const timePart = `${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
+        const datePart = `${toPersianDigits(d.getFullYear())}/${toPersianDigits(String(d.getMonth() + 1).padStart(2, '0'))}/${toPersianDigits(String(d.getDate()).padStart(2, '0'))}`;
+        const timePart = `${toPersianDigits(String(d.getHours()).padStart(2, '0'))}:${toPersianDigits(String(d.getMinutes()).padStart(2, '0'))}:${toPersianDigits(String(d.getSeconds()).padStart(2, '0'))}`;
         return `${datePart} | ${timePart}`;
     }
 
