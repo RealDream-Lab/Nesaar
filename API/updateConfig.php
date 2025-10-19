@@ -20,6 +20,21 @@ if (empty($saad) || empty($university)) {
     exit;
 }
 
+// Normalize SaadCode early so DB stores ASCII digits
+// Map Persian/Arabic digits to ASCII 0-9
+$map = [
+    '۰' => '0','۱' => '1','۲' => '2','۳' => '3','۴' => '4','۵' => '5','۶' => '6','۷' => '7','۸' => '8','۹' => '9',
+    '٠' => '0','١' => '1','٢' => '2','٣' => '3','٤' => '4','٥' => '5','٦' => '6','٧' => '7','٨' => '8','٩' => '9'
+];
+$normalizedSaad = strtr($saad, $map);
+$normalizedSaad = preg_replace('/\s+/u', '', $normalizedSaad);
+
+// Enforce exactly 4 ASCII digits
+if (!preg_match('/^\d{4}$/', $normalizedSaad)) {
+    echo json_encode(['error' => 'کد ساد باید دقیقاً ۴ رقم باشد']);
+    exit;
+}
+
 try {
     $pdo->beginTransaction();
 
@@ -29,10 +44,10 @@ try {
     $row = $stmt->fetch();
     if ($row && intval($row['cnt']) > 0) {
         $stmt = $pdo->prepare("UPDATE Config SET ConfigValue = ? WHERE ConfigName = 'SaadCode'");
-        $stmt->execute([$saad]);
+        $stmt->execute([$normalizedSaad]);
     } else {
         $stmt = $pdo->prepare("INSERT INTO Config (ConfigName, ConfigValue) VALUES ('SaadCode', ?)");
-        $stmt->execute([$saad]);
+        $stmt->execute([$normalizedSaad]);
     }
 
     $stmt = $pdo->prepare("UPDATE Config SET ConfigValue = ? WHERE ConfigName = 'University'");
@@ -41,30 +56,33 @@ try {
     $stmt = $pdo->prepare("UPDATE Config SET ConfigValue = 'YES' WHERE ConfigName = 'IsInit'");
     $stmt->execute();
 
-    // After commit, fire a GET webhook to notify external system
+    // After commit, call the webhook and include its response in our API response
     $pdo->commit();
 
-    // Fire-and-forget GET request to webhook with SaadCode and Center (University)
     $webhookUrl = 'https://wfa.pnubijar.ac.ir/webhook/Licence';
-    // Normalize SaadCode to ASCII digits (Persian/Arabic digits -> 0-9)
-    $map = [
-        '\x{06F0}' => '0','\x{06F1}' => '1','\x{06F2}' => '2','\x{06F3}' => '3','\x{06F4}' => '4',
-        '\x{06F5}' => '5','\x{06F6}' => '6','\x{06F7}' => '7','\x{06F8}' => '8','\x{06F9}' => '9',
-        '\x{0660}' => '0','\x{0661}' => '1','\x{0662}' => '2','\x{0663}' => '3','\x{0664}' => '4',
-        '\x{0665}' => '5','\x{0666}' => '6','\x{0667}' => '7','\x{0668}' => '8','\x{0669}' => '9'
-    ];
-    $normalizedSaad = preg_replace(array_keys($map), array_values($map), $saad);
     $query = http_build_query(['SaadCode' => $normalizedSaad, 'Center' => $university]);
-    // Use non-blocking stream context (short timeout)
+    // Blocking-ish request but with a short timeout
     $ctx = stream_context_create([
         'http' => [
             'method' => 'GET',
-            'timeout' => 2
+            'timeout' => 4,
+            'header' => "Accept: application/json\r\n"
         ]
     ]);
-    @file_get_contents($webhookUrl . '?' . $query, false, $ctx);
+    $webhookResp = @file_get_contents($webhookUrl . '?' . $query, false, $ctx);
 
-    echo json_encode(['success' => true]);
+    $responsePayload = ['success' => true];
+    if ($webhookResp !== false && strlen(trim($webhookResp)) > 0) {
+        $decoded = json_decode($webhookResp, true);
+        if (json_last_error() === JSON_ERROR_NONE && is_array($decoded)) {
+            $responsePayload['webhook'] = $decoded;
+        } else {
+            // Fallback: include raw text
+            $responsePayload['webhook'] = ['raw' => $webhookResp];
+        }
+    }
+
+    echo json_encode($responsePayload);
 } catch (Exception $e) {
     $pdo->rollBack();
     echo json_encode(['error' => 'خطا در آپدیت']);

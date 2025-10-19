@@ -109,13 +109,24 @@ document.addEventListener('DOMContentLoaded', () => {
             allowOutsideClick: false,
             allowEscapeKey: false,
             preConfirm: () => {
-                const saad = document.getElementById('swal-saadcode').value.trim();
+                const saadRaw = document.getElementById('swal-saadcode').value.trim();
                 const university = document.getElementById('swal-university').value.trim();
-                if (!saad || !university) {
+                if (!saadRaw || !university) {
                     Swal.showValidationMessage('هر دو فیلد باید پر شوند');
                     return false;
                 }
-                return { SaadCode: saad, University: university };
+                // Normalize Persian/Arabic digits to ASCII
+                const digitMap = { '۰': '0', '۱': '1', '۲': '2', '۳': '3', '۴': '4', '۵': '5', '۶': '6', '۷': '7', '۸': '8', '۹': '9', '٠': '0', '١': '1', '٢': '2', '٣': '3', '٤': '4', '٥': '5', '٦': '6', '٧': '7', '٨': '8', '٩': '9' };
+                let normalized = '';
+                for (let ch of saadRaw) {
+                    normalized += (digitMap[ch] !== undefined) ? digitMap[ch] : ch;
+                }
+                normalized = normalized.replace(/\s+/g, '');
+                if (!/^\d{4}$/.test(normalized)) {
+                    Swal.showValidationMessage('کد ساد باید دقیقاً ۴ رقم (۰-۹) باشد');
+                    return false;
+                }
+                return { SaadCode: normalized, University: university };
             },
             customClass: {
                 popup: 'swal2-rtl swal2-glass',
@@ -132,10 +143,21 @@ document.addEventListener('DOMContentLoaded', () => {
                 });
                 const result = await response.json();
                 if (result.success) {
+                    // If webhook returned a JSON payload, prefer its 'Respond' message (Persian text)
+                    let webhookText = '';
+                    if (result.webhook) {
+                        if (typeof result.webhook === 'object') {
+                            // Prefer 'Respond' field, then 'text' or 'message', then raw
+                            webhookText = result.webhook.Respond || result.webhook.respond || result.webhook.text || result.webhook.message || result.webhook.raw || '';
+                        } else if (typeof result.webhook === 'string') {
+                            webhookText = result.webhook;
+                        }
+                    }
+
                     Swal.fire({
                         icon: 'success',
                         title: 'ذخیره شد',
-                        text: 'تنظیمات آپدیت شد.',
+                        html: webhookText ? `<div style="text-align:right;">${escapeHtml(webhookText)}</div>` : 'تنظیمات آپدیت شد.',
                         confirmButtonText: 'باشه',
                         customClass: {
                             popup: 'swal2-rtl swal2-glass'

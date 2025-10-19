@@ -75,14 +75,14 @@ self.addEventListener('activate', event => {
       // Notify all clients about SW update
       self.clients.matchAll().then(clients => {
         clients.forEach(client => {
-              client.postMessage({
-                type: 'sw-update',
-                version: CACHE_NAME,
-                tagVersion: 'نسخه ۱.۵.۰',
-                changes: [
-                  'رفع ایرادات جزئی'
-                ]
-              });
+          client.postMessage({
+            type: 'sw-update',
+            version: CACHE_NAME,
+            tagVersion: 'نسخه ۱.۵.۰',
+            changes: [
+              'رفع ایرادات جزئی'
+            ]
+          });
         });
       });
     })
