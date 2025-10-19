@@ -80,7 +80,8 @@ self.addEventListener('activate', event => {
             version: CACHE_NAME,
             tagVersion: 'نسخه ۱.۵.۰',
             changes: [
-              'رفع ایرادات جزئی'
+              'رفع جابجایی صفحه هنگام نمایش SweetAlert',
+              'بهبود نمایش شماره نسخه در پیام آپدیت'
             ]
           });
         });

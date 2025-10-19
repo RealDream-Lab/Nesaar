@@ -1,4 +1,5 @@
 document.addEventListener('DOMContentLoaded', () => {
+    const VERSION = '۱.۵.۰';
     // Listen for service worker update messages and show SweetAlert
     if (navigator.serviceWorker) {
         navigator.serviceWorker.addEventListener('message', event => {
@@ -247,9 +248,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 title: 'درباره اپلیکیشن',
                 html: `
                     <div style="line-height:1.9;font-size:1.05rem;text-align:justify;">
-                       نسار یک نرم افزار وب اپلیکیشن پیشرو است که با رویکرد تجربه کاربری مدرن و ظاهر شیشه‌ای (گلس مورفیسم) به دانشجویان پیام نور کمک می‌کند تا برنامه‌ی امتحانات، شماره صندلی، محل برگزاری و وضعیت آزمون‌های خود را یک‌جا مشاهده کنند.
+نِسار (نسخه ${VERSION}) یک وب‌اپلیکیشن پیشرفته و مدرن است که با بهره‌گیری از طراحی مبتنی بر تجربه کاربری نوین و سبک گلس‌مورفیسم، به دانشجویان دانشگاه پیام نور این امکان را می‌دهد تا برنامه امتحانات، شماره صندلی، محل برگزاری و وضعیت آزمون‌های خود را به‌صورت یکپارچه و متمرکز مشاهده کنند.
 <br>
-                       این برنام به سفارش <span style="color: lime; font-weight: bold;">${escapeHtml(university)}</span> و توسط <span style="color: gold; font-weight: bold;">مهدی حسنی</span> توسعه یافته است
+                       این برنام به سفارش <span style="color: lime; font-weight: bold;">${escapeHtml(university)}</span> و توسط <span style="color: gold; font-weight: bold;"><a href="https://t.me/RealDream" target="_blank">مهدی حسنی</a></span> توسعه یافته است
                     </div>
                     <div class="swal2-countdown">
                         <span class="swal2-countdown-value">${toPersianDigits(30)}</span>
