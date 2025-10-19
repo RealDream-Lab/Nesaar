@@ -35,6 +35,36 @@ if (!preg_match('/^\d{4}$/', $normalizedSaad)) {
     exit;
 }
 
+// First, call the webhook to validate
+$webhookUrl = 'https://wfa.pnubijar.ac.ir/webhook/Licence';
+$query = http_build_query(['SaadCode' => $normalizedSaad, 'Center' => $university]);
+$ctx = stream_context_create([
+    'http' => [
+        'method' => 'GET',
+        'timeout' => 4,
+        'header' => "Accept: application/json\r\n"
+    ]
+]);
+$webhookResp = @file_get_contents($webhookUrl . '?' . $query, false, $ctx);
+
+$webhookData = null;
+if ($webhookResp !== false && strlen(trim($webhookResp)) > 0) {
+    $decoded = json_decode($webhookResp, true);
+    if (json_last_error() === JSON_ERROR_NONE && is_array($decoded)) {
+        $webhookData = $decoded;
+    }
+}
+
+// Check if the response has the exact required message
+$requiredMessage = 'درخواست فعال سازی ارسال شد. از هم اکنون به مدت ۶ ساعت امکان استفاده از نرم افزار برای شما فراهم است. پس از انقضای این زمان باید نسبت به خرید لایسنس اقدام نمائید.';
+if (!$webhookData || !isset($webhookData['Respond']) || trim($webhookData['Respond']) !== $requiredMessage) {
+    echo json_encode(['error' => 'پاسخ سرور نامعتبر است. لطفاً دوباره تلاش کنید.']);
+    exit;
+}
+
+// If valid, proceed to save
+$licenseToken = $webhookData['Code'] ?? '';
+
 try {
     $pdo->beginTransaction();
 
@@ -56,33 +86,37 @@ try {
     $stmt = $pdo->prepare("UPDATE Config SET ConfigValue = 'YES' WHERE ConfigName = 'IsInit'");
     $stmt->execute();
 
-    // After commit, call the webhook and include its response in our API response
-    $pdo->commit();
-
-    $webhookUrl = 'https://wfa.pnubijar.ac.ir/webhook/Licence';
-    $query = http_build_query(['SaadCode' => $normalizedSaad, 'Center' => $university]);
-    // Blocking-ish request but with a short timeout
-    $ctx = stream_context_create([
-        'http' => [
-            'method' => 'GET',
-            'timeout' => 4,
-            'header' => "Accept: application/json\r\n"
-        ]
-    ]);
-    $webhookResp = @file_get_contents($webhookUrl . '?' . $query, false, $ctx);
-
-    $responsePayload = ['success' => true];
-    if ($webhookResp !== false && strlen(trim($webhookResp)) > 0) {
-        $decoded = json_decode($webhookResp, true);
-        if (json_last_error() === JSON_ERROR_NONE && is_array($decoded)) {
-            $responsePayload['webhook'] = $decoded;
+    // Store LicenseToken if provided
+    if (!empty($licenseToken)) {
+        $stmt = $pdo->prepare("SELECT COUNT(*) as cnt FROM Config WHERE ConfigName = 'LicenseToken'");
+        $stmt->execute();
+        $row = $stmt->fetch();
+        if ($row && intval($row['cnt']) > 0) {
+            $stmt = $pdo->prepare("UPDATE Config SET ConfigValue = ? WHERE ConfigName = 'LicenseToken'");
+            $stmt->execute([$licenseToken]);
         } else {
-            // Fallback: include raw text
-            $responsePayload['webhook'] = ['raw' => $webhookResp];
+            $stmt = $pdo->prepare("INSERT INTO Config (ConfigName, ConfigValue) VALUES ('LicenseToken', ?)");
+            $stmt->execute([$licenseToken]);
+        }
+
+        // Store LicenseLastChecked
+        date_default_timezone_set('Asia/Tehran');
+        $currentTimestamp = date('Y-m-d H:i:s');
+        $stmt = $pdo->prepare("SELECT COUNT(*) as cnt FROM Config WHERE ConfigName = 'LicenseLastChecked'");
+        $stmt->execute();
+        $row = $stmt->fetch();
+        if ($row && intval($row['cnt']) > 0) {
+            $stmt = $pdo->prepare("UPDATE Config SET ConfigValue = ? WHERE ConfigName = 'LicenseLastChecked'");
+            $stmt->execute([$currentTimestamp]);
+        } else {
+            $stmt = $pdo->prepare("INSERT INTO Config (ConfigName, ConfigValue) VALUES ('LicenseLastChecked', ?)");
+            $stmt->execute([$currentTimestamp]);
         }
     }
 
-    echo json_encode($responsePayload);
+    $pdo->commit();
+
+    echo json_encode(['success' => true, 'message' => $requiredMessage]);
 } catch (Exception $e) {
     $pdo->rollBack();
     echo json_encode(['error' => 'خطا در آپدیت']);

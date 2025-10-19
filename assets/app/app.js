@@ -1,5 +1,5 @@
 document.addEventListener('DOMContentLoaded', () => {
-    const VERSION = '۱.۵.۰';
+    const VERSION = '۱.۵.۱';
     // Listen for service worker update messages and show SweetAlert
     if (navigator.serviceWorker) {
         navigator.serviceWorker.addEventListener('message', event => {
@@ -136,6 +136,20 @@ document.addEventListener('DOMContentLoaded', () => {
         });
 
         if (formValues) {
+            // Show loading message
+            Swal.fire({
+                title: 'در حال ارسال...',
+                text: 'لطفاً صبر کنید',
+                allowOutsideClick: false,
+                showConfirmButton: false,
+                willOpen: () => {
+                    Swal.showLoading();
+                },
+                customClass: {
+                    popup: 'swal2-rtl swal2-glass'
+                }
+            });
+
             try {
                 const response = await fetch('API/updateConfig.php', {
                     method: 'POST',
@@ -143,22 +157,14 @@ document.addEventListener('DOMContentLoaded', () => {
                     body: JSON.stringify(formValues)
                 });
                 const result = await response.json();
-                if (result.success) {
-                    // If webhook returned a JSON payload, prefer its 'Respond' message (Persian text)
-                    let webhookText = '';
-                    if (result.webhook) {
-                        if (typeof result.webhook === 'object') {
-                            // Prefer 'Respond' field, then 'text' or 'message', then raw
-                            webhookText = result.webhook.Respond || result.webhook.respond || result.webhook.text || result.webhook.message || result.webhook.raw || '';
-                        } else if (typeof result.webhook === 'string') {
-                            webhookText = result.webhook;
-                        }
-                    }
 
+                Swal.close(); // Close the loading alert
+
+                if (result.success) {
                     Swal.fire({
                         icon: 'success',
                         title: 'ذخیره شد',
-                        html: webhookText ? `<div style="text-align:right;">${escapeHtml(webhookText)}</div>` : 'تنظیمات آپدیت شد.',
+                        html: `<div style="text-align:right;">${escapeHtml(result.message || 'تنظیمات آپدیت شد.')}</div>`,
                         confirmButtonText: 'باشه',
                         customClass: {
                             popup: 'swal2-rtl swal2-glass'
@@ -175,6 +181,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     throw new Error(result.error || 'خطا در آپدیت');
                 }
             } catch (error) {
+                Swal.close(); // Close the loading alert
                 Swal.fire({
                     icon: 'error',
                     title: 'خطا',
