@@ -7,7 +7,7 @@ header('Pragma: no-cache');
 header('Expires: 0');
 
 $currentDate = jdate('Y/m/d', '', '', 'Asia/Tehran', 'en');
-$currentTime = jdate('H:i', '', '', 'Asia/Tehran', 'en');
+$currentTime = jdate('H:i:s', '', '', 'Asia/Tehran', 'en');
 
 echo json_encode([
     'date' => $currentDate,

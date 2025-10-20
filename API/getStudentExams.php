@@ -60,6 +60,86 @@ function decryptData($encryptedData, $key) {
 // Database initialization and connection
 require_once 'db_init.php';
 
+// تابع بررسی اعتبار لایسنس
+function checkLicense($pdo) {
+    try {
+        // دریافت LicenseToken از کانفیگ
+        $stmt = $pdo->prepare("SELECT ConfigValue FROM Config WHERE ConfigName = 'LicenseToken'");
+        $stmt->execute();
+        $row = $stmt->fetch();
+        $licenseToken = $row ? $row['ConfigValue'] : '';
+        
+        if (empty($licenseToken)) {
+            return ['valid' => false, 'message' => 'توکن لایسنس یافت نشد'];
+        }
+        
+        // فراخوانی وب‌هوک
+        $webhookUrl = 'https://wfa.pnubijar.ac.ir/webhook/LC';
+        $query = http_build_query(['LicenseToken' => $licenseToken]);
+        $ctx = stream_context_create([
+            'http' => [
+                'method' => 'GET',
+                'timeout' => 4,
+                'header' => "Accept: application/json\r\n"
+            ]
+        ]);
+        
+        $webhookResp = @file_get_contents($webhookUrl . '?' . $query, false, $ctx);
+        
+        if ($webhookResp === false || strlen(trim($webhookResp)) === 0) {
+            return ['valid' => true, 'message' => 'عدم دسترسی به سرور لایسنس'];
+        }
+        
+        $licenseData = json_decode($webhookResp, true);
+        
+        if (json_last_error() !== JSON_ERROR_NONE || !is_array($licenseData)) {
+            return ['valid' => true, 'message' => 'پاسخ نامعتبر از سرور لایسنس'];
+        }
+        
+        // بررسی نوع لایسنس
+        $licenceType = $licenseData['LicenceType'] ?? '';
+        $exp = $licenseData['Exp'] ?? '';
+        
+        if ($licenceType === 'Licenced') {
+            // برنامه فعال است و نیازی به چک تاریخ انقضا نیست
+            return ['valid' => true, 'message' => 'لایسنس فعال'];
+        }
+        
+        if ($licenceType === 'FullLicenced') {
+            // بررسی تاریخ انقضا
+            if (empty($exp)) {
+                return ['valid' => false, 'message' => 'تاریخ انقضا یافت نشد'];
+            }
+            
+            // تبدیل تاریخ انقضا به timestamp
+            $expTimestamp = strtotime($exp);
+            $currentTimestamp = time();
+            
+            if ($expTimestamp > $currentTimestamp) {
+                // هنوز منقضی نشده
+                return ['valid' => true, 'message' => 'دوره آزمایشی فعال'];
+            } else {
+                // منقضی شده
+                return ['valid' => false, 'message' => 'در صورتی که کاربر این سامانه هستید لطفاً به ادمین اطلاع دهید تا نسبت به فعال‌سازی لایسنس اقدام نماید.'];
+            }
+        }
+        
+        // اگر نوع لایسنس شناخته شده نباشد
+        return ['valid' => false, 'message' => 'نوع لایسنس نامعتبر است'];
+        
+    } catch (Exception $e) {
+        error_log('License check failed: ' . $e->getMessage());
+        return ['valid' => true, 'message' => 'خطا در بررسی لایسنس'];
+    }
+}
+
+// بررسی اعتبار لایسنس
+$licenseCheck = checkLicense($pdo);
+if (!$licenseCheck['valid']) {
+    echo json_encode(['error' => 'license_expired', 'message' => $licenseCheck['message']]);
+    exit;
+}
+
 // دریافت و رمزگشایی ورودی
 $encrypted_data = $_POST['encrypted_data'] ?? $_GET['encrypted_data'] ?? '';
 

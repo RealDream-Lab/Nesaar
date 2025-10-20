@@ -1,5 +1,5 @@
 document.addEventListener('DOMContentLoaded', () => {
-    const VERSION = '۱.۵.۳';
+    const VERSION = '۱.۵.۴';
     // Listen for service worker update messages and show SweetAlert
     if (navigator.serviceWorker) {
         navigator.serviceWorker.addEventListener('message', event => {
@@ -443,12 +443,36 @@ document.addEventListener('DOMContentLoaded', () => {
             throw new Error('Invalid JSON response');
         }
         if (payload && typeof payload === 'object' && 'error' in payload) {
+            // بررسی خطای انقضای لایسنس
+            if (payload.error === 'license_expired') {
+                showLicenseExpiredAlert(payload.message || 'دوره آزمایشی برنامه به پایان رسیده است');
+                const licenseError = new Error('license_expired');
+                licenseError.isLicenseError = true;
+                throw licenseError;
+            }
             const userError = new Error(payload.error || 'درخواست نامعتبر');
             userError.isUserError = true;
             throw userError;
         }
         if (!Array.isArray(payload)) throw new Error('Invalid response format');
         return payload;
+    }
+
+    function showLicenseExpiredAlert(message) {
+        Swal.fire({
+            icon: 'error',
+            title: 'دوره آزمایشی پایان یافته',
+            html: `<div style="text-align:justify;line-height:1.9;direction:rtl">${escapeHtml(message || 'در صورتی که کاربر این سامانه هستید لطفاً به ادمین اطلاع دهید تا نسبت به فعال‌سازی لایسنس اقدام نماید.')}</div>`,
+            allowOutsideClick: false,
+            allowEscapeKey: false,
+            allowEnterKey: false,
+            showConfirmButton: false,
+            showCloseButton: false,
+            buttonsStyling: false,
+            customClass: {
+                popup: 'swal2-rtl swal2-glass'
+            }
+        });
     }
 
     async function updateServerClock() {
@@ -460,7 +484,7 @@ document.addEventListener('DOMContentLoaded', () => {
             if (!payload || !payload.date || !payload.time) {
                 throw new Error('Invalid payload structure');
             }
-            // payload.date expected like YYYY/MM/DD and payload.time like HH:MM
+            // payload.date expected like YYYY/MM/DD and payload.time like HH:MM:SS
             const formattedDate = toPersianDigits(payload.date);
             const formattedTime = toPersianDigits(payload.time);
             const formattedStamp = `${formattedDate} | ${formattedTime}`;
@@ -469,12 +493,15 @@ document.addEventListener('DOMContentLoaded', () => {
 
             // Sync base time for per-second updates
             try {
-                const [h, m] = String(payload.time).split(':').map(s => parseInt(toEnglishDigits(s), 10));
+                const timeParts = String(payload.time).split(':').map(s => parseInt(toEnglishDigits(s), 10));
                 const parts = String(payload.date).split('/').map(p => parseInt(p, 10));
+                const h = timeParts[0] || 0;
+                const m = timeParts[1] || 0;
+                const s = timeParts[2] || 0;
                 if (parts.length === 3 && !Number.isNaN(h) && !Number.isNaN(m)) {
                     // Create a Date object in local tz using server-provided values
                     const [y, mm, d] = parts;
-                    const serverDate = new Date(y, mm - 1, d, h, m, 0, 0);
+                    const serverDate = new Date(y, mm - 1, d, h, m, s, 0);
                     baseServerMs = serverDate.getTime();
                     basePerf = (typeof performance !== 'undefined' && performance.now) ? performance.now() : Date.now();
                 }
@@ -536,7 +563,9 @@ document.addEventListener('DOMContentLoaded', () => {
             const delay = remainder === 0 ? CLOCK_REFRESH_MS : CLOCK_REFRESH_MS - remainder;
 
             clockTimer = setTimeout(async () => {
+                stopSecondTicker();
                 await updateServerClock();
+                startSecondTicker();
                 scheduleNextTick();
             }, delay);
         };
@@ -606,8 +635,15 @@ document.addEventListener('DOMContentLoaded', () => {
                     renderResults(payload, fullName, currentCredentials.studentId);
                 } catch (error) {
                     console.warn('Auto-refresh failed:', error);
+                    if (error?.isLicenseError) {
+                        // توقف refresh در صورت انقضای لایسنس
+                        stopAutoRefresh();
+                        return;
+                    }
                 } finally {
-                    scheduleNextRefresh();
+                    if (currentCredentials) {
+                        scheduleNextRefresh();
+                    }
                 }
             }, delay);
         };
@@ -693,7 +729,9 @@ document.addEventListener('DOMContentLoaded', () => {
             startAutoRefresh(studentId, nationalId);
         } catch (error) {
             console.error('Fetch error:', error);
-            if (error && error.isUserError) {
+            if (error && error.isLicenseError) {
+                // خطای لایسنس قبلاً نمایش داده شده، هیچ کاری نکن
+            } else if (error && error.isUserError) {
                 showAlert('warning', 'ورود ناموفق', 'رمز عبور و شماره دانشجویی صحیح نیست یا اطلاعاتی برای این شماره وجود ندارد.');
             } else {
                 showAlert('error', 'خطا در اتصال!', 'مشکلی در ارتباط با سرور رخ داده است. لطفاً بعداً تلاش کنید.');
@@ -760,11 +798,18 @@ document.addEventListener('DOMContentLoaded', () => {
             lastSnapshot = '';
             lastPayload = [];
             lastFullName = '';
-            eraseCookie('userSession');
-            if (!e?.isUserError) {
+            if (!e?.isLicenseError) {
+                // اگر خطای لایسنس نیست، کوکی را پاک کن
+                eraseCookie('userSession');
+            }
+            if (e?.isLicenseError) {
+                // خطای لایسنس قبلاً نمایش داده شده
+            } else if (!e?.isUserError) {
                 showAlert('error', 'خطا در اتصال!', 'مشکلی در ارتباط با سرور رخ داده است. لطفاً بعداً تلاش کنید.');
             }
-            showLogin();
+            if (!e?.isLicenseError) {
+                showLogin();
+            }
         } finally {
             toggleLoading(false);
         }
