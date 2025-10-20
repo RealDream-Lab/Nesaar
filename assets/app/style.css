@@ -198,15 +198,6 @@ body::after {
   padding-bottom: 6rem; /* Reduced bottom padding */
 }
 
-body.has-logout {
-  padding-top: 88px; /* global safe area for fixed logout button */
-}
-
-/* When logged in (logout button visible), hide the floating logo */
-body.has-logout .logo-container {
-  display: none;
-}
-
 html.session-cookie-detected .logo-container {
   display: none;
 }
@@ -218,6 +209,23 @@ html.session-cookie-detected .logo-container {
   .exam-cards-container {
     grid-template-columns: 1fr;
     padding: 0 1rem;
+  }
+
+  .session-card {
+    flex-direction: column;
+    align-items: stretch;
+    text-align: center;
+    gap: 1rem;
+    padding: 1.4rem 1.3rem;
+  }
+
+  .session-card .session-info {
+    align-items: center;
+  }
+
+  .session-card .session-logout-btn {
+    width: 100%;
+    justify-content: center;
   }
 }
 
@@ -351,6 +359,101 @@ body.login-active #loginRow {
 .exam-card.past .exam-detail {
   display: none !important;
 }
+
+/* Active session banner (user info + logout) */
+.session-card {
+  grid-column: 1 / -1;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1.25rem;
+  padding: 1.6rem 1.85rem;
+  border-radius: var(--glass-radius-md);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  background: linear-gradient(140deg, rgba(64, 120, 192, 0.55), rgba(32, 56, 118, 0.45));
+  box-shadow: 0 24px 52px rgba(9, 24, 45, 0.38);
+  backdrop-filter: blur(18px);
+  cursor: default;
+  margin-bottom: 1rem;
+}
+
+.session-info {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.session-name {
+  font-size: 1.35rem;
+  font-weight: 700;
+  color: var(--heading-color);
+}
+
+.session-id {
+  font-size: 1.35rem;
+  font-weight: 700;
+  color: var(--heading-color);
+}
+
+.session-logout-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.45rem;
+  border: 1px solid rgba(255, 255, 255, 0.28);
+  border-radius: 0.85rem;
+  padding: 0.65rem 1.75rem;
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.12), rgba(255, 255, 255, 0.04));
+  color: var(--heading-color);
+  font-weight: 700;
+  box-shadow: 0 20px 44px rgba(7, 18, 35, 0.28);
+  transition: transform 0.18s ease, box-shadow 0.18s ease, background 0.18s ease;
+  cursor: pointer;
+}
+
+.session-logout-btn:hover,
+.session-logout-btn:focus {
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.2), rgba(255, 255, 255, 0.08));
+  transform: translateY(-2px);
+  box-shadow: 0 26px 52px rgba(7, 18, 35, 0.38);
+}
+
+.session-logout-btn:active {
+  transform: translateY(0);
+  box-shadow: 0 14px 32px rgba(7, 18, 35, 0.32);
+}
+
+.session-logout-text {
+  pointer-events: none;
+}
+
+.session-card .session-logout-btn:focus-visible {
+  outline: 2px solid rgba(123, 213, 255, 0.9);
+  outline-offset: 3px;
+}
+
+.btn-glass-cancel {
+  border-radius: 0.85rem;
+  border: 1px solid rgba(255, 255, 255, 0.24);
+  background: linear-gradient(130deg, rgba(18, 32, 64, 0.55), rgba(32, 56, 88, 0.35));
+  color: rgba(230, 240, 255, 0.92);
+  font-weight: 600;
+  padding: 0.55rem 1.6rem;
+  transition: transform 0.18s ease, box-shadow 0.18s ease, background 0.18s ease;
+}
+
+.btn-glass-cancel:hover,
+.btn-glass-cancel:focus {
+  background: linear-gradient(130deg, rgba(36, 64, 112, 0.7), rgba(24, 44, 78, 0.55));
+  color: #ffffff;
+  transform: translateY(-1px);
+  box-shadow: 0 18px 38px rgba(8, 18, 34, 0.38);
+}
+
+.btn-glass-cancel:active {
+  transform: translateY(0);
+  box-shadow: 0 12px 26px rgba(8, 18, 34, 0.3);
+}
 .exam-divider {
   grid-column: 1 / -1;
   border-top: 1px solid rgba(255, 255, 255, 0.18);
@@ -469,54 +572,6 @@ body.login-active #loginRow {
   height: auto;
 }
 
-/* Logout button style */
-#logoutBtn.btn-outline-danger {
-  border-width: 1px;
-  border-radius: 0.85rem;
-  padding: 10px 22px;
-  font-size: 1rem;
-  color: rgba(255, 235, 229, 0.96);
-  border-color: rgba(255, 138, 101, 0.65);
-  background: linear-gradient(135deg, rgba(255, 115, 91, 0.55), rgba(205, 65, 33, 0.35));
-  font-weight: 600;
-  box-shadow: 0 16px 38px rgba(255, 112, 67, 0.3);
-  backdrop-filter: blur(18px);
-}
-
-#logoutBtn.btn-outline-danger:hover,
-#logoutBtn.btn-outline-danger:focus {
-  color: #ffffff;
-  background: linear-gradient(135deg, rgba(255, 138, 112, 0.95), rgba(220, 78, 42, 0.75));
-  border-color: rgba(255, 142, 104, 0.9);
-  box-shadow: 0 22px 45px rgba(255, 112, 67, 0.45);
-}
-
-/* Mobile: center logout button horizontally and give it full-with-ish layout */
-@media (max-width: 575.98px) {
-  #logoutBtn.btn-outline-danger {
-    /* override inline style `right: 20px; top: 20px` set by JS */
-    position: fixed !important;
-    left: 50% !important;
-    transform: translateX(-50%) !important;
-  /* place the button respecting safe-area insets on iOS and Android; slightly lower for comfort */
-  top: calc(env(safe-area-inset-top, 14px) + 18px) !important;
-  /* fallback for older iOS */
-  top: calc(constant(safe-area-inset-top, 14px) + 18px) !important;
-    right: auto !important;
-    z-index: 1001;
-    width: calc(100% - 40px);
-    max-width: 420px;
-    padding-left: 12px;
-    padding-right: 12px;
-    text-align: center;
-  }
-
-  /* if layout uses body.has-logout padding, reduce it slightly on very small screens */
-  body.has-logout {
-    padding-top: 72px;
-  }
-}
-
 .swal2-popup.swal2-rtl {
   direction: rtl;
   text-align: right;
@@ -587,9 +642,6 @@ body.login-active #loginRow {
 }
 
 @media (max-width: 576px) {
-  body.has-logout {
-    padding-top: 104px;
-  }
   .card-body {
     padding: 1.5rem;
   }

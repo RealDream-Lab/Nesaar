@@ -1,5 +1,5 @@
 document.addEventListener('DOMContentLoaded', () => {
-    const VERSION = '۱.۵.۱';
+    const VERSION = '۱.۵.۲';
     // Listen for service worker update messages and show SweetAlert
     if (navigator.serviceWorker) {
         navigator.serviceWorker.addEventListener('message', event => {
@@ -50,6 +50,7 @@ document.addEventListener('DOMContentLoaded', () => {
     let lastSnapshot = '';
     let lastPayload = [];
     let lastFullName = '';
+    let lastStudentId = '';
 
     function getPersianMonthName(dateStr) {
         const parts = dateStr.split('/');
@@ -92,14 +93,26 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     async function showInitModal(currentConfig) {
+        const defaultSaad = currentConfig && currentConfig.SaadCode ? String(currentConfig.SaadCode).trim() : '';
+        const defaultUniversity = currentConfig && currentConfig.University ? String(currentConfig.University).trim() : '';
         const { value: formValues } = await Swal.fire({
             title: 'تنظیمات اولیه',
             html: `
                 <div style="text-align:right; direction:rtl; line-height:2; max-width: 400px; margin: 0 auto;">
                     <label for="swal-saadcode">کد ساد مرکز:</label><br>
-                    <input id="swal-saadcode" class="swal2-input" value="" style="width:100%; max-width: 380px; margin-bottom:10px;"><br>
+                    <input
+                        id="swal-saadcode"
+                        class="swal2-input"
+                        value="${escapeHtml(defaultSaad)}"
+                        style="width:100%; max-width: 380px; margin-bottom:10px;"
+                    ><br>
                     <label for="swal-university">دانشگاه:</label><br>
-                    <input id="swal-university" class="swal2-input" value="" style="width:100%; max-width: 380px;">
+                    <input
+                        id="swal-university"
+                        class="swal2-input"
+                        value="${escapeHtml(defaultUniversity)}"
+                        style="width:100%; max-width: 380px;"
+                    >
                 </div>
             `,
             focusConfirm: false,
@@ -191,7 +204,9 @@ document.addEventListener('DOMContentLoaded', () => {
                         popup: 'swal2-rtl swal2-glass'
                     }
                 }).then(() => {
-                    window.location.reload();
+                    loadConfig()
+                        .then(config => showInitModal(config))
+                        .catch(() => showInitModal(currentConfig || {}));
                 });
             }
         }
@@ -580,8 +595,7 @@ document.addEventListener('DOMContentLoaded', () => {
                             const firstExam = payload[0] || {};
                             const refreshedName = `${firstExam.first_name || ''} ${firstExam.last_name || ''}`.trim();
                             lastFullName = refreshedName || lastFullName;
-                            renderResults(payload, lastFullName);
-                            ensureLogoutButton(lastFullName, currentCredentials.studentId);
+                            renderResults(payload, lastFullName, currentCredentials.studentId);
                         }
                         return;
                     }
@@ -589,8 +603,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     const first = payload[0] || {};
                     const fullName = `${first.first_name || ''} ${first.last_name || ''}`.trim();
                     lastFullName = fullName;
-                    renderResults(payload, fullName);
-                    ensureLogoutButton(fullName, currentCredentials.studentId);
+                    renderResults(payload, fullName, currentCredentials.studentId);
                 } catch (error) {
                     console.warn('Auto-refresh failed:', error);
                 } finally {
@@ -615,66 +628,12 @@ document.addEventListener('DOMContentLoaded', () => {
         document.documentElement.classList.remove('session-cookie-detected');
     }
 
-    function ensureLogoutButton(fullName, studentId) {
-        // Remove old button if exists
-        const old = document.getElementById('logoutBtn');
-        if (old) old.remove();
-
-        document.documentElement.classList.add('session-cookie-detected');
-
-        // Create logout button in top right corner
-        const btn = document.createElement('button');
-        btn.id = 'logoutBtn';
-        btn.type = 'button';
-        btn.className = 'btn btn-outline-danger';
-        btn.style.cssText = 'position: fixed; top: 20px; right: 20px; z-index: 1001;';
-        const safeName = fullName ? String(fullName).trim() : '';
-        // If studentId not provided, try to read it from cookie
-        let sid = studentId ? String(studentId).trim() : '';
-        if (!sid) {
-            try {
-                const raw = getCookie('userSession');
-                if (raw) {
-                    const data = JSON.parse(decodeURIComponent(raw));
-                    sid = (data.student_id || '').toString().trim();
-                }
-            } catch (e) { /* ignore */ }
-        }
-
-        // Build label: خروج ( نام | شناسه ) with Persian digits and spaces
-        let label = 'خروج';
-        const parts = [];
-        if (safeName) parts.push(safeName);
-        if (sid) parts.push(toPersianDigits(sid));
-        if (parts.length) {
-            label = `خروج ( ${parts.join(' | ')} )`;
-        }
-        btn.textContent = label;
-
-        document.body.appendChild(btn);
-
-        btn.addEventListener('click', () => {
-            stopAutoRefresh();
-            currentCredentials = null;
-            lastSnapshot = '';
-            lastPayload = [];
-            lastFullName = '';
-            eraseCookie('userSession');
-            document.documentElement.classList.remove('session-cookie-detected');
-            clearResults();
-            showLogin();
-        });
-
-        // add body class to create safe top padding
-        document.body.classList.add('has-logout');
-    }
-
     function clearResults() {
         if (examCards) examCards.innerHTML = '';
-        const btn = document.getElementById('logoutBtn');
-        if (btn) btn.remove();
-        document.body.classList.remove('has-logout');
         lastPayload = [];
+        lastFullName = '';
+        lastStudentId = '';
+        document.documentElement.classList.remove('session-cookie-detected');
     }
 
     form.addEventListener('submit', async event => {
@@ -729,8 +688,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 console.warn('Failed to set cookie', e);
             }
 
-            renderResults(payload, fullName);
-            ensureLogoutButton(fullName, studentId);
+            renderResults(payload, fullName, studentId);
             lastSnapshot = JSON.stringify(payload || []);
             startAutoRefresh(studentId, nationalId);
         } catch (error) {
@@ -792,8 +750,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const first = payload[0];
             const fullName = `${first.first_name || ''} ${first.last_name || ''}`.trim();
             lastFullName = fullName;
-            renderResults(payload, fullName);
-            ensureLogoutButton(fullName, sid);
+            renderResults(payload, fullName, sid);
             lastSnapshot = JSON.stringify(payload || []);
             startAutoRefresh(sid, nid);
         } catch (e) {
@@ -828,11 +785,26 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    function renderResults(exams, fullName) {
-        // Skip user info banner (removed per request)
+    function renderResults(exams, fullName, studentId) {
         const previousScroll = window.scrollY || 0;
         const now = Date.now();
-        const decorated = exams.map((exam, idx) => {
+        const normalizedFullName = typeof fullName === 'string' ? fullName.trim() : '';
+        if (normalizedFullName) {
+            lastFullName = normalizedFullName;
+        }
+        const resolvedName = (lastFullName || '').trim();
+
+        const providedStudentId = typeof studentId === 'number' || typeof studentId === 'string'
+            ? String(studentId).trim()
+            : '';
+        if (providedStudentId) {
+            lastStudentId = providedStudentId;
+        }
+        const resolvedStudentId = (lastStudentId || '').trim();
+
+        const safeExams = Array.isArray(exams) ? exams : [];
+
+        const decorated = safeExams.map((exam, idx) => {
             const target = createExamDateTime(exam.exam_date, exam.exam_time);
             const timeValue = target ? target.getTime() : 0;
             const isUpcoming = target ? timeValue > now : false;
@@ -848,6 +820,24 @@ document.addEventListener('DOMContentLoaded', () => {
             .sort((a, b) => (b.timeValue || -Infinity) - (a.timeValue || -Infinity));
 
         const htmlParts = [];
+        const hasIdentity = Boolean(resolvedName) || Boolean(resolvedStudentId);
+
+        if (hasIdentity) {
+            document.documentElement.classList.add('session-cookie-detected');
+            htmlParts.push(`
+                <div class="session-card" data-role="session-card">
+                    <div class="session-info">
+                        <div class="session-name">${escapeHtml(resolvedName || 'کاربر نسار')}</div>
+                        ${resolvedStudentId ? `<div class="session-id">${toPersianDigits(resolvedStudentId)}</div>` : ''}
+                    </div>
+                    <button type="button" class="session-logout-btn">
+                        <span class="session-logout-text">خروج</span>
+                    </button>
+                </div>
+            `);
+        } else {
+            document.documentElement.classList.remove('session-cookie-detected');
+        }
 
         if (upcoming.length) {
             const upcomingMarkup = upcoming.map(({ exam, idx }) => {
@@ -890,8 +880,47 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         examCards.innerHTML = htmlParts.join('');
-        lastPayload = exams.slice();
-        lastFullName = fullName || lastFullName;
+        lastPayload = safeExams.slice();
+
+        const logoutBtn = examCards.querySelector('.session-logout-btn');
+        if (logoutBtn) {
+            logoutBtn.addEventListener('click', async event => {
+                event.preventDefault();
+                event.stopPropagation();
+
+                const confirmation = await Swal.fire({
+                    icon: 'question',
+                    title: 'خروج از حساب؟',
+                    html: '<div style="text-align:right;">با خروج، دسترسی شما به اطلاعات آزمون قطع می‌شود. آیا اطمینان دارید؟</div>',
+                    showCancelButton: true,
+                    confirmButtonText: 'بله، خروج',
+                    cancelButtonText: 'انصراف',
+                    reverseButtons: true,
+                    focusCancel: true,
+                    buttonsStyling: false,
+                    customClass: {
+                        popup: 'swal2-rtl swal2-glass',
+                        confirmButton: 'btn btn-danger mx-2',
+                        cancelButton: 'btn btn-glass-cancel mx-2'
+                    }
+                });
+
+                if (!confirmation.isConfirmed) {
+                    return;
+                }
+
+                stopAutoRefresh();
+                currentCredentials = null;
+                lastSnapshot = '';
+                lastPayload = [];
+                lastFullName = '';
+                lastStudentId = '';
+                eraseCookie('userSession');
+                document.documentElement.classList.remove('session-cookie-detected');
+                clearResults();
+                showLogin();
+            });
+        }
 
         const maxScroll = Math.max(0, document.body.scrollHeight - window.innerHeight);
         const targetScroll = Math.min(previousScroll, maxScroll);
