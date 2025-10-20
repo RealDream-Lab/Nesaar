@@ -185,11 +185,13 @@ document.addEventListener('DOMContentLoaded', () => {
                 Swal.fire({
                     icon: 'error',
                     title: 'خطا',
-                    text: 'خطا در ذخیره تنظیمات.',
+                    text: ' ارتباط با سرور لایسنس برقرار نشد. چند دقیقه دیگر دوباره تلاش کنید.',
                     confirmButtonText: 'باشه',
                     customClass: {
                         popup: 'swal2-rtl swal2-glass'
                     }
+                }).then(() => {
+                    window.location.reload();
                 });
             }
         }
