@@ -245,7 +245,7 @@ html.session-cookie-detected .logo-container {
   left: 0;
   right: 0;
   bottom: 0;
-  background: linear-gradient(140deg, rgba(18, 54, 92, 0.28), rgba(12, 36, 70, 0.22));
+  background: linear-gradient(140deg, rgba(18, 54, 92, 0.12), rgba(12, 36, 70, 0.08));
   padding: 0.6rem 0.5rem;
   padding-bottom: calc(0.6rem + env(safe-area-inset-bottom, 0px));
   font-size: 0.95rem;
@@ -255,7 +255,7 @@ html.session-cookie-detected .logo-container {
   align-items: center;
   justify-content: center;
   backdrop-filter: blur(18px);
-  box-shadow: 0 -12px 30px rgba(4, 14, 30, 0.25);
+  box-shadow: 0 -12px 30px rgba(4, 14, 30, 0.15);
 }
 
 .fixed-footer .footer-text {
