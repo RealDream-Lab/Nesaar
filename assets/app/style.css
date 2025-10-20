@@ -254,8 +254,10 @@ html.session-cookie-detected .logo-container {
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  backdrop-filter: blur(18px);
+  backdrop-filter: blur(3px);
   box-shadow: 0 -12px 30px rgba(4, 14, 30, 0.15);
+  -webkit-mask-image: linear-gradient(to bottom, rgba(0,0,0,0.3) 0%, rgba(0,0,0,1) 40%);
+  mask-image: linear-gradient(to bottom, rgba(0,0,0,0.3) 0%, rgba(0,0,0,1) 40%);
 }
 
 .fixed-footer .footer-text {
