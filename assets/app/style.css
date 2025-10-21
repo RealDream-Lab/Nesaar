@@ -572,7 +572,7 @@ body.login-active #loginRow {
   top:  20px;
   left: 20px;
   z-index: 1000;
-  display: none; /* پیش‌فرض مخفی */
+  display: none; /* پیش‌فرض مخفی تا JavaScript تصمیم بگیره */
 }
 
 .logo-image {
@@ -581,7 +581,7 @@ body.login-active #loginRow {
 }
 
 /* فقط وقتی کوکی session نیست، لوگو نمایش داده میشه */
-html:not(.session-cookie-detected) .logo-container {
+html.no-session-cookie .logo-container {
   display: block;
 }
 

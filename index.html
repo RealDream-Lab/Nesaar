@@ -23,17 +23,30 @@
   <link rel="stylesheet" href="assets/sweetalert2/sweetalert2.min.css" />
   <link rel="stylesheet" href="assets/app/style.css" />
   <script>
+    // چک سریع کوکی قبل از رندر صفحه
     (function () {
       try {
         var cookies = document.cookie ? document.cookie.split(';') : [];
+        var hasSession = false;
         for (var i = 0; i < cookies.length; i++) {
           var c = cookies[i].trim();
           if (c.indexOf('userSession=') === 0) {
-            document.documentElement.classList.add('session-cookie-detected');
+            hasSession = true;
             break;
           }
         }
-      } catch (err) {}
+        
+        if (hasSession) {
+          // کاربر لاگین کرده - لوگو نباید نمایش داده بشه
+          document.documentElement.classList.add('session-cookie-detected');
+        } else {
+          // کاربر لاگین نکرده - لوگو باید نمایش داده بشه
+          document.documentElement.classList.add('no-session-cookie');
+        }
+      } catch (err) {
+        // در صورت خطا، فرض کن کوکی نداریم
+        document.documentElement.classList.add('no-session-cookie');
+      }
     })();
   </script>
 </head>
