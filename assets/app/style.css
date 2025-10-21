@@ -206,9 +206,7 @@ body::after {
   padding-bottom: 6rem; /* Reduced bottom padding */
 }
 
-html.session-cookie-detected .logo-container {
-  display: none;
-}
+/* قانون حذف شد - لوگیک معکوس شده در پایین فایل */
 
 @media (max-width: 576px) {
 }
@@ -574,11 +572,17 @@ body.login-active #loginRow {
   top:  20px;
   left: 20px;
   z-index: 1000;
+  display: none; /* پیش‌فرض مخفی */
 }
 
 .logo-image {
   max-width: 120px;
   height: auto;
+}
+
+/* فقط وقتی کوکی session نیست، لوگو نمایش داده میشه */
+html:not(.session-cookie-detected) .logo-container {
+  display: block;
 }
 
 .swal2-popup.swal2-rtl {
