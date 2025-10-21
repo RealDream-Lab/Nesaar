@@ -89,23 +89,30 @@ chmod +x setup.sh
    EOF
    ```
 
-3. **ساخت ایمیج (اختیاری، برای استفاده مجدد یا production)**:
-   اگر می‌خواهید ایمیج را بسازید و به registry push کنید:
+3. **استفاده از ایمیج آماده از GitHub Container Registry (توصیه شده)**:
+   به جای build کردن، می‌توانید مستقیماً از ایمیج آماده استفاده کنید:
    ```bash
-   cd /root/docker/pnu
-   git clone git@github.com:MehdiHassaniir/PnuSeat.git
-   cd PnuSeat
-   docker build -t ghcr.io/mehdihassaniir/pnuseat .
-   docker push ghcr.io/mehdihassaniir/pnuseat:latest
-   docker rmi $(docker images -f "dangling=true" -q)
+   # دریافت آخرین نسخه
+   docker pull ghcr.io/mehdihassaniir/pnuseat:latest
+   
+   # یا دریافت نسخه خاص (مثلاً v1.7.0)
+   docker pull ghcr.io/mehdihassaniir/pnuseat:v1.7.0
    ```
 
-4. **ساخت و اجرای کانتینرها**:
+4. **ساخت ایمیج (اختیاری، فقط برای توسعه‌دهندگان)**:
+   اگر می‌خواهید خودتان ایمیج را بسازید:
+   ```bash
+   git clone https://github.com/MehdiHassaniir/PnuSeat.git
+   cd PnuSeat
+   docker build -t ghcr.io/mehdihassaniir/pnuseat:latest .
+   ```
+
+5. **ساخت و اجرای کانتینرها**:
    ```bash
    docker-compose up --build
    ```
 
-5. **دسترسی**:
+6. **دسترسی**:
    - وب‌سایت: http://localhost:18080
    - phpMyAdmin: http://localhost:18081 (نام کاربری: `root` یا `pnu_user`، رمز: مطابق `.env`)
    - MySQL: localhost:3306
