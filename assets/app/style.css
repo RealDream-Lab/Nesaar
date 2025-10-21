@@ -37,6 +37,11 @@ body {
   color: var(--text-color);
 }
 
+/* Prevent SweetAlert2 from adding padding to body when modal opens */
+body.swal2-shown:not(.swal2-no-backdrop):not(.swal2-toast-shown) {
+  padding-right: 0 !important;
+}
+
 body::before,
 body::after {
   display: none; /* hide glassmorphism layers */
