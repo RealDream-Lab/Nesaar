@@ -7,3 +7,8 @@
 
 # Ignore Docker data volumes
 db_data/
+
+# Keep original JavaScript files for development
+# Obfuscated files are generated from these
+*.original.js
+obfuscate.sh
