@@ -11,7 +11,7 @@ header('Access-Control-Allow-Origin: *');
 require_once 'db_init.php';
 
 try {
-    $pdo = getDBConnection();
+    // $pdo is already defined in db_init.php
     
     // دریافت آخرین وضعیت موفق، تاریخ بررسی موفق و تاریخ انقضا
     $stmt = $pdo->query("
