@@ -1,5 +1,64 @@
 # Changelog
 
+## 2025-10-22 — نسخه ۱.۸.۰
+
+### ✨ قابلیت‌های جدید
+
+- **راه‌اندازی چند پلتفرمی (Multi-Platform Setup)**
+  - اسکریپت نصب خودکار برای Linux (Ubuntu/Debian/CentOS/Fedora/Arch)
+  - پشتیبانی از macOS با Homebrew
+  - پشتیبانی از Windows با WSL/Git Bash
+  - نصب خودکار Docker روی تمام پلتفرم‌ها
+  - دانلود خودکار فایل‌های پروژه از GitHub
+  - تولید رمز عبور امن با openssl
+  - نصب در `/opt/Nesaar` برای Linux و `~/Nesaar` برای macOS/Windows
+
+### 🔧 بهبودها
+
+- **بهبود Docker Compose:**
+  - استفاده از Environment Variables با مقادیر پیش‌فرض
+  - اضافه شدن Watchtower برای آپدیت خودکار
+  - تنظیم timezone MySQL روی Asia/Tehran (+03:30)
+  - اضافه شدن health check برای MySQL
+  - مسیرهای volume استاندارد شده به `/opt/Nesaar`
+
+- **بهبود پایگاه داده:**
+  - اضافه شدن UNIQUE constraint به ستون ConfigName
+  - حذف فیلد Order که دیگر استفاده نمی‌شد
+  - تنظیم timezone روی Asia/Tehran در PHP و MySQL
+  - اسکریپت migration برای بروزرسانی دیتابیس‌های موجود
+
+- **ساده‌سازی UI:**
+  - حذف کامل کد مربوط به مدیریت نمایش لوگو
+  - لوگو تنها بالای کارت لاگین نمایش داده می‌شود
+  - حذف CSS مربوط به logo-container
+  - کاهش پیچیدگی کد JavaScript
+
+### 📚 مستندات
+
+- **سازماندهی مستندات:**
+  - انتقال CHANGELOG به پوشه `docs/`
+  - ایجاد مستندات جامع برای License Cache & Grace Period
+  - مستندات Smart Check و سیستم لایسنس
+  - ساده‌سازی README با حذف بخش‌های فنی
+
+### 🛠️ DevOps
+
+- **اسکریپت Setup چند پلتفرمی:**
+  - تشخیص خودکار سیستم عامل
+  - نصب Docker بر اساس نوع سیستم
+  - مدیریت Package Manager (apt/yum/pacman/brew)
+  - خروجی رنگی و پیام‌های واضح
+  - مدیریت خطا و بررسی دسترسی‌ها
+
+### 🔒 امنیت
+
+- تولید خودکار رمزهای امن در setup.sh
+- محدودیت امنیتی Watchtower (no-new-privileges, read-only)
+- استفاده از متغیرهای محیطی برای اطلاعات حساس
+
+---
+
 ## 2025-10-22 — نسخه ۱.۷.۶
 
 ### ✨ قابلیت‌های جدید

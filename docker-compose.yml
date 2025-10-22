@@ -8,10 +8,10 @@ services:
       - "18080:80"
     environment:
       DB_HOST: db
-      DB_NAME: PnuExamsSeatNumber
-      DB_USER: pnu_user
-      DB_PASS: change_me
-      TZ: Asia/Tehran
+      DB_NAME: ${DB_NAME:-PnuExamsSeatNumber}
+      DB_USER: ${DB_USER:-pnu_user}
+      DB_PASS: ${DB_PASS:-change_me}
+      TZ: ${TZ:-Asia/Tehran}
     depends_on:
       - db
     restart: always
@@ -24,25 +24,30 @@ services:
     image: mysql:8.0
     container_name: PnuSeatDB
     environment:
-      MYSQL_ROOT_PASSWORD: super_secure_root
-      MYSQL_DATABASE: PnuExamsSeatNumber
-      MYSQL_USER: pnu_user
-      MYSQL_PASSWORD: change_me
-      TZ: Asia/Tehran
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-super_secure_root}
+      MYSQL_DATABASE: ${MYSQL_DATABASE:-PnuExamsSeatNumber}
+      MYSQL_USER: ${MYSQL_USER:-pnu_user}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD:-change_me}
+      TZ: ${TZ:-Asia/Tehran}
     command: >
       --default-authentication-plugin=mysql_native_password
       --character-set-server=utf8mb4
       --collation-server=utf8mb4_general_ci
+      --default-time-zone='+03:30'
     ports:
       - "3306:3306"
     volumes:
-      - /root/docker/Nesaar/db_data:/var/lib/mysql
-      - /root/docker/Nesaar/docker/mysql-init:/docker-entrypoint-initdb.d:ro
+      - /opt/Nesaar/db_data:/var/lib/mysql
+      - /opt/Nesaar/docker/mysql-init:/docker-entrypoint-initdb.d:ro
     restart: always
     labels:
       - "com.centurylinklabs.watchtower.enable=true"
     networks:
       - PnuSeat_Network
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      timeout: 5s
+      retries: 10
 
   phpmyadmin:
     image: phpmyadmin:latest
@@ -53,7 +58,7 @@ services:
     environment:
       PMA_HOST: db
       PMA_ABSOLUTE_URI: http://localhost:18081/
-      TZ: Asia/Tehran
+      TZ: ${TZ:-Asia/Tehran}
     depends_on:
       - db
     labels:
@@ -70,19 +75,21 @@ services:
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock:ro
     environment:
-      TZ: Asia/Tehran
-      WATCHTOWER_SCHEDULE: "0 0 14 * * *"
-      WATCHTOWER_CLEANUP: true
-      WATCHTOWER_ROLLING_RESTART: true
-      WATCHTOWER_INCLUDE_STOPPED: true
+      TZ: ${TZ:-Asia/Tehran}
+      WATCHTOWER_SCHEDULE: "0 0 14 * * *"  # Daily at 2 PM Tehran time
+      WATCHTOWER_CLEANUP: "true"
+      WATCHTOWER_ROLLING_RESTART: "true"
+      WATCHTOWER_INCLUDE_STOPPED: "true"
       WATCHTOWER_TIMEOUT: 30s
-      WATCHTOWER_LABEL_ENABLE: true
+      WATCHTOWER_LABEL_ENABLE: "true"
     restart: always
     networks:
       - PnuSeat_Network
 
 volumes:
   db_data:
+    driver: local
 
 networks:
   PnuSeat_Network:
+    driver: bridge

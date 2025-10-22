@@ -1,5 +1,5 @@
 document.addEventListener('DOMContentLoaded', () => {
-    const VERSION = '۱.۷.۶';
+    const VERSION = '۱.۸.۰';
     // Listen for service worker update messages and show SweetAlert
     if (navigator.serviceWorker) {
         navigator.serviceWorker.addEventListener('message', event => {
