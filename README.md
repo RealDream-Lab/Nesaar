@@ -12,6 +12,25 @@
 - ⚡ **کش هوشمند**: Service Worker با استراتژی‌های به‌روزشده (Network-first برای منابع اصلی و Cache-first برای بقیه)
 - 🔐 **امنیت و حریم خصوصی**: رمزگذاری شناسه‌ها، نشست ۳۰ روزه با تشخیص هوشمند نمایش/مخفی‌سازی لوگو
 - 🌐 **RTL و فونت فارسی**: استفاده از Vazir با ارقام هم‌عرض (tabular) برای خوانایی بهتر تایمر و داده‌ها
+- 🛡️ **سیستم لایسنس پیشرفته**: Cache هوشمند با Grace Period 24 ساعته برای اطمینان از دسترسی حتی در قطعی اینترنت
+
+## 📚 مستندات
+
+برای اطلاعات تکمیلی به پوشه [`docs/`](docs/) مراجعه کنید:
+
+- **[CHANGELOG.md](docs/CHANGELOG.md)** - تاریخچه تغییرات نسخه‌ها
+- **[LICENSE_CACHE_GRACE_PERIOD.md](docs/LICENSE_CACHE_GRACE_PERIOD.md)** - سیستم Cache و Grace Period لایسنس
+- **[LICENSE_SMART_CHECK_DOCUMENTATION.md](docs/LICENSE_SMART_CHECK_DOCUMENTATION.md)** - سیستم هوشمند بررسی لایسنس
+- **[LICENSE_CHECK_DOCUMENTATION.md](docs/LICENSE_CHECK_DOCUMENTATION.md)** - مستندات سیستم لایسنس
+
+## تغییرات نسخه ۱.۷.۶
+
+- 🛡️ **پیاده‌سازی سیستم Cache و Grace Period**: حفظ دسترسی تا 24 ساعت در صورت قطعی سرور لایسنس
+- 📊 **مدیریت پیشرفته خطا**: ذخیره وضعیت بررسی‌ها و استفاده از cache در مواقع ضروری
+- 🔍 **لاگ‌گذاری کامل**: tracking کامل تمام سناریوها برای debugging بهتر
+- 📚 **مستندات جامع**: راهنمای کامل سیستم Cache و Grace Period
+
+## تغییرات نسخه ۱.۷.۵
 
 ## تغییرات نسخه ۱.۷.۵
 
