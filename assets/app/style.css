@@ -567,24 +567,6 @@ body.login-active #loginRow {
   float: none !important;
 }
 
-.logo-container {
-  position: fixed;
-  top:  20px;
-  left: 20px;
-  z-index: 1000;
-  display: none; /* پیش‌فرض مخفی تا JavaScript تصمیم بگیره */
-}
-
-.logo-image {
-  max-width: 120px;
-  height: auto;
-}
-
-/* فقط وقتی کوکی session نیست، لوگو نمایش داده میشه */
-html.no-session-cookie .logo-container {
-  display: block;
-}
-
 .swal2-popup.swal2-rtl {
   direction: rtl;
   text-align: right;
