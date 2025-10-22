@@ -42,6 +42,10 @@ $db   = getenv('DB_NAME') ?: 'PnuExamsSeatNumber';
 $user = getenv('DB_USER') ?: 'root';
 $pass = getenv('DB_PASS') ?: '01012556360043214'; // Fallback for legacy dev only
 $charset = 'utf8mb4';
+
+// Set timezone to Iran (UTC+3:30)
+date_default_timezone_set('Asia/Tehran');
+
 $dsn = "mysql:host=$host;dbname=$db;charset=$charset";
 $options = [
     PDO::ATTR_ERRMODE            => PDO::ERRMODE_EXCEPTION,
@@ -50,6 +54,8 @@ $options = [
 ];
 try {
     $pdo = new PDO($dsn, $user, $pass, $options);
+    // Set MySQL timezone to match PHP timezone
+    $pdo->exec("SET time_zone = '+03:30'");
 } catch (\PDOException $e) {
     // Log the actual error for debugging (in production, log to file)
     error_log('Database connection failed: ' . $e->getMessage());
@@ -143,21 +149,14 @@ VALUES
     ('970100001', '1100013', 6, 'ساختمان آموزشی', 'کلاس 402', 1);
 
 CREATE TABLE Config (
-  ID int NOT NULL,
-  ConfigName varchar(20) COLLATE utf8mb4_general_ci NOT NULL,
+  ID int NOT NULL AUTO_INCREMENT PRIMARY KEY,
+  ConfigName varchar(20) COLLATE utf8mb4_general_ci NOT NULL UNIQUE,
   ConfigValue varchar(100) COLLATE utf8mb4_general_ci NOT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
-INSERT INTO Config (ID, ConfigName, ConfigValue) VALUES
-(1, 'Order', ''),
-(2, 'University', ''),
-(3, 'IsInit', 'NO');
-
-ALTER TABLE Config
-  ADD PRIMARY KEY (ID);
-
-ALTER TABLE Config
-  MODIFY ID int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=4;
+INSERT INTO Config (ConfigName, ConfigValue) VALUES
+('University', ''),
+('IsInit', 'NO');
         ";
         $pdo->exec($initSQL);
     }

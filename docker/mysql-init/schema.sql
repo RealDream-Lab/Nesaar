@@ -36,8 +36,8 @@ CREATE TABLE IF NOT EXISTS exam_seats (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 CREATE TABLE IF NOT EXISTS Config (
-  ID int NOT NULL,
-  ConfigName varchar(20) COLLATE utf8mb4_general_ci NOT NULL,
+  ID int NOT NULL AUTO_INCREMENT PRIMARY KEY,
+  ConfigName varchar(20) COLLATE utf8mb4_general_ci NOT NULL UNIQUE,
   ConfigValue varchar(100) COLLATE utf8mb4_general_ci NOT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
@@ -98,15 +98,8 @@ ON DUPLICATE KEY UPDATE
     class_name = VALUES(class_name),
     seat_row = VALUES(seat_row);
 
-INSERT INTO Config (ID, ConfigName, ConfigValue) VALUES
-(1, 'Order', ''),
-(2, 'University', ''),
-(3, 'IsInit', 'NO')
+INSERT INTO Config (ConfigName, ConfigValue) VALUES
+('University', ''),
+('IsInit', 'NO')
 ON DUPLICATE KEY UPDATE
     ConfigValue = VALUES(ConfigValue);
-
-ALTER TABLE Config
-  ADD PRIMARY KEY (ID);
-
-ALTER TABLE Config
-  MODIFY ID int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=4;
