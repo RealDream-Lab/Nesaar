@@ -212,44 +212,48 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    // Temporarily disable staff mode (only student mode active for now)
-    if (staffTypeRadio) {
-        staffTypeRadio.disabled = true;
-        // Optional: ensure student is selected
-        if (studentTypeRadio) studentTypeRadio.checked = true;
-    }
-
     // Handle user type change
     function handleUserTypeChange() {
         // Clear input fields
         studentIdInput.value = '';
         nationalIdInput.value = '';
 
-        // Only student mode is active for now
-        if (studentTypeRadio.checked || (staffTypeRadio && staffTypeRadio.disabled)) {
+        if (studentTypeRadio.checked) {
             // Student mode
             firstFieldLabel.textContent = 'شماره دانشجویی';
             secondFieldLabel.textContent = 'کد ملی / شماره شناسنامه';
             studentIdInput.placeholder = 'مثال: 403254321';
             nationalIdInput.placeholder = 'مثال: 3781985569';
             nationalIdInput.type = 'tel';
+            // Save selection
+            localStorage.setItem('userType', 'student');
         } else if (staffTypeRadio && staffTypeRadio.checked) {
-            // Staff mode (disabled for now)
+            // Staff mode
             firstFieldLabel.textContent = 'نام کاربری';
             secondFieldLabel.textContent = 'رمز عبور';
             studentIdInput.placeholder = '';
             nationalIdInput.placeholder = '';
             nationalIdInput.type = 'password';
+            // Save selection
+            localStorage.setItem('userType', 'staff');
         }
     }
 
     // Add event listeners for radio buttons
     studentTypeRadio.addEventListener('change', handleUserTypeChange);
-    if (!staffTypeRadio.disabled) {
+    if (staffTypeRadio) {
         staffTypeRadio.addEventListener('change', handleUserTypeChange);
     }
 
-    // Initialize with default state
+    // Restore saved user type selection
+    const savedUserType = localStorage.getItem('userType');
+    if (savedUserType === 'staff' && staffTypeRadio) {
+        staffTypeRadio.checked = true;
+    } else {
+        studentTypeRadio.checked = true;
+    }
+
+    // Initialize with saved state
     handleUserTypeChange();
     // Initial server clock sync and then start per-second ticker (no extra server requests)
     updateServerClock().then(() => {
@@ -938,18 +942,119 @@ document.addEventListener('DOMContentLoaded', () => {
         event.preventDefault();
 
         const mode = studentTypeRadio.checked ? 'student' : 'staff';
-        // Sanitize to digits-only for student mode
-        const studentId = toEnglishDigits(studentIdInput.value).replace(/[^0-9]/g, '').trim();
-        const nationalId = toEnglishDigits(nationalIdInput.value).replace(/[^0-9]/g, '').trim();
+
+        let studentId, nationalId;
+
+        if (mode === 'student') {
+            // Sanitize to digits-only for student mode
+            studentId = toEnglishDigits(studentIdInput.value).replace(/[^0-9]/g, '').trim();
+            nationalId = toEnglishDigits(nationalIdInput.value).replace(/[^0-9]/g, '').trim();
+        } else {
+            // For staff mode, convert digits to English but keep all characters
+            studentId = toEnglishDigits(studentIdInput.value).trim();
+            nationalId = toEnglishDigits(nationalIdInput.value).trim();
+        }
 
         if (mode === 'student') {
             if (!studentId || !nationalId) {
                 showAlert('warning', 'خطا!', 'وارد کردن نام کاربری و رمز عبور الزامی است.');
                 return;
             }
+        } else if (mode === 'staff') {
+            // Staff (Admin) authentication
+            if (!studentId || !nationalId) {
+                showAlert('warning', 'خطا!', 'وارد کردن نام کاربری و رمز عبور الزامی است.');
+                return;
+            }
+
+            try {
+                // Get LicenseToken from server
+                const configResponse = await fetch('API/getConfig.php', { cache: 'no-store' });
+                const config = await configResponse.json();
+
+                if (!config.LicenseToken || !config.SaadCode) {
+                    showAlert('error', 'خطا', 'سیستم هنوز راه‌اندازی نشده است.');
+                    return;
+                }
+
+                const licenseToken = config.LicenseToken;
+                const saadCode = config.SaadCode;
+
+                // Expected username: admin + SaadCode
+                const expectedUsername = 'admin' + saadCode;
+
+                // Expected password: reversed LicenseToken
+                const expectedPassword = licenseToken.split('').reverse().join('');
+
+                // Validate credentials
+                if (studentId === expectedUsername && nationalId === expectedPassword) {
+                    // Check if AdminNickName exists
+                    if (!config.AdminNickName) {
+                        // Ask for admin nickname
+                        const { value: nickname } = await Swal.fire({
+                            icon: 'question',
+                            title: 'نام نمایشی',
+                            text: 'لطفاً نام نمایشی خود را وارد کنید:',
+                            input: 'text',
+                            inputPlaceholder: 'مثال: محمد رضایی',
+                            showCancelButton: false,
+                            allowOutsideClick: false,
+                            confirmButtonText: 'تأیید',
+                            inputValidator: (value) => {
+                                if (!value || value.trim() === '') {
+                                    return 'وارد کردن نام نمایشی الزامی است';
+                                }
+                            },
+                            customClass: {
+                                popup: 'swal2-rtl swal2-glass'
+                            }
+                        });
+
+                        if (nickname && nickname.trim()) {
+                            // Save AdminNickName to database
+                            try {
+                                const saveResponse = await fetch('API/saveAdminNickName.php', {
+                                    method: 'POST',
+                                    headers: { 'Content-Type': 'application/json' },
+                                    body: JSON.stringify({ nickName: nickname.trim() })
+                                });
+                                const saveResult = await saveResponse.json();
+                                if (!saveResult.success) {
+                                    throw new Error('Failed to save nickname');
+                                }
+                            } catch (error) {
+                                console.error('Error saving nickname:', error);
+                                showAlert('error', 'خطا', 'خطا در ذخیره نام نمایشی');
+                                return;
+                            }
+                        }
+                    }
+
+                    // Success: Set admin session and redirect
+                    const adminSession = {
+                        type: 'admin',
+                        username: expectedUsername,
+                        loginTime: new Date().toISOString()
+                    };
+                    try {
+                        setCookie('adminSession', encodeURIComponent(JSON.stringify(adminSession)), 1); // 1 day
+                    } catch (e) {
+                        console.warn('Failed to set admin cookie', e);
+                    }
+
+                    // Redirect to dashboard
+                    window.location.href = 'dashboard/';
+                    return;
+                } else {
+                    showAlert('error', 'ورود ناموفق', 'نام کاربری یا رمز عبور اشتباه است.');
+                    return;
+                }
+            } catch (error) {
+                console.error('Admin login error:', error);
+                showAlert('error', 'خطا', 'مشکلی در احراز هویت رخ داده است.');
+                return;
+            }
         } else {
-            // Staff flow is disabled for now
-            showAlert('info', 'به‌زودی', 'ورود همکاران به‌زودی فعال می‌شود.');
             return;
         }
 
