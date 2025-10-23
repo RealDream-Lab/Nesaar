@@ -34,45 +34,66 @@
         }
 
         .dashboard-header {
-            background: white;
-            border-radius: 15px;
+            background: linear-gradient(135deg, rgba(255, 255, 255, 0.95) 0%, rgba(255, 255, 255, 0.9) 100%);
+            backdrop-filter: blur(10px);
+            border-radius: 20px;
             padding: 2rem;
             margin-bottom: 2rem;
-            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.3);
         }
 
         .dashboard-card {
-            background: white;
-            border-radius: 15px;
-            padding: 2rem;
+            background: linear-gradient(135deg, rgba(255, 255, 255, 0.95) 0%, rgba(255, 255, 255, 0.9) 100%);
+            backdrop-filter: blur(10px);
+            border-radius: 20px;
+            padding: 2.5rem;
             margin-bottom: 1.5rem;
-            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.08);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.3);
             transition: transform 0.3s ease, box-shadow 0.3s ease;
         }
 
         .dashboard-card:hover {
             transform: translateY(-5px);
-            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15);
+            box-shadow: 0 12px 40px rgba(0, 0, 0, 0.15);
+        }
+
+        .dashboard-card.no-hover:hover {
+            transform: none;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+        }
+
+        .dashboard-card h4 {
+            font-size: 1.5rem;
+            color: #1a6fa6;
+            font-weight: 700;
+        }
+
+        .btn-primary {
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
         }
 
         .stat-box {
             text-align: center;
-            padding: 1.5rem;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            border-radius: 10px;
+            padding: 2rem;
+            background: linear-gradient(135deg, #1a6fa6 0%, #127ead 100%);
+            border-radius: 15px;
             color: white;
-            margin-bottom: 1rem;
+            margin-bottom: 0;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.15);
         }
 
         .stat-box h3 {
-            font-size: 2.5rem;
+            font-size: 3rem;
             font-weight: bold;
             margin: 0;
         }
 
         .stat-box p {
             margin: 0.5rem 0 0 0;
-            opacity: 0.9;
+            opacity: 0.95;
+            font-size: 1.1rem;
         }
 
         .btn-logout {
@@ -95,17 +116,27 @@
             gap: 1rem;
         }
 
-        .admin-avatar {
-            width: 50px;
-            height: 50px;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            color: white;
-            font-size: 1.5rem;
-            font-weight: bold;
+        .admin-info h5 {
+            font-size: 1.3rem;
+            color: #1a6fa6;
+            font-weight: 700;
+        }
+
+        .admin-info small {
+            font-size: 1rem;
+        }
+
+        .table td {
+            font-size: 1.1rem;
+            padding: 0.8rem 0.5rem;
+        }
+
+        .table strong {
+            color: #1a6fa6;
+        }
+
+        .table {
+            --bs-table-bg: transparent;
         }
     </style>
 </head>
@@ -117,7 +148,6 @@
             <div class="dashboard-header">
                 <div class="d-flex justify-content-between align-items-center">
                     <div class="admin-info">
-                        <div class="admin-avatar">👤</div>
                         <div>
                             <h5 class="mb-0">خوش آمدید</h5>
                             <small class="text-muted" id="adminUsername">مدیر سیستم</small>
@@ -139,16 +169,32 @@
                     <div class="dashboard-card">
                         <div class="stat-box">
                             <h3 id="totalCourses">-</h3>
-                            <p>تعداد دروس</p>
+                            <p>تعداد آزمون‌ها</p>
                         </div>
                     </div>
                 </div>
                 <div class="col-md-4">
                     <div class="dashboard-card">
                         <div class="stat-box">
-                            <h3 id="totalSeats">-</h3>
-                            <p>تعداد صندلی‌ها</p>
+                            <h3 id="nextExamStudents">-</h3>
+                            <p id="nextExamDateTime">بارگذاری...</p>
                         </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Quick Actions -->
+            <div class="dashboard-card no-hover">
+                <div class="row g-3">
+                    <div class="col-md-6">
+                        <button class="btn btn-primary w-100" disabled>
+                            آزمون‌های کتبی
+                        </button>
+                    </div>
+                    <div class="col-md-6">
+                        <button class="btn btn-primary w-100" disabled>
+                            آزمون‌های الکترونیکی
+                        </button>
                     </div>
                 </div>
             </div>
@@ -174,19 +220,6 @@
                         </tr>
                     </tbody>
                 </table>
-            </div>
-
-            <!-- Quick Actions -->
-            <div class="dashboard-card">
-                <h4 class="mb-3">عملیات سریع</h4>
-                <div class="d-grid gap-2 d-md-flex">
-                    <button class="btn btn-primary" onclick="window.location.href='../'">
-                        بازگشت به صفحه اصلی
-                    </button>
-                    <button class="btn btn-outline-primary" id="refreshDataBtn">
-                        بروزرسانی اطلاعات
-                    </button>
-                </div>
             </div>
         </div>
     </div>
@@ -275,7 +308,8 @@
                 if (!stats.error) {
                     document.getElementById('totalStudents').textContent = stats.totalStudents || 0;
                     document.getElementById('totalCourses').textContent = stats.totalCourses || 0;
-                    document.getElementById('totalSeats').textContent = stats.totalSeats || 0;
+                    document.getElementById('nextExamStudents').textContent = stats.nextExamStudents || 0;
+                    document.getElementById('nextExamDateTime').textContent = stats.nextExamDateTime || 'آزمونی یافت نشد';
                 }
             } catch (error) {
                 console.error('Error loading dashboard data:', error);
@@ -292,16 +326,6 @@
         });
         licenseToken.addEventListener('mouseleave', () => {
             licenseToken.style.filter = 'blur(5px)';
-        });        // Refresh data
-        document.getElementById('refreshDataBtn').addEventListener('click', () => {
-            loadDashboardData();
-            Swal.fire({
-                icon: 'success',
-                title: 'بروزرسانی شد',
-                text: 'اطلاعات با موفقیت بروزرسانی شد',
-                timer: 1500,
-                showConfirmButton: false
-            });
         });
 
         // Update footer university name
