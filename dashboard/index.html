@@ -193,7 +193,9 @@
 
     <!-- Fixed Footer -->
     <footer class="fixed-footer" id="copyrightFooter" style="cursor: pointer; text-align: center;">
-        <span class="footer-text" id="footerText" style="color: white; font-weight: 600; text-shadow: 0 0 3px rgba(0,0,0,0.8), 0 0 5px rgba(0,0,0,0.6);">نسار - دانشگاه پیام نور بیجار</span>
+        <span class="footer-text" id="footerText"
+            style="color: white; font-weight: 600; text-shadow: 0 0 3px rgba(0,0,0,0.8), 0 0 5px rgba(0,0,0,0.6);">نسار
+            - دانشگاه پیام نور بیجار</span>
     </footer>
 
     <!-- Waves Background -->
@@ -320,7 +322,7 @@
         const copyrightFooter = document.getElementById('copyrightFooter');
         if (copyrightFooter) {
             copyrightFooter.addEventListener('click', async () => {
-                const VERSION = '۱.۸.۰';
+                const VERSION = '۲.۰.۰';
                 function toPersianDigits(num) {
                     const persianDigits = ['۰', '۱', '۲', '۳', '۴', '۵', '۶', '۷', '۸', '۹'];
                     return String(num).replace(/\d/g, d => persianDigits[d]);
