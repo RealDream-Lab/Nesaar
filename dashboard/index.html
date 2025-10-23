@@ -9,29 +9,31 @@
     <link rel="stylesheet" href="../assets/fonts/vazir/vazir.css">
     <link rel="stylesheet" href="../assets/sweetalert2/sweetalert2.min.css">
     <link rel="stylesheet" href="../assets/app/style.css">
-  <style>
-    body {
-      background: linear-gradient(180deg, rgba(18, 126, 189, 0.9), rgba(26, 111, 166, 0.8)),
-        url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTAwJSIgaGVpZ2h0PSIxMDAlIiB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciPjxkZWZzPjxwYXR0ZXJuIGlkPSJncmlkIiB3aWR0aD0iNDAiIGhlaWdodD0iNDAiIHBhdHRlcm5Vbml0cz0idXNlclNwYWNlT25Vc2UiPjxwYXRoIGQ9Ik0gNDAgMCBMIDAgMCAwIDQwIiBmaWxsPSJub25lIiBzdHJva2U9InJnYmEoMjU1LDI1NSwyNTUsMC4wNSkiIHN0cm9rZS13aWR0aD0iMSIvPjwvcGF0dGVybj48L2RlZnM+PHJlY3Qgd2lkdGg9IjEwMCUiIGhlaWdodD0iMTAwJSIgZmlsbD0idXJsKCNncmlkKSIvPjwvc3ZnPg==');
-      min-height: 100vh;
-      padding-bottom: 80px;
-      position: relative;
-      background-attachment: fixed;
-      background-size: cover;
-    }
+    <style>
+        body {
+            background: linear-gradient(180deg, rgba(18, 126, 189, 0.9), rgba(26, 111, 166, 0.8)),
+                url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTAwJSIgaGVpZ2h0PSIxMDAlIiB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciPjxkZWZzPjxwYXR0ZXJuIGlkPSJncmlkIiB3aWR0aD0iNDAiIGhlaWdodD0iNDAiIHBhdHRlcm5Vbml0cz0idXNlclNwYWNlT25Vc2UiPjxwYXRoIGQ9Ik0gNDAgMCBMIDAgMCAwIDQwIiBmaWxsPSJub25lIiBzdHJva2U9InJnYmEoMjU1LDI1NSwyNTUsMC4wNSkiIHN0cm9rZS13aWR0aD0iMSIvPjwvcGF0dGVybj48L2RlZnM+PHJlY3Qgd2lkdGg9IjEwMCUiIGhlaWdodD0iMTAwJSIgZmlsbD0idXJsKCNncmlkKSIvPjwvc3ZnPg==');
+            min-height: 100vh;
+            padding-bottom: 80px;
+            position: relative;
+            background-attachment: fixed;
+            background-size: cover;
+        }
 
-    .dashboard-wrapper {
-      max-width: 1200px;
-      margin: 0 auto;
-      padding: 2rem 1rem;
-      position: relative;
-      z-index: 1;
-    }
+        .dashboard-wrapper {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 2rem 1rem;
+            position: relative;
+            z-index: 1;
+        }
 
-    .dashboard-container {
-      position: relative;
-      z-index: 1;
-    }        .dashboard-header {
+        .dashboard-container {
+            position: relative;
+            z-index: 1;
+        }
+
+        .dashboard-header {
             background: white;
             border-radius: 15px;
             padding: 2rem;
@@ -109,92 +111,92 @@
 </head>
 
 <body>
-  <div class="dashboard-wrapper">
-    <div class="dashboard-container">
-      <!-- Header -->
-      <div class="dashboard-header">
-        <div class="d-flex justify-content-between align-items-center">
-          <div class="admin-info">
-            <div class="admin-avatar">👤</div>
-            <div>
-              <h5 class="mb-0">خوش آمدید</h5>
-              <small class="text-muted" id="adminUsername">مدیر سیستم</small>
-            </div>
-          </div>
-          <button class="btn btn-logout" id="logoutBtn">خروج</button>
-        </div>
-      </div>        <!-- Stats -->
-        <div class="row">
-            <div class="col-md-4">
-                <div class="dashboard-card">
-                    <div class="stat-box">
-                        <h3 id="totalStudents">-</h3>
-                        <p>تعداد دانشجویان</p>
+    <div class="dashboard-wrapper">
+        <div class="dashboard-container">
+            <!-- Header -->
+            <div class="dashboard-header">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div class="admin-info">
+                        <div class="admin-avatar">👤</div>
+                        <div>
+                            <h5 class="mb-0">خوش آمدید</h5>
+                            <small class="text-muted" id="adminUsername">مدیر سیستم</small>
+                        </div>
+                    </div>
+                    <button class="btn btn-logout" id="logoutBtn">خروج</button>
+                </div>
+            </div> <!-- Stats -->
+            <div class="row">
+                <div class="col-md-4">
+                    <div class="dashboard-card">
+                        <div class="stat-box">
+                            <h3 id="totalStudents">-</h3>
+                            <p>تعداد دانشجویان</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="dashboard-card">
+                        <div class="stat-box">
+                            <h3 id="totalCourses">-</h3>
+                            <p>تعداد دروس</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="dashboard-card">
+                        <div class="stat-box">
+                            <h3 id="totalSeats">-</h3>
+                            <p>تعداد صندلی‌ها</p>
+                        </div>
                     </div>
                 </div>
             </div>
-            <div class="col-md-4">
-                <div class="dashboard-card">
-                    <div class="stat-box">
-                        <h3 id="totalCourses">-</h3>
-                        <p>تعداد دروس</p>
-                    </div>
-                </div>
-            </div>
-            <div class="col-md-4">
-                <div class="dashboard-card">
-                    <div class="stat-box">
-                        <h3 id="totalSeats">-</h3>
-                        <p>تعداد صندلی‌ها</p>
-                    </div>
-                </div>
-            </div>
-        </div>
 
-        <!-- System Info -->
-        <div class="dashboard-card">
-            <h4 class="mb-3">اطلاعات لایسنس</h4>
-            <table class="table table-borderless">
-                <tbody>
-                    <tr>
-                        <td><strong>نام دانشگاه:</strong></td>
-                        <td id="universityName">-</td>
-                    </tr>
-                    <tr>
-                        <td><strong>کد مرکز:</strong></td>
-                        <td id="saadCode">-</td>
-                    </tr>
-                    <tr>
-                        <td><strong>شماره سریال:</strong></td>
-                        <td><code id="licenseToken" class="license-token-blur"
-                                style="font-family: monospace; background: #f5f5f5; padding: 4px 8px; border-radius: 4px; filter: blur(5px); transition: filter 0.3s ease; cursor: pointer;">-</code>
-                        </td>
-                    </tr>
-                </tbody>
-            </table>
-        </div>
+            <!-- System Info -->
+            <div class="dashboard-card">
+                <h4 class="mb-3">اطلاعات لایسنس</h4>
+                <table class="table table-borderless">
+                    <tbody>
+                        <tr>
+                            <td><strong>نام دانشگاه:</strong></td>
+                            <td id="universityName">-</td>
+                        </tr>
+                        <tr>
+                            <td><strong>کد مرکز:</strong></td>
+                            <td id="saadCode">-</td>
+                        </tr>
+                        <tr>
+                            <td><strong>شماره سریال:</strong></td>
+                            <td><code id="licenseToken" class="license-token-blur"
+                                    style="font-family: monospace; background: #f5f5f5; padding: 4px 8px; border-radius: 4px; filter: blur(5px); transition: filter 0.3s ease; cursor: pointer;">-</code>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
 
-        <!-- Quick Actions -->
-        <div class="dashboard-card">
-            <h4 class="mb-3">عملیات سریع</h4>
-            <div class="d-grid gap-2 d-md-flex">
-                <button class="btn btn-primary" onclick="window.location.href='../'">
-                    بازگشت به صفحه اصلی
-                </button>
-                <button class="btn btn-outline-primary" id="refreshDataBtn">
-                    بروزرسانی اطلاعات
-                </button>
+            <!-- Quick Actions -->
+            <div class="dashboard-card">
+                <h4 class="mb-3">عملیات سریع</h4>
+                <div class="d-grid gap-2 d-md-flex">
+                    <button class="btn btn-primary" onclick="window.location.href='../'">
+                        بازگشت به صفحه اصلی
+                    </button>
+                    <button class="btn btn-outline-primary" id="refreshDataBtn">
+                        بروزرسانی اطلاعات
+                    </button>
+                </div>
+            </div>
         </div>
     </div>
-  </div>
-</div>
 
-<!-- Fixed Footer -->
-<footer class="fixed-footer text-white" id="copyrightFooter" style="cursor: pointer;">
-    <span class="footer-text" id="footerText">نسار - دانشگاه پیام نور بیجار</span>
-    <span class="footer-spacer" aria-hidden="true"></span>
-    <span class="footer-clock" id="footerClock" aria-live="polite">در حال به‌روزرسانی...</span>
-</footer>    <!-- Waves Background -->
+    <!-- Fixed Footer -->
+    <footer class="fixed-footer" id="copyrightFooter" style="cursor: pointer; background: rgba(0, 0, 0, 0.8); color: white; text-align: center;">
+        <span class="footer-text" id="footerText">نسار - دانشگاه پیام نور بیجار</span>
+    </footer>
+    
+    <!-- Waves Background -->
     <div class="waves-header" aria-hidden="true">
         <div class="waves-inner-header"></div>
         <svg class="waves" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink"
@@ -299,23 +301,6 @@
                 showConfirmButton: false
             });
         });
-
-        // Update footer clock
-        async function updateFooterClock() {
-            try {
-                const response = await fetch('../API/serverTime.php', { cache: 'no-store' });
-                const data = await response.json();
-                if (data.time) {
-                    document.getElementById('footerClock').textContent = data.time;
-                }
-            } catch (error) {
-                console.error('Error updating clock:', error);
-            }
-        }
-
-        // Update clock every second
-        setInterval(updateFooterClock, 1000);
-        updateFooterClock();
 
         // Update footer university name
         async function updateFooterUniversity() {
