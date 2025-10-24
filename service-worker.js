@@ -81,9 +81,8 @@ self.addEventListener('activate', event => {
             version: CACHE_NAME,
             tagVersion: `نسخه ${VERSION}`,
             changes: [
-              'رفع ایرادات جزئی در نمایش ساعت',
-              'فعال‌سازی فاز دوم سیستم لایسنسینگ',
-              'بهبود طراحی فوتر با افکت شیشه‌ای'
+              'فعال‌سازی داشبورد مدیریت',
+              'بهبود طراحی با Glassmorphism'
             ]
           });
         });

@@ -17,10 +17,10 @@ try {
     
     // Get all unique exam date/time combinations that have students
     $stmt = $pdo->query("
-        SELECT DISTINCT
+        SELECT 
             c.exam_date,
             c.exam_time,
-            COUNT(DISTINCT es.student_id) as student_count
+            COUNT(*) as student_count
         FROM courses c
         INNER JOIN exam_seats es ON c.course_code = es.course_code
         GROUP BY c.exam_date, c.exam_time
