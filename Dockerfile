@@ -9,6 +9,13 @@ RUN apt-get update \
     && a2enmod rewrite headers \
     && rm -rf /var/lib/apt/lists/*
 
+# Configure PHP upload and post limits
+RUN echo "upload_max_filesize = 128M" > /usr/local/etc/php/conf.d/uploads.ini \
+    && echo "post_max_size = 128M" >> /usr/local/etc/php/conf.d/uploads.ini \
+    && echo "memory_limit = 128M" >> /usr/local/etc/php/conf.d/uploads.ini \
+    && echo "max_execution_time = 300" >> /usr/local/etc/php/conf.d/uploads.ini \
+    && echo "max_input_time = 300" >> /usr/local/etc/php/conf.d/uploads.ini
+
 # Copy application source
 COPY . /var/www/html
 
