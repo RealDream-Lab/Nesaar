@@ -1,5 +1,5 @@
 document.addEventListener('DOMContentLoaded', () => {
-    const VERSION = '۲.۰.۱';
+    const VERSION = '۲.۱.۰';
     // Listen for service worker update messages and show SweetAlert
     if (navigator.serviceWorker) {
         navigator.serviceWorker.addEventListener('message', event => {
@@ -51,6 +51,31 @@ document.addEventListener('DOMContentLoaded', () => {
     let lastPayload = [];
     let lastFullName = '';
     let lastStudentId = '';
+    let licenseAlertShown = false;
+    let lastLicenseAlertMessage = '';
+
+    async function handleLicenseGuardResponse(response) {
+        if (response.status !== 403) return;
+        let message = 'دسترسی شما به علت مشکل در لایسنس محدود شده است.';
+        try {
+            const payload = await response.clone().json();
+            if (payload && payload.message) {
+                message = payload.message;
+            }
+        } catch (error) {
+            // ignored: fallback message is already defined
+        }
+        showLicenseExpiredAlert(message);
+        const err = new Error('license_forbidden');
+        err.isLicenseError = true;
+        throw err;
+    }
+
+    async function guardedFetch(resource, options) {
+        const response = await fetch(resource, options);
+        await handleLicenseGuardResponse(response);
+        return response;
+    }
 
     function getPersianMonthName(dateStr) {
         const parts = dateStr.split('/');
@@ -62,7 +87,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // Fetch and cache config
     async function loadConfig() {
         try {
-            const response = await fetch('API/getConfig.php');
+            const response = await guardedFetch('API/getConfig.php');
             if (!response.ok) throw new Error(`HTTP ${response.status}`);
             const config = await response.json();
             localStorage.setItem('appConfig', JSON.stringify(config));
@@ -164,7 +189,7 @@ document.addEventListener('DOMContentLoaded', () => {
             });
 
             try {
-                const response = await fetch('API/updateConfig.php', {
+                const response = await guardedFetch('API/updateConfig.php', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify(formValues)
@@ -447,7 +472,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const body = new FormData();
         body.append('encrypted_data', encryptedData);
 
-        const response = await fetch('API/getStudentExams.php', { method: 'POST', body });
+        const response = await guardedFetch('API/getStudentExams.php', { method: 'POST', body });
         if (!response.ok) throw new Error(`HTTP ${response.status}`);
         let payload;
         try {
@@ -464,96 +489,60 @@ document.addEventListener('DOMContentLoaded', () => {
         return payload;
     }
 
-    // بررسی لایسنس با فرکانس هوشمند بر اساس نزدیکی به انقضا
+    // بررسی لایسنس با فرکانس زمان‌بندی‌شده
     async function checkLicense() {
-        const GRACE_PERIOD_HOURS = 24;
-        const GRACE_PERIOD_MS = GRACE_PERIOD_HOURS * 60 * 60 * 1000;
+        const GRACE_PERIOD_MS = 24 * 60 * 60 * 1000;
+        const TRIAL_CACHE_MS = 15 * 60 * 1000;
+        const PERMANENT_CACHE_MS = 24 * 60 * 60 * 1000;
 
+        let licenseCache = {};
         try {
-            // 1️⃣ دریافت cache لایسنس
-            const cacheResponse = await fetch('API/getLicenseCache.php', { cache: 'no-store' });
-            let licenseCache = null;
-
+            const cacheResponse = await guardedFetch('API/getLicenseCache.php', { cache: 'no-store' });
             if (cacheResponse.ok) {
                 const cacheData = await cacheResponse.json();
                 licenseCache = cacheData.cache || {};
             }
+        } catch (cacheError) {
+            console.warn('[License] ⚠ Unable to read license cache:', cacheError);
+        }
 
-            const now = new Date();
-            const lastChecked = licenseCache?.lastChecked || '';
+        try {
+            const nowMs = Date.now();
+            const lastCheckedRaw = licenseCache?.lastChecked || '';
             const lastSuccessCheck = licenseCache?.lastSuccessCheck || '';
-            const cachedExpiry = licenseCache?.expiry || '';
             const lastStatus = licenseCache?.lastStatus || '';
+            const lastType = licenseCache?.currentType || '';
 
-            // 2️⃣ بررسی فرکانس چک بر اساس نزدیکی به انقضا
-            if (lastChecked) {
-                const lastCheckedDate = new Date(lastChecked);
-                const timeSinceLastCheck = now.getTime() - lastCheckedDate.getTime();
-
-                if (cachedExpiry) {
-                    const expiryDate = new Date(cachedExpiry);
-                    const timeUntilExpiry = expiryDate.getTime() - now.getTime();
-
-                    const oneMinute = 60 * 1000;
-                    const oneHour = 60 * oneMinute;
-                    const oneDay = 24 * oneHour;
-
-                    // اگر انقضا در همین ساعت است (کمتر از 1 ساعت مانده)
-                    if (timeUntilExpiry > 0 && timeUntilExpiry <= oneHour) {
-                        if (timeSinceLastCheck < oneMinute) {
-                            console.log('[License] ✓ Checked <1min ago (expiring soon)');
-                            return { valid: true, message: 'لایسنس اخیراً چک شده', skipCheck: true };
-                        }
-                    }
-                    // اگر انقضا در همین روز است (کمتر از 24 ساعت مانده)
-                    else if (timeUntilExpiry > 0 && timeUntilExpiry <= oneDay) {
-                        if (timeSinceLastCheck < oneHour) {
-                            console.log('[License] ✓ Checked <1h ago (expiring today)');
-                            return { valid: true, message: 'لایسنس در این ساعت چک شده', skipCheck: true };
-                        }
-                    }
-                    // بیشتر از 1 روز مانده
-                    else if (timeUntilExpiry > oneDay) {
-                        const lastCheckedDay = new Date(lastCheckedDate);
-                        const today = new Date(now);
-                        lastCheckedDay.setHours(0, 0, 0, 0);
-                        today.setHours(0, 0, 0, 0);
-
-                        if (lastCheckedDay.getTime() === today.getTime()) {
-                            console.log('[License] ✓ Already checked today');
-                            return { valid: true, message: 'لایسنس امروز چک شده', skipCheck: true };
-                        }
-                    }
-                } else {
-                    // بدون تاریخ انقضا - روزانه چک
-                    const lastCheckedDay = new Date(lastCheckedDate);
-                    const today = new Date(now);
-                    lastCheckedDay.setHours(0, 0, 0, 0);
-                    today.setHours(0, 0, 0, 0);
-
-                    if (lastCheckedDay.getTime() === today.getTime()) {
-                        console.log('[License] ✓ Already checked today (permanent license)');
-                        return { valid: true, message: 'لایسنس امروز چک شده', skipCheck: true };
+            if (lastStatus === 'valid' && lastCheckedRaw) {
+                const lastCheckedDate = new Date(lastCheckedRaw);
+                if (!Number.isNaN(lastCheckedDate.getTime())) {
+                    const cacheWindow = (lastType === 'permanent') ? PERMANENT_CACHE_MS : TRIAL_CACHE_MS;
+                    if (nowMs - lastCheckedDate.getTime() < cacheWindow) {
+                        console.log('[License] ✓ Using cached status');
+                        return {
+                            valid: true,
+                            message: 'لایسنس اخیراً بررسی شده است',
+                            skipCheck: true,
+                            licenseType: lastType || 'unknown'
+                        };
                     }
                 }
             }
 
-            // 3️⃣ دریافت توکن لایسنس
-            const tokenResponse = await fetch('API/getLicenseToken.php', { cache: 'no-store' });
+            // دریافت توکن لایسنس
+            const tokenResponse = await guardedFetch('API/getLicenseToken.php', { cache: 'no-store' });
             if (!tokenResponse.ok) {
                 console.warn('[License] ⚠ Could not fetch license token');
-                return await handleLicenseServerError(lastSuccessCheck, cachedExpiry, 'عدم دسترسی به توکن لایسنس');
+                return await handleLicenseServerError(lastSuccessCheck, GRACE_PERIOD_MS, 'عدم دسترسی به توکن لایسنس');
             }
 
             const tokenData = await tokenResponse.json();
             if (tokenData.error || !tokenData.LicenseToken) {
                 console.warn('[License] ⚠ License token not found');
-                return await handleLicenseServerError(lastSuccessCheck, cachedExpiry, 'توکن لایسنس یافت نشد');
+                return await handleLicenseServerError(lastSuccessCheck, GRACE_PERIOD_MS, 'توکن لایسنس یافت نشد');
             }
 
             const licenseToken = tokenData.LicenseToken;
-
-            // 4️⃣ فراخوانی webhook
             const webhookUrl = 'https://wfa.pnubijar.ac.ir/webhook/LC';
             let webhookResponse;
 
@@ -566,120 +555,92 @@ document.addEventListener('DOMContentLoaded', () => {
                 });
             } catch (fetchError) {
                 console.warn('[License] ⚠ Webhook request failed:', fetchError.message);
-                return await handleLicenseServerError(lastSuccessCheck, cachedExpiry, 'عدم دسترسی به سرور لایسنس');
+                return await handleLicenseServerError(lastSuccessCheck, GRACE_PERIOD_MS, 'عدم دسترسی به سرور لایسنس');
             }
 
             if (!webhookResponse.ok) {
                 console.warn('[License] ⚠ Webhook returned error:', webhookResponse.status);
-                return await handleLicenseServerError(lastSuccessCheck, cachedExpiry, 'سرور لایسنس پاسخ نداد');
+                return await handleLicenseServerError(lastSuccessCheck, GRACE_PERIOD_MS, 'سرور لایسنس پاسخ نداد');
             }
 
-            // 5️⃣ پردازش پاسخ webhook
             const licenseData = await webhookResponse.json();
-
             if (!licenseData || typeof licenseData !== 'object') {
                 console.warn('[License] ⚠ Invalid license response');
-                return await handleLicenseServerError(lastSuccessCheck, cachedExpiry, 'پاسخ نامعتبر از سرور لایسنس');
+                return await handleLicenseServerError(lastSuccessCheck, GRACE_PERIOD_MS, 'پاسخ نامعتبر از سرور لایسنس');
             }
 
             const licenceType = licenseData.LicenceType || '';
             const exp = licenseData.Exp || '';
 
-            // 6️⃣ بررسی نوع لایسنس
             if (licenceType === 'Licenced') {
-                // لایسنس دائمی
-                await updateLicenseLastChecked(null);
-                await updateLicenseStatus('valid', null);
+                await updateLicenseLastChecked();
+                await updateLicenseStatus('valid');
                 console.log('[License] ✓ Permanent license active');
                 return { valid: true, message: 'لایسنس فعال', licenseType: 'permanent' };
             }
 
             if (licenceType === 'FullLicenced') {
                 if (!exp) {
-                    await updateLicenseStatus('invalid', null);
+                    await updateLicenseStatus('invalid');
                     console.error('[License] ✗ Expiry date missing');
                     return { valid: false, message: 'تاریخ انقضا یافت نشد' };
                 }
 
                 const expTimestamp = new Date(exp).getTime();
                 const currentTimestamp = Date.now();
+                if (!Number.isFinite(expTimestamp)) {
+                    await updateLicenseStatus('invalid');
+                    console.error('[License] ✗ Invalid expiry format');
+                    return { valid: false, message: 'تاریخ انقضا نامعتبر است' };
+                }
 
                 if (expTimestamp > currentTimestamp) {
-                    // دوره آزمایشی فعال
-                    await updateLicenseLastChecked(exp);
-                    await updateLicenseStatus('valid', exp);
+                    await updateLicenseLastChecked();
+                    await updateLicenseStatus('valid');
 
                     const hoursRemaining = Math.floor((expTimestamp - currentTimestamp) / (1000 * 60 * 60));
                     console.log(`[License] ✓ Trial license active (${hoursRemaining}h remaining)`);
 
                     return { valid: true, message: 'دوره آزمایشی فعال', licenseType: 'trial', expiry: exp };
-                } else {
-                    await updateLicenseStatus('invalid', exp);
-                    console.error('[License] ✗ License expired');
-                    return { valid: false, message: 'در صورتی که کاربر این سامانه هستید لطفاً به ادمین اطلاع دهید تا نسبت به فعال‌سازی لایسنس اقدام نماید.' };
                 }
+
+                await updateLicenseStatus('invalid');
+                console.error('[License] ✗ License expired');
+                return { valid: false, message: 'دوره آزمایشی پایان یافته، در صورتی که کاربر این سامانه هستید لطفاً به ادمین اطلاع دهید تا نسبت به فعال‌سازی لایسنس اقدام نماید.' };
             }
 
-            await updateLicenseStatus('invalid', null);
+            await updateLicenseStatus('invalid');
             console.error('[License] ✗ Invalid license type:', licenceType);
             return { valid: false, message: 'نوع لایسنس نامعتبر است' };
 
         } catch (error) {
             console.error('[License] ⚠ Exception:', error);
-            // در صورت خطا، از cache استفاده می‌کنیم
-            return await handleLicenseServerError(
-                licenseCache?.lastSuccessCheck || '',
-                licenseCache?.expiry || '',
-                'خطا در بررسی لایسنس'
-            );
+            const lastSuccessCheck = licenseCache?.lastSuccessCheck || '';
+            return await handleLicenseServerError(lastSuccessCheck, GRACE_PERIOD_MS, 'خطا در بررسی لایسنس');
         }
     }
 
     // مدیریت خطای سرور لایسنس با Grace Period
-    async function handleLicenseServerError(lastSuccessCheck, cachedExpiry, errorMessage) {
-        const now = new Date();
+    async function handleLicenseServerError(lastSuccessCheck, graceWindowMs, errorMessage) {
+        const now = Date.now();
+        await updateLicenseStatus('error');
 
-        // ثبت وضعیت خطا
-        await updateLicenseStatus('error', cachedExpiry);
-
-        // 1️⃣ بررسی Grace Period (24 ساعت از آخرین بررسی موفق)
         if (lastSuccessCheck) {
             const lastSuccessDate = new Date(lastSuccessCheck);
-            const timeSinceSuccess = now.getTime() - lastSuccessDate.getTime();
-            const GRACE_PERIOD_MS = 24 * 60 * 60 * 1000;
-
-            if (timeSinceSuccess < GRACE_PERIOD_MS) {
-                const hoursRemaining = Math.floor((GRACE_PERIOD_MS - timeSinceSuccess) / (1000 * 60 * 60));
-                console.log(`[License] ⚡ Grace Period active (${hoursRemaining}h remaining)`);
-                return {
-                    valid: true,
-                    message: `${errorMessage} (دسترسی موقت: ${hoursRemaining} ساعت)`,
-                    gracePeriod: true
-                };
+            if (!Number.isNaN(lastSuccessDate.getTime())) {
+                const timeSinceSuccess = now - lastSuccessDate.getTime();
+                if (timeSinceSuccess < graceWindowMs) {
+                    const hoursRemaining = Math.floor((graceWindowMs - timeSinceSuccess) / (1000 * 60 * 60));
+                    console.log(`[License] ⚡ Grace Period active (${hoursRemaining}h remaining)`);
+                    return {
+                        valid: true,
+                        message: `${errorMessage} (دسترسی موقت: ${hoursRemaining} ساعت)`,
+                        gracePeriod: true
+                    };
+                }
             }
         }
 
-        // 2️⃣ بررسی تاریخ انقضای cache شده
-        if (cachedExpiry) {
-            const expiryDate = new Date(cachedExpiry);
-            if (expiryDate.getTime() > now.getTime()) {
-                const hoursUntilExpiry = Math.floor((expiryDate.getTime() - now.getTime()) / (1000 * 60 * 60));
-                console.log(`[License] ⚡ Using cached expiry (${hoursUntilExpiry}h until expiry)`);
-                return {
-                    valid: true,
-                    message: `${errorMessage} (استفاده از cache)`,
-                    usingCache: true
-                };
-            } else {
-                console.warn('[License] ✗ Cached license expired');
-                return {
-                    valid: false,
-                    message: 'لایسنس منقضی شده - لطفاً به اینترنت متصل شوید'
-                };
-            }
-        }
-
-        // 3️⃣ Fallback نهایی - اجازه دسترسی موقت
         console.warn('[License] ⚡ Fallback: Allowing temporary access');
         return {
             valid: true,
@@ -689,14 +650,13 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // آپدیت وضعیت لایسنس
-    async function updateLicenseStatus(status, expiry) {
+    async function updateLicenseStatus(status) {
         try {
-            await fetch('API/updateLicenseStatus.php', {
+            await guardedFetch('API/updateLicenseStatus.php', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
-                    status: status,
-                    expiry: expiry
+                    status: status
                 })
             });
         } catch (error) {
@@ -704,15 +664,14 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    // آپدیت تاریخ آخرین چک لایسنس و تاریخ انقضا
-    async function updateLicenseLastChecked(expiryDate) {
+    // به‌روزرسانی تاریخ آخرین بررسی لایسنس در سرور
+    async function updateLicenseLastChecked() {
         try {
-            const response = await fetch('API/updateLicenseLastChecked.php', {
+            const response = await guardedFetch('API/updateLicenseLastChecked.php', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
-                    update: true,
-                    expiry: expiryDate || null
+                    update: true
                 })
             });
 
@@ -726,10 +685,31 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function showLicenseExpiredAlert(message) {
+        const trimmedMessage = (message || '').trim();
+        if (licenseAlertShown) {
+            if (trimmedMessage && trimmedMessage !== lastLicenseAlertMessage) {
+                console.warn('[License] Duplicate alert suppressed with new message:', trimmedMessage);
+            }
+            return;
+        }
+        licenseAlertShown = true;
+        lastLicenseAlertMessage = trimmedMessage;
+        const fallback = 'دوره آزمایشی پایان یافته، در صورتی که کاربر این سامانه هستید لطفاً به ادمین اطلاع دهید تا نسبت به فعال‌سازی لایسنس اقدام نماید.';
+        const combined = trimmedMessage || fallback;
+        const splitter = combined.indexOf('،') > -1 ? '،' : (combined.indexOf('.') > -1 ? '.' : null);
+        let titleText = combined;
+        let bodyText = '';
+
+        if (splitter) {
+            const index = combined.indexOf(splitter);
+            titleText = combined.slice(0, index).trim();
+            bodyText = combined.slice(index + 1).trim();
+        }
+
         Swal.fire({
             icon: 'error',
-            title: 'دوره آزمایشی پایان یافته',
-            html: `<div style="text-align:justify;line-height:1.9;direction:rtl">${escapeHtml(message || 'در صورتی که کاربر این سامانه هستید لطفاً به ادمین اطلاع دهید تا نسبت به فعال‌سازی لایسنس اقدام نماید.')}</div>`,
+            title: escapeHtml(titleText || 'دسترسی محدود شد'),
+            html: bodyText ? `<div style="text-align:justify;line-height:1.9;direction:rtl">${escapeHtml(bodyText)}</div>` : '',
             allowOutsideClick: false,
             allowEscapeKey: false,
             allowEnterKey: false,
@@ -745,7 +725,7 @@ document.addEventListener('DOMContentLoaded', () => {
     async function updateServerClock() {
         if (!footerClock) return;
         try {
-            const response = await fetch('API/serverTime.php', { cache: 'no-store' });
+            const response = await guardedFetch('API/serverTime.php', { cache: 'no-store' });
             if (!response.ok) throw new Error(`HTTP ${response.status}`);
             const payload = await response.json();
             if (!payload || !payload.date || !payload.time) {
@@ -969,7 +949,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
             try {
                 // Get LicenseToken from server
-                const configResponse = await fetch('API/getConfig.php', { cache: 'no-store' });
+                const configResponse = await guardedFetch('API/getConfig.php', { cache: 'no-store' });
                 const config = await configResponse.json();
 
                 if (!config.LicenseToken || !config.SaadCode) {
@@ -1013,7 +993,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         if (nickname && nickname.trim()) {
                             // Save AdminNickName to database
                             try {
-                                const saveResponse = await fetch('API/saveAdminNickName.php', {
+                                const saveResponse = await guardedFetch('API/saveAdminNickName.php', {
                                     method: 'POST',
                                     headers: { 'Content-Type': 'application/json' },
                                     body: JSON.stringify({ nickName: nickname.trim() })
@@ -1142,7 +1122,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
             const body = new FormData();
             body.append('encrypted_data', encryptedData);
-            const response = await fetch('API/getStudentExams.php', { method: 'POST', body });
+            const response = await guardedFetch('API/getStudentExams.php', { method: 'POST', body });
             if (!response.ok) throw new Error(`HTTP ${response.status}`);
             const payload = await response.json();
             if (payload.error) {

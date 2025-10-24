@@ -1,3 +1,15 @@
+<?php
+require_once __DIR__ . '/includes/license_guard.php';
+
+$licenseStatus = license_guard_validate();
+if ($licenseStatus['valid'] !== true) {
+  http_response_code(403);
+  header('Content-Type: text/html; charset=utf-8');
+  $message = htmlspecialchars($licenseStatus['message'] ?? 'دسترسی به سامانه به دلیل مشکل لایسنس ممنوع است.', ENT_QUOTES, 'UTF-8');
+  echo "<!DOCTYPE html><html lang=\"fa\" dir=\"rtl\"><head><meta charset=\"utf-8\"><title>خطای لایسنس</title><style>body{font-family:'Vazir',Tahoma,Arial,sans-serif;background:#0f172a;color:#f8fafc;display:flex;align-items:center;justify-content:center;min-height:100vh;margin:0;} .card{background:rgba(15,23,42,0.85);padding:2.5rem;border-radius:18px;max-width:520px;text-align:center;line-height:2;box-shadow:0 35px 80px rgba(15,23,42,0.45);} h1{margin-top:0;font-size:1.8rem;} .hint{margin-top:1.5rem;font-size:0.95rem;color:#cbd5f5;}</style><link rel=\"stylesheet\" href=\"assets/fonts/vazir/vazir.css\"></head><body><div class=\"card\"><h1>اعتبار لایسنس تایید نشد</h1><p>{$message}</p><p class=\"hint\">برای ادامه استفاده، لطفاً با پشتیبانی تماس بگیرید تا وضعیت لایسنس بررسی شود.</p></div></body></html>";
+  exit;
+}
+?>
 <!DOCTYPE html>
 <html lang="fa" dir="rtl">
 

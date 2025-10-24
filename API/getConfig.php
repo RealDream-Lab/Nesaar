@@ -1,7 +1,10 @@
 <?php
+require_once __DIR__ . '/../includes/license_guard.php';
 require_once 'db_init.php';
 
 header('Content-Type: application/json; charset=utf-8');
+
+license_guard_enforce_api();
 
 try {
     $stmt = $pdo->query("SELECT ConfigName, ConfigValue FROM Config");

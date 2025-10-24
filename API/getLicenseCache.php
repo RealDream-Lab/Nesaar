@@ -13,15 +13,16 @@ require_once 'db_init.php';
 try {
     // $pdo is already defined in db_init.php
     
-    // دریافت آخرین وضعیت موفق، تاریخ بررسی موفق و تاریخ انقضا
+    // دریافت وضعیت لایسنس از جدول Config
     $stmt = $pdo->query("
         SELECT ConfigName, ConfigValue 
         FROM Config 
         WHERE ConfigName IN (
             'LicenseLastStatus',
+            'LicenseLastSuccess',
             'LicenseLastSuccessCheck', 
-            'LicenseExpiry',
-            'LicenseLastChecked'
+            'LicenseLastChecked',
+            'LicenseCurrentType'
         )
     ");
     
@@ -34,9 +35,9 @@ try {
         'success' => true,
         'cache' => [
             'lastStatus' => $cache['LicenseLastStatus'] ?? null,
-            'lastSuccessCheck' => $cache['LicenseLastSuccessCheck'] ?? null,
+            'lastSuccessCheck' => $cache['LicenseLastSuccess'] ?? $cache['LicenseLastSuccessCheck'] ?? null,
             'lastChecked' => $cache['LicenseLastChecked'] ?? null,
-            'expiry' => $cache['LicenseExpiry'] ?? null
+            'currentType' => $cache['LicenseCurrentType'] ?? null
         ]
     ]);
     

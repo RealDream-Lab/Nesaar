@@ -1,8 +1,12 @@
 <?php
 require_once 'jdf.php';
+require_once __DIR__ . '/../includes/license_guard.php';
 $current_persian_date = jdate('Y/m/d', '', '', 'Asia/Tehran', 'en');
 $current_time = jdate('H:i', '', '', 'Asia/Tehran', 'en');
 header('Content-Type: application/json; charset=utf-8');
+
+// Enforce license validity before proceeding
+license_guard_enforce_api();
 
 // Load .env file when present so Docker/local configs stay in sync
 (function () {
@@ -60,7 +64,7 @@ function decryptData($encryptedData, $key) {
 // Database initialization and connection
 require_once 'db_init.php';
 
-// Note: License check has been moved to client-side JavaScript for better security
+// License guard enforced at the top of this file to prevent bypass attempts
 
 // دریافت و رمزگشایی ورودی
 $encrypted_data = $_POST['encrypted_data'] ?? $_GET['encrypted_data'] ?? '';

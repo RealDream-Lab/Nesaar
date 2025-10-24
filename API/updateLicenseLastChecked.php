@@ -40,7 +40,6 @@ require_once 'db_init.php';
 
 // Parse JSON input
 $input = json_decode(file_get_contents('php://input'), true);
-$expiryDate = isset($input['expiry']) ? $input['expiry'] : null;
 
 try {
     // Set timezone to Tehran
@@ -61,31 +60,14 @@ try {
         $stmt = $pdo->prepare("INSERT INTO Config (ConfigName, ConfigValue) VALUES ('LicenseLastChecked', ?)");
         $stmt->execute([$currentTimestamp]);
     }
-    
-    // Update or insert LicenseExpiry
-    if ($expiryDate !== null) {
-        // Store expiry date
-        $stmt = $pdo->prepare("SELECT COUNT(*) as cnt FROM Config WHERE ConfigName = 'LicenseExpiry'");
-        $stmt->execute();
-        $row = $stmt->fetch();
-        
-        if ($row && intval($row['cnt']) > 0) {
-            $stmt = $pdo->prepare("UPDATE Config SET ConfigValue = ? WHERE ConfigName = 'LicenseExpiry'");
-            $stmt->execute([$expiryDate]);
-        } else {
-            $stmt = $pdo->prepare("INSERT INTO Config (ConfigName, ConfigValue) VALUES ('LicenseExpiry', ?)");
-            $stmt->execute([$expiryDate]);
-        }
-    } else {
-        // Remove expiry date (permanent license)
-        $stmt = $pdo->prepare("DELETE FROM Config WHERE ConfigName = 'LicenseExpiry'");
-        $stmt->execute();
-    }
+
+    // Ensure legacy expiry record is removed
+    $stmt = $pdo->prepare("DELETE FROM Config WHERE ConfigName = 'LicenseExpiry'");
+    $stmt->execute();
     
     echo json_encode([
         'success' => true, 
-        'timestamp' => $currentTimestamp,
-        'expiry' => $expiryDate
+        'timestamp' => $currentTimestamp
     ]);
 } catch (Exception $e) {
     error_log('Failed to update LicenseLastChecked: ' . $e->getMessage());

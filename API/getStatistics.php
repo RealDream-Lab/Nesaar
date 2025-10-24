@@ -1,7 +1,10 @@
 <?php
 header('Content-Type: application/json; charset=utf-8');
+require_once __DIR__ . '/../includes/license_guard.php';
 require_once 'db_init.php';
 require_once 'jdf.php';
+
+license_guard_enforce_api();
 
 try {
     // Get total students

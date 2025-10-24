@@ -1,10 +1,10 @@
-// Bump cache to force refresh of updated assets (app.js, style.css, index.html)
+// Bump cache to force refresh of updated assets (app.js, style.css, index.php)
 // Increment this when you want clients to fetch the new assets.
-const CACHE_NAME = 'exam-seat-v2.0.1';
-const VERSION = '۲.۰.۱';
+const CACHE_NAME = 'exam-seat-v2.1.0';
+const VERSION = '۲.۱.۰';
 const urlsToCache = [
   '/',
-  '/index.html',
+  '/index.php',
   '/manifest.json',
   '/assets/fonts/vazir/vazir.css',
   '/assets/bootstrap/bootstrap.min.css',
@@ -52,7 +52,13 @@ self.addEventListener('fetch', event => {
 
   if (url.pathname.startsWith('/API/')) {
     event.respondWith(
-      fetch(request).catch(() => caches.match(request))
+      fetch(request).catch(() => new Response(
+        JSON.stringify({ error: 'offline_unavailable', message: 'داده‌ها بدون اتصال به اینترنت در دسترس نیستند.' }),
+        {
+          status: 503,
+          headers: { 'Content-Type': 'application/json; charset=utf-8' }
+        }
+      ))
     );
     return;
   }
@@ -81,8 +87,8 @@ self.addEventListener('activate', event => {
             version: CACHE_NAME,
             tagVersion: `نسخه ${VERSION}`,
             changes: [
-              'فعال‌سازی داشبورد مدیریت',
-              'بهبود طراحی با Glassmorphism'
+              'اجرای گارد سمت‌سرور برای لایسنس',
+              'جلوگیری از دسترسی آفلاین بدون لایسنس'
             ]
           });
         });
@@ -100,6 +106,10 @@ async function networkFirst(request) {
   const cache = await caches.open(CACHE_NAME);
   try {
     const fresh = await fetch(request);
+    if (fresh.status === 403) {
+      await cache.delete(request);
+      return fresh;
+    }
     cache.put(request, fresh.clone());
     return fresh;
   } catch (error) {

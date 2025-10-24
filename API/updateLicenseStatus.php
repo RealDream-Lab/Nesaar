@@ -31,18 +31,24 @@ $status = $data['status']; // 'valid' | 'invalid' | 'error'
 $now = date('Y-m-d H:i:s');
 
 try {
-    $pdo = getDBConnection();
+    global $pdo;
+    if (!($pdo instanceof PDO)) {
+        throw new PDOException('Database connection unavailable');
+    }
     
     // اگر وضعیت موفق است، تاریخ آخرین بررسی موفق رو آپدیت می‌کنیم
     if ($status === 'valid') {
         // ذخیره تاریخ آخرین بررسی موفق
         $stmt = $pdo->prepare("
             INSERT INTO Config (ConfigName, ConfigValue) 
-            VALUES ('LicenseLastSuccessCheck', :now)
+            VALUES ('LicenseLastSuccess', :now)
             ON DUPLICATE KEY UPDATE ConfigValue = :now
         ");
         $stmt->execute(['now' => $now]);
     }
+
+    // Clean up legacy key if still present
+    $pdo->prepare("DELETE FROM Config WHERE ConfigName = 'LicenseLastSuccessCheck'")->execute();
     
     // ذخیره وضعیت آخرین بررسی (موفق، ناموفق یا خطا)
     $stmt = $pdo->prepare("
@@ -52,15 +58,8 @@ try {
     ");
     $stmt->execute(['status' => $status]);
     
-    // اگر تاریخ انقضا ارسال شده، اون رو هم ذخیره می‌کنیم
-    if (isset($data['expiry']) && $data['expiry']) {
-        $stmt = $pdo->prepare("
-            INSERT INTO Config (ConfigName, ConfigValue) 
-            VALUES ('LicenseExpiry', :expiry)
-            ON DUPLICATE KEY UPDATE ConfigValue = :expiry
-        ");
-        $stmt->execute(['expiry' => $data['expiry']]);
-    }
+    // Clean up legacy expiry value if still stored
+    $pdo->prepare("DELETE FROM Config WHERE ConfigName = 'LicenseExpiry'")->execute();
     
     echo json_encode([
         'success' => true,

@@ -1,3 +1,15 @@
+<?php
+require_once __DIR__ . '/../includes/license_guard.php';
+
+$licenseStatus = license_guard_validate();
+if ($licenseStatus['valid'] !== true) {
+    http_response_code(403);
+    header('Content-Type: text/html; charset=utf-8');
+    $message = htmlspecialchars($licenseStatus['message'] ?? 'دسترسی به داشبورد به دلیل مشکل لایسنس ممنوع است.', ENT_QUOTES, 'UTF-8');
+    echo "<!DOCTYPE html><html lang=\"fa\" dir=\"rtl\"><head><meta charset=\"utf-8\"><title>خطای لایسنس</title><style>body{font-family:'Vazir',Tahoma,Arial,sans-serif;background:#0f172a;color:#f8fafc;display:flex;align-items:center;justify-content:center;min-height:100vh;margin:0;} .card{background:rgba(15,23,42,0.85);padding:2.5rem;border-radius:18px;max-width:520px;text-align:center;line-height:2;box-shadow:0 35px 80px rgba(15,23,42,0.45);} h1{margin-top:0;font-size:1.8rem;} .hint{margin-top:1.5rem;font-size:0.95rem;color:#cbd5f5;}</style><link rel=\"stylesheet\" href=\"../assets/fonts/vazir/vazir.css\"></head><body><div class=\"card\"><h1>اعتبار لایسنس تایید نشد</h1><p>{$message}</p><p class=\"hint\">لطفاً برای تمدید یا بررسی لایسنس با پشتیبانی تماس بگیرید.</p></div></body></html>";
+    exit;
+}
+?>
 <!DOCTYPE html>
 <html lang="fa" dir="rtl">
 
@@ -237,6 +249,43 @@
             return null;
         }
 
+        function showLicenseForbidden(message) {
+            Swal.fire({
+                icon: 'error',
+                title: 'خطای لایسنس',
+                html: `<div style="text-align:right;line-height:1.9">${message}</div>`,
+                confirmButtonText: 'باشه',
+                allowOutsideClick: false,
+                customClass: {
+                    popup: 'swal2-rtl swal2-glass',
+                    confirmButton: 'btn btn-primary'
+                }
+            });
+        }
+
+        async function handleLicenseGuardResponse(response) {
+            if (response.status !== 403) return;
+            let message = 'دسترسی به داشبورد به علت مشکل لایسنس امکان‌پذیر نیست.';
+            try {
+                const payload = await response.clone().json();
+                if (payload && payload.message) {
+                    message = payload.message;
+                }
+            } catch (error) {
+                // Ignore JSON parsing errors and use fallback text
+            }
+            showLicenseForbidden(message);
+            const err = new Error('license_forbidden');
+            err.isLicenseError = true;
+            throw err;
+        }
+
+        async function guardedFetch(resource, options) {
+            const response = await fetch(resource, options);
+            await handleLicenseGuardResponse(response);
+            return response;
+        }
+
         function checkAuth() {
             const adminSession = getCookie('adminSession');
             if (!adminSession) {
@@ -267,7 +316,7 @@
         async function loadDashboardData() {
             try {
                 // Get config
-                const configResponse = await fetch('../API/getConfig.php', { cache: 'no-store' });
+                const configResponse = await guardedFetch('../API/getConfig.php', { cache: 'no-store' });
                 const config = await configResponse.json();
 
                 // Update admin nickname if available
@@ -276,7 +325,7 @@
                 }
 
                 // Get statistics
-                const statsResponse = await fetch('../API/getStatistics.php', { cache: 'no-store' });
+                const statsResponse = await guardedFetch('../API/getStatistics.php', { cache: 'no-store' });
                 const stats = await statsResponse.json();
 
                 if (!stats.error) {
@@ -287,24 +336,28 @@
                 }
             } catch (error) {
                 console.error('Error loading dashboard data:', error);
-                Swal.fire({
-                    icon: 'error',
-                    title: 'خطا',
-                    text: 'خطا در بارگذاری اطلاعات'
-                });
+                if (!error?.isLicenseError) {
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'خطا',
+                        text: 'خطا در بارگذاری اطلاعات'
+                    });
+                }
             }
         }
 
         // Update footer university name
         async function updateFooterUniversity() {
             try {
-                const response = await fetch('../API/getConfig.php', { cache: 'no-store' });
+                const response = await guardedFetch('../API/getConfig.php', { cache: 'no-store' });
                 const config = await response.json();
                 if (config.University) {
                     document.getElementById('footerText').textContent = `نسار - ${config.University}`;
                 }
             } catch (error) {
-                console.error('Error updating footer:', error);
+                if (!error?.isLicenseError) {
+                    console.error('Error updating footer:', error);
+                }
             }
         }
         updateFooterUniversity();
@@ -325,9 +378,19 @@
                 }
 
                 let countdownInterval;
-                const configResponse = await fetch('../API/getConfig.php', { cache: 'no-store' });
-                const config = await configResponse.json();
-                const university = config.University || 'دانشگاه پیام نور مرکز بیجار';
+                let university = 'دانشگاه پیام نور مرکز بیجار';
+                try {
+                    const configResponse = await guardedFetch('../API/getConfig.php', { cache: 'no-store' });
+                    const config = await configResponse.json();
+                    if (config.University) {
+                        university = config.University;
+                    }
+                } catch (error) {
+                    if (error?.isLicenseError) {
+                        return;
+                    }
+                    console.error('Error loading config for about modal:', error);
+                }
 
                 Swal.fire({
                     title: 'درباره اپلیکیشن',
