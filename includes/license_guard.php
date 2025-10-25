@@ -70,15 +70,6 @@ function license_guard_validate(bool $forceRefresh = false): array
         ];
     }
     
-    // Rate limiting: محدود کردن تعداد بررسی‌های لایسنس
-    // 20 درخواست در هر 60 ثانیه از هر IP
-    if (rate_limit_check($pdo, 'license_validation', 20, 60)) {
-        return [
-            'valid' => false,
-            'message' => 'تعداد درخواست‌های بررسی لایسنس بیش از حد مجاز است'
-        ];
-    }
-
     $config = license_guard_fetch_config($pdo);
     $now = new DateTimeImmutable('now', new DateTimeZone('Asia/Tehran'));
     $nowString = $now->format('Y-m-d H:i:s');
@@ -93,6 +84,7 @@ function license_guard_validate(bool $forceRefresh = false): array
     license_guard_upsert_config($pdo, 'LicenseExpiry', null);
 
     // If we have a recent successful check, respect it according to cache rules.
+    // این قبل از rate limiting چک می‌شود تا کاربران عادی محدود نشوند
     if (!$forceRefresh && $lastStatus === 'valid') {
         $isPermanent = ($currentType === 'permanent');
         $revalidateWindow = $isPermanent
@@ -102,7 +94,7 @@ function license_guard_validate(bool $forceRefresh = false): array
         if ($lastChecked instanceof DateTimeImmutable) {
             $age = $now->getTimestamp() - $lastChecked->getTimestamp();
             if ($age <= $revalidateWindow) {
-                license_guard_upsert_config($pdo, 'LicenseLastChecked', $nowString);
+                // No need to update LicenseLastChecked - just return cached result
                 return [
                     'valid' => true,
                     'message' => $isPermanent
@@ -113,6 +105,15 @@ function license_guard_validate(bool $forceRefresh = false): array
                 ];
             }
         }
+    }
+    
+    // Rate limiting: فقط برای درخواست‌های جدید (غیر cache شده)
+    // 100 درخواست در هر 60 ثانیه از هر IP
+    if (rate_limit_check($pdo, 'license_validation', 100, 60)) {
+        return [
+            'valid' => false,
+            'message' => 'تعداد درخواست‌های بررسی لایسنس بیش از حد مجاز است'
+        ];
     }
 
     // Grace period when remote checks fail but we had success within the last 24 hours
