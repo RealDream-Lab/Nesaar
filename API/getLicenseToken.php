@@ -1,5 +1,10 @@
 <?php
+require_once __DIR__ . '/../includes/license_guard.php';
+
 header('Content-Type: application/json; charset=utf-8');
+
+// Enforce license validation before serving token
+license_guard_enforce_api();
 
 // Load .env file when present
 (function () {

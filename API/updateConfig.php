@@ -1,8 +1,12 @@
 <?php
+require_once __DIR__ . '/../includes/csrf_protection.php';
+require_once __DIR__ . '/../includes/audit_log.php';
 require_once 'db_init.php';
 
 header('Content-Type: application/json; charset=utf-8');
 
+// CSRF Protection for configuration updates
+csrf_enforce();
 
 $input = json_decode(file_get_contents('php://input'), true);
 
@@ -115,6 +119,16 @@ try {
     }
 
     $pdo->commit();
+    
+    // Audit log: ثبت تغییرات پیکربندی
+    audit_log_config($pdo, 'SaadCode', null, $normalizedSaad);
+    audit_log_config($pdo, 'University', null, $university);
+    if (!empty($licenseToken)) {
+        audit_log_license($pdo, 'license_initialized', 'success', [
+            'saad_code' => $normalizedSaad,
+            'university' => $university
+        ]);
+    }
 
     echo json_encode(['success' => true, 'message' => $requiredMessage]);
 } catch (Exception $e) {

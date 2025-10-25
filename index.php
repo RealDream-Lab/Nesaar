@@ -1,5 +1,6 @@
 <?php
 require_once __DIR__ . '/includes/license_guard.php';
+require_once __DIR__ . '/includes/csrf_protection.php';
 
 $licenseStatus = license_guard_validate();
 if ($licenseStatus['valid'] !== true) {
@@ -17,6 +18,7 @@ if ($licenseStatus['valid'] !== true) {
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <meta name="theme-color" content="#2196F3" />
+  <?php echo csrf_meta_tag(); ?>
   <title>نسار - سامانه نمایش شماره صندلی‌ آزمون‌های دانشگاه پیام نور بیجار</title>
   <link rel="manifest" href="manifest.json?v=10" />
   <!-- iOS PWA meta -->

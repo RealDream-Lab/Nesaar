@@ -5,8 +5,13 @@
  * دریافت اطلاعات cache شده لایسنس برای Grace Period
  */
 
+require_once __DIR__ . '/../includes/license_guard.php';
+
 header('Content-Type: application/json');
 header('Access-Control-Allow-Origin: *');
+
+// Enforce license validation before serving cache
+license_guard_enforce_api();
 
 require_once 'db_init.php';
 

@@ -1,5 +1,27 @@
 document.addEventListener('DOMContentLoaded', () => {
     const VERSION = '۲.۱.۰';
+
+    // CSRF Token Helper
+    function getCsrfToken() {
+        const metaTag = document.querySelector('meta[name="csrf-token"]');
+        return metaTag ? metaTag.getAttribute('content') : null;
+    }
+
+    // Enhanced fetch with CSRF protection
+    async function secureFetch(url, options = {}) {
+        const csrfToken = getCsrfToken();
+
+        // اضافه کردن CSRF token به header برای درخواست‌های POST/PUT/DELETE/PATCH
+        if (options.method && ['POST', 'PUT', 'DELETE', 'PATCH'].includes(options.method.toUpperCase())) {
+            options.headers = options.headers || {};
+            if (csrfToken) {
+                options.headers['X-CSRF-Token'] = csrfToken;
+            }
+        }
+
+        return fetch(url, options);
+    }
+
     // Listen for service worker update messages and show SweetAlert
     if (navigator.serviceWorker) {
         navigator.serviceWorker.addEventListener('message', event => {
@@ -72,7 +94,8 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     async function guardedFetch(resource, options) {
-        const response = await fetch(resource, options);
+        // ترکیب secureFetch (CSRF) با license guard checking
+        const response = await secureFetch(resource, options);
         await handleLicenseGuardResponse(response);
         return response;
     }
@@ -189,7 +212,7 @@ document.addEventListener('DOMContentLoaded', () => {
             });
 
             try {
-                const response = await guardedFetch('API/updateConfig.php', {
+                const response = await secureFetch('API/updateConfig.php', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify(formValues)

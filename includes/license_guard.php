@@ -10,6 +10,8 @@
 declare(strict_types=1);
 
 require_once __DIR__ . '/../API/db_init.php';
+require_once __DIR__ . '/rate_limit.php';
+require_once __DIR__ . '/audit_log.php';
 
 const LICENSE_WEBHOOK_URL = 'https://wfa.pnubijar.ac.ir/webhook/LC';
 const LICENSE_GRACE_PERIOD_SECONDS = 24 * 60 * 60; // 24 hours from last success
@@ -50,6 +52,15 @@ function license_guard_validate(bool $forceRefresh = false): array
         return [
             'valid' => false,
             'message' => 'Database connection not available'
+        ];
+    }
+    
+    // Rate limiting: محدود کردن تعداد بررسی‌های لایسنس
+    // 20 درخواست در هر 60 ثانیه از هر IP
+    if (rate_limit_check($pdo, 'license_validation', 20, 60)) {
+        return [
+            'valid' => false,
+            'message' => 'تعداد درخواست‌های بررسی لایسنس بیش از حد مجاز است'
         ];
     }
 
@@ -153,6 +164,12 @@ function license_guard_validate(bool $forceRefresh = false): array
         license_guard_upsert_config($pdo, 'LicenseLastStatus', 'valid');
         license_guard_upsert_config($pdo, 'LicenseLastSuccess', $nowString);
         license_guard_upsert_config($pdo, 'LicenseCurrentType', 'permanent');
+        
+        // Audit log
+        audit_log_license($pdo, 'webhook_check', 'valid', [
+            'license_type' => 'permanent',
+            'used_cache' => false
+        ]);
 
         return [
             'valid' => true,
@@ -167,6 +184,13 @@ function license_guard_validate(bool $forceRefresh = false): array
         if (!$expiryDate || $expiryDate <= $now) {
             license_guard_upsert_config($pdo, 'LicenseLastStatus', 'invalid');
             license_guard_upsert_config($pdo, 'LicenseCurrentType', 'trial');
+            
+            // Audit log
+            audit_log_license($pdo, 'webhook_check', 'expired', [
+                'license_type' => 'trial',
+                'expiry' => $expiryString
+            ]);
+            
             return [
                 'valid' => false,
                 'message' => 'دوره آزمایشی پایان یافته، در صورتی که کاربر این سامانه هستید لطفاً به ادمین اطلاع دهید تا نسبت به فعال‌سازی لایسنس اقدام نماید.'
@@ -176,6 +200,13 @@ function license_guard_validate(bool $forceRefresh = false): array
         license_guard_upsert_config($pdo, 'LicenseLastStatus', 'valid');
         license_guard_upsert_config($pdo, 'LicenseLastSuccess', $nowString);
         license_guard_upsert_config($pdo, 'LicenseCurrentType', 'trial');
+        
+        // Audit log
+        audit_log_license($pdo, 'webhook_check', 'valid', [
+            'license_type' => 'trial',
+            'expiry' => $expiryString,
+            'used_cache' => false
+        ]);
 
         return [
             'valid' => true,
@@ -187,6 +218,11 @@ function license_guard_validate(bool $forceRefresh = false): array
 
     license_guard_upsert_config($pdo, 'LicenseLastStatus', 'invalid');
     license_guard_upsert_config($pdo, 'LicenseCurrentType', null);
+    
+    // Audit log
+    audit_log_license($pdo, 'webhook_check', 'invalid', [
+        'reason' => 'Invalid license type received from server'
+    ]);
 
     return [
         'valid' => false,
@@ -265,21 +301,38 @@ function license_guard_parse_datetime(?string $value, DateTimeZone $tz): ?DateTi
  */
 function license_guard_call_webhook(string $token): array
 {
+    // نکته امنیتی: ترجیحاً token باید در header ارسال شود، اما webhook فعلی از query string استفاده می‌کند
+    // TODO: هماهنگی با تیم backend برای تغییر به header-based authentication
     $url = LICENSE_WEBHOOK_URL . '?LicenseToken=' . urlencode($token);
 
     $context = stream_context_create([
         'http' => [
             'method' => 'GET',
             'timeout' => 5,
-            'header' => "Accept: application/json\r\n"
+            'header' => "Accept: application/json\r\n",
+            'ignore_errors' => false
+        ],
+        'ssl' => [
+            'verify_peer' => true,
+            'verify_peer_name' => true,
+            'allow_self_signed' => false
         ]
     ]);
 
-    $response = @file_get_contents($url, false, $context);
+    $response = false;
+    $error = null;
+    
+    try {
+        $response = file_get_contents($url, false, $context);
+    } catch (Exception $e) {
+        $error = $e->getMessage();
+        error_log("License webhook call failed: " . $error);
+    }
+    
     if ($response === false) {
         return [
             'success' => false,
-            'message' => 'Unable to reach license server'
+            'message' => 'Unable to reach license server' . ($error ? ": $error" : '')
         ];
     }
 

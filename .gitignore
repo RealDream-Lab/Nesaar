@@ -8,6 +8,12 @@
 # Ignore Docker data volumes
 db_data/
 
+# Ignore uploaded database files (Excel files)
+database/*.xls
+database/*.xlsx
+database/*.log
+database/*.txt
+
 # Keep original JavaScript files for development
 # Obfuscated files are generated from these
 *.original.js

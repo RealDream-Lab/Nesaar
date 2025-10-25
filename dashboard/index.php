@@ -1,5 +1,6 @@
 <?php
 require_once __DIR__ . '/../includes/license_guard.php';
+require_once __DIR__ . '/../includes/csrf_protection.php';
 
 $licenseStatus = license_guard_validate();
 if ($licenseStatus['valid'] !== true) {
@@ -16,6 +17,7 @@ if ($licenseStatus['valid'] !== true) {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <?php echo csrf_meta_tag(); ?>
     <title>پنل مدیریت - نسار</title>
     <link rel="stylesheet" href="../assets/bootstrap/bootstrap.min.css">
     <link rel="stylesheet" href="../assets/fonts/vazir/vazir.css">
@@ -122,6 +124,21 @@ if ($licenseStatus['valid'] !== true) {
             color: white;
         }
 
+        .btn-upload {
+            background: #28a745;
+            color: white;
+            border: none;
+            padding: 0.5rem 1.5rem;
+            border-radius: 8px;
+            transition: background 0.3s ease;
+            font-size: 1rem;
+        }
+
+        .btn-upload:hover {
+            background: #218838;
+            color: white;
+        }
+
         .admin-info {
             display: flex;
             align-items: center;
@@ -200,12 +217,12 @@ if ($licenseStatus['valid'] !== true) {
                 <h4 class="mb-3">به‌روزرسانی دیتابیس</h4>
                 <div class="row g-3">
                     <div class="col-md-6">
-                        <button class="btn btn-primary w-100" disabled>
+                        <button class="btn btn-upload w-100" id="uploadWrittenBtn">
                             آزمون‌های کتبی
                         </button>
                     </div>
                     <div class="col-md-6">
-                        <button class="btn btn-primary w-100" disabled>
+                        <button class="btn btn-upload w-100" id="uploadElectronicBtn">
                             آزمون‌های الکترونیکی
                         </button>
                     </div>
@@ -436,6 +453,367 @@ if ($licenseStatus['valid'] !== true) {
         if (checkAuth()) {
             loadDashboardData();
         }
+
+        // Get max upload size from server
+        let MAX_UPLOAD_SIZE = 128 * 1024 * 1024; // Default 128MB
+        let MAX_UPLOAD_SIZE_FORMATTED = '۱۲۸ مگابایت';
+        
+        async function loadUploadLimit() {
+            try {
+                const response = await guardedFetch('../API/getUploadLimit.php', { cache: 'no-store' });
+                const data = await response.json();
+                if (data.maxSize) {
+                    MAX_UPLOAD_SIZE = data.maxSize;
+                    MAX_UPLOAD_SIZE_FORMATTED = data.maxSizeFormatted;
+                }
+            } catch (error) {
+                console.error('Error loading upload limit:', error);
+            }
+        }
+        loadUploadLimit();
+
+        // Database upload functionality
+        async function showUploadModal(examType) {
+            const examTypeName = examType === 'K' ? 'کتبی' : 'الکترونیکی';
+            
+            const { value: file } = await Swal.fire({
+                title: `آپلود فایل آزمون‌های ${examTypeName}`,
+                html: `
+                    <style>
+                        .upload-area {
+                            border: 3px dashed #28a745;
+                            border-radius: 15px;
+                            padding: 3rem 2rem;
+                            text-align: center;
+                            background: linear-gradient(135deg, rgba(40, 167, 69, 0.05) 0%, rgba(40, 167, 69, 0.1) 100%);
+                            cursor: pointer;
+                            transition: all 0.3s ease;
+                            margin-bottom: 1rem;
+                        }
+                        .upload-area:hover {
+                            border-color: #218838;
+                            background: linear-gradient(135deg, rgba(40, 167, 69, 0.1) 0%, rgba(40, 167, 69, 0.15) 100%);
+                            transform: translateY(-2px);
+                        }
+                        .upload-area.dragover {
+                            border-color: #1e7e34;
+                            background: linear-gradient(135deg, rgba(40, 167, 69, 0.15) 0%, rgba(40, 167, 69, 0.2) 100%);
+                            transform: scale(1.02);
+                        }
+                        .upload-icon {
+                            font-size: 4rem;
+                            color: #28a745;
+                            margin-bottom: 1rem;
+                        }
+                        .upload-text {
+                            font-size: 1.2rem;
+                            color: #28a745;
+                            font-weight: 600;
+                            margin-bottom: 0.5rem;
+                        }
+                        .upload-hint {
+                            font-size: 0.95rem;
+                            color: #6c757d;
+                            margin-bottom: 1rem;
+                        }
+                        .file-name-display {
+                            background: #e8f5e9;
+                            padding: 0.75rem;
+                            border-radius: 8px;
+                            margin-top: 1rem;
+                            color: #28a745;
+                            font-weight: 600;
+                            display: none;
+                        }
+                        .browse-btn {
+                            background: #28a745;
+                            color: white;
+                            border: none;
+                            padding: 0.75rem 2rem;
+                            border-radius: 8px;
+                            font-family: 'Vazir', sans-serif;
+                            font-size: 1rem;
+                            cursor: pointer;
+                            transition: all 0.3s ease;
+                            font-weight: 600;
+                        }
+                        .browse-btn:hover {
+                            background: #218838;
+                            transform: translateY(-2px);
+                            box-shadow: 0 4px 12px rgba(40, 167, 69, 0.3);
+                        }
+                        #databaseFile {
+                            display: none;
+                        }
+                    </style>
+                    <div style="text-align: center;">
+                        <div class="upload-area" id="uploadArea">
+                            <div class="upload-icon">📄</div>
+                            <div class="upload-text">فایل اکسل را اینجا بکشید</div>
+                            <div class="upload-hint">یا روی دکمه زیر کلیک کنید</div>
+                            <button type="button" class="browse-btn" id="browseBtn">انتخاب فایل</button>
+                            <div class="file-name-display" id="fileNameDisplay"></div>
+                        </div>
+                        <p style="font-size: 0.9rem; color: #6c757d; margin: 0;">
+                            فرمت‌های مجاز: XLS, XLSX | حداکثر حجم: ${MAX_UPLOAD_SIZE_FORMATTED}
+                        </p>
+                        <input type="file" id="databaseFile" accept=".xls,.xlsx">
+                    </div>
+                `,
+                showCancelButton: true,
+                confirmButtonText: 'آپلود فایل',
+                cancelButtonText: 'انصراف',
+                customClass: {
+                    popup: 'swal2-rtl swal2-glass',
+                    confirmButton: 'btn btn-primary',
+                    cancelButton: 'btn btn-secondary'
+                },
+                preConfirm: () => {
+                    const fileInput = document.getElementById('databaseFile');
+                    if (!fileInput.files || fileInput.files.length === 0) {
+                        Swal.showValidationMessage('لطفاً یک فایل انتخاب کنید');
+                        return false;
+                    }
+                    
+                    const file = fileInput.files[0];
+                    const fileName = file.name.toLowerCase();
+                    
+                    if (!fileName.endsWith('.xls') && !fileName.endsWith('.xlsx')) {
+                        Swal.showValidationMessage('فقط فایل‌های با پسوند XLS و XLSX مجاز هستند');
+                        return false;
+                    }
+                    
+                    // Check file size (use server's max upload size)
+                    if (file.size > MAX_UPLOAD_SIZE) {
+                        Swal.showValidationMessage(`حجم فایل نباید بیشتر از ${MAX_UPLOAD_SIZE_FORMATTED} باشد`);
+                        return false;
+                    }
+                    
+                    return file;
+                },
+                didOpen: () => {
+                    const fileInput = document.getElementById('databaseFile');
+                    const uploadArea = document.getElementById('uploadArea');
+                    const browseBtn = document.getElementById('browseBtn');
+                    const fileNameDisplay = document.getElementById('fileNameDisplay');
+                    
+                    // Browse button click
+                    if (browseBtn) {
+                        browseBtn.addEventListener('click', (e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            fileInput.click();
+                        });
+                    }
+                    
+                    // Upload area click
+                    if (uploadArea) {
+                        uploadArea.addEventListener('click', (e) => {
+                            if (e.target !== browseBtn) {
+                                fileInput.click();
+                            }
+                        });
+                    }
+                    
+                    // File input change
+                    if (fileInput) {
+                        fileInput.addEventListener('change', (e) => {
+                            if (e.target.files && e.target.files[0]) {
+                                const file = e.target.files[0];
+                                fileNameDisplay.textContent = `✓ فایل انتخاب شده: ${file.name}`;
+                                fileNameDisplay.style.display = 'block';
+                            }
+                        });
+                    }
+                    
+                    // Drag and drop events
+                    if (uploadArea) {
+                        ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+                            uploadArea.addEventListener(eventName, (e) => {
+                                e.preventDefault();
+                                e.stopPropagation();
+                            });
+                        });
+                        
+                        ['dragenter', 'dragover'].forEach(eventName => {
+                            uploadArea.addEventListener(eventName, () => {
+                                uploadArea.classList.add('dragover');
+                            });
+                        });
+                        
+                        ['dragleave', 'drop'].forEach(eventName => {
+                            uploadArea.addEventListener(eventName, () => {
+                                uploadArea.classList.remove('dragover');
+                            });
+                        });
+                        
+                        uploadArea.addEventListener('drop', (e) => {
+                            const files = e.dataTransfer.files;
+                            if (files.length > 0) {
+                                fileInput.files = files;
+                                const file = files[0];
+                                fileNameDisplay.textContent = `✓ فایل انتخاب شده: ${file.name}`;
+                                fileNameDisplay.style.display = 'block';
+                            }
+                        });
+                    }
+                }
+            });
+
+            if (file) {
+                await uploadDatabaseFile(file, examType, examTypeName);
+            }
+        }
+
+        async function uploadDatabaseFile(file, examType, examTypeName) {
+            // Show progress modal
+            Swal.fire({
+                title: 'در حال آپلود',
+                html: `
+                    <div style="text-align: center; padding: 1rem;">
+                        <div style="background: #e0e0e0; border-radius: 10px; overflow: hidden; height: 35px; margin-bottom: 1rem;">
+                            <div id="uploadProgressBar" style="background: linear-gradient(90deg, #1a6fa6, #127ead); height: 100%; width: 0%; transition: width 0.3s; display: flex; align-items: center; justify-content: center; color: white; font-weight: bold; font-size: 1.1rem;"></div>
+                        </div>
+                        <p id="uploadProgressText" style="color: #1a6fa6; font-size: 1.1rem;">در حال آپلود فایل...</p>
+                    </div>
+                `,
+                allowOutsideClick: false,
+                allowEscapeKey: false,
+                showConfirmButton: false,
+                customClass: {
+                    popup: 'swal2-rtl swal2-glass'
+                }
+            });
+
+            const formData = new FormData();
+            formData.append('file', file);
+            formData.append('examType', examType);
+
+            try {
+                const xhr = new XMLHttpRequest();
+                
+                // Track upload progress
+                xhr.upload.addEventListener('progress', (e) => {
+                    if (e.lengthComputable) {
+                        const percentComplete = Math.round((e.loaded / e.total) * 100);
+                        const progressBar = document.getElementById('uploadProgressBar');
+                        const progressText = document.getElementById('uploadProgressText');
+                        
+                        if (progressBar) {
+                            progressBar.style.width = percentComplete + '%';
+                            progressBar.textContent = percentComplete + '%';
+                        }
+                        
+                        if (progressText) {
+                            progressText.textContent = `در حال آپلود... ${percentComplete}%`;
+                        }
+                    }
+                });
+
+                // Handle completion
+                xhr.addEventListener('load', async () => {
+                    if (xhr.status === 200) {
+                        try {
+                            const response = JSON.parse(xhr.responseText);
+                            if (response.success) {
+                                await Swal.fire({
+                                    icon: 'success',
+                                    title: 'موفق',
+                                    text: `فایل آزمون‌های ${examTypeName} با موفقیت آپلود شد`,
+                                    confirmButtonText: 'باشه',
+                                    customClass: {
+                                        popup: 'swal2-rtl swal2-glass',
+                                        confirmButton: 'btn btn-primary'
+                                    }
+                                });
+                            } else {
+                                throw new Error(response.error || 'خطای نامشخص');
+                            }
+                        } catch (parseError) {
+                            throw new Error('خطا در پردازش پاسخ سرور');
+                        }
+                    } else if (xhr.status === 403) {
+                        let errorMessage = 'دسترسی به این عملیات ممکن نیست.';
+                        try {
+                            const errorResponse = JSON.parse(xhr.responseText);
+                            if (errorResponse && errorResponse.message) {
+                                errorMessage = errorResponse.message;
+                            }
+                        } catch (e) {
+                            // Use default message
+                        }
+                        showLicenseForbidden(errorMessage);
+                    } else {
+                        let errorMessage = 'خطا در آپلود فایل';
+                        try {
+                            const errorResponse = JSON.parse(xhr.responseText);
+                            if (errorResponse && errorResponse.error) {
+                                errorMessage = errorResponse.error;
+                            }
+                        } catch (e) {
+                            // Use default message
+                        }
+                        
+                        await Swal.fire({
+                            icon: 'error',
+                            title: 'خطا',
+                            text: errorMessage,
+                            confirmButtonText: 'باشه',
+                            customClass: {
+                                popup: 'swal2-rtl swal2-glass',
+                                confirmButton: 'btn btn-primary'
+                            }
+                        });
+                    }
+                });
+
+                // Handle errors
+                xhr.addEventListener('error', async () => {
+                    await Swal.fire({
+                        icon: 'error',
+                        title: 'خطا',
+                        text: 'خطا در برقراری ارتباط با سرور',
+                        confirmButtonText: 'باشه',
+                        customClass: {
+                            popup: 'swal2-rtl swal2-glass',
+                            confirmButton: 'btn btn-primary'
+                        }
+                    });
+                });
+
+                // Get CSRF token
+                const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
+                
+                // Send request
+                xhr.open('POST', '../API/uploadDatabase.php', true);
+                if (csrfToken) {
+                    xhr.setRequestHeader('X-CSRF-Token', csrfToken);
+                }
+                xhr.send(formData);
+
+            } catch (error) {
+                console.error('Upload error:', error);
+                await Swal.fire({
+                    icon: 'error',
+                    title: 'خطا',
+                    text: error.message || 'خطا در آپلود فایل',
+                    confirmButtonText: 'باشه',
+                    customClass: {
+                        popup: 'swal2-rtl swal2-glass',
+                        confirmButton: 'btn btn-primary'
+                    }
+                });
+            }
+        }
+
+        // Add event listeners to upload buttons
+        document.getElementById('uploadWrittenBtn').addEventListener('click', () => {
+            showUploadModal('K');
+        });
+
+        document.getElementById('uploadElectronicBtn').addEventListener('click', () => {
+            showUploadModal('E');
+        });
     </script>
 </body>
 

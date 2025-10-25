@@ -4,14 +4,22 @@
  * 
  * ذخیره وضعیت بررسی لایسنس (موفق/ناموفق) و تاریخ آخرین بررسی موفق
  * برای پیاده‌سازی Grace Period و Cache سیستم لایسنس
+ * 
+ * ⚠️ INTERNAL USE ONLY - این API فقط توسط سرور داخلی قابل فراخوانی است
  */
+
+require_once __DIR__ . '/../includes/internal_auth.php';
+require_once __DIR__ . '/../includes/audit_log.php';
 
 header('Content-Type: application/json');
 header('Access-Control-Allow-Origin: *');
 header('Access-Control-Allow-Methods: POST');
-header('Access-Control-Allow-Headers: Content-Type');
+header('Access-Control-Allow-Headers: Content-Type, X-Internal-Token, X-Internal-Call');
 
 require_once 'db_init.php';
+
+// محافظت: فقط درخواست‌های داخلی مجاز هستند
+internal_auth_enforce();
 
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     http_response_code(405);
@@ -60,6 +68,12 @@ try {
     
     // Clean up legacy expiry value if still stored
     $pdo->prepare("DELETE FROM Config WHERE ConfigName = 'LicenseExpiry'")->execute();
+    
+    // Audit log: ثبت تغییر وضعیت لایسنس
+    audit_log_license($pdo, 'status_update', $status, [
+        'timestamp' => $now,
+        'source' => 'internal_api'
+    ]);
     
     echo json_encode([
         'success' => true,
