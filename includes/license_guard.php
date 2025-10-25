@@ -124,11 +124,18 @@ function license_guard_validate(bool $forceRefresh = false): array
 
     $token = $config['LicenseToken'] ?? null;
     if (!$token) {
-        license_guard_upsert_config($pdo, 'LicenseLastStatus', 'invalid');
-        return [
-            'valid' => false,
-            'message' => 'License token is missing'
-        ];
+        // Try to request automatic trial license
+        $autoTrialResult = license_guard_request_auto_trial($pdo);
+        if ($autoTrialResult['success']) {
+            // Token obtained, use it
+            $token = $autoTrialResult['token'];
+        } else {
+            license_guard_upsert_config($pdo, 'LicenseLastStatus', 'invalid');
+            return [
+                'valid' => false,
+                'message' => $autoTrialResult['message'] ?? 'License token is missing'
+            ];
+        }
     }
 
     $webhookData = license_guard_call_webhook($token);
@@ -367,6 +374,92 @@ function license_guard_call_webhook(string $token): array
         'success' => false,
         'message' => 'License server returned an unexpected type'
     ];
+}
+
+/**
+ * Request automatic trial license from server
+ */
+function license_guard_request_auto_trial(PDO $pdo): array
+{
+    $url = 'https://wfa.pnubijar.ac.ir/webhook/Licence';
+    
+    try {
+        $ch = curl_init($url);
+        if ($ch === false) {
+            return [
+                'success' => false,
+                'message' => 'Unable to initialize license request'
+            ];
+        }
+
+        curl_setopt_array($ch, [
+            CURLOPT_RETURNTRANSFER => true,
+            CURLOPT_TIMEOUT => 10,
+            CURLOPT_CONNECTTIMEOUT => 5,
+            CURLOPT_SSL_VERIFYPEER => true,
+            CURLOPT_SSL_VERIFYHOST => 2,
+            CURLOPT_POST => true,
+            CURLOPT_HTTPHEADER => [
+                'Content-Type: application/json',
+                'Accept: application/json'
+            ]
+        ]);
+
+        $response = curl_exec($ch);
+        $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        $curlError = curl_error($ch);
+        curl_close($ch);
+
+        if ($response === false || $curlError) {
+            return [
+                'success' => false,
+                'message' => 'خطا در ارتباط با سرور لایسنس'
+            ];
+        }
+
+        if ($httpCode !== 200) {
+            return [
+                'success' => false,
+                'message' => 'سرور لایسنس پاسخ نامعتبر داد'
+            ];
+        }
+
+        $decoded = json_decode($response, true);
+        if (!is_array($decoded)) {
+            return [
+                'success' => false,
+                'message' => 'پاسخ نامعتبر از سرور لایسنس'
+            ];
+        }
+
+        // Check if we got a token
+        $token = $decoded['token'] ?? $decoded['Token'] ?? null;
+        if ($token) {
+            // Save the token
+            license_guard_upsert_config($pdo, 'LicenseToken', $token);
+            
+            // Audit log
+            audit_log_license($pdo, 'auto_trial_request', 'success', [
+                'token_received' => substr($token, 0, 10) . '...'
+            ]);
+            
+            return [
+                'success' => true,
+                'token' => $token
+            ];
+        }
+
+        return [
+            'success' => false,
+            'message' => 'توکن لایسنس دریافت نشد'
+        ];
+
+    } catch (Exception $e) {
+        return [
+            'success' => false,
+            'message' => 'خطا در درخواست لایسنس خودکار: ' . $e->getMessage()
+        ];
+    }
 }
 
 /**
