@@ -388,7 +388,7 @@ if ($licenseStatus['valid'] !== true) {
         const copyrightFooter = document.getElementById('copyrightFooter');
         if (copyrightFooter) {
             copyrightFooter.addEventListener('click', async () => {
-                const VERSION = '۲.۱.۵';
+                const VERSION = '۲.۱.۶';
                 function toPersianDigits(num) {
                     const persianDigits = ['۰', '۱', '۲', '۳', '۴', '۵', '۶', '۷', '۸', '۹'];
                     return String(num).replace(/\d/g, d => persianDigits[d]);

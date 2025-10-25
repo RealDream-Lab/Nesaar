@@ -1,5 +1,16 @@
 # Changelog
 
+## 2025-10-25 — نسخه ۲.۱.۶
+
+### 🐛 رفع باگ‌ها
+
+- **رفع خطای Session Warning:**
+  - اضافه کردن `session_start()` در ابتدای تمام فایل‌های ورودی
+  - حل مشکل "Session cannot be started after headers have already been sent"
+  - اطمینان از شروع session قبل از هر خروجی یا header
+
+---
+
 ## 2025-10-25 — نسخه ۲.۱.۵
 
 ### 🔐 امنیت

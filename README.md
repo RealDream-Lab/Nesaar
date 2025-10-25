@@ -24,7 +24,7 @@
 - **[LICENSE_CHECK_DOCUMENTATION.md](docs/LICENSE_CHECK_DOCUMENTATION.md)** - مستندات سیستم لایسنس
 - **[SECURITY_IMPROVEMENTS.md](SECURITY_IMPROVEMENTS.md)** - گزارش کامل بهبودهای امنیتی
 
-## تغییرات نسخه ۲.۱.۵
+## تغییرات نسخه ۲.۱.۶
 
 ### 🔐 امنیت
 - **سیستم حفاظت جامع**: CSRF Protection، Rate Limiting، Internal Authentication
