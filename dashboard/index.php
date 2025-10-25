@@ -172,6 +172,38 @@ if ($licenseStatus['valid'] !== true) {
         .table {
             --bs-table-bg: transparent;
         }
+
+        .table th {
+            background-color: #f8f9fa;
+            font-weight: 600;
+            color: #1a6fa6;
+        }
+
+        .table-bordered th,
+        .table-bordered td {
+            border: 1px solid #dee2e6;
+        }
+
+        #reportContent {
+            /* No scroll bar - card expands as needed */
+        }
+
+        #reportContent h5 {
+            background: white;
+            padding: 10px 0;
+        }
+
+        /* Remove scrollbar from SweetAlert inputs */
+        .swal2-input {
+            overflow: hidden !important;
+            overflow-x: hidden !important;
+            overflow-y: hidden !important;
+            resize: none !important;
+        }
+
+        .swal2-html-container {
+            overflow: visible !important;
+        }
     </style>
 </head>
 
@@ -192,7 +224,7 @@ if ($licenseStatus['valid'] !== true) {
             </div> <!-- Stats -->
             <div class="row">
                 <div class="col-md-4">
-                    <div class="dashboard-card">
+                    <div class="dashboard-card" style="cursor: pointer;" onclick="showStudentReport()">
                         <div class="stat-box">
                             <h3 id="totalStudents">-</h3>
                             <p>تعداد دانشجویان</p>
@@ -200,7 +232,7 @@ if ($licenseStatus['valid'] !== true) {
                     </div>
                 </div>
                 <div class="col-md-4">
-                    <div class="dashboard-card">
+                    <div class="dashboard-card" style="cursor: pointer;" onclick="showCourseReport()">
                         <div class="stat-box">
                             <h3 id="totalCourses">-</h3>
                             <p>تعداد آزمون‌ها</p>
@@ -208,7 +240,7 @@ if ($licenseStatus['valid'] !== true) {
                     </div>
                 </div>
                 <div class="col-md-4">
-                    <div class="dashboard-card">
+                    <div class="dashboard-card" style="cursor: pointer;" onclick="showNextExamReport()">
                         <div class="stat-box">
                             <h3 id="nextExamStudents">-</h3>
                             <p id="nextExamDateTime">بارگذاری...</p>
@@ -231,6 +263,15 @@ if ($licenseStatus['valid'] !== true) {
                             آزمون‌های الکترونیکی
                         </button>
                     </div>
+                </div>
+            </div>
+
+            <!-- Latest Request Report -->
+            <div class="dashboard-card no-hover" id="reportCard" style="display: none;">
+                <h4 class="mb-3">آخرین گزارش درخواستی</h4>
+                <div id="reportContent"></div>
+                <div class="text-center mt-3">
+                    <button class="btn btn-danger" onclick="clearReport()">پاک کردن گزارش</button>
                 </div>
             </div>
         </div>
@@ -388,7 +429,7 @@ if ($licenseStatus['valid'] !== true) {
         const copyrightFooter = document.getElementById('copyrightFooter');
         if (copyrightFooter) {
             copyrightFooter.addEventListener('click', async () => {
-                const VERSION = '۲.۱.۶';
+                const VERSION = '۲.۲.۰';
                 function toPersianDigits(num) {
                     const persianDigits = ['۰', '۱', '۲', '۳', '۴', '۵', '۶', '۷', '۸', '۹'];
                     return String(num).replace(/\d/g, d => persianDigits[d]);
@@ -819,6 +860,516 @@ if ($licenseStatus['valid'] !== true) {
         document.getElementById('uploadElectronicBtn').addEventListener('click', () => {
             showUploadModal('E');
         });
+
+        // Report functions
+        function clearReport() {
+            document.getElementById('reportCard').style.display = 'none';
+            document.getElementById('reportContent').innerHTML = '';
+        }
+
+        async function showStudentReport() {
+            const { value: studentId } = await Swal.fire({
+                title: 'جستجوی دانشجو',
+                html: '<input id="studentIdInput" class="swal2-input" placeholder="شماره دانشجویی را وارد کنید" style="font-family: Vazir, sans-serif; direction: ltr; text-align: center; overflow: hidden; resize: none; outline: none;">',
+                focusConfirm: false,
+                showCancelButton: true,
+                confirmButtonText: 'جستجو',
+                cancelButtonText: 'انصراف',
+                customClass: {
+                    popup: 'swal2-rtl swal2-glass',
+                    confirmButton: 'btn btn-primary',
+                    cancelButton: 'btn btn-secondary'
+                },
+                preConfirm: () => {
+                    const input = document.getElementById('studentIdInput');
+                    if (!input.value) {
+                        Swal.showValidationMessage('لطفاً شماره دانشجویی را وارد کنید');
+                        return false;
+                    }
+                    return input.value;
+                }
+            });
+
+            if (studentId) {
+                try {
+                    Swal.fire({
+                        title: 'در حال بارگذاری...',
+                        allowOutsideClick: false,
+                        allowEscapeKey: false,
+                        showConfirmButton: false,
+                        didOpen: () => {
+                            Swal.showLoading();
+                        }
+                    });
+
+                    const response = await guardedFetch(`../API/getStudentReport.php?student_id=${encodeURIComponent(studentId)}`, { cache: 'no-store' });
+                    const data = await response.json();
+
+                    Swal.close();
+
+                    if (data.error) {
+                        await Swal.fire({
+                            icon: 'error',
+                            title: 'خطا',
+                            text: data.error,
+                            confirmButtonText: 'باشه',
+                            customClass: {
+                                popup: 'swal2-rtl swal2-glass',
+                                confirmButton: 'btn btn-primary'
+                            }
+                        });
+                        return;
+                    }
+
+                    // Display student info and exams
+                    const student = data.student;
+                    const exams = data.exams;
+
+                    let html = `
+                        <div class="mb-4">
+                            <h5 class="text-primary mb-3">مشخصات دانشجو</h5>
+                            <div class="table-responsive">
+                                <table class="table table-bordered">
+                                    <tr>
+                                        <th style="width: 30%;">شماره دانشجویی</th>
+                                        <td>${student.student_id}</td>
+                                    </tr>
+                                    <tr>
+                                        <th>نام و نام خانوادگی</th>
+                                        <td>${student.first_name} ${student.last_name}</td>
+                                    </tr>
+                                    <tr>
+                                        <th>کد ملی</th>
+                                        <td>${student.national_id}</td>
+                                    </tr>
+                                    <tr>
+                                        <th>مقطع تحصیلی</th>
+                                        <td>${student.degree}</td>
+                                    </tr>
+                                </table>
+                            </div>
+                        </div>
+                    `;
+
+                    if (exams && exams.length > 0) {
+                        html += `
+                            <div>
+                                <h5 class="text-primary mb-3">آزمون‌های دانشجو</h5>
+                                <div class="table-responsive">
+                                    <table class="table table-striped table-hover">
+                                        <thead class="table-light">
+                                            <tr>
+                                                <th>ردیف</th>
+                                                <th>کد درس</th>
+                                                <th>نام درس</th>
+                                                <th>تاریخ</th>
+                                                <th>ساعت</th>
+                                                <th>شماره صندلی</th>
+                                                <th>ساختمان</th>
+                                                <th>کلاس</th>
+                                                <th>نوع آزمون</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                        `;
+
+                        exams.forEach((exam, index) => {
+                            html += `
+                                <tr>
+                                    <td>${index + 1}</td>
+                                    <td>${exam.course_code}</td>
+                                    <td>${exam.course_name}</td>
+                                    <td>${exam.exam_date}</td>
+                                    <td>${exam.exam_time}</td>
+                                    <td><strong class="text-primary">${exam.seat_number}</strong></td>
+                                    <td>${exam.building}</td>
+                                    <td>${exam.class_name}</td>
+                                    <td><span class="badge bg-${exam.exam_type === 'کتبی' ? 'success' : 'info'}">${exam.exam_type}</span></td>
+                                </tr>
+                            `;
+                        });
+
+                        html += `
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        `;
+                    } else {
+                        html += '<p class="text-muted text-center mt-3">این دانشجو در هیچ آزمونی ثبت‌نام نکرده است.</p>';
+                    }
+
+                    document.getElementById('reportContent').innerHTML = html;
+                    document.getElementById('reportCard').style.display = 'block';
+                    document.getElementById('reportCard').scrollIntoView({ behavior: 'smooth' });
+
+                } catch (error) {
+                    console.error('Error:', error);
+                    if (!error?.isLicenseError) {
+                        Swal.fire({
+                            icon: 'error',
+                            title: 'خطا',
+                            text: 'خطا در دریافت اطلاعات',
+                            confirmButtonText: 'باشه',
+                            customClass: {
+                                popup: 'swal2-rtl swal2-glass',
+                                confirmButton: 'btn btn-primary'
+                            }
+                        });
+                    }
+                }
+            }
+        }
+
+        async function showCourseReport() {
+            const { value: courseCode } = await Swal.fire({
+                title: 'جستجوی درس',
+                html: '<input id="courseCodeInput" class="swal2-input" placeholder="کد درس را وارد کنید" style="font-family: Vazir, sans-serif; direction: ltr; text-align: center; overflow: hidden; resize: none; outline: none;">',
+                focusConfirm: false,
+                showCancelButton: true,
+                confirmButtonText: 'جستجو',
+                cancelButtonText: 'انصراف',
+                customClass: {
+                    popup: 'swal2-rtl swal2-glass',
+                    confirmButton: 'btn btn-primary',
+                    cancelButton: 'btn btn-secondary'
+                },
+                preConfirm: () => {
+                    const input = document.getElementById('courseCodeInput');
+                    if (!input.value) {
+                        Swal.showValidationMessage('لطفاً کد درس را وارد کنید');
+                        return false;
+                    }
+                    return input.value;
+                }
+            });
+
+            if (courseCode) {
+                try {
+                    Swal.fire({
+                        title: 'در حال بارگذاری...',
+                        allowOutsideClick: false,
+                        allowEscapeKey: false,
+                        showConfirmButton: false,
+                        didOpen: () => {
+                            Swal.showLoading();
+                        }
+                    });
+
+                    const response = await guardedFetch(`../API/getCourseReport.php?course_code=${encodeURIComponent(courseCode)}`, { cache: 'no-store' });
+                    const data = await response.json();
+
+                    Swal.close();
+
+                    if (data.error) {
+                        await Swal.fire({
+                            icon: 'error',
+                            title: 'خطا',
+                            text: data.error,
+                            confirmButtonText: 'باشه',
+                            customClass: {
+                                popup: 'swal2-rtl swal2-glass',
+                                confirmButton: 'btn btn-primary'
+                            }
+                        });
+                        return;
+                    }
+
+                    // Display course info and students
+                    const course = data.course;
+                    const students = data.students;
+
+                    let html = `
+                        <div class="mb-4">
+                            <h5 class="text-primary mb-3">مشخصات درس</h5>
+                            <div class="table-responsive">
+                                <table class="table table-bordered">
+                                    <tr>
+                                        <th style="width: 30%;">کد درس</th>
+                                        <td>${course.course_code}</td>
+                                    </tr>
+                                    <tr>
+                                        <th>نام درس</th>
+                                        <td>${course.course_name}</td>
+                                    </tr>
+                                    <tr>
+                                        <th>تاریخ آزمون</th>
+                                        <td>${course.exam_date}</td>
+                                    </tr>
+                                    <tr>
+                                        <th>ساعت آزمون</th>
+                                        <td>${course.exam_time}</td>
+                                    </tr>
+                                    <tr>
+                                        <th>نوع آزمون</th>
+                                        <td><span class="badge bg-${course.exam_type === 'کتبی' ? 'success' : 'info'}">${course.exam_type}</span></td>
+                                    </tr>
+                                    <tr>
+                                        <th>تعداد دانشجویان</th>
+                                        <td><strong class="text-primary">${students.length}</strong> نفر</td>
+                                    </tr>
+                                </table>
+                            </div>
+                        </div>
+                    `;
+
+                    if (students && students.length > 0) {
+                        html += `
+                            <div>
+                                <h5 class="text-primary mb-3">لیست دانشجویان</h5>
+                                <div class="table-responsive">
+                                    <table class="table table-striped table-hover">
+                                        <thead class="table-light">
+                                            <tr>
+                                                <th>ردیف</th>
+                                                <th>شماره دانشجویی</th>
+                                                <th>نام خانوادگی</th>
+                                                <th>نام</th>
+                                                <th>مقطع</th>
+                                                <th>شماره صندلی</th>
+                                                <th>ساختمان</th>
+                                                <th>کلاس</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                        `;
+
+                        students.forEach((student, index) => {
+                            html += `
+                                <tr>
+                                    <td>${index + 1}</td>
+                                    <td>${student.student_id}</td>
+                                    <td><strong>${student.last_name}</strong></td>
+                                    <td>${student.first_name}</td>
+                                    <td>${student.degree}</td>
+                                    <td><strong class="text-primary">${student.seat_number}</strong></td>
+                                    <td>${student.building}</td>
+                                    <td>${student.class_name}</td>
+                                </tr>
+                            `;
+                        });
+
+                        html += `
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        `;
+                    } else {
+                        html += '<p class="text-muted text-center mt-3">هیچ دانشجویی در این درس ثبت‌نام نکرده است.</p>';
+                    }
+
+                    document.getElementById('reportContent').innerHTML = html;
+                    document.getElementById('reportCard').style.display = 'block';
+                    document.getElementById('reportCard').scrollIntoView({ behavior: 'smooth' });
+
+                } catch (error) {
+                    console.error('Error:', error);
+                    if (!error?.isLicenseError) {
+                        Swal.fire({
+                            icon: 'error',
+                            title: 'خطا',
+                            text: 'خطا در دریافت اطلاعات',
+                            confirmButtonText: 'باشه',
+                            customClass: {
+                                popup: 'swal2-rtl swal2-glass',
+                                confirmButton: 'btn btn-primary'
+                            }
+                        });
+                    }
+                }
+            }
+        }
+
+        async function showNextExamReport() {
+            try {
+                // Get exam date and time from the label
+                const nextExamDateTimeText = document.getElementById('nextExamDateTime').textContent;
+                
+                // Check if there's no exam
+                if (nextExamDateTimeText === 'بارگذاری...' || nextExamDateTimeText === 'آزمونی یافت نشد') {
+                    await Swal.fire({
+                        icon: 'info',
+                        title: 'اطلاعات',
+                        text: 'آزمون بعدی یافت نشد',
+                        confirmButtonText: 'باشه',
+                        customClass: {
+                            popup: 'swal2-rtl swal2-glass',
+                            confirmButton: 'btn btn-primary'
+                        }
+                    });
+                    return;
+                }
+                
+                // Parse the format: "HH:MM | YYYY/MM/DD"
+                const parts = nextExamDateTimeText.split('|').map(s => s.trim());
+                if (parts.length !== 2) {
+                    await Swal.fire({
+                        icon: 'error',
+                        title: 'خطا',
+                        text: 'فرمت تاریخ و ساعت نامعتبر است',
+                        confirmButtonText: 'باشه',
+                        customClass: {
+                            popup: 'swal2-rtl swal2-glass',
+                            confirmButton: 'btn btn-primary'
+                        }
+                    });
+                    return;
+                }
+                
+                const examTime = parts[0];
+                const examDate = parts[1];
+
+                Swal.fire({
+                    title: 'در حال بارگذاری...',
+                    allowOutsideClick: false,
+                    allowEscapeKey: false,
+                    showConfirmButton: false,
+                    didOpen: () => {
+                        Swal.showLoading();
+                    }
+                });
+
+                const response = await guardedFetch(`../API/getNextExamReport.php?exam_date=${encodeURIComponent(examDate)}&exam_time=${encodeURIComponent(examTime)}`, { cache: 'no-store' });
+                const data = await response.json();
+
+                Swal.close();
+
+                if (data.error) {
+                    await Swal.fire({
+                        icon: 'error',
+                        title: 'خطا',
+                        text: data.error,
+                        confirmButtonText: 'باشه',
+                        customClass: {
+                            popup: 'swal2-rtl swal2-glass',
+                            confirmButton: 'btn btn-primary'
+                        }
+                    });
+                    return;
+                }
+
+                // Display exam info and students
+                const courses = data.courses;
+                const students = data.students;
+
+                let html = `
+                    <div class="mb-4">
+                        <h5 class="text-primary mb-3">مشخصات آزمون بعدی</h5>
+                        <div class="table-responsive">
+                            <table class="table table-bordered">
+                                <tr>
+                                    <th style="width: 30%;">تاریخ آزمون</th>
+                                    <td>${data.exam_date}</td>
+                                </tr>
+                                <tr>
+                                    <th>ساعت آزمون</th>
+                                    <td>${data.exam_time}</td>
+                                </tr>
+                                <tr>
+                                    <th>تعداد دروس</th>
+                                    <td><strong class="text-success">${courses.length}</strong> درس</td>
+                                </tr>
+                                <tr>
+                                    <th>تعداد دانشجویان</th>
+                                    <td><strong class="text-primary">${students.length}</strong> نفر</td>
+                                </tr>
+                            </table>
+                        </div>
+                `;
+
+                // Show course list
+                if (courses && courses.length > 0) {
+                    html += `
+                        <h6 class="text-secondary mb-2 mt-3">لیست دروس این جلسه آزمون:</h6>
+                        <ul class="list-group mb-3">
+                    `;
+                    courses.forEach(course => {
+                        html += `
+                            <li class="list-group-item d-flex justify-content-between align-items-center">
+                                <span><strong>${course.course_code}</strong> - ${course.course_name}</span>
+                                <div>
+                                    <span class="badge bg-secondary me-2">${course.student_count}</span>
+                                    <span class="badge bg-${course.exam_type === 'کتبی' ? 'success' : 'info'}">${course.exam_type}</span>
+                                </div>
+                            </li>
+                        `;
+                    });
+                    html += `
+                        </ul>
+                    `;
+                }
+
+                html += `</div>`;
+
+                if (students && students.length > 0) {
+                    html += `
+                        <div>
+                            <h5 class="text-primary mb-3">لیست دانشجویان</h5>
+                            <div class="table-responsive">
+                                <table class="table table-striped table-hover">
+                                    <thead class="table-light">
+                                        <tr>
+                                            <th>ردیف</th>
+                                            <th>شماره دانشجویی</th>
+                                            <th>نام خانوادگی</th>
+                                            <th>نام</th>
+                                            <th>کد درس</th>
+                                            <th>نام درس</th>
+                                            <th>شماره صندلی</th>
+                                            <th>ساختمان</th>
+                                            <th>کلاس</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                    `;
+
+                    students.forEach((student, index) => {
+                        html += `
+                            <tr>
+                                <td>${index + 1}</td>
+                                <td>${student.student_id}</td>
+                                <td><strong>${student.last_name}</strong></td>
+                                <td>${student.first_name}</td>
+                                <td>${student.course_code}</td>
+                                <td>${student.course_name}</td>
+                                <td><strong class="text-primary">${student.seat_number}</strong></td>
+                                <td>${student.building}</td>
+                                <td>${student.class_name}</td>
+                            </tr>
+                        `;
+                    });
+
+                    html += `
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    `;
+                } else {
+                    html += '<p class="text-muted text-center mt-3">هیچ دانشجویی در این آزمون ثبت‌نام نکرده است.</p>';
+                }
+
+                document.getElementById('reportContent').innerHTML = html;
+                document.getElementById('reportCard').style.display = 'block';
+                document.getElementById('reportCard').scrollIntoView({ behavior: 'smooth' });
+
+            } catch (error) {
+                console.error('Error:', error);
+                if (!error?.isLicenseError) {
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'خطا',
+                        text: 'خطا در دریافت اطلاعات',
+                        confirmButtonText: 'باشه',
+                        customClass: {
+                            popup: 'swal2-rtl swal2-glass',
+                            confirmButton: 'btn btn-primary'
+                        }
+                    });
+                }
+            }
+        }
     </script>
 </body>
 
