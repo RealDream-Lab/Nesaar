@@ -64,14 +64,13 @@ if ($webhookResp !== false && strlen(trim($webhookResp)) > 0) {
     }
 }
 
-// Check if the response has the exact required message
-$requiredMessage = 'درخواست فعال سازی ارسال شد. از هم اکنون به مدت ۲۴ ساعت امکان استفاده از نرم افزار برای شما فراهم است. پس از انقضای این زمان باید نسبت به خرید لایسنس اقدام نمائید.';
-if (!$webhookData || !isset($webhookData['Respond']) || trim($webhookData['Respond']) !== $requiredMessage) {
+// Check if webhook response is valid
+if (!$webhookData) {
     echo json_encode(['error' => 'پاسخ سرور نامعتبر است. لطفاً دوباره تلاش کنید.']);
     exit;
 }
 
-// If valid, proceed to save
+// Get the license token first
 $licenseToken = $webhookData['Code'] ?? '';
 
 // Check if the license token is the "already registered" code
@@ -80,6 +79,13 @@ if ($licenseToken === '00000000000000000000000000000000') {
         'error' => 'این کد ساد قبلاً در سیستم دیگری ثبت شده است. امکان ثبت مجدد وجود ندارد.',
         'alreadyRegistered' => true
     ]);
+    exit;
+}
+
+// Check if the response has the exact required message
+$requiredMessage = 'درخواست فعال سازی ارسال شد. از هم اکنون به مدت ۲۴ ساعت امکان استفاده از نرم افزار برای شما فراهم است. پس از انقضای این زمان باید نسبت به خرید لایسنس اقدام نمائید.';
+if (!isset($webhookData['Respond']) || trim($webhookData['Respond']) !== $requiredMessage) {
+    echo json_encode(['error' => 'پاسخ سرور نامعتبر است. لطفاً دوباره تلاش کنید.']);
     exit;
 }
 
