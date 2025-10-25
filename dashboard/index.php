@@ -22,8 +22,16 @@ if ($licenseStatus['valid'] !== true) {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="theme-color" content="#2196F3">
     <?php echo csrf_meta_tag(); ?>
     <title>پنل مدیریت - نسار</title>
+    
+    <!-- Favicons -->
+    <link rel="icon" type="image/png" href="../assets/app/logo.png" />
+    <link rel="shortcut icon" type="image/png" href="../assets/app/logo.png" />
+    <link rel="apple-touch-icon" sizes="192x192" href="../pwa-icons/icon-192.png" />
+    <link rel="apple-touch-icon" sizes="512x512" href="../pwa-icons/icon-512.png" />
+    
     <link rel="stylesheet" href="../assets/bootstrap/bootstrap.min.css">
     <link rel="stylesheet" href="../assets/fonts/vazir/vazir.css">
     <link rel="stylesheet" href="../assets/sweetalert2/sweetalert2.min.css">
