@@ -1,5 +1,30 @@
 # Changelog
 
+## 2025-10-25 — نسخه ۲.۲.۳
+
+### 🐛 رفع باگ راه‌اندازی
+
+- **اصلاح logic راه‌اندازی اولیه:**
+  - اضافه شدن بررسی IsInit در ابتدای `license_guard_validate()`
+  - اگر IsInit != 'YES' باشد، سیستم در حالت setup قرار می‌گیرد
+  - در حالت setup، license guard bypass شده و دسترسی کامل داده می‌شود
+  - این تغییر اجازه می‌دهد مودال showInitModal بدون مشکل اجرا شود
+  
+- **حذف تابع اضافی:**
+  - حذف `license_guard_request_auto_trial()` که در flow اشتباه قرار داشت
+  - لایسنس فقط از طریق `updateConfig.php` پس از وارد کردن SaadCode دریافت می‌شود
+  
+- **توضیح flow صحیح:**
+  1. کانتینر Docker اجرا می‌شود (IsInit=NO)
+  2. کاربر به صفحه اصلی می‌رود (license guard در setup mode)
+  3. مودال showInitModal نمایش داده می‌شود
+  4. کاربر SaadCode و University را وارد می‌کند
+  5. updateConfig.php لایسنس را از webhook دریافت و ذخیره می‌کند
+  6. IsInit به YES تغییر می‌کند
+  7. از این پس license guard فعال می‌شود
+
+---
+
 ## 2025-10-25 — نسخه ۲.۲.۲
 
 ### 🐛 رفع باگ بحرانی

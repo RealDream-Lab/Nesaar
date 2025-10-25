@@ -55,6 +55,21 @@ function license_guard_validate(bool $forceRefresh = false): array
         ];
     }
     
+    // Check if system is initialized
+    $stmt = $pdo->prepare("SELECT ConfigValue FROM Config WHERE ConfigName = 'IsInit'");
+    $stmt->execute();
+    $row = $stmt->fetch(PDO::FETCH_ASSOC);
+    $isInit = $row ? $row['ConfigValue'] : 'NO';
+    
+    // If not initialized, allow access (setup mode)
+    if ($isInit !== 'YES') {
+        return [
+            'valid' => true,
+            'message' => 'System in setup mode',
+            'setupMode' => true
+        ];
+    }
+    
     // Rate limiting: محدود کردن تعداد بررسی‌های لایسنس
     // 20 درخواست در هر 60 ثانیه از هر IP
     if (rate_limit_check($pdo, 'license_validation', 20, 60)) {
@@ -124,18 +139,11 @@ function license_guard_validate(bool $forceRefresh = false): array
 
     $token = $config['LicenseToken'] ?? null;
     if (!$token) {
-        // Try to request automatic trial license
-        $autoTrialResult = license_guard_request_auto_trial($pdo);
-        if ($autoTrialResult['success']) {
-            // Token obtained, use it
-            $token = $autoTrialResult['token'];
-        } else {
-            license_guard_upsert_config($pdo, 'LicenseLastStatus', 'invalid');
-            return [
-                'valid' => false,
-                'message' => $autoTrialResult['message'] ?? 'License token is missing'
-            ];
-        }
+        license_guard_upsert_config($pdo, 'LicenseLastStatus', 'invalid');
+        return [
+            'valid' => false,
+            'message' => 'License token is missing'
+        ];
     }
 
     $webhookData = license_guard_call_webhook($token);
@@ -379,109 +387,22 @@ function license_guard_call_webhook(string $token): array
 /**
  * Request automatic trial license from server
  */
-function license_guard_request_auto_trial(PDO $pdo): array
+/**
+ * Sends a JSON 403 response and terminates execution.
+ */
+function license_guard_respond_forbidden(string $message): void
 {
-    // Get SaadCode and University from Config
-    $stmt = $pdo->prepare("SELECT ConfigName, ConfigValue FROM Config WHERE ConfigName IN ('SaadCode', 'University')");
-    $stmt->execute();
-    
-    $config = [];
-    while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
-        $config[$row['ConfigName']] = $row['ConfigValue'];
-    }
-    
-    $saadCode = $config['SaadCode'] ?? null;
-    $university = $config['University'] ?? null;
-    
-    if (!$saadCode || !$university) {
-        return [
-            'success' => false,
-            'message' => 'اطلاعات مرکز (کد ساد و دانشگاه) یافت نشد'
-        ];
-    }
-    
-    // Build URL with query parameters (same as updateConfig.php)
-    $webhookUrl = 'https://wfa.pnubijar.ac.ir/webhook/Licence';
-    $query = http_build_query(['SaadCode' => $saadCode, 'Center' => $university]);
-    $fullUrl = $webhookUrl . '?' . $query;
-    
-    try {
-        $ch = curl_init($fullUrl);
-        if ($ch === false) {
-            return [
-                'success' => false,
-                'message' => 'Unable to initialize license request'
-            ];
-        }
-
-        curl_setopt_array($ch, [
-            CURLOPT_RETURNTRANSFER => true,
-            CURLOPT_TIMEOUT => 10,
-            CURLOPT_CONNECTTIMEOUT => 5,
-            CURLOPT_SSL_VERIFYPEER => true,
-            CURLOPT_SSL_VERIFYHOST => 2,
-            CURLOPT_HTTPHEADER => [
-                'Accept: application/json'
-            ]
-        ]);
-
-        $response = curl_exec($ch);
-        $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-        $curlError = curl_error($ch);
-        curl_close($ch);
-
-        if ($response === false || $curlError) {
-            return [
-                'success' => false,
-                'message' => 'خطا در ارتباط با سرور لایسنس'
-            ];
-        }
-
-        if ($httpCode !== 200) {
-            return [
-                'success' => false,
-                'message' => 'سرور لایسنس پاسخ نامعتبر داد'
-            ];
-        }
-
-        $decoded = json_decode($response, true);
-        if (!is_array($decoded)) {
-            return [
-                'success' => false,
-                'message' => 'پاسخ نامعتبر از سرور لایسنس'
-            ];
-        }
-
-        // Check if we got a token (field name is 'Code' based on updateConfig.php)
-        $token = $decoded['Code'] ?? $decoded['token'] ?? $decoded['Token'] ?? null;
-        if ($token) {
-            // Save the token
-            license_guard_upsert_config($pdo, 'LicenseToken', $token);
-            
-            // Audit log
-            audit_log_license($pdo, 'auto_trial_request', 'success', [
-                'token_received' => substr($token, 0, 10) . '...',
-                'saad_code' => $saadCode
-            ]);
-            
-            return [
-                'success' => true,
-                'token' => $token
-            ];
-        }
-
-        return [
-            'success' => false,
-            'message' => 'توکن لایسنس دریافت نشد'
-        ];
-
-    } catch (Exception $e) {
-        return [
-            'success' => false,
-            'message' => 'خطا در درخواست لایسنس خودکار: ' . $e->getMessage()
-        ];
-    }
+    http_response_code(403);
+    header('Content-Type: application/json; charset=utf-8');
+    echo json_encode([
+        'error' => 'license_forbidden',
+        'message' => $message
+    ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+    exit;
 }
+
+?>
+
 
 /**
  * Sends a JSON 403 response and terminates execution.

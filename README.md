@@ -24,7 +24,14 @@
 - **[LICENSE_CHECK_DOCUMENTATION.md](docs/LICENSE_CHECK_DOCUMENTATION.md)** - مستندات سیستم لایسنس
 - **[SECURITY_IMPROVEMENTS.md](SECURITY_IMPROVEMENTS.md)** - گزارش کامل بهبودهای امنیتی
 
-## نسخه فعلی: 2.2.2
+## نسخه فعلی: 2.2.3
+
+### تغییرات نسخه 2.2.3
+- **رفع باگ**: اصلاح logic راه‌اندازی اولیه
+- اضافه شدن setup mode: اگر IsInit=NO باشد، license guard bypass می‌شود
+- کاربران می‌توانند بدون لایسنس به مودال تنظیمات اولیه دسترسی داشته باشند
+- پس از وارد کردن SaadCode و University، لایسنس از طریق updateConfig دریافت می‌شود
+- حذف تابع license_guard_request_auto_trial که باعث خطا می‌شد
 
 ### تغییرات نسخه 2.2.2
 - **رفع باگ بحرانی**: تصحیح درخواست خودکار لایسنس آزمایشی
