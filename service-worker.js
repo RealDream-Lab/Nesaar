@@ -1,7 +1,7 @@
 // Bump cache to force refresh of updated assets (app.js, style.css, index.php)
 // Increment this when you want clients to fetch the new assets.
-const CACHE_NAME = 'exam-seat-v2.1.0';
-const VERSION = '۲.۱.۰';
+const CACHE_NAME = 'exam-seat-v2.1.5';
+const VERSION = '۲.۱.۵';
 const urlsToCache = [
   '/',
   '/index.php',
@@ -87,8 +87,8 @@ self.addEventListener('activate', event => {
             version: CACHE_NAME,
             tagVersion: `نسخه ${VERSION}`,
             changes: [
-              'اجرای گارد سمت‌سرور برای لایسنس',
-              'جلوگیری از دسترسی آفلاین بدون لایسنس'
+              'بهبود عملکرد سیستم',
+              'رفع ایرادهای جزئی'
             ]
           });
         });
