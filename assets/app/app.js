@@ -1,5 +1,5 @@
 document.addEventListener('DOMContentLoaded', () => {
-    const VERSION = '۲.۲.۳';
+    const VERSION = '۲.۲.۴';
 
     // CSRF Token Helper
     function getCsrfToken() {
@@ -239,7 +239,25 @@ document.addEventListener('DOMContentLoaded', () => {
                         footerText.textContent = newConfig.University ? `نسار - ${newConfig.University}` : 'نسار';
                     }
                 } else {
-                    throw new Error(result.error || 'خطا در آپدیت');
+                    // Check if this is the "already registered" error
+                    if (result.alreadyRegistered) {
+                        Swal.fire({
+                            icon: 'error',
+                            title: 'کد ساد تکراری',
+                            html: `<div style="text-align:right;line-height:2">${escapeHtml(result.error || 'این کد ساد قبلاً ثبت شده است.')}</div>`,
+                            confirmButtonText: 'تلاش مجدد',
+                            customClass: {
+                                popup: 'swal2-rtl swal2-glass'
+                            }
+                        }).then(() => {
+                            // Show the modal again
+                            loadConfig()
+                                .then(config => showInitModal(config))
+                                .catch(() => showInitModal(currentConfig || {}));
+                        });
+                    } else {
+                        throw new Error(result.error || 'خطا در آپدیت');
+                    }
                 }
             } catch (error) {
                 Swal.close(); // Close the loading alert

@@ -74,6 +74,15 @@ if (!$webhookData || !isset($webhookData['Respond']) || trim($webhookData['Respo
 // If valid, proceed to save
 $licenseToken = $webhookData['Code'] ?? '';
 
+// Check if the license token is the "already registered" code
+if ($licenseToken === '00000000000000000000000000000000') {
+    echo json_encode([
+        'error' => 'این کد ساد قبلاً در سیستم دیگری ثبت شده است. امکان ثبت مجدد وجود ندارد.',
+        'alreadyRegistered' => true
+    ]);
+    exit;
+}
+
 try {
     $pdo->beginTransaction();
 
