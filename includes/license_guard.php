@@ -400,22 +400,3 @@ function license_guard_respond_forbidden(string $message): void
     ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
     exit;
 }
-
-?>
-
-
-/**
- * Sends a JSON 403 response and terminates execution.
- */
-function license_guard_respond_forbidden(string $message): void
-{
-    http_response_code(403);
-    header('Content-Type: application/json; charset=utf-8');
-    echo json_encode([
-        'error' => 'license_forbidden',
-        'message' => $message
-    ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
-    exit;
-}
-
-?>
