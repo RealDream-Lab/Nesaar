@@ -381,10 +381,32 @@ function license_guard_call_webhook(string $token): array
  */
 function license_guard_request_auto_trial(PDO $pdo): array
 {
-    $url = 'https://wfa.pnubijar.ac.ir/webhook/Licence';
+    // Get SaadCode and University from Config
+    $stmt = $pdo->prepare("SELECT ConfigName, ConfigValue FROM Config WHERE ConfigName IN ('SaadCode', 'University')");
+    $stmt->execute();
+    
+    $config = [];
+    while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
+        $config[$row['ConfigName']] = $row['ConfigValue'];
+    }
+    
+    $saadCode = $config['SaadCode'] ?? null;
+    $university = $config['University'] ?? null;
+    
+    if (!$saadCode || !$university) {
+        return [
+            'success' => false,
+            'message' => 'اطلاعات مرکز (کد ساد و دانشگاه) یافت نشد'
+        ];
+    }
+    
+    // Build URL with query parameters (same as updateConfig.php)
+    $webhookUrl = 'https://wfa.pnubijar.ac.ir/webhook/Licence';
+    $query = http_build_query(['SaadCode' => $saadCode, 'Center' => $university]);
+    $fullUrl = $webhookUrl . '?' . $query;
     
     try {
-        $ch = curl_init($url);
+        $ch = curl_init($fullUrl);
         if ($ch === false) {
             return [
                 'success' => false,
@@ -398,9 +420,7 @@ function license_guard_request_auto_trial(PDO $pdo): array
             CURLOPT_CONNECTTIMEOUT => 5,
             CURLOPT_SSL_VERIFYPEER => true,
             CURLOPT_SSL_VERIFYHOST => 2,
-            CURLOPT_POST => true,
             CURLOPT_HTTPHEADER => [
-                'Content-Type: application/json',
                 'Accept: application/json'
             ]
         ]);
@@ -432,15 +452,16 @@ function license_guard_request_auto_trial(PDO $pdo): array
             ];
         }
 
-        // Check if we got a token
-        $token = $decoded['token'] ?? $decoded['Token'] ?? null;
+        // Check if we got a token (field name is 'Code' based on updateConfig.php)
+        $token = $decoded['Code'] ?? $decoded['token'] ?? $decoded['Token'] ?? null;
         if ($token) {
             // Save the token
             license_guard_upsert_config($pdo, 'LicenseToken', $token);
             
             // Audit log
             audit_log_license($pdo, 'auto_trial_request', 'success', [
-                'token_received' => substr($token, 0, 10) . '...'
+                'token_received' => substr($token, 0, 10) . '...',
+                'saad_code' => $saadCode
             ]);
             
             return [
