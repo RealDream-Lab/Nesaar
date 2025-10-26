@@ -1017,7 +1017,7 @@ document.addEventListener('DOMContentLoaded', () => {
                             title: 'نام نمایشی',
                             text: 'لطفاً نام نمایشی خود را وارد کنید:',
                             input: 'text',
-                            inputPlaceholder: 'مثال: محمد رضایی',
+                            inputPlaceholder: 'مثال: آرتین حسنی',
                             showCancelButton: false,
                             allowOutsideClick: false,
                             confirmButtonText: 'تأیید',

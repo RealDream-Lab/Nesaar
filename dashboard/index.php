@@ -869,6 +869,14 @@ if ($licenseStatus['valid'] !== true) {
             showUploadModal('E');
         });
 
+        function scrollReportCardIntoView() {
+            const reportCard = document.getElementById('reportCard');
+            if (!reportCard) return;
+            const marginTop = parseFloat(window.getComputedStyle(reportCard).marginTop) || 0;
+            const targetTop = reportCard.getBoundingClientRect().top + window.pageYOffset - marginTop;
+            window.scrollTo({ top: Math.max(0, targetTop), behavior: 'smooth' });
+        }
+
         // Report functions
         function clearReport() {
             document.getElementById('reportCard').style.display = 'none';
@@ -1015,12 +1023,7 @@ if ($licenseStatus['valid'] !== true) {
                     document.getElementById('reportContent').innerHTML = html;
                     document.getElementById('reportCard').style.display = 'block';
                     // Small delay to ensure DOM is updated before scrolling
-                    setTimeout(() => {
-                        const reportCard = document.getElementById('reportCard');
-                        if (!reportCard) return;
-                        const cardTop = reportCard.getBoundingClientRect().top + window.pageYOffset;
-                        window.scrollTo({ top: Math.max(0, cardTop), behavior: 'smooth' });
-                    }, 100);
+                    setTimeout(scrollReportCardIntoView, 100);
 
                 } catch (error) {
                     console.error('Error:', error);
@@ -1181,12 +1184,7 @@ if ($licenseStatus['valid'] !== true) {
                     document.getElementById('reportContent').innerHTML = html;
                     document.getElementById('reportCard').style.display = 'block';
                     // Small delay to ensure DOM is updated before scrolling
-                    setTimeout(() => {
-                        const reportCard = document.getElementById('reportCard');
-                        if (!reportCard) return;
-                        const cardTop = reportCard.getBoundingClientRect().top + window.pageYOffset;
-                        window.scrollTo({ top: Math.max(0, cardTop), behavior: 'smooth' });
-                    }, 100);
+                    setTimeout(scrollReportCardIntoView, 100);
 
                 } catch (error) {
                     console.error('Error:', error);
@@ -1378,12 +1376,7 @@ if ($licenseStatus['valid'] !== true) {
                 document.getElementById('reportContent').innerHTML = html;
                 document.getElementById('reportCard').style.display = 'block';
                 // Small delay to ensure DOM is updated before scrolling
-                setTimeout(() => {
-                    const reportCard = document.getElementById('reportCard');
-                    if (!reportCard) return;
-                    const cardTop = reportCard.getBoundingClientRect().top + window.pageYOffset;
-                    window.scrollTo({ top: Math.max(0, cardTop), behavior: 'smooth' });
-                }, 100);
+                setTimeout(scrollReportCardIntoView, 100);
 
             } catch (error) {
                 console.error('Error:', error);
