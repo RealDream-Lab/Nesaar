@@ -991,7 +991,7 @@ if ($licenseStatus['valid'] !== true) {
                                     <td>${exam.course_name}</td>
                                     <td>${exam.exam_date}</td>
                                     <td>${exam.exam_time}</td>
-                                    <td><strong>${exam.seat_number}</strong></td>
+                                    <td><span class="fw-semibold text-body">${exam.seat_number}</span></td>
                                     <td>${exam.building}</td>
                                     <td>${exam.class_name}</td>
                                     <td><span class="badge bg-${exam.exam_type === 'کتبی' ? 'success' : 'info'}">${exam.exam_type}</span></td>
@@ -1121,7 +1121,7 @@ if ($licenseStatus['valid'] !== true) {
                                     </tr>
                                     <tr>
                                         <th>تعداد دانشجویان</th>
-                                        <td><strong>${students.length}</strong> نفر</td>
+                                        <td><span class="fw-semibold text-body">${students.length}</span> نفر</td>
                                     </tr>
                                 </table>
                             </div>
@@ -1154,10 +1154,10 @@ if ($licenseStatus['valid'] !== true) {
                                 <tr>
                                     <td>${index + 1}</td>
                                     <td>${student.student_id}</td>
-                                    <td><strong>${student.last_name}</strong></td>
+                                    <td><span class="fw-semibold text-body">${student.last_name}</span></td>
                                     <td>${student.first_name}</td>
                                     <td>${student.degree}</td>
-                                    <td><strong>${student.seat_number}</strong></td>
+                                    <td><span class="fw-semibold text-body">${student.seat_number}</span></td>
                                     <td>${student.building}</td>
                                     <td>${student.class_name}</td>
                                 </tr>
@@ -1288,11 +1288,11 @@ if ($licenseStatus['valid'] !== true) {
                                 </tr>
                                 <tr>
                                     <th>تعداد دروس</th>
-                                    <td><strong>${courses.length}</strong> درس</td>
+                                    <td><span class="fw-semibold text-body">${courses.length}</span> درس</td>
                                 </tr>
                                 <tr>
                                     <th>تعداد دانشجویان</th>
-                                    <td><strong>${students.length}</strong> نفر</td>
+                                    <td><span class="fw-semibold text-body">${students.length}</span> نفر</td>
                                 </tr>
                             </table>
                         </div>
@@ -1307,7 +1307,7 @@ if ($licenseStatus['valid'] !== true) {
                     courses.forEach(course => {
                         html += `
                             <li class="list-group-item d-flex justify-content-between align-items-center">
-                                <span><strong>${course.course_code}</strong> - ${course.course_name}</span>
+                                <span><span class="fw-semibold text-body">${course.course_code}</span> - ${course.course_name}</span>
                                 <div>
                                     <span class="badge bg-secondary me-2">${course.student_count}</span>
                                     <span class="badge bg-${course.exam_type === 'کتبی' ? 'success' : 'info'}">${course.exam_type}</span>
@@ -1349,11 +1349,11 @@ if ($licenseStatus['valid'] !== true) {
                             <tr>
                                 <td>${index + 1}</td>
                                 <td>${student.student_id}</td>
-                                <td><strong>${student.last_name}</strong></td>
+                                <td><span class="fw-semibold text-body">${student.last_name}</span></td>
                                 <td>${student.first_name}</td>
                                 <td>${student.course_code}</td>
                                 <td>${student.course_name}</td>
-                                <td><strong>${student.seat_number}</strong></td>
+                                <td><span class="fw-semibold text-body">${student.seat_number}</span></td>
                                 <td>${student.building}</td>
                                 <td>${student.class_name}</td>
                             </tr>
