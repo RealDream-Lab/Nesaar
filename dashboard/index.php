@@ -991,7 +991,7 @@ if ($licenseStatus['valid'] !== true) {
                                     <td>${exam.course_name}</td>
                                     <td>${exam.exam_date}</td>
                                     <td>${exam.exam_time}</td>
-                                    <td><strong class="text-primary">${exam.seat_number}</strong></td>
+                                    <td><strong>${exam.seat_number}</strong></td>
                                     <td>${exam.building}</td>
                                     <td>${exam.class_name}</td>
                                     <td><span class="badge bg-${exam.exam_type === 'کتبی' ? 'success' : 'info'}">${exam.exam_type}</span></td>
@@ -1121,7 +1121,7 @@ if ($licenseStatus['valid'] !== true) {
                                     </tr>
                                     <tr>
                                         <th>تعداد دانشجویان</th>
-                                        <td><strong class="text-primary">${students.length}</strong> نفر</td>
+                                        <td><strong>${students.length}</strong> نفر</td>
                                     </tr>
                                 </table>
                             </div>
@@ -1157,7 +1157,7 @@ if ($licenseStatus['valid'] !== true) {
                                     <td><strong>${student.last_name}</strong></td>
                                     <td>${student.first_name}</td>
                                     <td>${student.degree}</td>
-                                    <td><strong class="text-primary">${student.seat_number}</strong></td>
+                                    <td><strong>${student.seat_number}</strong></td>
                                     <td>${student.building}</td>
                                     <td>${student.class_name}</td>
                                 </tr>
@@ -1288,11 +1288,11 @@ if ($licenseStatus['valid'] !== true) {
                                 </tr>
                                 <tr>
                                     <th>تعداد دروس</th>
-                                    <td><strong class="text-success">${courses.length}</strong> درس</td>
+                                    <td><strong>${courses.length}</strong> درس</td>
                                 </tr>
                                 <tr>
                                     <th>تعداد دانشجویان</th>
-                                    <td><strong class="text-primary">${students.length}</strong> نفر</td>
+                                    <td><strong>${students.length}</strong> نفر</td>
                                 </tr>
                             </table>
                         </div>
@@ -1353,7 +1353,7 @@ if ($licenseStatus['valid'] !== true) {
                                 <td>${student.first_name}</td>
                                 <td>${student.course_code}</td>
                                 <td>${student.course_name}</td>
-                                <td><strong class="text-primary">${student.seat_number}</strong></td>
+                                <td><strong>${student.seat_number}</strong></td>
                                 <td>${student.building}</td>
                                 <td>${student.class_name}</td>
                             </tr>
