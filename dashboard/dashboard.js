@@ -21,6 +21,7 @@ function showLicenseForbidden(message) {
     });
 }
 
+
 async function handleLicenseGuardResponse(response) {
     if (response.status !== 403) return;
     let message = 'دسترسی به داشبورد به علت مشکل لایسنس امکان‌پذیر نیست.';
