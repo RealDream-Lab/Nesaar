@@ -872,9 +872,19 @@ if ($licenseStatus['valid'] !== true) {
         function scrollReportCardIntoView() {
             const reportCard = document.getElementById('reportCard');
             if (!reportCard) return;
-            const marginTop = parseFloat(window.getComputedStyle(reportCard).marginTop) || 0;
-            const targetTop = reportCard.getBoundingClientRect().top + window.pageYOffset - marginTop;
-            window.scrollTo({ top: Math.max(0, targetTop), behavior: 'smooth' });
+            // Ensure the card is scrolled to the top of the viewport, accounting for
+            // the dashboard header (which is visually above the content) and a small gap.
+            const header = document.querySelector('.dashboard-header');
+            const headerHeight = header ? Math.ceil(header.getBoundingClientRect().height) : 0;
+            const extraGap = 12; // small spacing between header and card
+
+            // Compute the element's top relative to the document
+            const rect = reportCard.getBoundingClientRect();
+            const docTop = window.pageYOffset || document.documentElement.scrollTop || 0;
+            const targetTop = Math.max(0, rect.top + docTop - headerHeight - extraGap);
+
+            // Use smooth scroll and prefer start alignment
+            window.scrollTo({ top: targetTop, behavior: 'smooth' });
         }
 
         // Report functions
