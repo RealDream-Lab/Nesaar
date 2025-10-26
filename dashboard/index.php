@@ -1032,19 +1032,7 @@ if ($licenseStatus['valid'] !== true) {
 
                     document.getElementById('reportContent').innerHTML = html;
                     document.getElementById('reportCard').style.display = 'block';
-                    // Scroll after SweetAlert closes (modal is gone)
-                    Swal.fire({
-                        icon: 'success',
-                        title: 'گزارش آماده شد',
-                        text: 'گزارش با موفقیت تولید شد.',
-                        confirmButtonText: 'مشاهده گزارش',
-                        customClass: {
-                            popup: 'swal2-rtl swal2-glass',
-                            confirmButton: 'btn btn-primary'
-                        }
-                    }).then(() => {
-                        scrollReportCardIntoView();
-                    });
+                    setTimeout(scrollReportCardIntoView, 100);
 
                 } catch (error) {
                     console.error('Error:', error);
@@ -1175,7 +1163,7 @@ if ($licenseStatus['valid'] !== true) {
                                             </tr>
                                         </thead>
                                         <tbody>
-                        `;
+                `;
 
                         students.forEach((student, index) => {
                             html += `
@@ -1193,29 +1181,18 @@ if ($licenseStatus['valid'] !== true) {
                         });
 
                         html += `
-                                        </tbody>
-                                    </table>
-                                </div>
-                            </div>
-                        `;
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                `;
                     } else {
                         html += '<p class="text-muted text-center mt-3">هیچ دانشجویی در این درس ثبت‌نام نکرده است.</p>';
                     }
 
                     document.getElementById('reportContent').innerHTML = html;
                     document.getElementById('reportCard').style.display = 'block';
-                    Swal.fire({
-                        icon: 'success',
-                        title: 'گزارش آماده شد',
-                        text: 'گزارش با موفقیت تولید شد.',
-                        confirmButtonText: 'مشاهده گزارش',
-                        customClass: {
-                            popup: 'swal2-rtl swal2-glass',
-                            confirmButton: 'btn btn-primary'
-                        }
-                    }).then(() => {
-                        scrollReportCardIntoView();
-                    });
+                    setTimeout(scrollReportCardIntoView, 100);
 
                 } catch (error) {
                     console.error('Error:', error);
@@ -1406,18 +1383,7 @@ if ($licenseStatus['valid'] !== true) {
 
                 document.getElementById('reportContent').innerHTML = html;
                 document.getElementById('reportCard').style.display = 'block';
-                Swal.fire({
-                    icon: 'success',
-                    title: 'گزارش آماده شد',
-                    text: 'گزارش با موفقیت تولید شد.',
-                    confirmButtonText: 'مشاهده گزارش',
-                    customClass: {
-                        popup: 'swal2-rtl swal2-glass',
-                        confirmButton: 'btn btn-primary'
-                    }
-                }).then(() => {
-                    scrollReportCardIntoView();
-                });
+                setTimeout(scrollReportCardIntoView, 100);
 
             } catch (error) {
                 console.error('Error:', error);
