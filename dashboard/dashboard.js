@@ -565,7 +565,7 @@ function scrollReportCardIntoView() {
     requestAnimationFrame(() => {
         const header = document.querySelector('.dashboard-header');
         const headerHeight = header ? Math.ceil(header.getBoundingClientRect().height) : 0;
-        const extraGap = 12; // small spacing
+        const extraGap = 12; // reduce gap to minimum for tight alignment
 
         const rect = reportCard.getBoundingClientRect();
         const docTop = window.pageYOffset || document.documentElement.scrollTop || 0;
