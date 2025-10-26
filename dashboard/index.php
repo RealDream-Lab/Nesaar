@@ -1032,8 +1032,19 @@ if ($licenseStatus['valid'] !== true) {
 
                     document.getElementById('reportContent').innerHTML = html;
                     document.getElementById('reportCard').style.display = 'block';
-                    // Small delay to ensure DOM is updated before scrolling
-                    setTimeout(scrollReportCardIntoView, 100);
+                    // Scroll after SweetAlert closes (modal is gone)
+                    Swal.fire({
+                        icon: 'success',
+                        title: 'گزارش آماده شد',
+                        text: 'گزارش با موفقیت تولید شد.',
+                        confirmButtonText: 'مشاهده گزارش',
+                        customClass: {
+                            popup: 'swal2-rtl swal2-glass',
+                            confirmButton: 'btn btn-primary'
+                        }
+                    }).then(() => {
+                        scrollReportCardIntoView();
+                    });
 
                 } catch (error) {
                     console.error('Error:', error);
@@ -1193,8 +1204,18 @@ if ($licenseStatus['valid'] !== true) {
 
                     document.getElementById('reportContent').innerHTML = html;
                     document.getElementById('reportCard').style.display = 'block';
-                    // Small delay to ensure DOM is updated before scrolling
-                    setTimeout(scrollReportCardIntoView, 100);
+                    Swal.fire({
+                        icon: 'success',
+                        title: 'گزارش آماده شد',
+                        text: 'گزارش با موفقیت تولید شد.',
+                        confirmButtonText: 'مشاهده گزارش',
+                        customClass: {
+                            popup: 'swal2-rtl swal2-glass',
+                            confirmButton: 'btn btn-primary'
+                        }
+                    }).then(() => {
+                        scrollReportCardIntoView();
+                    });
 
                 } catch (error) {
                     console.error('Error:', error);
@@ -1385,8 +1406,18 @@ if ($licenseStatus['valid'] !== true) {
 
                 document.getElementById('reportContent').innerHTML = html;
                 document.getElementById('reportCard').style.display = 'block';
-                // Small delay to ensure DOM is updated before scrolling
-                setTimeout(scrollReportCardIntoView, 100);
+                Swal.fire({
+                    icon: 'success',
+                    title: 'گزارش آماده شد',
+                    text: 'گزارش با موفقیت تولید شد.',
+                    confirmButtonText: 'مشاهده گزارش',
+                    customClass: {
+                        popup: 'swal2-rtl swal2-glass',
+                        confirmButton: 'btn btn-primary'
+                    }
+                }).then(() => {
+                    scrollReportCardIntoView();
+                });
 
             } catch (error) {
                 console.error('Error:', error);
