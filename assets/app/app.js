@@ -305,6 +305,21 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
+    // Modify input types based on user type selection
+    studentTypeRadio.addEventListener('change', () => {
+        studentIdInput.type = 'tel';
+        studentIdInput.inputMode = 'numeric';
+        nationalIdInput.type = 'tel';
+        nationalIdInput.inputMode = 'numeric';
+    });
+
+    staffTypeRadio.addEventListener('change', () => {
+        studentIdInput.type = 'text';
+        studentIdInput.inputMode = 'text';
+        nationalIdInput.type = 'password';
+        nationalIdInput.inputMode = 'text';
+    });
+
     // Add event listeners for radio buttons
     studentTypeRadio.addEventListener('change', handleUserTypeChange);
     if (staffTypeRadio) {
@@ -321,6 +336,18 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Initialize with saved state
     handleUserTypeChange();
+    // Ensure the correct input types are set on page load
+    if (studentTypeRadio.checked) {
+        studentIdInput.type = 'tel';
+        studentIdInput.inputMode = 'numeric';
+        nationalIdInput.type = 'tel';
+        nationalIdInput.inputMode = 'numeric';
+    } else if (staffTypeRadio.checked) {
+        studentIdInput.type = 'text';
+        studentIdInput.inputMode = 'text';
+        nationalIdInput.type = 'password';
+        nationalIdInput.inputMode = 'text';
+    }
     // Initial server clock sync and then start per-second ticker (no extra server requests)
     updateServerClock().then(() => {
         try { startSecondTicker(); } catch (e) { /* ignore */ }

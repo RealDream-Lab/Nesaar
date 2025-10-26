@@ -1,7 +1,7 @@
 // Bump cache to force refresh of updated assets (app.js, style.css, index.php)
 // Increment this when you want clients to fetch the new assets.
-const CACHE_NAME = 'exam-seat-v2.2.4';
-const VERSION = '۲.۲.۳';
+const CACHE_NAME = 'exam-seat-v2.2.6';
+const VERSION = '۲.۲.۶';
 const urlsToCache = [
   '/',
   '/index.php',
