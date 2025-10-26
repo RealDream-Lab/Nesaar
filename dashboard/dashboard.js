@@ -1,158 +1,158 @@
 
 // Check admin authentication
 function getCookie(name) {
-	const value = `; ${document.cookie}`;
-	const parts = value.split(`; ${name}=`);
-	if (parts.length === 2) return parts.pop().split(';').shift();
-	return null;
+    const value = `; ${document.cookie}`;
+    const parts = value.split(`; ${name}=`);
+    if (parts.length === 2) return parts.pop().split(';').shift();
+    return null;
 }
 
 function showLicenseForbidden(message) {
-	Swal.fire({
-		icon: 'error',
-		title: 'خطای لایسنس',
-		html: `<div style="text-align:right;line-height:1.9">${message}</div>`,
-		confirmButtonText: 'باشه',
-		allowOutsideClick: false,
-		customClass: {
-			popup: 'swal2-rtl swal2-glass',
-			confirmButton: 'btn btn-primary'
-		}
-	});
+    Swal.fire({
+        icon: 'error',
+        title: 'خطای لایسنس',
+        html: `<div style="text-align:right;line-height:1.9">${message}</div>`,
+        confirmButtonText: 'باشه',
+        allowOutsideClick: false,
+        customClass: {
+            popup: 'swal2-rtl swal2-glass',
+            confirmButton: 'btn btn-primary'
+        }
+    });
 }
 
 async function handleLicenseGuardResponse(response) {
-	if (response.status !== 403) return;
-	let message = 'دسترسی به داشبورد به علت مشکل لایسنس امکان‌پذیر نیست.';
-	try {
-		const payload = await response.clone().json();
-		if (payload && payload.message) {
-			message = payload.message;
-		}
-	} catch (error) {
-		// Ignore JSON parsing errors and use fallback text
-	}
-	showLicenseForbidden(message);
-	const err = new Error('license_forbidden');
-	err.isLicenseError = true;
-	throw err;
+    if (response.status !== 403) return;
+    let message = 'دسترسی به داشبورد به علت مشکل لایسنس امکان‌پذیر نیست.';
+    try {
+        const payload = await response.clone().json();
+        if (payload && payload.message) {
+            message = payload.message;
+        }
+    } catch (error) {
+        // Ignore JSON parsing errors and use fallback text
+    }
+    showLicenseForbidden(message);
+    const err = new Error('license_forbidden');
+    err.isLicenseError = true;
+    throw err;
 }
 
 async function guardedFetch(resource, options) {
-	const response = await fetch(resource, options);
-	await handleLicenseGuardResponse(response);
-	return response;
+    const response = await fetch(resource, options);
+    await handleLicenseGuardResponse(response);
+    return response;
 }
 
 function checkAuth() {
-	const adminSession = getCookie('adminSession');
-	if (!adminSession) {
-		window.location.href = '../';
-		return false;
-	}
-	try {
-		const session = JSON.parse(decodeURIComponent(adminSession));
-		if (session.type !== 'admin') {
-			window.location.href = '../';
-			return false;
-		}
-		document.getElementById('adminUsername').textContent = session.username || 'مدیر سیستم';
-		return true;
-	} catch (e) {
-		window.location.href = '../';
-		return false;
-	}
+    const adminSession = getCookie('adminSession');
+    if (!adminSession) {
+        window.location.href = '../';
+        return false;
+    }
+    try {
+        const session = JSON.parse(decodeURIComponent(adminSession));
+        if (session.type !== 'admin') {
+            window.location.href = '../';
+            return false;
+        }
+        document.getElementById('adminUsername').textContent = session.username || 'مدیر سیستم';
+        return true;
+    } catch (e) {
+        window.location.href = '../';
+        return false;
+    }
 }
 
 // Logout
 document.getElementById('logoutBtn').addEventListener('click', () => {
-	document.cookie = 'adminSession=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;';
-	window.location.href = '../';
+    document.cookie = 'adminSession=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;';
+    window.location.href = '../';
 });
 
 // Load dashboard data
 async function loadDashboardData() {
-	try {
-		// Get config
-		const configResponse = await guardedFetch('../API/getConfig.php', { cache: 'no-store' });
-		const config = await configResponse.json();
+    try {
+        // Get config
+        const configResponse = await guardedFetch('../API/getConfig.php', { cache: 'no-store' });
+        const config = await configResponse.json();
 
-		// Update admin nickname if available
-		if (config.AdminNickName) {
-			document.getElementById('adminUsername').textContent = config.AdminNickName;
-		}
+        // Update admin nickname if available
+        if (config.AdminNickName) {
+            document.getElementById('adminUsername').textContent = config.AdminNickName;
+        }
 
-		// Get statistics
-		const statsResponse = await guardedFetch('../API/getStatistics.php', { cache: 'no-store' });
-		const stats = await statsResponse.json();
+        // Get statistics
+        const statsResponse = await guardedFetch('../API/getStatistics.php', { cache: 'no-store' });
+        const stats = await statsResponse.json();
 
-		if (!stats.error) {
-			document.getElementById('totalStudents').textContent = stats.totalStudents || 0;
-			document.getElementById('totalCourses').textContent = stats.totalCourses || 0;
-			document.getElementById('nextExamStudents').textContent = stats.nextExamStudents || 0;
-			document.getElementById('nextExamDateTime').textContent = stats.nextExamDateTime || 'آزمونی یافت نشد';
-		}
-	} catch (error) {
-		console.error('Error loading dashboard data:', error);
-		if (!error?.isLicenseError) {
-			Swal.fire({
-				icon: 'error',
-				title: 'خطا',
-				text: 'خطا در بارگذاری اطلاعات'
-			});
-		}
-	}
+        if (!stats.error) {
+            document.getElementById('totalStudents').textContent = stats.totalStudents || 0;
+            document.getElementById('totalCourses').textContent = stats.totalCourses || 0;
+            document.getElementById('nextExamStudents').textContent = stats.nextExamStudents || 0;
+            document.getElementById('nextExamDateTime').textContent = stats.nextExamDateTime || 'آزمونی یافت نشد';
+        }
+    } catch (error) {
+        console.error('Error loading dashboard data:', error);
+        if (!error?.isLicenseError) {
+            Swal.fire({
+                icon: 'error',
+                title: 'خطا',
+                text: 'خطا در بارگذاری اطلاعات'
+            });
+        }
+    }
 }
 
 // Update footer university name
 async function updateFooterUniversity() {
-	try {
-		const response = await guardedFetch('../API/getConfig.php', { cache: 'no-store' });
-		const config = await response.json();
-		if (config.University) {
-			document.getElementById('footerText').textContent = `نسار - ${config.University}`;
-		}
-	} catch (error) {
-		if (!error?.isLicenseError) {
-			console.error('Error updating footer:', error);
-		}
-	}
+    try {
+        const response = await guardedFetch('../API/getConfig.php', { cache: 'no-store' });
+        const config = await response.json();
+        if (config.University) {
+            document.getElementById('footerText').textContent = `نسار - ${config.University}`;
+        }
+    } catch (error) {
+        if (!error?.isLicenseError) {
+            console.error('Error updating footer:', error);
+        }
+    }
 }
 updateFooterUniversity();
 
 // Footer click event
 const copyrightFooter = document.getElementById('copyrightFooter');
 if (copyrightFooter) {
-	copyrightFooter.addEventListener('click', async () => {
-		const VERSION = '۲.۲.۸';
-		function toPersianDigits(num) {
-			const persianDigits = ['۰', '۱', '۲', '۳', '۴', '۵', '۶', '۷', '۸', '۹'];
-			return String(num).replace(/\d/g, d => persianDigits[d]);
-		}
-		function escapeHtml(text) {
-			const div = document.createElement('div');
-			div.textContent = text;
-			return div.innerHTML;
-		}
+    copyrightFooter.addEventListener('click', async () => {
+    const VERSION = '۲.۲.۹';
+        function toPersianDigits(num) {
+            const persianDigits = ['۰', '۱', '۲', '۳', '۴', '۵', '۶', '۷', '۸', '۹'];
+            return String(num).replace(/\d/g, d => persianDigits[d]);
+        }
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
 
-		let countdownInterval;
-		let university = 'دانشگاه پیام نور مرکز بیجار';
-		try {
-			const configResponse = await guardedFetch('../API/getConfig.php', { cache: 'no-store' });
-			const config = await configResponse.json();
-			if (config.University) {
-				university = config.University;
-			}
-		} catch (error) {
-			if (error?.isLicenseError) {
-				return;
-			}
-			console.error('Error loading config for about modal:', error);
-		}
+        let countdownInterval;
+        let university = 'دانشگاه پیام نور مرکز بیجار';
+        try {
+            const configResponse = await guardedFetch('../API/getConfig.php', { cache: 'no-store' });
+            const config = await configResponse.json();
+            if (config.University) {
+                university = config.University;
+            }
+        } catch (error) {
+            if (error?.isLicenseError) {
+                return;
+            }
+            console.error('Error loading config for about modal:', error);
+        }
 
-		Swal.fire({
-			title: 'درباره اپلیکیشن',
-			html: `
+        Swal.fire({
+            title: 'درباره اپلیکیشن',
+            html: `
 	<div style="line-height:1.9;font-size:1.05rem;text-align:justify;">
 	  نِسار (نسخه ${VERSION}) یک وب‌اپلیکیشن پیشرفته و مدرن است که با بهره‌گیری از طراحی مبتنی بر تجربه کاربری نوین و سبک گلس‌مورفیسم، به دانشجویان دانشگاه پیام نور این امکان را می‌دهد تا برنامه امتحانات، شماره صندلی، محل برگزاری و وضعیت آزمون‌های خود را به‌صورت یکپارچه و متمرکز مشاهده کنند.
 	  <br>
@@ -162,37 +162,37 @@ if (copyrightFooter) {
 	  <span class="swal2-countdown-value">${toPersianDigits(30)}</span>
 	</div>
   `,
-			timer: 30000,
-			showConfirmButton: false,
-			allowOutsideClick: true,
-			allowEscapeKey: true,
-			customClass: {
-				popup: 'swal2-rtl swal2-glass'
-			},
-			didOpen: () => {
-				const valueEl = Swal.getHtmlContainer()?.querySelector('.swal2-countdown-value');
-				if (valueEl) {
-					let remaining = 30;
-					countdownInterval = setInterval(() => {
-						remaining--;
-						if (remaining < 0) {
-							clearInterval(countdownInterval);
-						} else {
-							valueEl.textContent = toPersianDigits(remaining);
-						}
-					}, 1000);
-				}
-			},
-			willClose: () => {
-				if (countdownInterval) clearInterval(countdownInterval);
-			}
-		});
-	});
+            timer: 30000,
+            showConfirmButton: false,
+            allowOutsideClick: true,
+            allowEscapeKey: true,
+            customClass: {
+                popup: 'swal2-rtl swal2-glass'
+            },
+            didOpen: () => {
+                const valueEl = Swal.getHtmlContainer()?.querySelector('.swal2-countdown-value');
+                if (valueEl) {
+                    let remaining = 30;
+                    countdownInterval = setInterval(() => {
+                        remaining--;
+                        if (remaining < 0) {
+                            clearInterval(countdownInterval);
+                        } else {
+                            valueEl.textContent = toPersianDigits(remaining);
+                        }
+                    }, 1000);
+                }
+            },
+            willClose: () => {
+                if (countdownInterval) clearInterval(countdownInterval);
+            }
+        });
+    });
 }
 
 // Initialize
 if (checkAuth()) {
-	loadDashboardData();
+    loadDashboardData();
 }
 
 // Get max upload size from server
@@ -200,26 +200,26 @@ let MAX_UPLOAD_SIZE = 128 * 1024 * 1024; // Default 128MB
 let MAX_UPLOAD_SIZE_FORMATTED = '۱۲۸ مگابایت';
 
 async function loadUploadLimit() {
-	try {
-		const response = await guardedFetch('../API/getUploadLimit.php', { cache: 'no-store' });
-		const data = await response.json();
-		if (data.maxSize) {
-			MAX_UPLOAD_SIZE = data.maxSize;
-			MAX_UPLOAD_SIZE_FORMATTED = data.maxSizeFormatted;
-		}
-	} catch (error) {
-		console.error('Error loading upload limit:', error);
-	}
+    try {
+        const response = await guardedFetch('../API/getUploadLimit.php', { cache: 'no-store' });
+        const data = await response.json();
+        if (data.maxSize) {
+            MAX_UPLOAD_SIZE = data.maxSize;
+            MAX_UPLOAD_SIZE_FORMATTED = data.maxSizeFormatted;
+        }
+    } catch (error) {
+        console.error('Error loading upload limit:', error);
+    }
 }
 loadUploadLimit();
 
 // Database upload functionality
 async function showUploadModal(examType) {
-	const examTypeName = examType === 'K' ? 'کتبی' : 'الکترونیکی';
+    const examTypeName = examType === 'K' ? 'کتبی' : 'الکترونیکی';
 
-	const { value: file } = await Swal.fire({
-		title: `آپلود فایل آزمون‌های ${examTypeName}`,
-		html: `
+    const { value: file } = await Swal.fire({
+        title: `آپلود فایل آزمون‌های ${examTypeName}`,
+        html: `
 			<style>
 				.upload-area {
 					border: 3px dashed #28a745;
@@ -301,116 +301,116 @@ async function showUploadModal(examType) {
 				<input type="file" id="databaseFile" accept=".xls,.xlsx">
 			</div>
 		`,
-		showCancelButton: true,
-		confirmButtonText: 'آپلود فایل',
-		cancelButtonText: 'انصراف',
-		customClass: {
-			popup: 'swal2-rtl swal2-glass',
-			confirmButton: 'btn btn-primary',
-			cancelButton: 'btn btn-secondary'
-		},
-		preConfirm: () => {
-			const fileInput = document.getElementById('databaseFile');
-			if (!fileInput.files || fileInput.files.length === 0) {
-				Swal.showValidationMessage('لطفاً یک فایل انتخاب کنید');
-				return false;
-			}
-            
-			const file = fileInput.files[0];
-			const fileName = file.name.toLowerCase();
-            
-			if (!fileName.endsWith('.xls') && !fileName.endsWith('.xlsx')) {
-				Swal.showValidationMessage('فقط فایل‌های با پسوند XLS و XLSX مجاز هستند');
-				return false;
-			}
-            
-			// Check file size (use server's max upload size)
-			if (file.size > MAX_UPLOAD_SIZE) {
-				Swal.showValidationMessage(`حجم فایل نباید بیشتر از ${MAX_UPLOAD_SIZE_FORMATTED} باشد`);
-				return false;
-			}
-            
-			return file;
-		},
-		didOpen: () => {
-			const fileInput = document.getElementById('databaseFile');
-			const uploadArea = document.getElementById('uploadArea');
-			const browseBtn = document.getElementById('browseBtn');
-			const fileNameDisplay = document.getElementById('fileNameDisplay');
-            
-			// Browse button click
-			if (browseBtn) {
-				browseBtn.addEventListener('click', (e) => {
-					e.preventDefault();
-					e.stopPropagation();
-					fileInput.click();
-				});
-			}
-            
-			// Upload area click
-			if (uploadArea) {
-				uploadArea.addEventListener('click', (e) => {
-					if (e.target !== browseBtn) {
-						fileInput.click();
-					}
-				});
-			}
-            
-			// File input change
-			if (fileInput) {
-				fileInput.addEventListener('change', (e) => {
-					if (e.target.files && e.target.files[0]) {
-						const file = e.target.files[0];
-						fileNameDisplay.textContent = `✓ فایل انتخاب شده: ${file.name}`;
-						fileNameDisplay.style.display = 'block';
-					}
-				});
-			}
-            
-			// Drag and drop events
-			if (uploadArea) {
-				['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
-					uploadArea.addEventListener(eventName, (e) => {
-						e.preventDefault();
-						e.stopPropagation();
-					});
-				});
-                
-				['dragenter', 'dragover'].forEach(eventName => {
-					uploadArea.addEventListener(eventName, () => {
-						uploadArea.classList.add('dragover');
-					});
-				});
-                
-				['dragleave', 'drop'].forEach(eventName => {
-					uploadArea.addEventListener(eventName, () => {
-						uploadArea.classList.remove('dragover');
-					});
-				});
-                
-				uploadArea.addEventListener('drop', (e) => {
-					const files = e.dataTransfer.files;
-					if (files.length > 0) {
-						fileInput.files = files;
-						const file = files[0];
-						fileNameDisplay.textContent = `✓ فایل انتخاب شده: ${file.name}`;
-						fileNameDisplay.style.display = 'block';
-					}
-				});
-			}
-		}
-	});
+        showCancelButton: true,
+        confirmButtonText: 'آپلود فایل',
+        cancelButtonText: 'انصراف',
+        customClass: {
+            popup: 'swal2-rtl swal2-glass',
+            confirmButton: 'btn btn-primary',
+            cancelButton: 'btn btn-secondary'
+        },
+        preConfirm: () => {
+            const fileInput = document.getElementById('databaseFile');
+            if (!fileInput.files || fileInput.files.length === 0) {
+                Swal.showValidationMessage('لطفاً یک فایل انتخاب کنید');
+                return false;
+            }
 
-	if (file) {
-		await uploadDatabaseFile(file, examType, examTypeName);
-	}
+            const file = fileInput.files[0];
+            const fileName = file.name.toLowerCase();
+
+            if (!fileName.endsWith('.xls') && !fileName.endsWith('.xlsx')) {
+                Swal.showValidationMessage('فقط فایل‌های با پسوند XLS و XLSX مجاز هستند');
+                return false;
+            }
+
+            // Check file size (use server's max upload size)
+            if (file.size > MAX_UPLOAD_SIZE) {
+                Swal.showValidationMessage(`حجم فایل نباید بیشتر از ${MAX_UPLOAD_SIZE_FORMATTED} باشد`);
+                return false;
+            }
+
+            return file;
+        },
+        didOpen: () => {
+            const fileInput = document.getElementById('databaseFile');
+            const uploadArea = document.getElementById('uploadArea');
+            const browseBtn = document.getElementById('browseBtn');
+            const fileNameDisplay = document.getElementById('fileNameDisplay');
+
+            // Browse button click
+            if (browseBtn) {
+                browseBtn.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    fileInput.click();
+                });
+            }
+
+            // Upload area click
+            if (uploadArea) {
+                uploadArea.addEventListener('click', (e) => {
+                    if (e.target !== browseBtn) {
+                        fileInput.click();
+                    }
+                });
+            }
+
+            // File input change
+            if (fileInput) {
+                fileInput.addEventListener('change', (e) => {
+                    if (e.target.files && e.target.files[0]) {
+                        const file = e.target.files[0];
+                        fileNameDisplay.textContent = `✓ فایل انتخاب شده: ${file.name}`;
+                        fileNameDisplay.style.display = 'block';
+                    }
+                });
+            }
+
+            // Drag and drop events
+            if (uploadArea) {
+                ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+                    uploadArea.addEventListener(eventName, (e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                    });
+                });
+
+                ['dragenter', 'dragover'].forEach(eventName => {
+                    uploadArea.addEventListener(eventName, () => {
+                        uploadArea.classList.add('dragover');
+                    });
+                });
+
+                ['dragleave', 'drop'].forEach(eventName => {
+                    uploadArea.addEventListener(eventName, () => {
+                        uploadArea.classList.remove('dragover');
+                    });
+                });
+
+                uploadArea.addEventListener('drop', (e) => {
+                    const files = e.dataTransfer.files;
+                    if (files.length > 0) {
+                        fileInput.files = files;
+                        const file = files[0];
+                        fileNameDisplay.textContent = `✓ فایل انتخاب شده: ${file.name}`;
+                        fileNameDisplay.style.display = 'block';
+                    }
+                });
+            }
+        }
+    });
+
+    if (file) {
+        await uploadDatabaseFile(file, examType, examTypeName);
+    }
 }
 
 async function uploadDatabaseFile(file, examType, examTypeName) {
-	// Show progress modal
-	Swal.fire({
-		title: 'در حال آپلود',
-		html: `
+    // Show progress modal
+    Swal.fire({
+        title: 'در حال آپلود',
+        html: `
 			<div style="text-align: center; padding: 1rem;">
 				<div style="background: #e0e0e0; border-radius: 10px; overflow: hidden; height: 35px; margin-bottom: 1rem;">
 					<div id="uploadProgressBar" style="background: linear-gradient(90deg, #1a6fa6, #127ead); height: 100%; width: 0%; transition: width 0.3s; display: flex; align-items: center; justify-content: center; color: white; font-weight: bold; font-size: 1.1rem;"></div>
@@ -418,221 +418,221 @@ async function uploadDatabaseFile(file, examType, examTypeName) {
 				<p id="uploadProgressText" style="color: #1a6fa6; font-size: 1.1rem;">در حال آپلود فایل...</p>
 			</div>
 		`,
-		allowOutsideClick: false,
-		allowEscapeKey: false,
-		showConfirmButton: false,
-		customClass: {
-			popup: 'swal2-rtl swal2-glass'
-		}
-	});
+        allowOutsideClick: false,
+        allowEscapeKey: false,
+        showConfirmButton: false,
+        customClass: {
+            popup: 'swal2-rtl swal2-glass'
+        }
+    });
 
-	const formData = new FormData();
-	formData.append('file', file);
-	formData.append('examType', examType);
+    const formData = new FormData();
+    formData.append('file', file);
+    formData.append('examType', examType);
 
-	try {
-		const xhr = new XMLHttpRequest();
-        
-		// Track upload progress
-		xhr.upload.addEventListener('progress', (e) => {
-			if (e.lengthComputable) {
-				const percentComplete = Math.round((e.loaded / e.total) * 100);
-				const progressBar = document.getElementById('uploadProgressBar');
-				const progressText = document.getElementById('uploadProgressText');
-                
-				if (progressBar) {
-					progressBar.style.width = percentComplete + '%';
-					progressBar.textContent = percentComplete + '%';
-				}
-                
-				if (progressText) {
-					progressText.textContent = `در حال آپلود... ${percentComplete}%`;
-				}
-			}
-		});
+    try {
+        const xhr = new XMLHttpRequest();
 
-		// Handle completion
-		xhr.addEventListener('load', async () => {
-			if (xhr.status === 200) {
-				try {
-					const response = JSON.parse(xhr.responseText);
-					if (response.success) {
-						await Swal.fire({
-							icon: 'success',
-							title: 'موفق',
-							text: `فایل آزمون‌های ${examTypeName} با موفقیت آپلود شد`,
-							confirmButtonText: 'باشه',
-							customClass: {
-								popup: 'swal2-rtl swal2-glass',
-								confirmButton: 'btn btn-primary'
-							}
-						});
-					} else {
-						throw new Error(response.error || 'خطای نامشخص');
-					}
-				} catch (parseError) {
-					throw new Error('خطا در پردازش پاسخ سرور');
-				}
-			} else if (xhr.status === 403) {
-				let errorMessage = 'دسترسی به این عملیات ممکن نیست.';
-				try {
-					const errorResponse = JSON.parse(xhr.responseText);
-					if (errorResponse && errorResponse.message) {
-						errorMessage = errorResponse.message;
-					}
-				} catch (e) {
-					// Use default message
-				}
-				showLicenseForbidden(errorMessage);
-			} else {
-				let errorMessage = 'خطا در آپلود فایل';
-				try {
-					const errorResponse = JSON.parse(xhr.responseText);
-					if (errorResponse && errorResponse.error) {
-						errorMessage = errorResponse.error;
-					}
-				} catch (e) {
-					// Use default message
-				}
-                
-				await Swal.fire({
-					icon: 'error',
-					title: 'خطا',
-					text: errorMessage,
-					confirmButtonText: 'باشه',
-					customClass: {
-						popup: 'swal2-rtl swal2-glass',
-						confirmButton: 'btn btn-primary'
-					}
-				});
-			}
-		});
+        // Track upload progress
+        xhr.upload.addEventListener('progress', (e) => {
+            if (e.lengthComputable) {
+                const percentComplete = Math.round((e.loaded / e.total) * 100);
+                const progressBar = document.getElementById('uploadProgressBar');
+                const progressText = document.getElementById('uploadProgressText');
 
-		// Handle errors
-		xhr.addEventListener('error', async () => {
-			await Swal.fire({
-				icon: 'error',
-				title: 'خطا',
-				text: 'خطا در برقراری ارتباط با سرور',
-				confirmButtonText: 'باشه',
-				customClass: {
-					popup: 'swal2-rtl swal2-glass',
-					confirmButton: 'btn btn-primary'
-				}
-			});
-		});
+                if (progressBar) {
+                    progressBar.style.width = percentComplete + '%';
+                    progressBar.textContent = percentComplete + '%';
+                }
 
-		// Get CSRF token
-		const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
-        
-		// Send request
-		xhr.open('POST', '../API/uploadDatabase.php', true);
-		if (csrfToken) {
-			xhr.setRequestHeader('X-CSRF-Token', csrfToken);
-		}
-		xhr.send(formData);
+                if (progressText) {
+                    progressText.textContent = `در حال آپلود... ${percentComplete}%`;
+                }
+            }
+        });
 
-	} catch (error) {
-		console.error('Upload error:', error);
-		await Swal.fire({
-			icon: 'error',
-			title: 'خطا',
-			text: error.message || 'خطا در آپلود فایل',
-			confirmButtonText: 'باشه',
-			customClass: {
-				popup: 'swal2-rtl swal2-glass',
-				confirmButton: 'btn btn-primary'
-			}
-		});
-	}
+        // Handle completion
+        xhr.addEventListener('load', async () => {
+            if (xhr.status === 200) {
+                try {
+                    const response = JSON.parse(xhr.responseText);
+                    if (response.success) {
+                        await Swal.fire({
+                            icon: 'success',
+                            title: 'موفق',
+                            text: `فایل آزمون‌های ${examTypeName} با موفقیت آپلود شد`,
+                            confirmButtonText: 'باشه',
+                            customClass: {
+                                popup: 'swal2-rtl swal2-glass',
+                                confirmButton: 'btn btn-primary'
+                            }
+                        });
+                    } else {
+                        throw new Error(response.error || 'خطای نامشخص');
+                    }
+                } catch (parseError) {
+                    throw new Error('خطا در پردازش پاسخ سرور');
+                }
+            } else if (xhr.status === 403) {
+                let errorMessage = 'دسترسی به این عملیات ممکن نیست.';
+                try {
+                    const errorResponse = JSON.parse(xhr.responseText);
+                    if (errorResponse && errorResponse.message) {
+                        errorMessage = errorResponse.message;
+                    }
+                } catch (e) {
+                    // Use default message
+                }
+                showLicenseForbidden(errorMessage);
+            } else {
+                let errorMessage = 'خطا در آپلود فایل';
+                try {
+                    const errorResponse = JSON.parse(xhr.responseText);
+                    if (errorResponse && errorResponse.error) {
+                        errorMessage = errorResponse.error;
+                    }
+                } catch (e) {
+                    // Use default message
+                }
+
+                await Swal.fire({
+                    icon: 'error',
+                    title: 'خطا',
+                    text: errorMessage,
+                    confirmButtonText: 'باشه',
+                    customClass: {
+                        popup: 'swal2-rtl swal2-glass',
+                        confirmButton: 'btn btn-primary'
+                    }
+                });
+            }
+        });
+
+        // Handle errors
+        xhr.addEventListener('error', async () => {
+            await Swal.fire({
+                icon: 'error',
+                title: 'خطا',
+                text: 'خطا در برقراری ارتباط با سرور',
+                confirmButtonText: 'باشه',
+                customClass: {
+                    popup: 'swal2-rtl swal2-glass',
+                    confirmButton: 'btn btn-primary'
+                }
+            });
+        });
+
+        // Get CSRF token
+        const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
+
+        // Send request
+        xhr.open('POST', '../API/uploadDatabase.php', true);
+        if (csrfToken) {
+            xhr.setRequestHeader('X-CSRF-Token', csrfToken);
+        }
+        xhr.send(formData);
+
+    } catch (error) {
+        console.error('Upload error:', error);
+        await Swal.fire({
+            icon: 'error',
+            title: 'خطا',
+            text: error.message || 'خطا در آپلود فایل',
+            confirmButtonText: 'باشه',
+            customClass: {
+                popup: 'swal2-rtl swal2-glass',
+                confirmButton: 'btn btn-primary'
+            }
+        });
+    }
 }
 
 // Add event listeners to upload buttons
 document.getElementById('uploadWrittenBtn').addEventListener('click', () => {
-	showUploadModal('K');
+    showUploadModal('K');
 });
 
 document.getElementById('uploadElectronicBtn').addEventListener('click', () => {
-	showUploadModal('E');
+    showUploadModal('E');
 });
 
 function scrollReportCardIntoView() {
-	const reportCard = document.getElementById('reportCard');
-	if (!reportCard) return;
+    const reportCard = document.getElementById('reportCard');
+    if (!reportCard) return;
 
-	// Use requestAnimationFrame to ensure calculations happen after the element is rendered.
-	requestAnimationFrame(() => {
-		const header = document.querySelector('.dashboard-header');
-		const headerHeight = header ? Math.ceil(header.getBoundingClientRect().height) : 0;
-		const extraGap = 12; // small spacing
+    // Use requestAnimationFrame to ensure calculations happen after the element is rendered.
+    requestAnimationFrame(() => {
+        const header = document.querySelector('.dashboard-header');
+        const headerHeight = header ? Math.ceil(header.getBoundingClientRect().height) : 0;
+        const extraGap = 12; // small spacing
 
-		const rect = reportCard.getBoundingClientRect();
-		const docTop = window.pageYOffset || document.documentElement.scrollTop || 0;
-		const targetTop = Math.max(0, rect.top + docTop - headerHeight - extraGap);
+        const rect = reportCard.getBoundingClientRect();
+        const docTop = window.pageYOffset || document.documentElement.scrollTop || 0;
+        const targetTop = Math.max(0, rect.top + docTop - headerHeight - extraGap);
 
-		window.scrollTo({ top: targetTop, behavior: 'smooth' });
-	});
+        window.scrollTo({ top: targetTop, behavior: 'smooth' });
+    });
 }
 
 // Report functions
 function clearReport() {
-	document.getElementById('reportCard').style.display = 'none';
-	document.getElementById('reportContent').innerHTML = '';
-	// Smooth scroll to top of page
-	const container = document.querySelector('.dashboard-container');
-	if (!container) return;
-	const targetTop = container.getBoundingClientRect().top + window.pageYOffset;
-	window.scrollTo({ top: Math.max(0, targetTop), behavior: 'smooth' });
+    document.getElementById('reportCard').style.display = 'none';
+    document.getElementById('reportContent').innerHTML = '';
+    // Smooth scroll to top of page
+    const container = document.querySelector('.dashboard-container');
+    if (!container) return;
+    const targetTop = container.getBoundingClientRect().top + window.pageYOffset;
+    window.scrollTo({ top: Math.max(0, targetTop), behavior: 'smooth' });
 }
 
 async function showStudentReport() {
-	const { value: studentId } = await Swal.fire({
-		title: 'جستجوی دانشجو',
-		html: '<input id="studentIdInput" class="swal2-input" placeholder="شماره دانشجویی را وارد کنید" style="font-family: Vazir, sans-serif; direction: ltr; text-align: center; overflow: hidden; resize: none; outline: none;">',
-		focusConfirm: false,
-		showCancelButton: true,
-		confirmButtonText: 'جستجو',
-		cancelButtonText: 'انصراف',
-		customClass: {
-			popup: 'swal2-rtl swal2-glass',
-			confirmButton: 'btn btn-primary',
-			cancelButton: 'btn btn-secondary'
-		},
-		preConfirm: () => {
-			const input = document.getElementById('studentIdInput');
-			if (!input.value) {
-				Swal.showValidationMessage('لطفاً شماره دانشجویی را وارد کنید');
-				return false;
-			}
-			return input.value;
-		}
-	});
+    const { value: studentId } = await Swal.fire({
+        title: 'جستجوی دانشجو',
+        html: '<input id="studentIdInput" class="swal2-input" placeholder="شماره دانشجویی را وارد کنید" style="font-family: Vazir, sans-serif; direction: ltr; text-align: center; overflow: hidden; resize: none; outline: none;">',
+        focusConfirm: false,
+        showCancelButton: true,
+        confirmButtonText: 'جستجو',
+        cancelButtonText: 'انصراف',
+        customClass: {
+            popup: 'swal2-rtl swal2-glass',
+            confirmButton: 'btn btn-primary',
+            cancelButton: 'btn btn-secondary'
+        },
+        preConfirm: () => {
+            const input = document.getElementById('studentIdInput');
+            if (!input.value) {
+                Swal.showValidationMessage('لطفاً شماره دانشجویی را وارد کنید');
+                return false;
+            }
+            return input.value;
+        }
+    });
 
-	if (studentId) {
-		try {
-			// حذف Swal.fire بارگذاری
-			const response = await guardedFetch(`../API/getStudentReport.php?student_id=${encodeURIComponent(studentId)}`, { cache: 'no-store' });
-			const data = await response.json();
+    if (studentId) {
+        try {
+            // حذف Swal.fire بارگذاری
+            const response = await guardedFetch(`../API/getStudentReport.php?student_id=${encodeURIComponent(studentId)}`, { cache: 'no-store' });
+            const data = await response.json();
 
-			if (data.error) {
-				await Swal.fire({
-					icon: 'error',
-					title: 'خطا',
-					text: data.error,
-					confirmButtonText: 'باشه',
-					customClass: {
-						popup: 'swal2-rtl swal2-glass',
-						confirmButton: 'btn btn-primary'
-					}
-				});
-				return;
-			}
+            if (data.error) {
+                await Swal.fire({
+                    icon: 'error',
+                    title: 'خطا',
+                    text: data.error,
+                    confirmButtonText: 'باشه',
+                    customClass: {
+                        popup: 'swal2-rtl swal2-glass',
+                        confirmButton: 'btn btn-primary'
+                    }
+                });
+                return;
+            }
 
-			// Display student info and exams
-			const student = data.student;
-			const exams = data.exams;
+            // Display student info and exams
+            const student = data.student;
+            const exams = data.exams;
 
-			let html = `
+            let html = `
 				<div class="mb-4">
 					<h5 class="text-primary mb-3">مشخصات دانشجو</h5>
 					<div class="table-responsive">
@@ -658,8 +658,8 @@ async function showStudentReport() {
 				</div>
 			`;
 
-			if (exams && exams.length > 0) {
-				html += `
+            if (exams && exams.length > 0) {
+                html += `
 					<div>
 						<h5 class="text-primary mb-3">آزمون‌های دانشجو</h5>
 						<div class="table-responsive">
@@ -680,8 +680,8 @@ async function showStudentReport() {
 								<tbody>
 					`;
 
-				exams.forEach((exam, index) => {
-					html += `
+                exams.forEach((exam, index) => {
+                    html += `
 						<tr>
 							<td>${index + 1}</td>
 							<td>${exam.course_code}</td>
@@ -694,88 +694,88 @@ async function showStudentReport() {
 							<td><span class="badge bg-${exam.exam_type === 'کتبی' ? 'success' : 'info'}">${exam.exam_type}</span></td>
 						</tr>
 					`;
-				});
+                });
 
-				html += `
+                html += `
 								</tbody>
 							</table>
 						</div>
 					</div>
 				`;
-			} else {
-				html += '<p class="text-muted text-center mt-3">این دانشجو در هیچ آزمونی ثبت‌نام نکرده است.</p>';
-			}
+            } else {
+                html += '<p class="text-muted text-center mt-3">این دانشجو در هیچ آزمونی ثبت‌نام نکرده است.</p>';
+            }
 
-			document.getElementById('reportContent').innerHTML = html;
-			document.getElementById('reportCard').style.display = 'block';
-			setTimeout(scrollReportCardIntoView, 100);
+            document.getElementById('reportContent').innerHTML = html;
+            document.getElementById('reportCard').style.display = 'block';
+            setTimeout(scrollReportCardIntoView, 100);
 
-		} catch (error) {
-			console.error('Error:', error);
-			if (!error?.isLicenseError) {
-				Swal.fire({
-					icon: 'error',
-					title: 'خطا',
-					text: 'خطا در دریافت اطلاعات',
-					confirmButtonText: 'باشه',
-					customClass: {
-						popup: 'swal2-rtl swal2-glass',
-						confirmButton: 'btn btn-primary'
-					}
-				});
-			}
-		}
-	}
+        } catch (error) {
+            console.error('Error:', error);
+            if (!error?.isLicenseError) {
+                Swal.fire({
+                    icon: 'error',
+                    title: 'خطا',
+                    text: 'خطا در دریافت اطلاعات',
+                    confirmButtonText: 'باشه',
+                    customClass: {
+                        popup: 'swal2-rtl swal2-glass',
+                        confirmButton: 'btn btn-primary'
+                    }
+                });
+            }
+        }
+    }
 }
 
 async function showCourseReport() {
-	const { value: courseCode } = await Swal.fire({
-		title: 'جستجوی درس',
-		html: '<input id="courseCodeInput" class="swal2-input" placeholder="کد درس را وارد کنید" style="font-family: Vazir, sans-serif; direction: ltr; text-align: center; overflow: hidden; resize: none; outline: none;">',
-		focusConfirm: false,
-		showCancelButton: true,
-		confirmButtonText: 'جستجو',
-		cancelButtonText: 'انصراف',
-		customClass: {
-			popup: 'swal2-rtl swal2-glass',
-			confirmButton: 'btn btn-primary',
-			cancelButton: 'btn btn-secondary'
-		},
-		preConfirm: () => {
-			const input = document.getElementById('courseCodeInput');
-			if (!input.value) {
-				Swal.showValidationMessage('لطفاً کد درس را وارد کنید');
-				return false;
-			}
-			return input.value;
-		}
-	});
+    const { value: courseCode } = await Swal.fire({
+        title: 'جستجوی درس',
+        html: '<input id="courseCodeInput" class="swal2-input" placeholder="کد درس را وارد کنید" style="font-family: Vazir, sans-serif; direction: ltr; text-align: center; overflow: hidden; resize: none; outline: none;">',
+        focusConfirm: false,
+        showCancelButton: true,
+        confirmButtonText: 'جستجو',
+        cancelButtonText: 'انصراف',
+        customClass: {
+            popup: 'swal2-rtl swal2-glass',
+            confirmButton: 'btn btn-primary',
+            cancelButton: 'btn btn-secondary'
+        },
+        preConfirm: () => {
+            const input = document.getElementById('courseCodeInput');
+            if (!input.value) {
+                Swal.showValidationMessage('لطفاً کد درس را وارد کنید');
+                return false;
+            }
+            return input.value;
+        }
+    });
 
-	if (courseCode) {
-		try {
-			// حذف Swal.fire بارگذاری
-			const response = await guardedFetch(`../API/getCourseReport.php?course_code=${encodeURIComponent(courseCode)}`, { cache: 'no-store' });
-			const data = await response.json();
+    if (courseCode) {
+        try {
+            // حذف Swal.fire بارگذاری
+            const response = await guardedFetch(`../API/getCourseReport.php?course_code=${encodeURIComponent(courseCode)}`, { cache: 'no-store' });
+            const data = await response.json();
 
-			if (data.error) {
-				await Swal.fire({
-					icon: 'error',
-					title: 'خطا',
-					text: data.error,
-					confirmButtonText: 'باشه',
-					customClass: {
-						popup: 'swal2-rtl swal2-glass',
-						confirmButton: 'btn btn-primary'
-					}
-				});
-				return;
-			}
+            if (data.error) {
+                await Swal.fire({
+                    icon: 'error',
+                    title: 'خطا',
+                    text: data.error,
+                    confirmButtonText: 'باشه',
+                    customClass: {
+                        popup: 'swal2-rtl swal2-glass',
+                        confirmButton: 'btn btn-primary'
+                    }
+                });
+                return;
+            }
 
-			// Display course info and students
-			const course = data.course;
-			const students = data.students;
+            // Display course info and students
+            const course = data.course;
+            const students = data.students;
 
-			let html = `
+            let html = `
 				<div class="mb-4">
 					<h5 class="text-primary mb-3">مشخصات درس</h5>
 					<div class="table-responsive">
@@ -809,8 +809,8 @@ async function showCourseReport() {
 				</div>
 			`;
 
-			if (students && students.length > 0) {
-				html += `
+            if (students && students.length > 0) {
+                html += `
 					<div>
 						<h5 class="text-primary mb-3">لیست دانشجویان</h5>
 						<div class="table-responsive">
@@ -830,8 +830,8 @@ async function showCourseReport() {
 								<tbody>
 			`;
 
-				students.forEach((student, index) => {
-					html += `
+                students.forEach((student, index) => {
+                    html += `
 						<tr>
 							<td>${index + 1}</td>
 							<td>${student.student_id}</td>
@@ -843,102 +843,102 @@ async function showCourseReport() {
 							<td>${student.class_name}</td>
 						</tr>
 					`;
-				});
+                });
 
-				html += `
+                html += `
 							</tbody>
 						</table>
 					</div>
 				</div>
 			`;
-			} else {
-				html += '<p class="text-muted text-center mt-3">هیچ دانشجویی در این درس ثبت‌نام نکرده است.</p>';
-			}
+            } else {
+                html += '<p class="text-muted text-center mt-3">هیچ دانشجویی در این درس ثبت‌نام نکرده است.</p>';
+            }
 
-			document.getElementById('reportContent').innerHTML = html;
-			document.getElementById('reportCard').style.display = 'block';
-			setTimeout(scrollReportCardIntoView, 100);
+            document.getElementById('reportContent').innerHTML = html;
+            document.getElementById('reportCard').style.display = 'block';
+            setTimeout(scrollReportCardIntoView, 100);
 
-		} catch (error) {
-			console.error('Error:', error);
-			if (!error?.isLicenseError) {
-				Swal.fire({
-					icon: 'error',
-					title: 'خطا',
-					text: 'خطا در دریافت اطلاعات',
-					confirmButtonText: 'باشه',
-					customClass: {
-						popup: 'swal2-rtl swal2-glass',
-						confirmButton: 'btn btn-primary'
-					}
-				});
-			}
-		}
-	}
+        } catch (error) {
+            console.error('Error:', error);
+            if (!error?.isLicenseError) {
+                Swal.fire({
+                    icon: 'error',
+                    title: 'خطا',
+                    text: 'خطا در دریافت اطلاعات',
+                    confirmButtonText: 'باشه',
+                    customClass: {
+                        popup: 'swal2-rtl swal2-glass',
+                        confirmButton: 'btn btn-primary'
+                    }
+                });
+            }
+        }
+    }
 }
 
 async function showNextExamReport() {
-	try {
-		// Get exam date and time from the label
-		const nextExamDateTimeText = document.getElementById('nextExamDateTime').textContent;
-        
-		// Check if there's no exam
-		if (nextExamDateTimeText === 'بارگذاری...' || nextExamDateTimeText === 'آزمونی یافت نشد') {
-			await Swal.fire({
-				icon: 'info',
-				title: 'اطلاعات',
-				text: 'آزمون بعدی یافت نشد',
-				confirmButtonText: 'باشه',
-				customClass: {
-					popup: 'swal2-rtl swal2-glass',
-					confirmButton: 'btn btn-primary'
-				}
-			});
-			return;
-		}
-        
-		// Parse the format: "HH:MM | YYYY/MM/DD"
-		const parts = nextExamDateTimeText.split('|').map(s => s.trim());
-		if (parts.length !== 2) {
-			await Swal.fire({
-				icon: 'error',
-				title: 'خطا',
-				text: 'فرمت تاریخ و ساعت نامعتبر است',
-				confirmButtonText: 'باشه',
-				customClass: {
-					popup: 'swal2-rtl swal2-glass',
-					confirmButton: 'btn btn-primary'
-				}
-			});
-			return;
-		}
-        
-		const examTime = parts[0];
-		const examDate = parts[1];
+    try {
+        // Get exam date and time from the label
+        const nextExamDateTimeText = document.getElementById('nextExamDateTime').textContent;
 
-		// حذف Swal.fire بارگذاری
-		const response = await guardedFetch(`../API/getNextExamReport.php?exam_date=${encodeURIComponent(examDate)}&exam_time=${encodeURIComponent(examTime)}`, { cache: 'no-store' });
-		const data = await response.json();
+        // Check if there's no exam
+        if (nextExamDateTimeText === 'بارگذاری...' || nextExamDateTimeText === 'آزمونی یافت نشد') {
+            await Swal.fire({
+                icon: 'info',
+                title: 'اطلاعات',
+                text: 'آزمون بعدی یافت نشد',
+                confirmButtonText: 'باشه',
+                customClass: {
+                    popup: 'swal2-rtl swal2-glass',
+                    confirmButton: 'btn btn-primary'
+                }
+            });
+            return;
+        }
 
-		if (data.error) {
-			await Swal.fire({
-				icon: 'error',
-				title: 'خطا',
-				text: data.error,
-				confirmButtonText: 'باشه',
-				customClass: {
-					popup: 'swal2-rtl swal2-glass',
-					confirmButton: 'btn btn-primary'
-				}
-			});
-			return;
-		}
+        // Parse the format: "HH:MM | YYYY/MM/DD"
+        const parts = nextExamDateTimeText.split('|').map(s => s.trim());
+        if (parts.length !== 2) {
+            await Swal.fire({
+                icon: 'error',
+                title: 'خطا',
+                text: 'فرمت تاریخ و ساعت نامعتبر است',
+                confirmButtonText: 'باشه',
+                customClass: {
+                    popup: 'swal2-rtl swal2-glass',
+                    confirmButton: 'btn btn-primary'
+                }
+            });
+            return;
+        }
 
-		// Display exam info and students
-		const courses = data.courses;
-		const students = data.students;
+        const examTime = parts[0];
+        const examDate = parts[1];
 
-		let html = `
+        // حذف Swal.fire بارگذاری
+        const response = await guardedFetch(`../API/getNextExamReport.php?exam_date=${encodeURIComponent(examDate)}&exam_time=${encodeURIComponent(examTime)}`, { cache: 'no-store' });
+        const data = await response.json();
+
+        if (data.error) {
+            await Swal.fire({
+                icon: 'error',
+                title: 'خطا',
+                text: data.error,
+                confirmButtonText: 'باشه',
+                customClass: {
+                    popup: 'swal2-rtl swal2-glass',
+                    confirmButton: 'btn btn-primary'
+                }
+            });
+            return;
+        }
+
+        // Display exam info and students
+        const courses = data.courses;
+        const students = data.students;
+
+        let html = `
 			<div class="mb-4">
 				<h5 class="text-primary mb-3">مشخصات آزمون بعدی</h5>
 				<div class="table-responsive">
@@ -963,14 +963,14 @@ async function showNextExamReport() {
 				</div>
 		`;
 
-		// Show course list
-		if (courses && courses.length > 0) {
-			html += `
+        // Show course list
+        if (courses && courses.length > 0) {
+            html += `
 				<h6 class="text-secondary mb-2 mt-3">لیست دروس این جلسه آزمون:</h6>
 				<ul class="list-group mb-3">
 			`;
-			courses.forEach(course => {
-				html += `
+            courses.forEach(course => {
+                html += `
 					<li class="list-group-item d-flex justify-content-between align-items-center">
 						<span><span class="fw-semibold text-body">${course.course_code}</span> - ${course.course_name}</span>
 						<div>
@@ -979,16 +979,16 @@ async function showNextExamReport() {
 						</div>
 					</li>
 				`;
-			});
-			html += `
+            });
+            html += `
 				</ul>
 			`;
-		}
+        }
 
-		html += `</div>`;
+        html += `</div>`;
 
-		if (students && students.length > 0) {
-			html += `
+        if (students && students.length > 0) {
+            html += `
 				<div>
 					<h5 class="text-primary mb-3">لیست دانشجویان</h5>
 					<div class="table-responsive">
@@ -1009,8 +1009,8 @@ async function showNextExamReport() {
 							<tbody>
 			`;
 
-			students.forEach((student, index) => {
-				html += `
+            students.forEach((student, index) => {
+                html += `
 					<tr>
 						<td>${index + 1}</td>
 						<td>${student.student_id}</td>
@@ -1023,35 +1023,35 @@ async function showNextExamReport() {
 						<td>${student.class_name}</td>
 					</tr>
 				`;
-			});
+            });
 
-			html += `
+            html += `
 							</tbody>
 						</table>
 					</div>
 				</div>
 			`;
-		} else {
-			html += '<p class="text-muted text-center mt-3">هیچ دانشجویی در این آزمون ثبت‌نام نکرده است.</p>';
-		}
+        } else {
+            html += '<p class="text-muted text-center mt-3">هیچ دانشجویی در این آزمون ثبت‌نام نکرده است.</p>';
+        }
 
-		document.getElementById('reportContent').innerHTML = html;
-		document.getElementById('reportCard').style.display = 'block';
-		setTimeout(scrollReportCardIntoView, 100);
+        document.getElementById('reportContent').innerHTML = html;
+        document.getElementById('reportCard').style.display = 'block';
+        setTimeout(scrollReportCardIntoView, 100);
 
-	} catch (error) {
-		console.error('Error:', error);
-		if (!error?.isLicenseError) {
-			Swal.fire({
-				icon: 'error',
-				title: 'خطا',
-				text: 'خطا در دریافت اطلاعات',
-				confirmButtonText: 'باشه',
-				customClass: {
-					popup: 'swal2-rtl swal2-glass',
-					confirmButton: 'btn btn-primary'
-				}
-			});
-		}
-	}
+    } catch (error) {
+        console.error('Error:', error);
+        if (!error?.isLicenseError) {
+            Swal.fire({
+                icon: 'error',
+                title: 'خطا',
+                text: 'خطا در دریافت اطلاعات',
+                confirmButtonText: 'باشه',
+                customClass: {
+                    popup: 'swal2-rtl swal2-glass',
+                    confirmButton: 'btn btn-primary'
+                }
+            });
+        }
+    }
 }
