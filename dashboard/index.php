@@ -923,20 +923,9 @@ if ($licenseStatus['valid'] !== true) {
 
             if (studentId) {
                 try {
-                    Swal.fire({
-                        title: 'در حال بارگذاری...',
-                        allowOutsideClick: false,
-                        allowEscapeKey: false,
-                        showConfirmButton: false,
-                        didOpen: () => {
-                            Swal.showLoading();
-                        }
-                    });
-
+                    // حذف Swal.fire بارگذاری
                     const response = await guardedFetch(`../API/getStudentReport.php?student_id=${encodeURIComponent(studentId)}`, { cache: 'no-store' });
                     const data = await response.json();
-
-                    Swal.close();
 
                     if (data.error) {
                         await Swal.fire({
@@ -1077,20 +1066,9 @@ if ($licenseStatus['valid'] !== true) {
 
             if (courseCode) {
                 try {
-                    Swal.fire({
-                        title: 'در حال بارگذاری...',
-                        allowOutsideClick: false,
-                        allowEscapeKey: false,
-                        showConfirmButton: false,
-                        didOpen: () => {
-                            Swal.showLoading();
-                        }
-                    });
-
+                    // حذف Swal.fire بارگذاری
                     const response = await guardedFetch(`../API/getCourseReport.php?course_code=${encodeURIComponent(courseCode)}`, { cache: 'no-store' });
                     const data = await response.json();
-
-                    Swal.close();
 
                     if (data.error) {
                         await Swal.fire({
@@ -1251,20 +1229,9 @@ if ($licenseStatus['valid'] !== true) {
                 const examTime = parts[0];
                 const examDate = parts[1];
 
-                Swal.fire({
-                    title: 'در حال بارگذاری...',
-                    allowOutsideClick: false,
-                    allowEscapeKey: false,
-                    showConfirmButton: false,
-                    didOpen: () => {
-                        Swal.showLoading();
-                    }
-                });
-
+                // حذف Swal.fire بارگذاری
                 const response = await guardedFetch(`../API/getNextExamReport.php?exam_date=${encodeURIComponent(examDate)}&exam_time=${encodeURIComponent(examTime)}`, { cache: 'no-store' });
                 const data = await response.json();
-
-                Swal.close();
 
                 if (data.error) {
                     await Swal.fire({
