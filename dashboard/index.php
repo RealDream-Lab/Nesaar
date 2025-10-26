@@ -873,6 +873,8 @@ if ($licenseStatus['valid'] !== true) {
         function clearReport() {
             document.getElementById('reportCard').style.display = 'none';
             document.getElementById('reportContent').innerHTML = '';
+            // Smooth scroll to top of page
+            document.querySelector('.dashboard-container').scrollIntoView({ behavior: 'smooth', block: 'start' });
         }
 
         async function showStudentReport() {
@@ -1009,7 +1011,10 @@ if ($licenseStatus['valid'] !== true) {
 
                     document.getElementById('reportContent').innerHTML = html;
                     document.getElementById('reportCard').style.display = 'block';
-                    document.getElementById('reportCard').scrollIntoView({ behavior: 'smooth' });
+                    // Small delay to ensure DOM is updated before scrolling
+                    setTimeout(() => {
+                        document.getElementById('reportCard').scrollIntoView({ behavior: 'smooth', block: 'start' });
+                    }, 100);
 
                 } catch (error) {
                     console.error('Error:', error);
@@ -1169,7 +1174,10 @@ if ($licenseStatus['valid'] !== true) {
 
                     document.getElementById('reportContent').innerHTML = html;
                     document.getElementById('reportCard').style.display = 'block';
-                    document.getElementById('reportCard').scrollIntoView({ behavior: 'smooth' });
+                    // Small delay to ensure DOM is updated before scrolling
+                    setTimeout(() => {
+                        document.getElementById('reportCard').scrollIntoView({ behavior: 'smooth', block: 'start' });
+                    }, 100);
 
                 } catch (error) {
                     console.error('Error:', error);
@@ -1360,7 +1368,10 @@ if ($licenseStatus['valid'] !== true) {
 
                 document.getElementById('reportContent').innerHTML = html;
                 document.getElementById('reportCard').style.display = 'block';
-                document.getElementById('reportCard').scrollIntoView({ behavior: 'smooth' });
+                // Small delay to ensure DOM is updated before scrolling
+                setTimeout(() => {
+                    document.getElementById('reportCard').scrollIntoView({ behavior: 'smooth', block: 'start' });
+                }, 100);
 
             } catch (error) {
                 console.error('Error:', error);
