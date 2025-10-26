@@ -874,7 +874,10 @@ if ($licenseStatus['valid'] !== true) {
             document.getElementById('reportCard').style.display = 'none';
             document.getElementById('reportContent').innerHTML = '';
             // Smooth scroll to top of page
-            document.querySelector('.dashboard-container').scrollIntoView({ behavior: 'smooth', block: 'start' });
+            const container = document.querySelector('.dashboard-container');
+            if (!container) return;
+            const targetTop = container.getBoundingClientRect().top + window.pageYOffset;
+            window.scrollTo({ top: Math.max(0, targetTop), behavior: 'smooth' });
         }
 
         async function showStudentReport() {
@@ -1014,8 +1017,9 @@ if ($licenseStatus['valid'] !== true) {
                     // Small delay to ensure DOM is updated before scrolling
                     setTimeout(() => {
                         const reportCard = document.getElementById('reportCard');
-                        const cardTop = reportCard.getBoundingClientRect().top + window.pageYOffset - 20;
-                        window.scrollTo({ top: cardTop, behavior: 'smooth' });
+                        if (!reportCard) return;
+                        const cardTop = reportCard.getBoundingClientRect().top + window.pageYOffset;
+                        window.scrollTo({ top: Math.max(0, cardTop), behavior: 'smooth' });
                     }, 100);
 
                 } catch (error) {
@@ -1179,8 +1183,9 @@ if ($licenseStatus['valid'] !== true) {
                     // Small delay to ensure DOM is updated before scrolling
                     setTimeout(() => {
                         const reportCard = document.getElementById('reportCard');
-                        const cardTop = reportCard.getBoundingClientRect().top + window.pageYOffset - 20;
-                        window.scrollTo({ top: cardTop, behavior: 'smooth' });
+                        if (!reportCard) return;
+                        const cardTop = reportCard.getBoundingClientRect().top + window.pageYOffset;
+                        window.scrollTo({ top: Math.max(0, cardTop), behavior: 'smooth' });
                     }, 100);
 
                 } catch (error) {
@@ -1375,8 +1380,9 @@ if ($licenseStatus['valid'] !== true) {
                 // Small delay to ensure DOM is updated before scrolling
                 setTimeout(() => {
                     const reportCard = document.getElementById('reportCard');
-                    const cardTop = reportCard.getBoundingClientRect().top + window.pageYOffset - 20;
-                    window.scrollTo({ top: cardTop, behavior: 'smooth' });
+                    if (!reportCard) return;
+                    const cardTop = reportCard.getBoundingClientRect().top + window.pageYOffset;
+                    window.scrollTo({ top: Math.max(0, cardTop), behavior: 'smooth' });
                 }, 100);
 
             } catch (error) {
