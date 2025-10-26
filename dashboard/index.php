@@ -1013,7 +1013,9 @@ if ($licenseStatus['valid'] !== true) {
                     document.getElementById('reportCard').style.display = 'block';
                     // Small delay to ensure DOM is updated before scrolling
                     setTimeout(() => {
-                        document.getElementById('reportCard').scrollIntoView({ behavior: 'smooth', block: 'start' });
+                        const reportCard = document.getElementById('reportCard');
+                        const cardTop = reportCard.getBoundingClientRect().top + window.pageYOffset - 20;
+                        window.scrollTo({ top: cardTop, behavior: 'smooth' });
                     }, 100);
 
                 } catch (error) {
@@ -1176,7 +1178,9 @@ if ($licenseStatus['valid'] !== true) {
                     document.getElementById('reportCard').style.display = 'block';
                     // Small delay to ensure DOM is updated before scrolling
                     setTimeout(() => {
-                        document.getElementById('reportCard').scrollIntoView({ behavior: 'smooth', block: 'start' });
+                        const reportCard = document.getElementById('reportCard');
+                        const cardTop = reportCard.getBoundingClientRect().top + window.pageYOffset - 20;
+                        window.scrollTo({ top: cardTop, behavior: 'smooth' });
                     }, 100);
 
                 } catch (error) {
@@ -1370,7 +1374,9 @@ if ($licenseStatus['valid'] !== true) {
                 document.getElementById('reportCard').style.display = 'block';
                 // Small delay to ensure DOM is updated before scrolling
                 setTimeout(() => {
-                    document.getElementById('reportCard').scrollIntoView({ behavior: 'smooth', block: 'start' });
+                    const reportCard = document.getElementById('reportCard');
+                    const cardTop = reportCard.getBoundingClientRect().top + window.pageYOffset - 20;
+                    window.scrollTo({ top: cardTop, behavior: 'smooth' });
                 }, 100);
 
             } catch (error) {
