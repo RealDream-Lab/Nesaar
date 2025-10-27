@@ -1,3 +1,51 @@
+// Device detection and SweetAlert for non-desktop users
+function isDesktopDevice() {
+    const isTouch = 'ontouchstart' in window || navigator.maxTouchPoints > 1;
+    const width = window.innerWidth || document.documentElement.clientWidth;
+    const userAgent = navigator.userAgent.toLowerCase();
+    const isMobileUA = /android|webos|iphone|ipad|ipod|blackberry|iemobile|opera mini/.test(userAgent);
+    return !isTouch && width > 900 && !isMobileUA;
+}
+
+function toPersianDigits(num) {
+    return String(num).replace(/[0-9]/g, d => '۰۱۲۳۴۵۶۷۸۹'[d]);
+}
+
+document.addEventListener('DOMContentLoaded', function () {
+    if (!isDesktopDevice()) {
+        let countdownInterval;
+        Swal.fire({
+            icon: 'warning',
+            title: 'دسترسی فقط از دسکتاپ',
+            html: '<div style="text-align:justify;line-height:2">برای استفاده کامل از امکانات داشبورد مدیریتی نسار، لطفاً از کامپیوتر یا لپ‌تاپ استفاده کنید.<br>نمایش و مدیریت دقیق اطلاعات فقط در نسخه دسکتاپ پشتیبانی می‌شود.</div>' +
+                '<div class="swal2-countdown" style="margin-top:1.2em;text-align:center;font-size:1.2em;font-weight:bold;"><span class="swal2-countdown-value">' + toPersianDigits(15) + '</span></div>',
+            timer: 15000,
+            timerProgressBar: true,
+            showConfirmButton: false,
+            allowOutsideClick: true,
+            customClass: {
+                popup: 'swal2-rtl swal2-glass',
+            },
+            didOpen: () => {
+                const valueEl = Swal.getHtmlContainer()?.querySelector('.swal2-countdown-value');
+                if (!valueEl) return;
+                const updateCountdown = () => {
+                    const remaining = Swal.getTimerLeft();
+                    if (typeof remaining !== 'number') return;
+                    const seconds = Math.max(0, Math.ceil(remaining / 1000));
+                    valueEl.textContent = toPersianDigits(seconds);
+                };
+                updateCountdown();
+                countdownInterval = window.setInterval(updateCountdown, 250);
+            },
+            willClose: () => {
+                if (countdownInterval) {
+                    window.clearInterval(countdownInterval);
+                }
+            }
+        });
+    }
+});
 
 // Check admin authentication
 function getCookie(name) {
@@ -125,7 +173,7 @@ updateFooterUniversity();
 const copyrightFooter = document.getElementById('copyrightFooter');
 if (copyrightFooter) {
     copyrightFooter.addEventListener('click', async () => {
-        const VERSION = '۲.۲.۹';
+        const VERSION = '۲.۳.۰';
         function toPersianDigits(num) {
             const persianDigits = ['۰', '۱', '۲', '۳', '۴', '۵', '۶', '۷', '۸', '۹'];
             return String(num).replace(/\d/g, d => persianDigits[d]);
@@ -155,7 +203,7 @@ if (copyrightFooter) {
             title: 'درباره نِسار',
             html: `
 	<div style="line-height:1.9;font-size:1.05rem;text-align:justify;">
-	  نِسار (نسخه ${VERSION}) یک وب‌اپلیکیشن پیشرفته و مدرن است که با بهره‌گیری از طراحی مبتنی بر تجربه کاربری نوین و سبک گلس‌مورفیسم، به دانشجویان دانشگاه پیام نور این امکان را می‌دهد تا برنامه امتحانات، شماره صندلی، محل برگزاری و وضعیت آزمون‌های خود را به‌صورت یکپارچه و متمرکز مشاهده کنند.
+    نِسار (نسخه ${VERSION}) یک وب‌اپلیکیشن پیشرفته و مدرن است که با بهره‌گیری از طراحی مبتنی بر تجربه کاربری نوین و سبک گلس‌مورفیسم، به دانشجویان دانشگاه پیام نور این امکان را می‌دهد تا برنامه امتحانات، شماره صندلی، محل برگزاری و وضعیت آزمون‌های خود را به‌صورت یکپارچه و متمرکز مشاهده کنند.
 	  <br>
 	  این برنامه به سفارش <span style="color: lime; font-weight: bold;">${escapeHtml(university)}</span> و توسط <a href="https://t.me/RealDream" target="_blank" style="color: gold; font-weight: bold; text-decoration: none; border: none; outline: none;">مهدی حسنی</a> توسعه یافته است
 	</div>
