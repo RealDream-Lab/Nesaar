@@ -2,11 +2,12 @@
 
 FROM php:8.2-apache
 
-# Install system dependencies and PHP extensions needed by the app
+# Install system dependencies, PHP extensions, and Composer
 RUN apt-get update \
-    && apt-get install -y --no-install-recommends libzip-dev libonig-dev libxml2-dev unzip \
+    && apt-get install -y --no-install-recommends libzip-dev libonig-dev libxml2-dev unzip curl \
     && docker-php-ext-install bcmath mbstring pdo_mysql xml zip \
     && a2enmod rewrite headers \
+    && curl -sS https://getcomposer.org/installer | php -- --install-dir=/usr/local/bin --filename=composer \
     && rm -rf /var/lib/apt/lists/*
 
 # Configure PHP upload and post limits
