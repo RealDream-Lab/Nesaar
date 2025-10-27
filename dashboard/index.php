@@ -235,7 +235,7 @@ if ($licenseStatus['valid'] !== true) {
                     <div class="dashboard-card" style="cursor: pointer;" onclick="showStudentReport()">
                         <div class="stat-box">
                             <h3 id="totalStudents">-</h3>
-                            <p>تعداد دانشجویان</p>
+                            <p>دانشجو</p>
                         </div>
                     </div>
                 </div>
@@ -243,7 +243,7 @@ if ($licenseStatus['valid'] !== true) {
                     <div class="dashboard-card" style="cursor: pointer;" onclick="showCourseReport()">
                         <div class="stat-box">
                             <h3 id="totalCourses">-</h3>
-                            <p>تعداد آزمون‌ها</p>
+                            <p>آزمون</p>
                         </div>
                     </div>
                 </div>
