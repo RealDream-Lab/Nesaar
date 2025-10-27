@@ -1,5 +1,5 @@
 {
     "require": {
-        "phpoffice/phpspreadsheet": "^5.2"
+        "openspout/openspout": "^4.32"
     }
 }

@@ -140,7 +140,7 @@ sudo systemctl enable --now apache2 mysql
 
 ### پیش‌نیازهای نصب و وابستگی‌ها
 
-برای استفاده از قابلیت خواندن فایل‌های اکسل، بسته PhpSpreadsheet به پروژه اضافه شده است.
+برای خواندن و پردازش فایل‌های اکسل (XLSX و CSV) از کتابخانه OpenSpout استفاده می‌شود که سبک، سریع و مناسب برای فایل‌های بزرگ است.
 
 #### نصب وابستگی‌ها با Composer
 
@@ -152,7 +152,7 @@ sudo systemctl enable --now apache2 mysql
 composer install
 ```
 
-این دستور تمام وابستگی‌های مورد نیاز از جمله PhpSpreadsheet را نصب می‌کند.
+این دستور تمام وابستگی‌های مورد نیاز از جمله OpenSpout را نصب می‌کند.
 
 #### وابستگی‌های PHP مورد نیاز
 - php-mbstring
@@ -162,7 +162,7 @@ composer install
 - php-json
 
 #### بسته‌های PHP اضافه‌شده:
-- phpoffice/phpspreadsheet
+- openspout/openspout
 
 ### ۲. دریافت و استقرار کد
 
@@ -291,3 +291,10 @@ sudo systemctl reload apache2
 
 
 ---
+
+### تغییرات نسخه 2.3.0
+- **افزودن قابلیت خواندن فایل اکسل** با استفاده از OpenSpout
+- حذف PhpSpreadsheet و جایگزینی با OpenSpout
+- به‌روزرسانی Dockerfile برای نصب Composer و پشتیبانی از وابستگی‌های PHP مورد نیاز
+- بهبود مستندات نصب و پیش‌نیازها
+- حذف و ساده‌سازی بخش‌های قدیمی تغییرات نسخه‌ها
