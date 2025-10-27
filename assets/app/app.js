@@ -1,5 +1,5 @@
 document.addEventListener('DOMContentLoaded', () => {
-    const VERSION = '۲.۲.۹';
+    const VERSION = '۲.۳.۰';
 
     // CSRF Token Helper
     function getCsrfToken() {
