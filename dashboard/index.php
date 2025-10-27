@@ -311,6 +311,7 @@ if ($licenseStatus['valid'] !== true) {
 
     <script src="../assets/bootstrap/bootstrap.bundle.min.js"></script>
     <script src="../assets/sweetalert2/sweetalert2.min.js"></script>
+    <script src="../assets/app/version.js"></script>
     <!-- Device check and SweetAlert moved to dashboard.js -->
     <script src="dashboard.js"></script>
 </body>
