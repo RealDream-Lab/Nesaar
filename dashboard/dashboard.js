@@ -173,7 +173,7 @@ updateFooterUniversity();
 const copyrightFooter = document.getElementById('copyrightFooter');
 if (copyrightFooter) {
     copyrightFooter.addEventListener('click', async () => {
-        const VERSION = '۲.۳.۰';
+    const VERSION = '۲.۳.۱';
         function toPersianDigits(num) {
             const persianDigits = ['۰', '۱', '۲', '۳', '۴', '۵', '۶', '۷', '۸', '۹'];
             return String(num).replace(/\d/g, d => persianDigits[d]);
