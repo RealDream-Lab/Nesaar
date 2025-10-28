@@ -1,7 +1,9 @@
 // Bump cache to force refresh of updated assets (app.js, style.css, index.php)
 // Increment this when you want clients to fetch the new assets.
-const CACHE_NAME = 'exam-seat-v2.4.0';
-const VERSION = window.APP_VERSION;
+const CACHE_NAME = 'exam-seat-v2.4.1';
+// service workers run in a worker context (no window). Use a fixed string so
+// the SW can include a human-readable version in messages to clients.
+const VERSION = '۲.۴.۱';
 const urlsToCache = [
   '/',
   '/index.php',
