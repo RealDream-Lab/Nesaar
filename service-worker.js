@@ -1,6 +1,6 @@
 // Bump cache to force refresh of updated assets (app.js, style.css, index.php)
 // Increment this when you want clients to fetch the new assets.
-const CACHE_NAME = 'exam-seat-v2.3.1';
+const CACHE_NAME = 'exam-seat-v2.4.0';
 const VERSION = window.APP_VERSION;
 const urlsToCache = [
   '/',
@@ -88,7 +88,7 @@ self.addEventListener('activate', event => {
             version: CACHE_NAME,
             tagVersion: `نسخه ${VERSION}`,
             changes: [
-              'رفع ایرادهای جزیی و حذف مودال بارگذاری گزارش'
+              'بهینه سازی گزارشات مدیریتی'
             ]
           });
         });

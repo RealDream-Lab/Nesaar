@@ -1,1 +1,1 @@
-window.APP_VERSION = '۲.۳.۱';
+window.APP_VERSION = '۲.۴.۰';

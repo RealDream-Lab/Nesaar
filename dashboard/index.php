@@ -194,6 +194,11 @@ if ($licenseStatus['valid'] !== true) {
 
         #reportContent {
             /* No scroll bar - card expands as needed */
+            color: #6c757d; /* Gray color for text */
+        }
+
+        #reportContent td {
+            color: #6c757d !important;
         }
 
         #reportContent h5 {
@@ -211,6 +216,10 @@ if ($licenseStatus['valid'] !== true) {
 
         .swal2-html-container {
             overflow: visible !important;
+        }
+
+        .course-item.active {
+            background-color: #e9ecef !important;
         }
     </style>
 </head>

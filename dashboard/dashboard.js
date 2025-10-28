@@ -516,6 +516,9 @@ async function uploadDatabaseFile(file, examType, examTypeName) {
                                 confirmButton: 'btn btn-primary'
                             }
                         });
+
+                        // Now process the uploaded Excel file
+                        await processUploadedExcel(examType, examTypeName, response.filename);
                     } else {
                         throw new Error(response.error || 'خطای نامشخص');
                     }
@@ -594,6 +597,208 @@ async function uploadDatabaseFile(file, examType, examTypeName) {
             }
         });
     }
+}
+
+// Process uploaded Excel file to temp table
+async function processUploadedExcel(examType, examTypeName, filename) {
+    // Show processing modal
+    Swal.fire({
+        title: 'در حال پردازش',
+        html: `
+            <div style="text-align: center; padding: 1rem;">
+                <div id="processProgressDisplay" style="font-size: 3rem; font-weight: bold; color: white; margin-bottom: 1rem;">1%</div>
+                <p id="processProgressText" style="color: white; font-size: 1.1rem;">در حال خواندن فایل اکسل...</p>
+            </div>
+        `,
+        allowOutsideClick: false,
+        allowEscapeKey: false,
+        showConfirmButton: false,
+        customClass: {
+            popup: 'swal2-rtl swal2-glass'
+        }
+    });
+
+    // Animate progress bar
+    let progress = 1;
+    const progressDisplay = document.getElementById('processProgressDisplay');
+    const progressText = document.getElementById('processProgressText');
+    const interval = setInterval(() => {
+        progress += Math.random() * 3 + 0.5; // Slower increase
+        if (progress > 95) progress = 95; // Stay longer at high %
+        if (progressDisplay) {
+            progressDisplay.textContent = progress >= 10 ? Math.round(progress) + '%' : 'شروع...';
+        }
+        if (progressText) {
+            if (progress < 30) {
+                progressText.textContent = 'در حال خواندن فایل اکسل...';
+            } else if (progress < 60) {
+                progressText.textContent = 'در حال پردازش داده‌ها...';
+            } else {
+                progressText.textContent = 'در حال ذخیره در دیتابیس...';
+            }
+        }
+    }, 300); // Slower interval
+
+    try {
+        const formData = new FormData();
+        formData.append('examType', examType);
+        formData.append('filename', filename);
+
+        const response = await guardedFetch('../API/processExcelToTemp.php', {
+            method: 'POST',
+            body: formData
+        });
+
+        clearInterval(interval); // Stop animation
+
+        if (!response.ok) {
+            Swal.close();
+            if (response.status === 403) {
+                let message = 'دسترسی به این عملیات ممکن نیست.';
+                try {
+                    const payload = await response.json();
+                    if (payload && payload.message) {
+                        message = payload.message;
+                    }
+                } catch (error) {
+                    // Ignore JSON parsing errors
+                }
+                showLicenseForbidden(message);
+                return;
+            } else {
+                let errorMessage = 'خطا در پردازش فایل';
+                try {
+                    const errorResponse = await response.json();
+                    if (errorResponse && errorResponse.error) {
+                        errorMessage = errorResponse.error;
+                    }
+                } catch (e) {
+                    // Use default message
+                }
+                throw new Error(errorMessage);
+            }
+        }
+
+        const result = await response.json();
+        if (result.success) {
+            // Set to 100%
+            if (progressDisplay) {
+                progressDisplay.textContent = '100%';
+            }
+            if (progressText) {
+                progressText.textContent = 'پردازش کامل شد!';
+            }
+            // Wait a bit then show success
+            setTimeout(() => {
+                Swal.close();
+                Swal.fire({
+                    icon: 'success',
+                    title: 'موفق',
+                    html: `فایل اکسل با موفقیت پردازش شد<br>تعداد ردیف‌ها: ${result.rows}<br>تعداد ستون‌ها: ${result.columns}`,
+                    confirmButtonText: 'باشه',
+                    customClass: {
+                        popup: 'swal2-rtl swal2-glass',
+                        confirmButton: 'btn btn-primary'
+                    }
+                });
+            }, 500);
+        } else {
+            Swal.close();
+            throw new Error(result.error || 'خطای نامشخص');
+        }
+    } catch (error) {
+        clearInterval(interval);
+        Swal.close();
+        console.error('Process error:', error);
+        await Swal.fire({
+            icon: 'error',
+            title: 'خطا',
+            text: error.message || 'خطا در پردازش فایل',
+            confirmButtonText: 'باشه',
+            customClass: {
+                popup: 'swal2-rtl swal2-glass',
+                confirmButton: 'btn btn-primary'
+            }
+        });
+    }
+}
+
+async function filterStudentsByCourse(courseCode) {
+    // Remove active class from all course items
+    document.querySelectorAll('.course-item').forEach(item => item.classList.remove('active'));
+    // Add active to clicked item
+    event.currentTarget.classList.add('active');
+
+    try {
+        const response = await guardedFetch(`../API/getCourseReport.php?course_code=${encodeURIComponent(courseCode)}`, { cache: 'no-store' });
+        const data = await response.json();
+
+        if (data.error) {
+            throw new Error(data.error);
+        }
+
+        const students = data.students;
+
+        // Update tbody
+        let tbodyHtml = '';
+        students.forEach((student, index) => {
+            tbodyHtml += `
+                <tr>
+                    <td>${index + 1}</td>
+                    <td>${student.student_id}</td>
+                    <td><span class="text-secondary">${student.last_name}</span></td>
+                    <td>${student.first_name}</td>
+                    <td>${courseCode}</td>
+                    <td>${data.course.course_name}</td>
+                    <td><span class="text-secondary">${student.seat_number}</span></td>
+                    <td>${student.class_name}</td>
+                    <td><span class="badge bg-${student.exam_type === 'کتبی' ? 'success' : 'info'}">${student.exam_type}</span></td>
+                </tr>
+            `;
+        });
+
+        document.querySelector('#studentsTableBody').innerHTML = tbodyHtml;
+
+    } catch (error) {
+        console.error('Error:', error);
+        Swal.fire({
+            icon: 'error',
+            title: 'خطا',
+            text: 'خطا در فیلتر دانشجویان',
+            confirmButtonText: 'باشه',
+            customClass: {
+                popup: 'swal2-rtl swal2-glass',
+                confirmButton: 'btn btn-primary'
+            }
+        });
+    }
+}
+
+function showAllStudents() {
+    // Remove active class from all course items
+    document.querySelectorAll('.course-item').forEach(item => item.classList.remove('active'));
+    // Add active to clicked item
+    event.currentTarget.classList.add('active');
+
+    // Update tbody with all students
+    let tbodyHtml = '';
+    window.allStudents.forEach((student, index) => {
+        tbodyHtml += `
+            <tr>
+                <td>${index + 1}</td>
+                <td>${student.student_id}</td>
+                <td><span class="text-secondary">${student.last_name}</span></td>
+                <td>${student.first_name}</td>
+                <td>${student.course_code}</td>
+                <td>${student.course_name}</td>
+                <td><span class="text-secondary">${student.seat_number}</span></td>
+                <td>${student.class_name}</td>
+                <td><span class="badge bg-${student.exam_type === 'کتبی' ? 'success' : 'info'}">${student.exam_type}</span></td>
+            </tr>
+        `;
+    });
+
+    document.querySelector('#studentsTableBody').innerHTML = tbodyHtml;
 }
 
 // Add event listeners to upload buttons
@@ -721,8 +926,8 @@ async function showStudentReport() {
 										<th>تاریخ</th>
 										<th>ساعت</th>
 										<th>شماره صندلی</th>
-										<th>ساختمان</th>
 										<th>کلاس</th>
+										<th>نوع درس</th>
 										<th>نوع آزمون</th>
 									</tr>
 								</thead>
@@ -737,9 +942,9 @@ async function showStudentReport() {
 							<td>${exam.course_name}</td>
 							<td>${exam.exam_date}</td>
 							<td>${exam.exam_time}</td>
-							<td><span class="fw-semibold text-body">${exam.seat_number}</span></td>
-							<td>${exam.building}</td>
+							<td><span class="text-secondary">${exam.seat_number}</span></td>
 							<td>${exam.class_name}</td>
+							<td><span class="badge bg-${exam.course_type === 'کتبی' ? 'success' : 'info'}">${exam.course_type}</span></td>
 							<td><span class="badge bg-${exam.exam_type === 'کتبی' ? 'success' : 'info'}">${exam.exam_type}</span></td>
 						</tr>
 					`;
@@ -846,12 +1051,12 @@ async function showCourseReport() {
 								<td>${course.exam_time}</td>
 							</tr>
 							<tr>
-								<th>نوع آزمون</th>
-								<td><span class="badge bg-${course.exam_type === 'کتبی' ? 'success' : 'info'}">${course.exam_type}</span></td>
+								<th>نوع درس</th>
+								<td><span class="badge bg-${course.course_type === 'کتبی' ? 'success' : 'info'}">${course.course_type}</span></td>
 							</tr>
 							<tr>
 								<th>تعداد دانشجویان</th>
-								<td><span class="fw-semibold text-body">${students.length}</span> نفر</td>
+								<td><span class="text-secondary">${students.length}</span> نفر</td>
 							</tr>
 						</table>
 					</div>
@@ -872,8 +1077,8 @@ async function showCourseReport() {
 										<th>نام</th>
 										<th>مقطع</th>
 										<th>شماره صندلی</th>
-										<th>ساختمان</th>
 										<th>کلاس</th>
+										<th>نوع آزمون</th>
 									</tr>
 								</thead>
 								<tbody>
@@ -884,12 +1089,12 @@ async function showCourseReport() {
 						<tr>
 							<td>${index + 1}</td>
 							<td>${student.student_id}</td>
-							<td><span class="fw-semibold text-body">${student.last_name}</span></td>
+							<td><span class="text-secondary">${student.last_name}</span></td>
 							<td>${student.first_name}</td>
 							<td>${student.degree}</td>
-							<td><span class="fw-semibold text-body">${student.seat_number}</span></td>
-							<td>${student.building}</td>
+							<td><span class="text-secondary">${student.seat_number}</span></td>
 							<td>${student.class_name}</td>
+							<td><span class="badge bg-${student.exam_type === 'کتبی' ? 'success' : 'info'}">${student.exam_type}</span></td>
 						</tr>
 					`;
                 });
@@ -987,6 +1192,9 @@ async function showNextExamReport() {
         const courses = data.courses;
         const students = data.students;
 
+        // Store students globally for filtering
+        window.allStudents = students;
+
         let html = `
 			<div class="mb-4">
 				<h5 class="text-primary mb-3">مشخصات آزمون بعدی</h5>
@@ -1002,29 +1210,35 @@ async function showNextExamReport() {
 						</tr>
 						<tr>
 							<th>تعداد دروس</th>
-							<td><span class="fw-semibold text-body">${courses.length}</span> درس</td>
+							<td><span class="text-secondary">${courses.length}</span> درس</td>
 						</tr>
 						<tr>
 							<th>تعداد دانشجویان</th>
-							<td><span class="fw-semibold text-body">${students.length}</span> نفر</td>
+							<td><span class="text-secondary">${students.length}</span> نفر</td>
 						</tr>
 					</table>
 				</div>
 		`;
 
-        // Show course list
-        if (courses && courses.length > 0) {
+        // Show course list only if more than one course
+        if (courses && courses.length > 1) {
             html += `
 				<h6 class="text-secondary mb-2 mt-3">لیست دروس این جلسه آزمون:</h6>
 				<ul class="list-group mb-3">
+					<li class="list-group-item d-flex justify-content-between align-items-center course-item active" style="cursor: pointer;" onclick="showAllStudents()">
+						<span><strong>همه دروس</strong></span>
+						<div>
+							<span class="badge bg-primary me-2">${students.length}</span>
+						</div>
+					</li>
 			`;
             courses.forEach(course => {
                 html += `
-					<li class="list-group-item d-flex justify-content-between align-items-center">
-						<span><span class="fw-semibold text-body">${course.course_code}</span> - ${course.course_name}</span>
+					<li class="list-group-item d-flex justify-content-between align-items-center course-item" style="cursor: pointer;" onclick="filterStudentsByCourse('${course.course_code}')">
+						<span><span class="text-secondary">${course.course_code}</span> - ${course.course_name}</span>
 						<div>
 							<span class="badge bg-secondary me-2">${course.student_count}</span>
-							<span class="badge bg-${course.exam_type === 'کتبی' ? 'success' : 'info'}">${course.exam_type}</span>
+							<span class="badge bg-${course.course_type === 'کتبی' ? 'success' : 'info'}">${course.course_type}</span>
 						</div>
 					</li>
 				`;
@@ -1051,11 +1265,11 @@ async function showNextExamReport() {
 									<th>کد درس</th>
 									<th>نام درس</th>
 									<th>شماره صندلی</th>
-									<th>ساختمان</th>
 									<th>کلاس</th>
+									<th>نوع آزمون</th>
 								</tr>
 							</thead>
-							<tbody>
+							<tbody id="studentsTableBody">
 			`;
 
             students.forEach((student, index) => {
@@ -1063,13 +1277,13 @@ async function showNextExamReport() {
 					<tr>
 						<td>${index + 1}</td>
 						<td>${student.student_id}</td>
-						<td><span class="fw-semibold text-body">${student.last_name}</span></td>
+						<td><span class="text-secondary">${student.last_name}</span></td>
 						<td>${student.first_name}</td>
 						<td>${student.course_code}</td>
 						<td>${student.course_name}</td>
-						<td><span class="fw-semibold text-body">${student.seat_number}</span></td>
-						<td>${student.building}</td>
+						<td><span class="text-secondary">${student.seat_number}</span></td>
 						<td>${student.class_name}</td>
+						<td><span class="badge bg-${student.exam_type === 'کتبی' ? 'success' : 'info'}">${student.exam_type}</span></td>
 					</tr>
 				`;
             });

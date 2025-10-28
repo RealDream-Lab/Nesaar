@@ -78,9 +78,12 @@ try {
             es.seat_number,
             es.building,
             es.class_name,
-            es.seat_row
+            es.seat_row,
+            c.course_type,
+            c.exam_type
         FROM exam_seats es
         JOIN students s ON es.student_id = s.student_id
+        JOIN courses c ON es.course_code = c.course_code
         WHERE es.course_code = ?
         ORDER BY s.last_name, s.first_name
     ");
