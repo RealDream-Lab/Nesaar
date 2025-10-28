@@ -1,9 +1,25 @@
 // Bump cache to force refresh of updated assets (app.js, style.css, index.php)
 // Increment this when you want clients to fetch the new assets.
 const CACHE_NAME = 'exam-seat-v2.4.1';
-// service workers run in a worker context (no window). Use a fixed string so
-// the SW can include a human-readable version in messages to clients.
-const VERSION = '۲.۴.۱';
+// service workers run in a worker context (no window). Use a default string
+// but try to fetch the canonical version from the app's version.js so a
+// single source of truth can be updated and the SW will pick it up.
+let VERSION = '۲.۴.۱';
+
+async function fetchAndSetVersion() {
+  try {
+    const resp = await fetch('/assets/app/version.js', { cache: 'no-store' });
+    if (!resp.ok) return;
+    const txt = await resp.text();
+    const m = txt.match(/APP_VERSION\s*=\s*['"]([^'"]+)['"]/);
+    if (m && m[1]) {
+      VERSION = m[1];
+      console.log('[SW] Loaded VERSION from version.js ->', VERSION);
+    }
+  } catch (e) {
+    console.warn('[SW] Could not load version.js', e);
+  }
+}
 const urlsToCache = [
   '/',
   '/index.php',
@@ -80,7 +96,9 @@ self.addEventListener('activate', event => {
       Promise.all(
         keys.filter(key => key !== CACHE_NAME).map(key => caches.delete(key))
       )
-    ).then(() => {
+    ).then(async () => {
+      // Try to refresh VERSION from the canonical file before notifying clients
+      await fetchAndSetVersion();
       self.clients.claim();
       // Notify all clients about SW update
       self.clients.matchAll().then(clients => {
