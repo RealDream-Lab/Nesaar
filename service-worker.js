@@ -88,7 +88,7 @@ self.addEventListener('activate', event => {
             version: CACHE_NAME,
             tagVersion: `نسخه ${VERSION}`,
             changes: [
-              'بهینه سازی گزارشات مدیریتی'
+              'بهینه سازی گزارشات مدیریتی و بهبود عملکرد'
             ]
           });
         });
