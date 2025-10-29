@@ -1354,9 +1354,10 @@ async function showNextExamReport() {
         // Store students globally for filtering
         window.allStudents = students;
 
+        const headerTitle = window.customExamReportTitle || 'جزئیات جلسه آزمون';
         let html = `
-			<div class="mb-4">
-				<h5 class="text-primary mb-3">جزئیات جلسه آزمون</h5>
+            <div class="mb-4">
+                <h5 class="text-primary mb-3">${headerTitle}</h5>
 				<div class="table-responsive">
 					<table class="table table-bordered">
 						<tr>
@@ -1486,9 +1487,11 @@ async function showNextExamReport() {
             html += '<p class="text-muted text-center mt-3">هیچ دانشجویی در این آزمون ثبت‌نام نکرده است.</p>';
         }
 
-        document.getElementById('reportContent').innerHTML = html;
-        document.getElementById('reportCard').style.display = 'block';
-        setTimeout(scrollReportCardIntoView, 100);
+            document.getElementById('reportContent').innerHTML = html;
+            document.getElementById('reportCard').style.display = 'block';
+            setTimeout(scrollReportCardIntoView, 100);
+            // clear any custom title after rendering
+            try { delete window.customExamReportTitle; } catch (e) { window.customExamReportTitle = undefined; }
 
     } catch (error) {
         console.error('Error:', error);
