@@ -1709,8 +1709,8 @@ async function showNextExamReport() {
                     </li>
             `;
 
-                // Insert mini pie charts area (course / exam-type / course-type)
-                html += `
+            // Insert mini pie charts area (course / exam-type / course-type)
+            html += `
                     <li class="list-group-item">
                         <div id="miniPieSection" class="d-flex flex-column gap-2">
                             <h6 class="mb-2">آمار سریع جلسه (پیش‌نمایش)</h6>
@@ -1799,9 +1799,9 @@ async function showNextExamReport() {
 
         document.getElementById('reportContent').innerHTML = html;
         document.getElementById('reportCard').style.display = 'block';
-    setTimeout(scrollReportCardIntoView, 100);
-    // Render mini pies for this report
-    try { renderMiniPiesFromReport(data); } catch (e) { console.error('Could not render mini pies:', e); }
+        setTimeout(scrollReportCardIntoView, 100);
+        // Render mini pies for this report
+        try { renderMiniPiesFromReport(data); } catch (e) { console.error('Could not render mini pies:', e); }
         // clear any custom title after rendering
         try { delete window.customExamReportTitle; } catch (e) { window.customExamReportTitle = undefined; }
 
@@ -1853,7 +1853,7 @@ function renderMiniPiesFromReport(data) {
         const ctValues = ctLabels.map(k => Number(courseTypeCounts[k]) || 0);
 
         // Colors
-        const palette = ['#1a6fa6','#ff8a65','#7bd5ff','#9ccc65','#ffca28','#7e57c2','#26a69a','#ef5350','#90a4ae','#5c6bc0'];
+        const palette = ['#1a6fa6', '#ff8a65', '#7bd5ff', '#9ccc65', '#ffca28', '#7e57c2', '#26a69a', '#ef5350', '#90a4ae', '#5c6bc0'];
 
         destroyMiniPies();
 
@@ -1861,7 +1861,7 @@ function renderMiniPiesFromReport(data) {
         const cCtx = document.getElementById('miniPieCourse').getContext('2d');
         miniPieInstances.course = new Chart(cCtx, {
             type: 'doughnut',
-            data: { labels: courseLabels, datasets: [{ data: courseValues, backgroundColor: courseLabels.map((_,i)=>palette[i%palette.length]), borderColor: 'rgba(255,255,255,0.6)', borderWidth: 4 }] },
+            data: { labels: courseLabels, datasets: [{ data: courseValues, backgroundColor: courseLabels.map((_, i) => palette[i % palette.length]), borderColor: 'rgba(255,255,255,0.6)', borderWidth: 4 }] },
             options: { responsive: false, plugins: { legend: { display: false } }, cutout: '30%' }
         });
 
@@ -1869,7 +1869,7 @@ function renderMiniPiesFromReport(data) {
         const eCtx = document.getElementById('miniPieExamType').getContext('2d');
         miniPieInstances.examType = new Chart(eCtx, {
             type: 'doughnut',
-            data: { labels: examLabels, datasets: [{ data: examValues, backgroundColor: examLabels.map((_,i)=>palette[i%palette.length]), borderColor: 'rgba(255,255,255,0.6)', borderWidth: 4 }] },
+            data: { labels: examLabels, datasets: [{ data: examValues, backgroundColor: examLabels.map((_, i) => palette[i % palette.length]), borderColor: 'rgba(255,255,255,0.6)', borderWidth: 4 }] },
             options: { responsive: false, plugins: { legend: { display: false } }, cutout: '40%' }
         });
 
@@ -1877,12 +1877,12 @@ function renderMiniPiesFromReport(data) {
         const ctCtx = document.getElementById('miniPieCourseType').getContext('2d');
         miniPieInstances.courseType = new Chart(ctCtx, {
             type: 'doughnut',
-            data: { labels: ctLabels, datasets: [{ data: ctValues, backgroundColor: ctLabels.map((_,i)=>palette[i%palette.length]), borderColor: 'rgba(255,255,255,0.6)', borderWidth: 4 }] },
+            data: { labels: ctLabels, datasets: [{ data: ctValues, backgroundColor: ctLabels.map((_, i) => palette[i % palette.length]), borderColor: 'rgba(255,255,255,0.6)', borderWidth: 4 }] },
             options: { responsive: false, plugins: { legend: { display: false } }, cutout: '40%' }
         });
 
         // Wire buttons to open large view
-        document.getElementById('btnShowCoursePie').addEventListener('click', () => showLargePie('fراوانی دروس', courseLabels, courseValues, palette));
+    document.getElementById('btnShowCoursePie').addEventListener('click', () => showLargePie('فراوانی دروس', courseLabels, courseValues, palette));
         document.getElementById('btnShowExamTypePie').addEventListener('click', () => showLargePie('نوع آزمون', examLabels, examValues, palette));
         document.getElementById('btnShowCourseTypePie').addEventListener('click', () => showLargePie('نوع درس', ctLabels, ctValues, palette));
 
@@ -1904,16 +1904,40 @@ function showLargePie(title, labels, values, palette) {
                 // placeholder
             },
             didOpen: () => {
-                try { if (largePieInstance) largePieInstance.destroy(); } catch(e){}
+                try { if (largePieInstance) largePieInstance.destroy(); } catch (e) { }
                 const ctx = document.getElementById('largePieCanvas').getContext('2d');
                 largePieInstance = new Chart(ctx, {
                     type: 'doughnut',
-                    data: { labels: labels, datasets: [{ data: values, backgroundColor: labels.map((_,i)=>palette[i%palette.length]), borderColor: 'rgba(255,255,255,0.7)', borderWidth: 6 }] },
-                    options: { responsive: true, maintainAspectRatio: false, cutout: '30%', plugins: { legend: { position: 'right' } } }
+                    data: { labels: labels, datasets: [{ data: values, backgroundColor: labels.map((_, i) => palette[i % palette.length]), borderColor: 'rgba(255,255,255,0.85)', borderWidth: 6 }] },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        cutout: '30%',
+                        plugins: {
+                            // legend removed per request (we'll use tooltips instead)
+                            legend: { display: false },
+                            tooltip: {
+                                enabled: true,
+                                displayColors: false,
+                                title: { display: false },
+                                bodyFont: { family: 'Vazir, sans-serif' },
+                                callbacks: {
+                                    // remove title duplication and show a single label line with Persian numbers
+                                    title: function() { return ''; },
+                                    label: function(context) {
+                                        const v = context.raw || 0;
+                                        const label = context.label || context.dataset && context.dataset._rawLabel || '';
+                                        const valText = (typeof toPersianDigits === 'function') ? toPersianDigits(v) : String(v);
+                                        return `${label}: ${valText}`;
+                                    }
+                                }
+                            }
+                        }
+                    }
                 });
             },
             willClose: () => {
-                try { if (largePieInstance) { largePieInstance.destroy(); largePieInstance = null; } } catch(e){}
+                try { if (largePieInstance) { largePieInstance.destroy(); largePieInstance = null; } } catch (e) { }
             }
         });
     } catch (err) {
