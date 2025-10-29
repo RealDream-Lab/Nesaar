@@ -138,8 +138,29 @@ async function loadDashboardData() {
         if (!stats.error) {
             document.getElementById('totalStudents').textContent = stats.totalStudents || 0;
             document.getElementById('totalCourses').textContent = stats.totalCourses || 0;
-            document.getElementById('nextExamStudents').textContent = stats.nextExamStudents || 0;
-            document.getElementById('nextExamDateTime').textContent = stats.nextExamDateTime || 'آزمونی یافت نشد';
+                document.getElementById('nextExamStudents').textContent = stats.nextExamStudents || 0;
+                document.getElementById('nextExamDateTime').textContent = stats.nextExamDateTime || 'آزمونی یافت نشد';
+                // Render breakdown if provided
+                try {
+                    const bdEl = document.getElementById('nextExamBreakdown');
+                    if (bdEl) {
+                        const bd = stats.nextExamBreakdown || stats.breakdown || null;
+                        if (bd) {
+                            const toPersian = toPersianDigits;
+                            const parts = [];
+                            if (bd.electronic !== undefined) parts.push(`الکترونیکی: ${toPersian(bd.electronic)}`);
+                            if (bd.written !== undefined) parts.push(`کتبی: ${toPersian(bd.written)}`);
+                            if (bd.test !== undefined) parts.push(`تستی: ${toPersian(bd.test)}`);
+                            if (bd.descriptive !== undefined) parts.push(`تشریحی: ${toPersian(bd.descriptive)}`);
+                            if (bd.both !== undefined) parts.push(`تستی و تشریحی: ${toPersian(bd.both)}`);
+                            bdEl.textContent = parts.join(' — ');
+                        } else {
+                            bdEl.textContent = '';
+                        }
+                    }
+                } catch (err) {
+                    console.warn('Failed to render nextExamBreakdown', err);
+                }
         }
     } catch (error) {
         console.error('Error loading dashboard data:', error);

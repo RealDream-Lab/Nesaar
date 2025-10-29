@@ -261,6 +261,7 @@ if ($licenseStatus['valid'] !== true) {
                         <div class="stat-box">
                             <h3 id="nextExamStudents">-</h3>
                             <p id="nextExamDateTime">بارگذاری...</p>
+                            <div id="nextExamBreakdown" class="small text-muted" style="margin-top:6px;">&nbsp;</div>
                         </div>
                     </div>
                 </div>
