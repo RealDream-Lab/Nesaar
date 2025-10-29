@@ -105,6 +105,13 @@ if ($licenseStatus['valid'] !== true) {
                 </div>
             </div>
 
+            <!-- Reports Chart Card (empty title by design) -->
+            <div class="dashboard-card no-hover" id="reportsChartCard">
+                <div style="padding: 1rem 0;">
+                    <canvas id="reportsChart" height="220" aria-label="نمودار جلسات آینده" role="img"></canvas>
+                </div>
+            </div>
+
             <!-- Latest Request Report -->
             <div class="dashboard-card no-hover" id="reportCard" style="display: none;">
                 <h4 class="mb-3">آخرین گزارش درخواستی</h4>
@@ -143,6 +150,8 @@ if ($licenseStatus['valid'] !== true) {
     <script src="../assets/bootstrap/bootstrap.bundle.min.js"></script>
     <script src="../assets/sweetalert2/sweetalert2.min.js"></script>
     <script src="../assets/app/version.js"></script>
+    <!-- Local Chart.js (UMD) - load synchronously so window.Chart is available -->
+    <script src="../assets/vendor/chartjs/chart.min.js"></script>
     <!-- Device check and SweetAlert moved to dashboard.js -->
     <script src="dashboard.js"></script>
 </body>

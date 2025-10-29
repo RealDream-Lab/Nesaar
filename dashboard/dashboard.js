@@ -173,6 +173,8 @@ async function loadDashboardData() {
             }
             // no breakdown in the top stat card; breakdown will be shown in the course list header
         }
+        // Always (re)render the reports chart after loading statistics
+        try { renderReportsChart(); } catch (e) { console.error('Chart render failed:', e); }
     } catch (error) {
         console.error('Error loading dashboard data:', error);
         if (!error?.isLicenseError) {
@@ -188,6 +190,26 @@ async function loadDashboardData() {
 // Placeholder action for the "جلسه باقیمانده" card. User will specify the exact action later.
 async function showRemainingSessions() {
     try {
+        // Ensure Chart.js is available before attempting to render
+        try { await loadChartJsIfNeeded(); } catch (loadErr) {
+            console.warn('Chart.js not available:', loadErr);
+            const card = document.getElementById('reportsChartCard');
+            if (card) {
+                let ph = card.querySelector('.reports-chart-placeholder');
+                if (!ph) {
+                    ph = document.createElement('div');
+                    ph.className = 'reports-chart-placeholder';
+                    ph.style.cssText = 'padding:1.5rem;color:var(--text-muted);text-align:center;font-size:1.05rem;';
+                    ph.textContent = 'خطا در بارگذاری نمودار (Chart.js در دسترس نیست)';
+                    card.appendChild(ph);
+                } else {
+                    ph.textContent = 'خطا در بارگذاری نمودار (Chart.js در دسترس نیست)';
+                    ph.style.display = 'block';
+                }
+            }
+            return;
+        }
+
         const resp = await guardedFetch('../API/getStatistics.php', { cache: 'no-store' });
         const stats = await resp.json();
         const future = stats.futureExams || [];
@@ -343,6 +365,197 @@ if (checkAuth()) {
     loadDashboardData();
 }
 
+// Chart instance holder for reports chart
+let reportsChartInstance = null;
+
+// Ensure Chart.js is loaded and available as a global. If it's not, dynamically load the vendor file.
+function loadChartJsIfNeeded() {
+    // Prefer dynamic import for ESM bundle and expose Chart as a global for legacy code
+    return new Promise(async (resolve, reject) => {
+        if (typeof Chart !== 'undefined') return resolve();
+        try {
+            // Dynamic import of ESM Chart.js
+            const mod = await import('../assets/vendor/chartjs/chart.min.js');
+            // Chart may be named export or default
+            const exported = mod.Chart || mod.default || mod;
+            if (!exported) return reject(new Error('Chart module loaded but no export found'));
+            // Expose as global for existing code
+            window.Chart = exported;
+            return resolve();
+        } catch (err) {
+            // Attempt fallback: try to load as a script tag (older browsers)
+            try {
+                const existing = document.querySelector('script[data-chart-loader]');
+                if (existing) {
+                    existing.addEventListener('load', () => {
+                        if (typeof Chart !== 'undefined') return resolve();
+                        return reject(new Error('Chart.js loaded but Chart is undefined'));
+                    });
+                    existing.addEventListener('error', () => reject(new Error('Failed to load Chart.js')));
+                    return;
+                }
+                const script = document.createElement('script');
+                script.src = '../assets/vendor/chartjs/chart.min.js';
+                script.async = true;
+                script.setAttribute('data-chart-loader', '1');
+                script.onload = () => {
+                    if (typeof Chart !== 'undefined') return resolve();
+                    return reject(new Error('Chart.js loaded but Chart is undefined'));
+                };
+                script.onerror = () => reject(new Error('Failed to load Chart.js'));
+                document.head.appendChild(script);
+            } catch (err2) {
+                return reject(err);
+            }
+        }
+    });
+}
+
+// Render a simple daily grouped bar chart of future exam sessions
+async function renderReportsChart() {
+    try {
+        // Ensure Chart.js is available (dynamic import for ESM build)
+        try {
+            await loadChartJsIfNeeded();
+        } catch (loadErr) {
+            console.warn('Chart.js not available for reports chart:', loadErr);
+            const card = document.getElementById('reportsChartCard');
+            if (card) {
+                let ph = card.querySelector('.reports-chart-placeholder');
+                if (!ph) {
+                    ph = document.createElement('div');
+                    ph.className = 'reports-chart-placeholder';
+                    ph.style.cssText = 'padding:1.5rem;color:var(--text-muted);text-align:center;font-size:1.05rem;';
+                    ph.textContent = 'خطا در بارگذاری نمودار (Chart.js در دسترس نیست)';
+                    card.appendChild(ph);
+                } else {
+                    ph.textContent = 'خطا در بارگذاری نمودار (Chart.js در دسترس نیست)';
+                    ph.style.display = 'block';
+                }
+            }
+            return;
+        }
+        const resp = await guardedFetch('../API/getStatistics.php', { cache: 'no-store' });
+        const stats = await resp.json();
+        const future = stats.futureExams || [];
+
+        const card = document.getElementById('reportsChartCard');
+        const canvas = document.getElementById('reportsChart');
+        if (!card || !canvas) return;
+
+        // Group by exam_date (Jalali string)
+        const grouped = {};
+        const dateTs = {};
+        future.forEach(e => {
+            const d = e.exam_date || '';
+            const cnt = Number(e.student_count) || 0;
+            if (!grouped[d]) grouped[d] = 0;
+            grouped[d] += cnt;
+            // Keep earliest timestamp for sorting
+            if (!dateTs[d] || e.timestamp < dateTs[d]) dateTs[d] = e.timestamp;
+        });
+
+        const entries = Object.keys(grouped).map(d => ({ date: d, count: grouped[d], ts: dateTs[d] || 0 }));
+        // Sort by timestamp ascending
+        entries.sort((a, b) => a.ts - b.ts);
+
+        const labels = entries.map(e => e.date);
+        const data = entries.map(e => e.count);
+
+        // If no data, show placeholder text and destroy any existing chart
+        if (!labels.length) {
+            canvas.style.display = 'none';
+            if (reportsChartInstance) {
+                try { reportsChartInstance.destroy(); } catch (er) { /* ignore */ }
+                reportsChartInstance = null;
+            }
+            // ensure placeholder exists
+            let ph = card.querySelector('.reports-chart-placeholder');
+            if (!ph) {
+                ph = document.createElement('div');
+                ph.className = 'reports-chart-placeholder';
+                ph.style.cssText = 'padding:1.5rem;color:var(--text-muted);text-align:center;font-size:1.05rem;';
+                ph.textContent = 'جلسه‌ای برای نمایش وجود ندارد';
+                card.appendChild(ph);
+            } else {
+                ph.style.display = 'block';
+            }
+            return;
+        }
+
+        // Remove any placeholder
+        const existingPh = card.querySelector('.reports-chart-placeholder');
+        if (existingPh) existingPh.remove();
+        canvas.style.display = 'block';
+
+        // Destroy previous instance if present
+        if (reportsChartInstance) {
+            try { reportsChartInstance.destroy(); } catch (er) { /* ignore */ }
+            reportsChartInstance = null;
+        }
+
+        const ctx = canvas.getContext('2d');
+
+        // Plugin to draw labels above bars (uses Persian digits conversion)
+        const valueAbovePlugin = {
+            id: 'valueAbove',
+            afterDatasetsDraw(chart) {
+                const { ctx } = chart;
+                chart.data.datasets.forEach((dataset, datasetIndex) => {
+                    const meta = chart.getDatasetMeta(datasetIndex);
+                    meta.data.forEach((element, index) => {
+                        const value = dataset.data[index];
+                        const x = element.x;
+                        const y = element.y;
+                        ctx.save();
+                        ctx.fillStyle = '#ffffff';
+                        ctx.font = '600 12px Vazir, sans-serif';
+                        ctx.textAlign = 'center';
+                        // Convert to Persian digits if helper exists
+                        const text = (typeof toPersianDigits === 'function') ? toPersianDigits(value) : String(value);
+                        ctx.fillText(text, x, y - 6);
+                        ctx.restore();
+                    });
+                });
+            }
+        };
+
+        reportsChartInstance = new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: labels,
+                datasets: [{
+                    label: 'تعداد',
+                    data: data,
+                    backgroundColor: '#1a6fa6'
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    x: { 
+                        ticks: { color: 'white' },
+                        grid: { display: false }
+                    },
+                    y: {
+                        beginAtZero: true,
+                        ticks: { color: 'white', precision: 0 },
+                        grid: { color: 'rgba(255,255,255,0.06)' }
+                    }
+                },
+                plugins: {
+                    legend: { display: false },
+                    tooltip: { enabled: true }
+                }
+            },
+            plugins: [valueAbovePlugin]
+        });
+
+    } catch (error) {
+        console.error('Error rendering reports chart:', error);
+    }
+}
 // Get max upload size from server
 let MAX_UPLOAD_SIZE = 128 * 1024 * 1024; // Default 128MB
 let MAX_UPLOAD_SIZE_FORMATTED = '۱۲۸ مگابایت';
@@ -996,6 +1209,8 @@ function clearReport() {
     if (!container) return;
     const targetTop = container.getBoundingClientRect().top + window.pageYOffset;
     window.scrollTo({ top: Math.max(0, targetTop), behavior: 'smooth' });
+    // Rebuild the reports chart when the report is cleared
+    try { renderReportsChart(); } catch (e) { /* ignore */ }
 }
 
 async function showStudentReport() {
