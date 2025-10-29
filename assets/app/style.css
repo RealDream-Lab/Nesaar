@@ -207,11 +207,17 @@ body::after {
   background: linear-gradient(135deg, rgba(255, 255, 255, 0.95) 0%, rgba(255, 255, 255, 0.9) 100%);
   backdrop-filter: blur(10px);
   border-radius: 20px;
+  /* Default padding for dashboard cards (revert to original) */
   padding: 2.5rem;
   margin-bottom: 1.5rem;
   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
   border: 1px solid rgba(255, 255, 255, 0.3);
   transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+/* Scoped compact padding: only apply reduced white padding to stat cards */
+.dashboard-card.stat-card {
+  padding: 0.3125rem; /* 5px symmetric padding */
 }
 
 .dashboard-card:hover {
@@ -236,6 +242,7 @@ body::after {
 
 .stat-box {
   text-align: center;
+  /* Keep inner blue padding so content has breathing room */
   padding: 2rem;
   background: linear-gradient(135deg, #1a6fa6 0%, #127ead 100%);
   border-radius: 15px;
