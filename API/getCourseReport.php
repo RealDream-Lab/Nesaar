@@ -55,12 +55,12 @@ try {
     // Get course info
     $stmt = $pdo->prepare("
         SELECT course_code, course_name, exam_date, exam_time, 
-               exam_type, course_type
+               course_type
         FROM courses 
         WHERE course_code = ?
     ");
-    $stmt->execute([$courseCode]);
-    $course = $stmt->fetch(PDO::FETCH_ASSOC);
+        $stmt->execute([$courseCode]);
+        $course = $stmt->fetch(PDO::FETCH_ASSOC);
     
     if (!$course) {
         echo json_encode(['error' => 'درسی با این کد یافت نشد'], JSON_UNESCAPED_UNICODE);
@@ -80,7 +80,7 @@ try {
             es.class_name,
             es.seat_row,
             c.course_type,
-            c.exam_type
+                es.exam_type
         FROM exam_seats es
         JOIN students s ON es.student_id = s.student_id
         JOIN courses c ON es.course_code = c.course_code
@@ -89,6 +89,12 @@ try {
     ");
     $stmt->execute([$courseCode]);
     $students = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+        // Derive course-level exam_type from seats (if any)
+        $etypeStmt = $pdo->prepare("SELECT MAX(exam_type) as exam_type FROM exam_seats WHERE course_code = ?");
+        $etypeStmt->execute([$courseCode]);
+        $etypeRow = $etypeStmt->fetch(PDO::FETCH_ASSOC);
+        $course['exam_type'] = $etypeRow['exam_type'] ?? '';
     
     echo json_encode([
         'success' => true,

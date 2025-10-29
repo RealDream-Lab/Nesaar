@@ -74,7 +74,7 @@ try {
             c.course_name,
             c.exam_date,
             c.exam_time,
-            c.exam_type,
+            es.exam_type AS exam_type,
             c.course_type,
             es.seat_number,
             es.building,

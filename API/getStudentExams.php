@@ -96,7 +96,7 @@ SELECT
     c.course_name AS course_name,
     c.exam_date AS exam_date,
     c.exam_time AS exam_time,
-    c.exam_type AS exam_type,
+    es.exam_type AS exam_type,
     c.course_type AS course_type,
     e.seat_number AS seat_number,
     e.building AS building,

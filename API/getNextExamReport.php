@@ -54,21 +54,38 @@ try {
     require_once __DIR__ . '/db_init.php';
     
     // Get all courses with this date and time with student count
-    $stmt = $pdo->prepare("
-        SELECT 
-            c.course_code, 
-            c.course_name, 
-            c.exam_date, 
-            c.exam_time, 
-            c.exam_type, 
-            c.course_type,
-            COUNT(es.student_id) as student_count
-        FROM courses c
-        LEFT JOIN exam_seats es ON c.course_code = es.course_code
-        WHERE c.exam_date = ? AND c.exam_time = ?
-        GROUP BY c.course_code, c.course_name, c.exam_date, c.exam_time, c.exam_type, c.course_type
-        ORDER BY c.course_code
-    ");
+        // Get all courses with this date and time with student count
+        // exam_type is now stored per-seat in exam_seats; derive a course-level value from seats (if any)
+        $stmt = $pdo->prepare("
+            SELECT 
+                c.course_code, 
+                c.course_name, 
+                c.exam_date, 
+                c.exam_time, 
+                MAX(es.exam_type) AS exam_type, 
+                c.course_type,
+                COUNT(es.student_id) as student_count
+            FROM courses c
+            LEFT JOIN exam_seats es ON c.course_code = es.course_code
+            WHERE c.exam_date = ? AND c.exam_time = ?
+            GROUP BY c.course_code, c.course_name, c.exam_date, c.exam_time, c.course_type
+            ORDER BY c.course_code
+        ");
+        $stmt = $pdo->prepare("
+            SELECT 
+                c.course_code, 
+                c.course_name, 
+                c.exam_date, 
+                c.exam_time, 
+                MAX(es.exam_type) AS exam_type, 
+                c.course_type,
+                COUNT(es.student_id) as student_count
+            FROM courses c
+            LEFT JOIN exam_seats es ON c.course_code = es.course_code
+            WHERE c.exam_date = ? AND c.exam_time = ?
+            GROUP BY c.course_code, c.course_name, c.exam_date, c.exam_time, c.course_type
+            ORDER BY c.course_code
+        ");
     $stmt->execute([$examDate, $examTime]);
     $courses = $stmt->fetchAll(PDO::FETCH_ASSOC);
     
@@ -96,7 +113,7 @@ try {
             c.course_code,
             c.course_name,
             c.course_type,
-            c.exam_type
+                es.exam_type
         FROM exam_seats es
         JOIN students s ON es.student_id = s.student_id
         JOIN courses c ON es.course_code = c.course_code
