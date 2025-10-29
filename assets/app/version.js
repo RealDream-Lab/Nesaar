@@ -1,1 +1,3 @@
-window.APP_VERSION = '۲.۴.۶';
+// Application version exposed to frontend
+// Bumped for recent cleanup and schema/API fixes
+window.APP_VERSION = '2.4.7';
