@@ -138,29 +138,9 @@ async function loadDashboardData() {
         if (!stats.error) {
             document.getElementById('totalStudents').textContent = stats.totalStudents || 0;
             document.getElementById('totalCourses').textContent = stats.totalCourses || 0;
-                document.getElementById('nextExamStudents').textContent = stats.nextExamStudents || 0;
-                document.getElementById('nextExamDateTime').textContent = stats.nextExamDateTime || 'آزمونی یافت نشد';
-                // Render breakdown if provided
-                try {
-                    const bdEl = document.getElementById('nextExamBreakdown');
-                    if (bdEl) {
-                        const bd = stats.nextExamBreakdown || stats.breakdown || null;
-                        if (bd) {
-                            const toPersian = toPersianDigits;
-                            const parts = [];
-                            if (bd.electronic !== undefined) parts.push(`الکترونیکی: ${toPersian(bd.electronic)}`);
-                            if (bd.written !== undefined) parts.push(`کتبی: ${toPersian(bd.written)}`);
-                            if (bd.test !== undefined) parts.push(`تستی: ${toPersian(bd.test)}`);
-                            if (bd.descriptive !== undefined) parts.push(`تشریحی: ${toPersian(bd.descriptive)}`);
-                            if (bd.both !== undefined) parts.push(`تستی و تشریحی: ${toPersian(bd.both)}`);
-                            bdEl.textContent = parts.join(' — ');
-                        } else {
-                            bdEl.textContent = '';
-                        }
-                    }
-                } catch (err) {
-                    console.warn('Failed to render nextExamBreakdown', err);
-                }
+            document.getElementById('nextExamStudents').textContent = stats.nextExamStudents || 0;
+            document.getElementById('nextExamDateTime').textContent = stats.nextExamDateTime || 'آزمونی یافت نشد';
+            // no breakdown in the top stat card; breakdown will be shown in the course list header
         }
     } catch (error) {
         console.error('Error loading dashboard data:', error);
@@ -1303,24 +1283,39 @@ async function showNextExamReport() {
 
         // Show course list only if more than one course
         if (courses && courses.length > 1) {
+            // Prepare header breakdown badges from API (examTypeCounts and courseTypeCounts)
+            // The user prefers the same gray badge template used in the course list; use `bg-secondary` for both groups.
+            const et = data.examTypeCounts || {};
+            const ct = data.courseTypeCounts || {};
+            const badgeParts = [];
+            // Exam-type counts first (e.g., کتبی / الکترونیکی)
+            for (const [type, cnt] of Object.entries(et)) {
+                badgeParts.push(`<span class="badge bg-secondary me-2">${type}: ${toPersianDigits(cnt)}</span>`);
+            }
+            // Course-type counts (e.g., تستی / تشریحی)
+            for (const [type, cnt] of Object.entries(ct)) {
+                badgeParts.push(`<span class="badge bg-secondary me-2">${type}: ${toPersianDigits(cnt)}</span>`);
+            }
+            const badgesHtml = badgeParts.join('');
+
             html += `
-				<h6 class="text-secondary mb-2 mt-3">لیست دروس این جلسه آزمون:</h6>
-				<ul class="list-group mb-3">
-					<li class="list-group-item d-flex justify-content-between align-items-center course-item active" style="cursor: pointer;" onclick="showAllStudents()">
-						<span><strong>همه دروس</strong></span>
-						<div>
-							<span class="badge bg-primary me-2">${students.length}</span>
-						</div>
-					</li>
-			`;
+                <h6 class="text-secondary mb-2 mt-3">لیست دروس این جلسه آزمون:</h6>
+                <ul class="list-group mb-3">
+                    <li class="list-group-item d-flex justify-content-between align-items-center course-item active" style="cursor: pointer;" onclick="showAllStudents()">
+                        <span><strong>همه دروس</strong></span>
+                        <div>
+                            ${badgesHtml}
+                        </div>
+                    </li>
+            `;
             courses.forEach(course => {
                 html += `
 					<li class="list-group-item d-flex justify-content-between align-items-center course-item" style="cursor: pointer;" onclick="filterStudentsByCourse('${course.course_code}')">
 						<span><span class="text-secondary">${course.course_code}</span> - ${course.course_name}</span>
-						<div>
-							<span class="badge bg-secondary me-2">${course.student_count}</span>
-							<span class="badge bg-${course.course_type === 'کتبی' ? 'success' : 'info'}">${course.course_type}</span>
-						</div>
+                        <div>
+                            <span class="badge bg-secondary me-2">${course.student_count}</span>
+                            <span class="badge bg-${course.course_type === 'کتبی' ? 'success' : 'info'}">${course.course_type}</span>
+                        </div>
 					</li>
 				`;
             });

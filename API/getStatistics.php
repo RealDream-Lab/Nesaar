@@ -79,63 +79,11 @@ try {
         $nextExamDateTime = 'آزمونی یافت نشد';
     }
 
-    // If we have a next exam, compute breakdowns by exam modality and course assessment type
-    $breakdown = [
-        'electronic' => 0,
-        'written' => 0,
-        'test' => 0,
-        'descriptive' => 0,
-        'both' => 0
-    ];
-    if (!empty($futureExams)) {
-        try {
-            // Counts by exam_type (exam_seats.exam_type)
-            $etypeStmt = $pdo->prepare("SELECT es.exam_type, COUNT(*) as cnt FROM courses c JOIN exam_seats es ON c.course_code = es.course_code WHERE c.exam_date = ? AND c.exam_time = ? GROUP BY es.exam_type");
-            $etypeStmt->execute([$nextExam['exam_date'], $nextExam['exam_time']]);
-            $etypeRows = $etypeStmt->fetchAll();
-            foreach ($etypeRows as $r) {
-                $etype = trim($r['exam_type']);
-                $cnt = (int)$r['cnt'];
-                if ($etype === 'الکترونیکی') {
-                    $breakdown['electronic'] += $cnt;
-                } elseif ($etype === 'کتبی') {
-                    $breakdown['written'] += $cnt;
-                } else {
-                    // Unknown/empty types counted under written fallback
-                    $breakdown['written'] += $cnt;
-                }
-            }
-
-            // Counts by course_type (تستی / تشریحی / تستی و تشریحی)
-            $ctypeStmt = $pdo->prepare("SELECT c.course_type, COUNT(es.student_id) as cnt FROM courses c LEFT JOIN exam_seats es ON c.course_code = es.course_code WHERE c.exam_date = ? AND c.exam_time = ? GROUP BY c.course_type");
-            $ctypeStmt->execute([$nextExam['exam_date'], $nextExam['exam_time']]);
-            $ctypeRows = $ctypeStmt->fetchAll();
-            foreach ($ctypeRows as $r) {
-                $ctype = trim($r['course_type']);
-                $cnt = (int)$r['cnt'];
-                if ($ctype === 'تستی') {
-                    $breakdown['test'] += $cnt;
-                } elseif ($ctype === 'تشریحی') {
-                    $breakdown['descriptive'] += $cnt;
-                } elseif ($ctype === 'تستی و تشریحی' || $ctype === 'تستی و تشریحی') {
-                    $breakdown['both'] += $cnt;
-                } else {
-                    // Unknown types we attribute to test by default
-                    $breakdown['test'] += $cnt;
-                }
-            }
-        } catch (Exception $e) {
-            // Non-fatal: leave breakdowns as zero if any query fails
-            error_log('Statistics breakdown error: ' . $e->getMessage());
-        }
-    }
-
     echo json_encode([
         'totalStudents' => $totalStudents,
         'totalCourses' => $totalCourses,
         'nextExamStudents' => $nextExamStudents,
-        'nextExamDateTime' => $nextExamDateTime,
-        'nextExamBreakdown' => $breakdown
+        'nextExamDateTime' => $nextExamDateTime
     ], JSON_UNESCAPED_UNICODE);
 } catch (Exception $e) {
     error_log('Statistics error: ' . $e->getMessage());

@@ -123,12 +123,43 @@ try {
     $stmt->execute($courseCodes);
     $students = $stmt->fetchAll(PDO::FETCH_ASSOC);
     
+    // Compute counts grouped by course_type for the header breakdown
+    $courseTypeCounts = [];
+    try {
+        $ctStmt = $pdo->prepare("SELECT c.course_type, COUNT(es.student_id) as cnt FROM courses c LEFT JOIN exam_seats es ON c.course_code = es.course_code WHERE c.exam_date = ? AND c.exam_time = ? GROUP BY c.course_type");
+        $ctStmt->execute([$examDate, $examTime]);
+        $rows = $ctStmt->fetchAll(PDO::FETCH_ASSOC);
+        foreach ($rows as $r) {
+            $type = trim($r['course_type']) ?: 'نامشخص';
+            $courseTypeCounts[$type] = (int)$r['cnt'];
+        }
+    } catch (Exception $e) {
+        error_log('getNextExamReport: failed to compute course type counts: ' . $e->getMessage());
+    }
+
+    // Compute counts grouped by exam_type for the header breakdown (e.g., کتبی / الکترونیکی)
+    $examTypeCounts = [];
+    try {
+        // Prefer exam_type stored in exam_seats (seat-level). If absent for a seat, it will be ignored in the count.
+        $etStmt = $pdo->prepare("SELECT COALESCE(es.exam_type, '') AS exam_type, COUNT(es.student_id) as cnt FROM exam_seats es JOIN courses c ON es.course_code = c.course_code WHERE c.exam_date = ? AND c.exam_time = ? GROUP BY COALESCE(es.exam_type, '')");
+        $etStmt->execute([$examDate, $examTime]);
+        $erows = $etStmt->fetchAll(PDO::FETCH_ASSOC);
+        foreach ($erows as $r) {
+            $type = trim($r['exam_type']) ?: 'نامشخص';
+            $examTypeCounts[$type] = (int)$r['cnt'];
+        }
+    } catch (Exception $e) {
+        error_log('getNextExamReport: failed to compute exam type counts: ' . $e->getMessage());
+    }
+
     echo json_encode([
         'success' => true,
         'exam_date' => $examDate,
         'exam_time' => $examTime,
         'courses' => $courses,
-        'students' => $students
+        'students' => $students,
+        'courseTypeCounts' => $courseTypeCounts,
+        'examTypeCounts' => $examTypeCounts
     ], JSON_UNESCAPED_UNICODE);
     
 } catch (PDOException $e) {
