@@ -367,6 +367,35 @@ if (checkAuth()) {
 
 // Chart instance holder for reports chart
 let reportsChartInstance = null;
+// Ensure we only configure Chart.js defaults once
+let chartDefaultsConfigured = false;
+
+function configureChartDefaults() {
+    if (chartDefaultsConfigured) return;
+    try {
+        if (typeof Chart === 'undefined') return;
+        // Font family and global color
+        Chart.defaults.font.family = 'Vazir, sans-serif';
+        // Keep default font size unchanged by not setting Chart.defaults.font.size
+        // Set default color for axes and labels
+        Chart.defaults.color = '#0b2a44';
+        // Disable tooltips globally per user's preference
+        if (!Chart.defaults.plugins) Chart.defaults.plugins = {};
+        Chart.defaults.plugins.tooltip = Chart.defaults.plugins.tooltip || {};
+        Chart.defaults.plugins.tooltip.enabled = false;
+        // Legend labels styling
+        Chart.defaults.plugins.legend = Chart.defaults.plugins.legend || {};
+        Chart.defaults.plugins.legend.labels = Chart.defaults.plugins.legend.labels || {};
+        Chart.defaults.plugins.legend.labels.family = 'Vazir, sans-serif';
+        Chart.defaults.plugins.legend.labels.color = '#0b2a44';
+        // Set a sensible global aspect ratio
+        Chart.defaults.maintainAspectRatio = true;
+        Chart.defaults.aspectRatio = 16 / 9;
+        chartDefaultsConfigured = true;
+    } catch (e) {
+        console.warn('Could not configure Chart defaults:', e);
+    }
+}
 
 // Ensure Chart.js is loaded and available as a global. If it's not, dynamically load the vendor file.
 function loadChartJsIfNeeded() {
@@ -381,6 +410,8 @@ function loadChartJsIfNeeded() {
             if (!exported) return reject(new Error('Chart module loaded but no export found'));
             // Expose as global for existing code
             window.Chart = exported;
+            // Configure global defaults now that Chart is available
+            try { configureChartDefaults(); } catch (e) { /* ignore */ }
             return resolve();
         } catch (err) {
             // Attempt fallback: try to load as a script tag (older browsers)
@@ -399,7 +430,10 @@ function loadChartJsIfNeeded() {
                 script.async = true;
                 script.setAttribute('data-chart-loader', '1');
                 script.onload = () => {
-                    if (typeof Chart !== 'undefined') return resolve();
+                    if (typeof Chart !== 'undefined') {
+                        try { configureChartDefaults(); } catch (e) { /* ignore */ }
+                        return resolve();
+                    }
                     return reject(new Error('Chart.js loaded but Chart is undefined'));
                 };
                 script.onerror = () => reject(new Error('Failed to load Chart.js'));
@@ -417,6 +451,8 @@ async function renderReportsChart() {
         // Ensure Chart.js is available (dynamic import for ESM build)
         try {
             await loadChartJsIfNeeded();
+            // ensure defaults configured before rendering any chart
+            try { configureChartDefaults(); } catch (e) { /* ignore */ }
         } catch (loadErr) {
             console.warn('Chart.js not available for reports chart:', loadErr);
             const card = document.getElementById('reportsChartCard');
