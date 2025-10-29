@@ -366,6 +366,33 @@ body::after {
   height: 100% !important;
 }
 
+/* Reports overview: main chart + small pies column */
+.reports-overview {
+  display: flex;
+  gap: 12px;
+  align-items: stretch;
+}
+
+.reports-side {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  min-width: 160px;
+  justify-content: center;
+}
+
+.small-pie {
+  width: 140px !important;
+  height: 140px !important;
+}
+
+.small-pie-wrap {
+  padding: 4px;
+  background: #fff;
+  border-radius: 8px;
+  box-shadow: 0 1px 3px rgba(11,42,68,0.06);
+}
+
 /* Mini pie styles inside report card */
 .mini-pie {
   width: 140px !important;
@@ -952,6 +979,42 @@ body.login-active #loginRow {
   .exam-cards-container {
     max-width: 100%;
     padding: 0 1rem 5rem;
+  }
+}
+
+/* Responsive: stack chart and side pies on narrow screens to avoid layout break */
+@media (max-width: 900px) {
+  .reports-overview {
+    flex-direction: column;
+    gap: 8px;
+  }
+  .reports-side {
+    flex-direction: row;
+    justify-content: space-around;
+    min-width: auto;
+    margin-top: 8px;
+    gap: 8px;
+  }
+  .small-pie, .mini-pie {
+    width: 100px !important;
+    height: 100px !important;
+  }
+  .small-pie-wrap {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-direction: column;
+  }
+  /* Release 16:9 wrapper on small screens so Chart.js maintainAspectRatio=false takes effect */
+  #reportsChartCard .chart-wrapper {
+    padding-top: 0; /* remove the padding-top trick */
+    height: auto;
+  }
+  /* Let the canvas be a normal block element with a controlled height on small screens */
+  #reportsChartCard .chart-wrapper canvas {
+    position: relative !important;
+    width: 100% !important;
+    height: 260px !important; /* comfortable default height for narrow viewports */
   }
 }
 

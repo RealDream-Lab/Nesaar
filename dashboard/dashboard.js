@@ -173,8 +173,10 @@ async function loadDashboardData() {
             }
             // no breakdown in the top stat card; breakdown will be shown in the course list header
         }
-        // Always (re)render the reports chart after loading statistics
-        try { renderReportsChart(); } catch (e) { console.error('Chart render failed:', e); }
+    // Always (re)render the reports chart after loading statistics
+    try { renderReportsChart(); } catch (e) { console.error('Chart render failed:', e); }
+    // Show release notice for v3.0.0 (once per session)
+    try { showReleaseNotice(); } catch (e) { /* ignore */ }
     } catch (error) {
         console.error('Error loading dashboard data:', error);
         if (!error?.isLicenseError) {
@@ -290,6 +292,37 @@ async function updateFooterUniversity() {
 }
 updateFooterUniversity();
 
+// Show release notice for v3.0.0 once per session
+function showReleaseNotice() {
+    try {
+        if (sessionStorage.getItem('release_v3_0_0_shown')) return;
+        const title = 'نسخه ۳.۰.۰ منتشر شد';
+        const html = `
+            <div style="text-align:right;line-height:1.8">
+                <p>تغییرات مهم این نسخه:</p>
+                <ul style="text-align:right;direction:rtl;">
+                    <li>اضافه شدن گزارش‌های متنوع به پنل مدیریت.</li>
+                    <li>اضافه شدن نمودارهای تحلیلی (Chart.js) در بخش گزارش‌ها.</li>
+                    <li>به‌روزرسانی مستندات و ثبت تغییرات در Changelog.</li>
+                </ul>
+                <p style="margin-top:0.6rem;color:var(--text-muted)">برای مشاهده جزئیات به CHANGELOG مراجعه کنید.</p>
+            </div>`;
+
+        Swal.fire({
+            icon: 'info',
+            title: title,
+            html: html,
+            confirmButtonText: 'متوجه شدم',
+            showCancelButton: false,
+            customClass: { popup: 'swal2-rtl swal2-glass', confirmButton: 'btn btn-primary' }
+        }).then(() => {
+            try { sessionStorage.setItem('release_v3_0_0_shown', '1'); } catch (e) { /* ignore */ }
+        });
+    } catch (e) {
+        console.warn('Could not show release notice:', e);
+    }
+}
+
 // Footer click event
 const copyrightFooter = document.getElementById('copyrightFooter');
 if (copyrightFooter) {
@@ -369,6 +402,135 @@ if (checkAuth()) {
 let reportsChartInstance = null;
 // Ensure we only configure Chart.js defaults once
 let chartDefaultsConfigured = false;
+// Resize handling for reports chart (debounced)
+let reportsResizeRegistered = false;
+let reportsResizeTimer = null;
+// Small pie instances for overview pies
+let smallPieExamTypeInstance = null;
+let smallPieCourseTypeInstance = null;
+
+function destroySmallOverviewPies() {
+    try { if (smallPieExamTypeInstance) { smallPieExamTypeInstance.destroy(); smallPieExamTypeInstance = null; } } catch (e) { /* ignore */ }
+    try { if (smallPieCourseTypeInstance) { smallPieCourseTypeInstance.destroy(); smallPieCourseTypeInstance = null; } } catch (e) { /* ignore */ }
+}
+
+function renderSmallOverviewPies(stats) {
+    if (!stats) return;
+    try {
+        // Ensure Chart.js loaded
+        if (typeof Chart === 'undefined') return;
+
+        const examTypeTotals = stats.futureExamTypeTotals || {};
+        const courseTypeTotals = stats.futureCourseTypeTotals || {};
+
+        // Prepare exam-type pie
+        const examLabels = Object.keys(examTypeTotals);
+        const examValues = examLabels.map(l => Number(examTypeTotals[l]) || 0);
+
+        const examCtx = document.getElementById('smallPieExamType');
+        const courseCtx = document.getElementById('smallPieCourseType');
+
+        // Colors palette
+        const palette = ['#1a6fa6', '#ff8a65', '#7bd5ff', '#9ccc65', '#ffca28', '#7e57c2', '#26a69a', '#ef5350'];
+
+        destroySmallOverviewPies();
+
+        if (examCtx && examLabels.length) {
+            const examData = {
+                labels: examLabels.map(l => (typeof toPersianDigits === 'function') ? toPersianDigits(l) : l),
+                datasets: [{
+                    data: examValues,
+                    backgroundColor: examLabels.map((_, i) => palette[i % palette.length])
+                }]
+            };
+
+            const examOptions = {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { display: false },
+                    tooltip: {
+                        enabled: true,
+                        displayColors: false,
+                        callbacks: {
+                            // remove tooltip title to avoid duplicate lines; return single-line label
+                            title: function () { return ''; },
+                            label: function (ctx) {
+                                const val = ctx.raw || 0;
+                                const label = ctx.label || '';
+                                return `${label}: ${(typeof toPersianDigits === 'function') ? toPersianDigits(val) : val}`;
+                            }
+                        }
+                    }
+                },
+                elements: { arc: { borderWidth: 1 } }
+            };
+
+            smallPieExamTypeInstance = new Chart(examCtx.getContext('2d'), {
+                type: 'doughnut',
+                data: examData,
+                options: examOptions
+            });
+            // make the small canvas clickable to show a large modal preview
+            try {
+                const el = document.getElementById('smallPieExamType');
+                if (el) {
+                    el.style.cursor = 'pointer';
+                    el.onclick = function () { try { showLargePie('نوع آزمون', examLabels, examValues, palette); } catch (e) { console.error(e); } };
+                }
+            } catch (e) { /* ignore */ }
+        }
+
+        // Prepare course-type pie
+        const courseLabels = Object.keys(courseTypeTotals);
+        const courseValues = courseLabels.map(l => Number(courseTypeTotals[l]) || 0);
+        if (courseCtx && courseLabels.length) {
+            const courseData = {
+                labels: courseLabels.map(l => (typeof toPersianDigits === 'function') ? toPersianDigits(l) : l),
+                datasets: [{
+                    data: courseValues,
+                    backgroundColor: courseLabels.map((_, i) => palette[(i + 2) % palette.length])
+                }]
+            };
+
+            const courseOptions = {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { display: false },
+                    tooltip: {
+                        enabled: true,
+                        displayColors: false,
+                        callbacks: {
+                            title: function () { return ''; },
+                            label: function (ctx) {
+                                const val = ctx.raw || 0;
+                                const label = ctx.label || '';
+                                return `${label}: ${(typeof toPersianDigits === 'function') ? toPersianDigits(val) : val}`;
+                            }
+                        }
+                    }
+                },
+                elements: { arc: { borderWidth: 1 } }
+            };
+
+            smallPieCourseTypeInstance = new Chart(courseCtx.getContext('2d'), {
+                type: 'doughnut',
+                data: courseData,
+                options: courseOptions
+            });
+            try {
+                const el2 = document.getElementById('smallPieCourseType');
+                if (el2) {
+                    el2.style.cursor = 'pointer';
+                    el2.onclick = function () { try { showLargePie('نوع درس', courseLabels, courseValues, palette); } catch (e) { console.error(e); } };
+                }
+            } catch (e) { /* ignore */ }
+        }
+    } catch (e) {
+        console.warn('Could not render small overview pies:', e);
+    }
+}
 
 function configureChartDefaults() {
     if (chartDefaultsConfigured) return;
@@ -519,6 +681,21 @@ async function renderReportsChart() {
             };
         });
 
+        // If the viewport is narrow, aggregate by date (sum across session times) to save horizontal space
+        const viewportWidth = (window.innerWidth || document.documentElement.clientWidth || 0);
+        const isNarrow = viewportWidth < 900 || (canvas && canvas.clientWidth && canvas.clientWidth < 520);
+        let chartDatasets = datasets;
+        if (isNarrow) {
+            const aggregated = labels.map((_, idx) => {
+                return datasets.reduce((sum, ds) => sum + (Number(ds.data[idx]) || 0), 0);
+            });
+            chartDatasets = [{
+                label: (typeof toPersianDigits === 'function') ? toPersianDigits('مجموع') : 'مجموع',
+                data: aggregated,
+                backgroundColor: '#1a6fa6'
+            }];
+        }
+
         // If no data, show placeholder text and destroy any existing chart
         if (!labels.length) {
             canvas.style.display = 'none';
@@ -526,6 +703,8 @@ async function renderReportsChart() {
                 try { reportsChartInstance.destroy(); } catch (er) { /* ignore */ }
                 reportsChartInstance = null;
             }
+            // destroy small overview pies as there's no data
+            try { destroySmallOverviewPies(); } catch (e) { /* ignore */ }
             // ensure placeholder exists
             let ph = card.querySelector('.reports-chart-placeholder');
             if (!ph) {
@@ -553,38 +732,7 @@ async function renderReportsChart() {
 
         const ctx = canvas.getContext('2d');
 
-        // Plugin to draw labels above bars (uses Persian digits conversion)
-        const valueAbovePlugin = {
-            id: 'valueAbove',
-            afterDatasetsDraw(chart) {
-                const { ctx } = chart;
-                // derive font from chart options to preserve size, but prefer Vazir family
-                const fontOpts = (chart.options && chart.options.font) ? chart.options.font : (Chart && Chart.defaults && Chart.defaults.font ? Chart.defaults.font : {});
-                const fontWeight = fontOpts.weight || '600';
-                const fontSize = fontOpts.size || 12;
-                const fontFamily = fontOpts.family || 'Vazir, sans-serif';
-                const fontStr = `${fontWeight} ${fontSize}px ${fontFamily}`;
-
-                chart.data.datasets.forEach((dataset, datasetIndex) => {
-                    const meta = chart.getDatasetMeta(datasetIndex);
-                    meta.data.forEach((element, index) => {
-                        const value = dataset.data[index];
-                        if (!value) return; // skip zero values
-                        const x = element.x;
-                        const y = element.y;
-                        ctx.save();
-                        // use dark color so text reads on light card backgrounds
-                        ctx.fillStyle = '#0b2a44';
-                        ctx.font = fontStr;
-                        ctx.textAlign = 'center';
-                        // Convert to Persian digits if helper exists
-                        const text = (typeof toPersianDigits === 'function') ? toPersianDigits(value) : String(value);
-                        ctx.fillText(text, x, y - 6);
-                        ctx.restore();
-                    });
-                });
-            }
-        };
+        // (Removed) labels-on-bars plugin — per user request values above bars are not rendered.
 
         // convert x-axis labels (dates) to Persian digits for display
         const displayLabels = (typeof toPersianDigits === 'function') ? labels.map(l => toPersianDigits(l)) : labels;
@@ -593,16 +741,16 @@ async function renderReportsChart() {
             type: 'bar',
             data: {
                 labels: displayLabels,
-                datasets: datasets
+                datasets: chartDatasets
             },
             options: {
                 responsive: true,
-                // prefer a 16:9 viewing frame
-                maintainAspectRatio: true,
+                // prefer a 16:9 viewing frame on wide screens; allow flexible height on narrow
+                maintainAspectRatio: !isNarrow,
                 aspectRatio: 16 / 9,
                 scales: {
                     x: {
-                        ticks: { color: '#0b2a44', font: { family: 'Vazir, sans-serif' } },
+                        ticks: { color: '#0b2a44', font: { family: 'Vazir, sans-serif' }, maxRotation: 90, minRotation: 90 },
                         grid: { display: false },
                         stacked: false
                     },
@@ -616,13 +764,48 @@ async function renderReportsChart() {
                     }
                 },
                 plugins: {
-                    legend: { display: true, position: 'top', labels: { color: '#0b2a44', font: { family: 'Vazir, sans-serif' } } },
-                    // tooltips disabled per user request
-                    tooltip: { enabled: false }
+                    legend: { display: !isNarrow, position: 'top', labels: { color: '#0b2a44', font: { family: 'Vazir, sans-serif' } } },
+                    // enable a minimal tooltip that shows only the Persian-formatted value (no title, no color box)
+                    tooltip: {
+                        enabled: true,
+                        displayColors: false,
+                        bodyFont: { family: 'Vazir, sans-serif' },
+                        callbacks: {
+                            title: function() { return ''; },
+                            label: function(context) {
+                                // Prefer raw value, fallback to parsed y value
+                                const raw = (typeof context.raw !== 'undefined') ? context.raw : (context.parsed && context.parsed.y ? context.parsed.y : 0);
+                                const v = Number(raw) || 0;
+                                return (typeof toPersianDigits === 'function') ? toPersianDigits(v) : String(v);
+                            }
+                        }
+                    }
                 }
-            },
-            plugins: [valueAbovePlugin]
+            }
         });
+
+        // Register a debounced resize handler once so chart re-renders and switches aggregation mode when window size changes
+        try {
+            if (!reportsResizeRegistered) {
+                window.addEventListener('resize', () => {
+                    if (reportsResizeTimer) clearTimeout(reportsResizeTimer);
+                    reportsResizeTimer = setTimeout(() => {
+                        try {
+                            // Re-render reports chart which will pick aggregation based on current width
+                            renderReportsChart();
+                        } catch (e) {
+                            console.error('Error re-rendering reports chart on resize:', e);
+                        }
+                    }, 260);
+                });
+                reportsResizeRegistered = true;
+            }
+        } catch (e) {
+            console.warn('Could not register resize handler for reports chart:', e);
+        }
+
+        // Render the two small overview pies beside the main chart
+        try { renderSmallOverviewPies(stats); } catch (e) { console.warn('Could not render overview pies:', e); }
 
     } catch (error) {
         console.error('Error rendering reports chart:', error);
@@ -1882,7 +2065,7 @@ function renderMiniPiesFromReport(data) {
         });
 
         // Wire buttons to open large view
-    document.getElementById('btnShowCoursePie').addEventListener('click', () => showLargePie('فراوانی دروس', courseLabels, courseValues, palette));
+        document.getElementById('btnShowCoursePie').addEventListener('click', () => showLargePie('فراوانی دروس', courseLabels, courseValues, palette));
         document.getElementById('btnShowExamTypePie').addEventListener('click', () => showLargePie('نوع آزمون', examLabels, examValues, palette));
         document.getElementById('btnShowCourseTypePie').addEventListener('click', () => showLargePie('نوع درس', ctLabels, ctValues, palette));
 
@@ -1923,8 +2106,8 @@ function showLargePie(title, labels, values, palette) {
                                 bodyFont: { family: 'Vazir, sans-serif' },
                                 callbacks: {
                                     // remove title duplication and show a single label line with Persian numbers
-                                    title: function() { return ''; },
-                                    label: function(context) {
+                                    title: function () { return ''; },
+                                    label: function (context) {
                                         const v = context.raw || 0;
                                         const label = context.label || context.dataset && context.dataset._rawLabel || '';
                                         const valText = (typeof toPersianDigits === 'function') ? toPersianDigits(v) : String(v);

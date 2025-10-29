@@ -126,6 +126,37 @@ try {
 
     // Count remaining future sessions
     $remainingSessions = count($futureExamsOutput);
+    // Aggregate exam-type totals across all future exams
+    $futureExamTypeTotals = ['الکترونیکی' => 0, 'کتبی' => 0];
+    foreach ($futureExamsOutput as $fe) {
+        if (!empty($fe['exam_type_counts'])) {
+            foreach ($fe['exam_type_counts'] as $k => $v) {
+                if ($k === 'الکترونیکی' || mb_stripos($k, 'الکت') !== false) $futureExamTypeTotals['الکترونیکی'] += (int)$v;
+                else $futureExamTypeTotals['کتبی'] += (int)$v;
+            }
+        }
+    }
+
+    // Aggregate course-type totals across all future exams
+    $futureCourseTypeTotals = [];
+    if (!empty($futureExamsOutput)) {
+        // Build WHERE clause pairs for (exam_date, exam_time)
+        $pairs = [];
+        $params = [];
+        foreach ($futureExamsOutput as $fe) {
+            $pairs[] = "(c.exam_date = ? AND c.exam_time = ?)";
+            $params[] = $fe['exam_date'];
+            $params[] = $fe['exam_time'];
+        }
+        $where = implode(' OR ', $pairs);
+        $sql = "SELECT c.course_type, COUNT(*) as cnt FROM courses c INNER JOIN exam_seats es ON c.course_code = es.course_code WHERE ($where) GROUP BY c.course_type";
+        $stmt = $pdo->prepare($sql);
+        $stmt->execute($params);
+        foreach ($stmt->fetchAll() as $row) {
+            $ctype = $row['course_type'] ?: 'نامشخص';
+            $futureCourseTypeTotals[$ctype] = (int)$row['cnt'];
+        }
+    }
 
     echo json_encode([
         'totalStudents' => $totalStudents,
@@ -133,7 +164,9 @@ try {
         'nextExamStudents' => $nextExamStudents,
         'nextExamDateTime' => $nextExamDateTime,
         'remainingSessions' => $remainingSessions,
-        'futureExams' => $futureExamsOutput
+        'futureExams' => $futureExamsOutput,
+        'futureExamTypeTotals' => $futureExamTypeTotals,
+        'futureCourseTypeTotals' => $futureCourseTypeTotals
     ], JSON_UNESCAPED_UNICODE);
 } catch (Exception $e) {
     error_log('Statistics error: ' . $e->getMessage());

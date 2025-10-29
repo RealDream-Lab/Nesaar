@@ -88,7 +88,37 @@ if ($licenseStatus['valid'] !== true) {
                 </div>
             </div>
 
-            <!-- Database Update -->
+            <!-- Database Update (moved to bottom) -->
+
+            <!-- Reports Chart Card (empty title by design) -->
+            <div class="dashboard-card no-hover" id="reportsChartCard">
+                <div class="reports-overview">
+                    <div class="chart-wrapper">
+                        <canvas id="reportsChart" aria-label="نمودار جلسات آینده" role="img"></canvas>
+                    </div>
+                    <div class="reports-side">
+                        <div class="small-pie-wrap text-center">
+                            <canvas id="smallPieExamType" class="small-pie" aria-label="نمودار نوع آزمون" role="img"></canvas>
+                            <div class="mt-1 text-muted small">نوع آزمون</div>
+                        </div>
+                        <div class="small-pie-wrap text-center">
+                            <canvas id="smallPieCourseType" class="small-pie" aria-label="نمودار نوع درس" role="img"></canvas>
+                            <div class="mt-1 text-muted small">نوع درس</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Latest Request Report -->
+            <div class="dashboard-card no-hover" id="reportCard" style="display: none;">
+                <h4 class="mb-3">آخرین گزارش درخواستی</h4>
+                <div id="reportContent"></div>
+                <div class="text-center mt-3">
+                    <button class="btn btn-danger" onclick="clearReport()">پاک کردن گزارش</button>
+                </div>
+            </div>
+
+            <!-- Database Update (moved here to bottom-most section) -->
             <div class="dashboard-card no-hover">
                 <h4 class="mb-3">به‌روزرسانی دیتابیس</h4>
                 <div class="row g-3">
@@ -102,33 +132,6 @@ if ($licenseStatus['valid'] !== true) {
                             آزمون‌های الکترونیکی
                         </button>
                     </div>
-                </div>
-            </div>
-
-            <!-- Reports Chart Card (empty title by design) -->
-            <div class="dashboard-card no-hover" id="reportsChartCard">
-                <div class="chart-wrapper">
-                    <canvas id="reportsChart" aria-label="نمودار جلسات آینده" role="img"></canvas>
-                </div>
-                <div id="reportsPieContainer" class="pies-single d-none">
-                    <div class="pie-controls mb-2">
-                        <button class="btn btn-outline-primary me-2" id="pieBtnCourse" onclick="switchPie('course')">نمودار دروس</button>
-                        <button class="btn btn-outline-primary me-2" id="pieBtnExamType" onclick="switchPie('examType')">نوع آزمون</button>
-                        <button class="btn btn-outline-primary" id="pieBtnCourseType" onclick="switchPie('courseType')">نوع درس</button>
-                    </div>
-                    <div class="pie-main-wrapper">
-                        <canvas id="pieMain" aria-label="نمودار گزارش"></canvas>
-                    </div>
-                    <div id="pieLegend" class="pie-legend mt-2"></div>
-                </div>
-            </div>
-
-            <!-- Latest Request Report -->
-            <div class="dashboard-card no-hover" id="reportCard" style="display: none;">
-                <h4 class="mb-3">آخرین گزارش درخواستی</h4>
-                <div id="reportContent"></div>
-                <div class="text-center mt-3">
-                    <button class="btn btn-danger" onclick="clearReport()">پاک کردن گزارش</button>
                 </div>
             </div>
         </div>
