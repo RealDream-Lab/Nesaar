@@ -55,7 +55,7 @@ if ($licenseStatus['valid'] !== true) {
             </div> <!-- Stats -->
             <div class="row">
                 <div class="col-md-3">
-                    <div class="dashboard-card" style="cursor: pointer;" onclick="showStudentReport()">
+                    <div class="dashboard-card stat-card" style="cursor: pointer;" onclick="showStudentReport()">
                         <div class="stat-box">
                             <h3 id="totalStudents">-</h3>
                             <p>دانشجو</p>
@@ -63,7 +63,7 @@ if ($licenseStatus['valid'] !== true) {
                     </div>
                 </div>
                 <div class="col-md-3">
-                    <div class="dashboard-card" style="cursor: pointer;" onclick="showCourseReport()">
+                    <div class="dashboard-card stat-card" style="cursor: pointer;" onclick="showCourseReport()">
                         <div class="stat-box">
                             <h3 id="totalCourses">-</h3>
                             <p>آزمون</p>
@@ -71,18 +71,18 @@ if ($licenseStatus['valid'] !== true) {
                     </div>
                 </div>
                 <div class="col-md-3">
-                    <div class="dashboard-card" style="cursor: pointer;" onclick="showNextExamReport()">
+                    <div class="dashboard-card stat-card" style="cursor: pointer;" onclick="showRemainingSessions()">
                         <div class="stat-box">
-                            <h3 id="nextExamStudents">-</h3>
-                            <p id="nextExamDateTime">بارگذاری...</p>
+                            <h3 id="remainingSessions">-</h3>
+                            <p>جلسه باقیمانده</p>
                         </div>
                     </div>
                 </div>
                 <div class="col-md-3">
-                    <div class="dashboard-card" style="cursor: pointer;" onclick="showRemainingSessions()">
+                    <div class="dashboard-card stat-card" style="cursor: pointer;" onclick="showNextExamReport()">
                         <div class="stat-box">
-                            <h3 id="remainingSessions">-</h3>
-                            <p>جلسه باقیمانده</p>
+                            <h3 id="nextExamStudents">-</h3>
+                            <p id="nextExamDateTime">بارگذاری...</p>
                         </div>
                     </div>
                 </div>
