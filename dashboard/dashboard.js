@@ -1487,11 +1487,11 @@ async function showNextExamReport() {
             html += '<p class="text-muted text-center mt-3">هیچ دانشجویی در این آزمون ثبت‌نام نکرده است.</p>';
         }
 
-            document.getElementById('reportContent').innerHTML = html;
-            document.getElementById('reportCard').style.display = 'block';
-            setTimeout(scrollReportCardIntoView, 100);
-            // clear any custom title after rendering
-            try { delete window.customExamReportTitle; } catch (e) { window.customExamReportTitle = undefined; }
+        document.getElementById('reportContent').innerHTML = html;
+        document.getElementById('reportCard').style.display = 'block';
+        setTimeout(scrollReportCardIntoView, 100);
+        // clear any custom title after rendering
+        try { delete window.customExamReportTitle; } catch (e) { window.customExamReportTitle = undefined; }
 
     } catch (error) {
         console.error('Error:', error);
