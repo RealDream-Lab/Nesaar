@@ -1,10 +1,10 @@
 // Bump cache to force refresh of updated assets (app.js, style.css, index.php)
 // Increment this when you want clients to fetch the new assets.
-const CACHE_NAME = 'exam-seat-v2.4.5';
+const CACHE_NAME = 'exam-seat-v2.4.6';
 // service workers run in a worker context (no window). Use a default string
 // but try to fetch the canonical version from the app's version.js so a
 // single source of truth can be updated and the SW will pick it up.
-let VERSION = '۲.۴.۵';
+let VERSION = '۲.۴.۶';
 
 async function fetchAndSetVersion() {
   try {

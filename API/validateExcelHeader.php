@@ -1,0 +1,98 @@
+<?php
+header('Content-Type: application/json; charset=utf-8');
+
+require_once __DIR__ . '/../vendor/autoload.php';
+use OpenSpout\Reader\XLSX\Reader as XLSXReader;
+use OpenSpout\Reader\XLS\Reader as XLSReader;
+
+$filename = $_POST['filename'] ?? '';
+$examType = $_POST['examType'] ?? '';
+
+if (empty($filename) || !in_array($examType, ['K','E'])) {
+    http_response_code(400);
+    echo json_encode(['error' => 'نام فایل یا نوع آزمون نامعتبر است']);
+    exit;
+}
+
+$filePath = __DIR__ . '/../database/' . $filename;
+if (!file_exists($filePath)) {
+    http_response_code(400);
+    echo json_encode(['error' => 'فایل یافت نشد']);
+    exit;
+}
+
+$fileExt = strtolower(pathinfo($filename, PATHINFO_EXTENSION));
+try {
+    if ($fileExt === 'xlsx') {
+        $reader = new XLSXReader();
+    } elseif ($fileExt === 'xls') {
+        $reader = new XLSReader();
+    } else {
+        throw new Exception('Unsupported file type');
+    }
+    $reader->open($filePath);
+    $headerRow = null;
+    $rowCount = 0;
+    foreach ($reader->getSheetIterator() as $sheet) {
+        foreach ($sheet->getRowIterator() as $r) {
+            $cells = $r->getCells();
+            $rowData = [];
+            foreach ($cells as $c) $rowData[] = $c->getValue();
+            if ($headerRow === null) {
+                $headerRow = $rowData;
+            }
+            $rowCount++;
+        }
+        break;
+    }
+    $reader->close();
+
+    if ($headerRow === null) {
+        http_response_code(400);
+        echo json_encode(['error' => 'فایل خالی است']);
+        exit;
+    }
+
+    // Expected columns (must match server logic)
+    $columns = [
+        'شماره دانشجويي', 'شماره شناسنامه', 'مرکز مبدا', 'مرکز مقصد', 'نام', 'نام خانوادگي', 'مدرک',
+        'کد درس', 'نام درس', 'تاريخ آزمون', 'ساعت آزمون', 'شماره صندلي', 'نوع آزمون', 'نوع درس',
+        'ساختمان', 'کلاس', 'ردیف'
+    ];
+
+    $normalize = function($s) {
+        if ($s === null) return '';
+        $s = trim((string)$s);
+        $s = str_replace(['ك','ي'], ['ک','ی'], $s);
+        $s = preg_replace('/\s+/u', ' ', $s);
+        return mb_strtolower($s);
+    };
+
+    $expected = array_map($normalize, $columns);
+    $actual = array_map($normalize, $headerRow);
+
+    // Check each expected exists in header
+    foreach ($expected as $exp) {
+        $found = false;
+        foreach ($actual as $act) {
+            if ($exp === $act) { $found = true; break; }
+        }
+        if (!$found) {
+            http_response_code(400);
+            echo json_encode(['error' => 'فایل منطبق با ساختار فایل نرم افزار ساد نیست']);
+            exit;
+        }
+    }
+
+    // Success: return total data rows (exclude header)
+    $totalDataRows = max(0, $rowCount - 1);
+    echo json_encode(['success' => true, 'totalRows' => $totalDataRows]);
+    exit;
+
+} catch (Exception $e) {
+    http_response_code(500);
+    echo json_encode(['error' => 'خطا در خواندن فایل: ' . $e->getMessage()]);
+    exit;
+}
+
+?>

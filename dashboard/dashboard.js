@@ -618,13 +618,45 @@ async function processUploadedExcel(examType, examTypeName, filename) {
         }
     });
 
-    // Animate progress bar
+    // Before starting heavy processing, validate header mapping quickly on server
+    try {
+        const validateForm = new FormData();
+        validateForm.append('filename', filename);
+        validateForm.append('examType', examType);
+        const validateResp = await guardedFetch('../API/validateExcelHeader.php', {
+            method: 'POST',
+            body: validateForm
+        });
+        if (!validateResp.ok) {
+            // Read error message if possible
+            let msg = 'فایل منطبق با ساختار فایل نرم افزار ساد نیست';
+            try {
+                const payload = await validateResp.json();
+                if (payload && payload.error) msg = payload.error;
+            } catch (e) { }
+            Swal.close();
+            await Swal.fire({ icon: 'error', title: 'خطا', text: msg, confirmButtonText: 'باشه', customClass: { popup: 'swal2-rtl swal2-glass', confirmButton: 'btn btn-primary' } });
+            return;
+        }
+        const validateData = await validateResp.json();
+        // If validate returned totalRows, we can show it in UI later
+        const serverTotalRows = validateData.totalRows || 0;
+
+    } catch (e) {
+        // Validation failed unexpectedly; continue to processing which will handle it server-side
+        console.warn('Header validation failed:', e);
+    }
+
+    // Animate progress bar and poll server for real progress
     let progress = 1;
+    let serverProgressAvailable = false;
     const progressDisplay = document.getElementById('processProgressDisplay');
     const progressText = document.getElementById('processProgressText');
-    const interval = setInterval(() => {
+
+    const animInterval = setInterval(() => {
+        if (serverProgressAvailable) return; // server will drive progress
         progress += Math.random() * 3 + 0.5; // Slower increase
-        if (progress > 95) progress = 95; // Stay longer at high %
+        if (progress > 95) progress = 95; // Stay longer at high % until server finishes
         if (progressDisplay) {
             progressDisplay.textContent = progress >= 10 ? Math.round(progress) + '%' : 'شروع...';
         }
@@ -639,6 +671,31 @@ async function processUploadedExcel(examType, examTypeName, filename) {
         }
     }, 300); // Slower interval
 
+    // Polling server-side progress file
+    const pollProgress = async () => {
+        try {
+            const resp = await guardedFetch(`../API/getProcessProgress.php?filename=${encodeURIComponent(filename)}`);
+            if (!resp.ok) return;
+            const payload = await resp.json();
+            if (!payload) return;
+            // If server provides totalRows, use it to compute real percent
+            if (payload.totalRows && payload.totalRows > 0) {
+                serverProgressAvailable = true;
+                const percent = Math.min(99, Math.round((payload.processedRows / payload.totalRows) * 100));
+                if (progressDisplay) progressDisplay.textContent = percent + '%';
+                if (progressText) progressText.textContent = payload.message || 'در حال پردازش...';
+            } else if (payload.stage === 'error') {
+                // show server-side validation error
+                serverProgressAvailable = true;
+                if (progressDisplay) progressDisplay.textContent = '0%';
+                if (progressText) progressText.textContent = payload.message || 'خطا در پردازش';
+            }
+        } catch (e) {
+            // ignore polling errors
+        }
+    };
+
+    const pollInterval = setInterval(pollProgress, 500);
     try {
         const formData = new FormData();
         formData.append('examType', examType);
@@ -649,7 +706,9 @@ async function processUploadedExcel(examType, examTypeName, filename) {
             body: formData
         });
 
-        clearInterval(interval); // Stop animation
+        // Stop polling and animation (server will have final status)
+        clearInterval(animInterval);
+        clearInterval(pollInterval);
 
         if (!response.ok) {
             Swal.close();
@@ -707,7 +766,8 @@ async function processUploadedExcel(examType, examTypeName, filename) {
             throw new Error(result.error || 'خطای نامشخص');
         }
     } catch (error) {
-        clearInterval(interval);
+        if (typeof animInterval !== 'undefined') try { clearInterval(animInterval); } catch (e) { }
+        if (typeof pollInterval !== 'undefined') try { clearInterval(pollInterval); } catch (e) { }
         Swal.close();
         console.error('Process error:', error);
         await Swal.fire({
