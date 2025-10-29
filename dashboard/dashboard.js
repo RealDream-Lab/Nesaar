@@ -152,7 +152,24 @@ async function loadDashboardData() {
             // Remaining future exam sessions (from now onwards)
             if (typeof stats.remainingSessions !== 'undefined') {
                 const el = document.getElementById('remainingSessions');
-                if (el) el.textContent = stats.remainingSessions;
+                const card = el ? el.closest('.dashboard-card') : null;
+                if (el) {
+                    // If there are no remaining sessions, show the text and disable interaction
+                    if (!stats.remainingSessions || stats.remainingSessions === 0) {
+                        el.textContent = 'آزمونی وجود ندارد';
+                        if (card) {
+                            card.classList.add('stat-card-disabled');
+                            // remove pointer cursor
+                            card.style.cursor = 'default';
+                        }
+                    } else {
+                        el.textContent = stats.remainingSessions;
+                        if (card) {
+                            card.classList.remove('stat-card-disabled');
+                            card.style.cursor = 'pointer';
+                        }
+                    }
+                }
             }
             // no breakdown in the top stat card; breakdown will be shown in the course list header
         }
@@ -185,27 +202,27 @@ async function showRemainingSessions() {
             });
         }
 
-                // Build HTML grid of mini-cards: first line = total (bigger), second line = date | time
-                let cardsHtml = '<div class="session-mini-grid">';
-                future.forEach(f => {
-                        const time = f.exam_time;
-                        const date = f.exam_date;
-                        const total = f.student_count || 0;
-                        // Determine morning vs afternoon: hour < 12 => morning
-                        const hour = parseInt((time || '00:00').split(':')[0], 10) || 0;
-                        const whenClass = hour < 12 ? 'morning' : 'afternoon';
-                        const label = `${time} | ${date}`;
-                        cardsHtml += `
+        // Build HTML grid of mini-cards: first line = total (bigger), second line = date | time
+        let cardsHtml = '<div class="session-mini-grid">';
+        future.forEach(f => {
+            const time = f.exam_time;
+            const date = f.exam_date;
+            const total = f.student_count || 0;
+            // Determine morning vs afternoon: hour < 12 => morning
+            const hour = parseInt((time || '00:00').split(':')[0], 10) || 0;
+            const whenClass = hour < 12 ? 'morning' : 'afternoon';
+            const label = `${time} | ${date}`;
+            cardsHtml += `
                             <div class="session-mini-card ${whenClass}" data-exam-time="${time}" data-exam-date="${date}">
                                 <div class="line1">${toPersianDigits(total)}</div>
                                 <div class="line2">${label}</div>
                             </div>`;
-                });
-                cardsHtml += '</div>';
+        });
+        cardsHtml += '</div>';
 
         await Swal.fire({
             html: cardsHtml,
-            width: '80rem',
+            width: '110rem',
             showCloseButton: false,
             showConfirmButton: false,
             customClass: { popup: 'swal2-rtl swal2-glass' },
@@ -1339,7 +1356,7 @@ async function showNextExamReport() {
 
         let html = `
 			<div class="mb-4">
-				<h5 class="text-primary mb-3">مشخصات آزمون بعدی</h5>
+				<h5 class="text-primary mb-3">جزئیات جلسه آزمون</h5>
 				<div class="table-responsive">
 					<table class="table table-bordered">
 						<tr>
