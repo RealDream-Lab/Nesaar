@@ -178,6 +178,187 @@ body::after {
   box-shadow: 0 0 0 3px rgba(91, 176, 255, 0.18);
 }
 
+/* Styles moved from dashboard/index.php <style> block */
+/* Dashboard page specific styles */
+.dashboard-wrapper {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 2rem 1rem;
+  position: relative;
+  z-index: 1;
+}
+
+.dashboard-container {
+  position: relative;
+  z-index: 1;
+}
+
+.dashboard-header {
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.95) 0%, rgba(255, 255, 255, 0.9) 100%);
+  backdrop-filter: blur(10px);
+  border-radius: 20px;
+  padding: 2rem;
+  margin-bottom: 2rem;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+}
+
+.dashboard-card {
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.95) 0%, rgba(255, 255, 255, 0.9) 100%);
+  backdrop-filter: blur(10px);
+  border-radius: 20px;
+  padding: 2.5rem;
+  margin-bottom: 1.5rem;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.dashboard-card:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.15);
+}
+
+.dashboard-card.no-hover:hover {
+  transform: none;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+}
+
+.dashboard-card h4 {
+  font-size: 1.5rem;
+  color: #1a6fa6;
+  font-weight: 700;
+}
+
+.btn-primary {
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+}
+
+.stat-box {
+  text-align: center;
+  padding: 2rem;
+  background: linear-gradient(135deg, #1a6fa6 0%, #127ead 100%);
+  border-radius: 15px;
+  color: white;
+  margin-bottom: 0;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.15);
+}
+
+.stat-box h3 {
+  font-size: 3rem;
+  font-weight: bold;
+  margin: 0;
+}
+
+.stat-box p {
+  margin: 0.5rem 0 0 0;
+  opacity: 0.95;
+  font-size: 1.1rem;
+}
+
+.btn-logout {
+  background: #dc3545;
+  color: white;
+  border: none;
+  padding: 0.5rem 1.5rem;
+  border-radius: 8px;
+  transition: background 0.3s ease;
+}
+
+.btn-logout:hover {
+  background: #c82333;
+  color: white;
+}
+
+.btn-upload {
+  background: #28a745;
+  color: white;
+  border: none;
+  padding: 0.5rem 1.5rem;
+  border-radius: 8px;
+  transition: background 0.3s ease;
+  font-size: 1rem;
+}
+
+.btn-upload:hover {
+  background: #218838;
+  color: white;
+}
+
+.admin-info {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.admin-info h5 {
+  font-size: 1.3rem;
+  color: #1a6fa6;
+  font-weight: 700;
+}
+
+.admin-info small {
+  font-size: 1rem;
+}
+
+.table td {
+  font-size: 1.1rem;
+  padding: 0.8rem 0.5rem;
+}
+
+.table strong {
+  color: #1a6fa6;
+}
+
+#reportContent {
+  /* No scroll bar - card expands as needed */
+  color: #6c757d; /* Gray color for text */
+}
+
+#reportContent td {
+  color: #6c757d !important;
+}
+
+#reportContent h5 {
+  background: white;
+  padding: 10px 0;
+}
+
+/* Tweak SweetAlert input appearance: center and improve desktop look */
+.swal2-html-container {
+  /* center inline HTML content inside the modal */
+  text-align: center;
+  overflow: visible !important;
+}
+
+.swal2-input {
+  display: block;
+  width: 14rem;
+  max-width: 92%;
+  margin: 0.6rem auto !important;
+  padding: 0.6rem 0.85rem !important;
+  border-radius: 10px !important;
+  border: 1px solid #d6dbe0 !important;
+  box-shadow: 0 4px 10px rgba(16, 24, 40, 0.06) inset !important;
+  font-size: 1.05rem !important;
+  text-align: center !important;
+  direction: ltr !important;
+  font-family: 'Vazir', sans-serif !important;
+  background: #ffffff !important;
+  color: #333 !important;
+}
+
+/* Slightly larger input on very wide screens */
+@media (min-width: 1400px) {
+  .swal2-input { width: 18rem; }
+}
+
+.course-item.active {
+  background-color: #e9ecef !important;
+}
+
+/* End moved styles */
+
 .btn.btn-primary {
   border: 1px solid rgba(91, 176, 255, 0.65);
   border-radius: 0.95rem;
