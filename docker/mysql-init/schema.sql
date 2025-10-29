@@ -29,6 +29,7 @@ CREATE TABLE IF NOT EXISTS exam_seats (
     building VARCHAR(100) NOT NULL,
     class_name VARCHAR(50) NOT NULL,
     seat_row INT NOT NULL,
+    exam_type VARCHAR(15) NOT NULL,
     FOREIGN KEY (student_id) REFERENCES students(student_id) ON DELETE CASCADE,
     FOREIGN KEY (course_code) REFERENCES courses(course_code) ON DELETE CASCADE,
     UNIQUE KEY uniq_student_course (student_id, course_code),
@@ -76,23 +77,24 @@ ON DUPLICATE KEY UPDATE
     exam_type = VALUES(exam_type),
     course_type = VALUES(course_type);
 
-INSERT INTO exam_seats (student_id, course_code, seat_number, building, class_name, seat_row)
+INSERT INTO exam_seats (student_id, course_code, seat_number, building, class_name, seat_row, exam_type)
 VALUES
-    ('970100001', '1100001', 15, 'ساختمان A', 'کلاس 203', 2),
-    ('970100001', '1100002', 8, 'ساختمان A', 'کلاس 205', 1),
-    ('970100001', '1100003', 3, 'ساختمان B', 'کلاس 101', 1),
-    ('970100001', '1100004', 5, 'ساختمان A', 'کلاس 201', 1),
-    ('970100001', '1100005', 9, 'ساختمان A', 'کلاس 204', 2),
-    ('970100001', '1100006', 14, 'ساختمان A', 'کلاس 206', 3),
-    ('970100001', '1100007', 3, 'ساختمان A', 'کلاس 202', 1),
-    ('970100002', '1100001', 12, 'ساختمان B', 'کلاس 101', 1),
-    ('970100001', '1100009', 10, 'ساختمان B', 'کلاس 102', 2),
-    ('970100001', '1100011', 11, 'ساختمان C', 'کلاس 302', 2)
+    ('970100001', '1100001', 15, 'ساختمان A', 'کلاس 203', 2, 'الکترونیکی'),
+    ('970100001', '1100002', 8, 'ساختمان A', 'کلاس 205', 1, 'کتبی'),
+    ('970100001', '1100003', 3, 'ساختمان B', 'کلاس 101', 1, 'الکترونیکی'),
+    ('970100001', '1100004', 5, 'ساختمان A', 'کلاس 201', 1, 'کتبی'),
+    ('970100001', '1100005', 9, 'ساختمان A', 'کلاس 204', 2, 'الکترونیکی'),
+    ('970100001', '1100006', 14, 'ساختمان A', 'کلاس 206', 3, 'کتبی'),
+    ('970100001', '1100007', 3, 'ساختمان A', 'کلاس 202', 1, 'الکترونیکی'),
+    ('970100002', '1100001', 12, 'ساختمان B', 'کلاس 101', 1, 'کتبی'),
+    ('970100001', '1100009', 10, 'ساختمان B', 'کلاس 102', 2, 'الکترونیکی'),
+    ('970100001', '1100011', 11, 'ساختمان C', 'کلاس 302', 2, 'کتبی')
 ON DUPLICATE KEY UPDATE
     seat_number = VALUES(seat_number),
     building = VALUES(building),
     class_name = VALUES(class_name),
-    seat_row = VALUES(seat_row);
+    seat_row = VALUES(seat_row),
+    exam_type = VALUES(exam_type);
 
 INSERT INTO Config (ConfigName, ConfigValue) VALUES
 ('University', ''),
