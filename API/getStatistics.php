@@ -79,15 +79,61 @@ try {
         $nextExamDateTime = 'آزمونی یافت نشد';
     }
 
+    // Prepare exam_type counts per date/time
+    $typeStmt = $pdo->query("SELECT c.exam_date, c.exam_time, COALESCE(es.exam_type, '') as exam_type, COUNT(*) as cnt
+        FROM courses c
+        INNER JOIN exam_seats es ON c.course_code = es.course_code
+        GROUP BY c.exam_date, c.exam_time, es.exam_type");
+
+    $typeCounts = [];
+    foreach ($typeStmt->fetchAll() as $row) {
+        $d = $row['exam_date'];
+        $t = $row['exam_time'];
+        $ty = $row['exam_type'] ?: 'unknown';
+        if (!isset($typeCounts[$d])) $typeCounts[$d] = [];
+        if (!isset($typeCounts[$d][$t])) $typeCounts[$d][$t] = [];
+        $typeCounts[$d][$t][$ty] = (int)$row['cnt'];
+    }
+
+    // Build futureExams array with per-type breakdown
+    $futureExamsOutput = [];
+    foreach ($futureExams as $exam) {
+        $d = $exam['exam_date'];
+        $t = $exam['exam_time'];
+        $etypeCounts = [
+            'الکترونیکی' => 0,
+            'کتبی' => 0
+        ];
+        if (isset($typeCounts[$d][$t])) {
+            foreach ($typeCounts[$d][$t] as $k => $v) {
+                if ($k === 'الکترونیکی' || mb_stripos($k, 'الکت') !== false) $etypeCounts['الکترونیکی'] += (int)$v;
+                elseif ($k === 'کتبی' || mb_stripos($k, 'کتب') !== false) $etypeCounts['کتبی'] += (int)$v;
+                else {
+                    // fallback: if unknown, count towards 'کتبی' (conservative)
+                    $etypeCounts['کتبی'] += (int)$v;
+                }
+            }
+        }
+
+        $futureExamsOutput[] = [
+            'exam_date' => $d,
+            'exam_time' => $t,
+            'student_count' => $exam['student_count'],
+            'timestamp' => $exam['timestamp'],
+            'exam_type_counts' => $etypeCounts
+        ];
+    }
+
     // Count remaining future sessions
-    $remainingSessions = count($futureExams);
+    $remainingSessions = count($futureExamsOutput);
 
     echo json_encode([
         'totalStudents' => $totalStudents,
         'totalCourses' => $totalCourses,
         'nextExamStudents' => $nextExamStudents,
         'nextExamDateTime' => $nextExamDateTime,
-        'remainingSessions' => $remainingSessions
+        'remainingSessions' => $remainingSessions,
+        'futureExams' => $futureExamsOutput
     ], JSON_UNESCAPED_UNICODE);
 } catch (Exception $e) {
     error_log('Statistics error: ' . $e->getMessage());

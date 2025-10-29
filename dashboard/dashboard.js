@@ -169,16 +169,70 @@ async function loadDashboardData() {
 }
 
 // Placeholder action for the "جلسه باقیمانده" card. User will specify the exact action later.
-function showRemainingSessions() {
-    const el = document.getElementById('remainingSessions');
-    const count = el ? el.textContent : '-';
-    Swal.fire({
-        icon: 'info',
-        title: 'جلسات باقیمانده',
-        html: `<div style="text-align:right;line-height:1.8">تعداد جلسات باقیمانده: <strong>${toPersianDigits(count)}</strong><br>عملیات مرتبط با این کارت بعداً مشخص و اضافه خواهد شد.</div>`,
-        confirmButtonText: 'باشه',
-        customClass: { popup: 'swal2-rtl swal2-glass', confirmButton: 'btn btn-primary' }
-    });
+async function showRemainingSessions() {
+    try {
+        const resp = await guardedFetch('../API/getStatistics.php', { cache: 'no-store' });
+        const stats = await resp.json();
+        const future = stats.futureExams || [];
+
+        if (!future.length) {
+            return Swal.fire({
+                icon: 'info',
+                title: 'اطلاعات',
+                text: 'جلسه آینده‌ای یافت نشد',
+                confirmButtonText: 'باشه',
+                customClass: { popup: 'swal2-rtl swal2-glass', confirmButton: 'btn btn-primary' }
+            });
+        }
+
+                // Build HTML grid of mini-cards: first line = total (bigger), second line = date | time
+                let cardsHtml = '<div class="session-mini-grid">';
+                future.forEach(f => {
+                        const time = f.exam_time;
+                        const date = f.exam_date;
+                        const total = f.student_count || 0;
+                        // Determine morning vs afternoon: hour < 12 => morning
+                        const hour = parseInt((time || '00:00').split(':')[0], 10) || 0;
+                        const whenClass = hour < 12 ? 'morning' : 'afternoon';
+                        const label = `${time} | ${date}`;
+                        cardsHtml += `
+                            <div class="session-mini-card ${whenClass}" data-exam-time="${time}" data-exam-date="${date}">
+                                <div class="line1">${toPersianDigits(total)}</div>
+                                <div class="line2">${label}</div>
+                            </div>`;
+                });
+                cardsHtml += '</div>';
+
+        await Swal.fire({
+            html: cardsHtml,
+            width: '80rem',
+            showCloseButton: false,
+            showConfirmButton: false,
+            customClass: { popup: 'swal2-rtl swal2-glass' },
+            didOpen: () => {
+                const container = Swal.getHtmlContainer();
+                if (!container) return;
+                const cards = container.querySelectorAll('.session-mini-card');
+                cards.forEach(card => {
+                    card.addEventListener('click', () => {
+                        const t = card.getAttribute('data-exam-time');
+                        const d = card.getAttribute('data-exam-date');
+                        // Set a custom title so showNextExamReport will render with a specific label
+                        window.customExamReportTitle = `آزمون تاریخ ${d} ساعت ${t}`;
+                        // Set the nextExamDateTime label so showNextExamReport can parse it
+                        const nextEl = document.getElementById('nextExamDateTime');
+                        if (nextEl) nextEl.textContent = `${t} | ${d}`;
+                        Swal.close();
+                        // Small delay to ensure modal closed
+                        setTimeout(() => showNextExamReport(), 120);
+                    });
+                });
+            }
+        });
+    } catch (err) {
+        console.error('Error loading future exams:', err);
+        Swal.fire({ icon: 'error', title: 'خطا', text: 'خطا در دریافت جلسات آینده', confirmButtonText: 'باشه', customClass: { popup: 'swal2-rtl swal2-glass', confirmButton: 'btn btn-primary' } });
+    }
 }
 
 // Update footer university name

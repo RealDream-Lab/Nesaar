@@ -402,6 +402,40 @@ body::after {
   box-shadow: none !important; /* make badges blend with the white background */
 }
 
+/* Session mini-cards inside the Remaining Sessions modal */
+.session-mini-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 0.75rem;
+  margin-top: 0.75rem;
+}
+.session-mini-card {
+  padding: 0.9rem;
+  border-radius: 12px;
+  cursor: pointer;
+  color: #04202a;
+  box-shadow: 0 6px 18px rgba(2, 18, 24, 0.06);
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+  border: 1px solid rgba(0,0,0,0.04);
+}
+.session-mini-card:hover { transform: translateY(-4px); box-shadow: 0 10px 26px rgba(2,18,24,0.08); }
+/* Line1: big total number */
+.session-mini-card .line1 { font-weight: 800; color: #04202a; font-size: 1.5rem; text-align: center; }
+/* Line2: date|time smaller */
+.session-mini-card .line2 { margin-top: 0.5rem; color: #04202a; font-size: 1rem; text-align: center; }
+
+/* Morning: solid light teal background */
+.session-mini-card.morning { background-color: #e6f8ff; }
+
+/* Afternoon: solid light pink background */
+.session-mini-card.afternoon { background-color: #fff0f6; }
+
+/* Morning: solid teal-ish background */
+.session-mini-card.morning { background: #e6f8ff; }
+
+/* Afternoon: solid pink-ish background */
+.session-mini-card.afternoon { background: #fff0f6; }
+
 
 .btn.btn-primary {
   border: 1px solid rgba(91, 176, 255, 0.65);
