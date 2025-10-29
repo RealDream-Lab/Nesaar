@@ -107,8 +107,8 @@ if ($licenseStatus['valid'] !== true) {
 
             <!-- Reports Chart Card (empty title by design) -->
             <div class="dashboard-card no-hover" id="reportsChartCard">
-                <div style="padding: 1rem 0;">
-                    <canvas id="reportsChart" height="220" aria-label="نمودار جلسات آینده" role="img"></canvas>
+                <div class="chart-wrapper">
+                    <canvas id="reportsChart" aria-label="نمودار جلسات آینده" role="img"></canvas>
                 </div>
             </div>
 

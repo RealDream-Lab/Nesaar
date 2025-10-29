@@ -340,10 +340,30 @@ body::after {
 }
 
 /* Reports chart card styling */
-#reportsChartCard canvas {
-  width: 100% !important;
-  height: 220px !important;
+.reports-chart-placeholder {
+  padding: 1.5rem;
+  color: var(--text-muted);
+  text-align: center;
+  font-size: 1.05rem;
+}
+
+/* Make the reports chart responsive with a 16:9 aspect box */
+#reportsChartCard {
+  position: relative;
+}
+#reportsChartCard .chart-wrapper {
+  width: 100%;
   display: block;
+  /* Maintain 16:9 ratio using padding-top trick */
+  padding-top: 56.25%;
+  position: relative;
+}
+#reportsChartCard .chart-wrapper canvas {
+  position: absolute !important;
+  top: 0;
+  left: 0;
+  width: 100% !important;
+  height: 100% !important;
 }
 .reports-chart-placeholder {
   padding: 1.5rem;

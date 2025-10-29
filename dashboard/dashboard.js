@@ -443,24 +443,43 @@ async function renderReportsChart() {
         const canvas = document.getElementById('reportsChart');
         if (!card || !canvas) return;
 
-        // Group by exam_date (Jalali string)
-        const grouped = {};
-        const dateTs = {};
+        // Build mapping date -> time -> count, and collect ordered dates & times
+        const dateMap = {}; // { date: { time: count } }
+        const dateTs = {}; // earliest timestamp per date for sorting
+        const timesSet = new Set();
+
         future.forEach(e => {
             const d = e.exam_date || '';
+            const t = e.exam_time || '';
             const cnt = Number(e.student_count) || 0;
-            if (!grouped[d]) grouped[d] = 0;
-            grouped[d] += cnt;
-            // Keep earliest timestamp for sorting
+            if (!dateMap[d]) dateMap[d] = {};
+            if (!dateMap[d][t]) dateMap[d][t] = 0;
+            dateMap[d][t] += cnt;
+            timesSet.add(t);
             if (!dateTs[d] || e.timestamp < dateTs[d]) dateTs[d] = e.timestamp;
         });
 
-        const entries = Object.keys(grouped).map(d => ({ date: d, count: grouped[d], ts: dateTs[d] || 0 }));
-        // Sort by timestamp ascending
-        entries.sort((a, b) => a.ts - b.ts);
+        // Sort dates by earliest timestamp
+        const labels = Object.keys(dateMap).map(d => ({ date: d, ts: dateTs[d] || 0 })).sort((a, b) => a.ts - b.ts).map(x => x.date);
+        // Sort times naturally (by hour and minute)
+        const times = Array.from(timesSet).sort((a, b) => {
+            const pa = (a || '00:00').split(':').map(Number);
+            const pb = (b || '00:00').split(':').map(Number);
+            return (pa[0] - pb[0]) || (pa[1] - pb[1]);
+        });
 
-        const labels = entries.map(e => e.date);
-        const data = entries.map(e => e.count);
+        // Build datasets: one dataset per session time across all dates
+        const palette = [
+            '#1a6fa6', '#ff8a65', '#7bd5ff', '#9ccc65', '#ffca28', '#7e57c2', '#26a69a', '#ef5350'
+        ];
+        const datasets = times.map((time, idx) => {
+            const dataArr = labels.map(date => (dateMap[date] && dateMap[date][time]) ? dateMap[date][time] : 0);
+            return {
+                label: time,
+                data: dataArr,
+                backgroundColor: palette[idx % palette.length]
+            };
+        });
 
         // If no data, show placeholder text and destroy any existing chart
         if (!labels.length) {
@@ -505,10 +524,12 @@ async function renderReportsChart() {
                     const meta = chart.getDatasetMeta(datasetIndex);
                     meta.data.forEach((element, index) => {
                         const value = dataset.data[index];
+                        if (!value) return; // skip zero values
                         const x = element.x;
                         const y = element.y;
                         ctx.save();
-                        ctx.fillStyle = '#ffffff';
+                        // use dark color so text reads on light card backgrounds
+                        ctx.fillStyle = '#0b2a44';
                         ctx.font = '600 12px Vazir, sans-serif';
                         ctx.textAlign = 'center';
                         // Convert to Persian digits if helper exists
@@ -524,29 +545,40 @@ async function renderReportsChart() {
             type: 'bar',
             data: {
                 labels: labels,
-                datasets: [{
-                    label: 'تعداد',
-                    data: data,
-                    backgroundColor: '#1a6fa6'
-                }]
+                datasets: datasets
             },
             options: {
                 responsive: true,
-                maintainAspectRatio: false,
+                // prefer a 16:9 viewing frame
+                maintainAspectRatio: true,
+                aspectRatio: 16/9,
                 scales: {
-                    x: { 
-                        ticks: { color: 'white' },
-                        grid: { display: false }
+                    x: {
+                        ticks: { color: '#0b2a44' },
+                        grid: { display: false },
+                        stacked: false
                     },
                     y: {
                         beginAtZero: true,
-                        ticks: { color: 'white', precision: 0 },
-                        grid: { color: 'rgba(255,255,255,0.06)' }
+                        ticks: { color: '#0b2a44', precision: 0,
+                            callback: function(value) { return (typeof toPersianDigits === 'function') ? toPersianDigits(value) : value; }
+                        },
+                        grid: { color: 'rgba(11,42,68,0.06)' }
                     }
                 },
                 plugins: {
-                    legend: { display: false },
-                    tooltip: { enabled: true }
+                    legend: { display: true, position: 'top', labels: { color: '#0b2a44' } },
+                    tooltip: {
+                        enabled: true,
+                        callbacks: {
+                            label: function(context) {
+                                const v = context.raw || 0;
+                                const label = context.dataset.label || '';
+                                const valText = (typeof toPersianDigits === 'function') ? toPersianDigits(v) : String(v);
+                                return `${label}: ${valText}`;
+                            }
+                        }
+                    }
                 }
             },
             plugins: [valueAbovePlugin]
