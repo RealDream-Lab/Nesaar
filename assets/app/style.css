@@ -354,10 +354,63 @@ body::after {
 }
 
 .course-item.active {
-  background-color: #e9ecef !important;
+  background-color: #ffffff !important; /* white background for high contrast */
+  color: #1a6fa6 !important; /* primary blue for text */
+  border: 1px solid rgba(26,111,166,0.08) !important;
 }
 
 /* End moved styles */
+
+/* Badge pair: make number and label appear as one glued element */
+.badge-pair {
+  display: inline-flex;
+  align-items: center;
+  overflow: hidden;
+  border-radius: 0.6rem;
+  vertical-align: middle;
+}
+.badge-pair .badge {
+  margin: 0; /* remove any default spacing */
+  border-radius: 0; /* reset; container will handle rounding */
+  padding: 0.3rem 0.45rem; /* slightly smaller so badges are more compact */
+  font-size: 12px; /* match other badges */
+  line-height: 1; /* keep compact height */
+}
+/* inner badges should have no radius so they join perfectly; the container (.badge-pair) handles rounding */
+.badge-pair .badge:first-child,
+.badge-pair .badge:last-child {
+  border-radius: 0;
+}
+/* ensure the numeric (gray) badge background is fully filled */
+.badge-pair .bg-secondary {
+  background-color: #6c757d;
+  color: #fff;
+}
+
+/* Adjustments for active course-item readability */
+.course-item.active .text-secondary {
+  color: #6c757d !important; /* keep secondary text muted */
+}
+.course-item.active .badge {
+  box-shadow: none !important; /* make badges blend with the white background */
+}
+
+/* Dashboard-scoped badge color overrides for course-type labels
+   - Use accessible, non-jarring colors for success/info badges within the dashboard
+   - Scoped under .dashboard-container to avoid changing badges globally elsewhere */
+.dashboard-container .badge.bg-success,
+.badge-pair .bg-success {
+  background-color: #198754 !important; /* accessible green */
+  color: #ffffff !important;
+  border: 0 !important;
+}
+.dashboard-container .badge.bg-info,
+.badge-pair .bg-info {
+  background-color: #0aa5a5 !important; /* calm teal/turquoise */
+  color: #ffffff !important;
+  border: 0 !important;
+}
+
 
 .btn.btn-primary {
   border: 1px solid rgba(91, 176, 255, 0.65);
