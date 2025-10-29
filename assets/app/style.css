@@ -395,22 +395,6 @@ body::after {
   box-shadow: none !important; /* make badges blend with the white background */
 }
 
-/* Dashboard-scoped badge color overrides for course-type labels
-   - Use accessible, non-jarring colors for success/info badges within the dashboard
-   - Scoped under .dashboard-container to avoid changing badges globally elsewhere */
-.dashboard-container .badge.bg-success,
-.badge-pair .bg-success {
-  background-color: #198754 !important; /* accessible green */
-  color: #ffffff !important;
-  border: 0 !important;
-}
-.dashboard-container .badge.bg-info,
-.badge-pair .bg-info {
-  background-color: #0aa5a5 !important; /* calm teal/turquoise */
-  color: #ffffff !important;
-  border: 0 !important;
-}
-
 
 .btn.btn-primary {
   border: 1px solid rgba(91, 176, 255, 0.65);

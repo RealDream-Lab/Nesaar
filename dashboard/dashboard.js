@@ -11,6 +11,15 @@ function toPersianDigits(num) {
     return String(num).replace(/[0-9]/g, d => '۰۱۲۳۴۵۶۷۸۹'[d]);
 }
 
+// Return Bootstrap badge class for exam type labels across the dashboard
+function getExamBadgeClass(type) {
+    if (!type) return 'bg-secondary';
+    const t = String(type).trim();
+    if (t === 'الکترونیکی') return 'bg-warning';
+    if (t === 'کتبی') return 'bg-dark';
+    return 'bg-info';
+}
+
 document.addEventListener('DOMContentLoaded', function () {
     if (!isDesktopDevice()) {
         let countdownInterval;
@@ -813,7 +822,7 @@ async function filterStudentsByCourse(courseCode) {
                     <td>${data.course.course_name}</td>
                     <td><span class="text-secondary">${student.seat_number}</span></td>
                     <td>${student.class_name}</td>
-                    <td><span class="badge bg-${student.exam_type === 'کتبی' ? 'success' : 'info'}">${student.exam_type}</span></td>
+                    <td><span class="badge ${getExamBadgeClass(student.exam_type)}">${student.exam_type}</span></td>
                 </tr>
             `;
         });
@@ -854,7 +863,7 @@ function showAllStudents() {
                 <td>${student.course_name}</td>
                 <td><span class="text-secondary">${student.seat_number}</span></td>
                 <td>${student.class_name}</td>
-                <td><span class="badge bg-${student.exam_type === 'کتبی' ? 'success' : 'info'}">${student.exam_type}</span></td>
+                <td><span class="badge ${getExamBadgeClass(student.exam_type)}">${student.exam_type}</span></td>
             </tr>
         `;
     });
@@ -1006,7 +1015,7 @@ async function showStudentReport() {
 							<td><span class="text-secondary">${exam.seat_number}</span></td>
 							<td>${exam.class_name}</td>
 							<td><span class="badge bg-${exam.course_type === 'کتبی' ? 'success' : 'info'}">${exam.course_type}</span></td>
-							<td><span class="badge bg-${exam.exam_type === 'کتبی' ? 'success' : 'info'}">${exam.exam_type}</span></td>
+                            <td><span class="badge ${getExamBadgeClass(exam.exam_type)}">${exam.exam_type}</span></td>
 						</tr>
 					`;
                 });
@@ -1155,7 +1164,7 @@ async function showCourseReport() {
 							<td>${student.degree}</td>
 							<td><span class="text-secondary">${student.seat_number}</span></td>
 							<td>${student.class_name}</td>
-							<td><span class="badge bg-${student.exam_type === 'کتبی' ? 'success' : 'info'}">${student.exam_type}</span></td>
+                            <td><span class="badge ${getExamBadgeClass(student.exam_type)}">${student.exam_type}</span></td>
 						</tr>
 					`;
                 });
@@ -1284,18 +1293,32 @@ async function showNextExamReport() {
         // Show course list only if more than one course
         if (courses && courses.length > 1) {
             // Prepare header breakdown badges from API (examTypeCounts and courseTypeCounts)
-            // The user prefers the same gray badge template used in the course list; use `bg-secondary` for both groups.
+            // Render number badge (gray) first, then a label badge using the same color mapping as in the course rows
             const et = data.examTypeCounts || {};
             const ct = data.courseTypeCounts || {};
             const badgeParts = [];
-            // Exam-type counts first (e.g., کتبی / الکترونیکی)
-            for (const [type, cnt] of Object.entries(et)) {
-                badgeParts.push(`<span class="badge bg-secondary me-2">${type}: ${toPersianDigits(cnt)}</span>`);
+
+            function labelColorFor(type) {
+                // Keep the same simple mapping used elsewhere: 'کتبی' -> success (green), others -> info (turquoise)
+                return type === 'کتبی' ? 'success' : 'info';
             }
+
+            // Exam-type counts (e.g., کتبی / الکترونیکی)
+            for (const [type, cnt] of Object.entries(et)) {
+                const numBadge = `<span class="badge bg-secondary">${toPersianDigits(cnt)}</span>`;
+                // use exam-type color mapping (electronic -> warning, written -> dark)
+                const labelBadge = `<span class="badge ${getExamBadgeClass(type)}">${type}</span>`;
+                // show label first then number so they read as "label number" and appear as a single unit
+                badgeParts.push(`<span class="badge-pair me-2">${labelBadge}${numBadge}</span>`);
+            }
+
             // Course-type counts (e.g., تستی / تشریحی)
             for (const [type, cnt] of Object.entries(ct)) {
-                badgeParts.push(`<span class="badge bg-secondary me-2">${type}: ${toPersianDigits(cnt)}</span>`);
+                const numBadge = `<span class="badge bg-secondary">${toPersianDigits(cnt)}</span>`;
+                const labelBadge = `<span class="badge bg-${labelColorFor(type)}">${type}</span>`;
+                badgeParts.push(`<span class="badge-pair me-2">${labelBadge}${numBadge}</span>`);
             }
+
             const badgesHtml = badgeParts.join('');
 
             html += `
@@ -1359,7 +1382,7 @@ async function showNextExamReport() {
 						<td>${student.course_name}</td>
 						<td><span class="text-secondary">${student.seat_number}</span></td>
 						<td>${student.class_name}</td>
-						<td><span class="badge bg-${student.exam_type === 'کتبی' ? 'success' : 'info'}">${student.exam_type}</span></td>
+                        <td><span class="badge ${getExamBadgeClass(student.exam_type)}">${student.exam_type}</span></td>
 					</tr>
 				`;
             });
