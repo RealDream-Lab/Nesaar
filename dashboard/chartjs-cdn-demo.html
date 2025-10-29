@@ -24,8 +24,19 @@
     </div>
   </div>
 
-  <!-- Chart.js from CDN (v4) -->
-  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+  <!-- Attempt to load Chart.js from a local vendor directory first. If missing, fall back to CDN. -->
+  <script src="/assets/vendor/chartjs/chart.umd.min.js"></script>
+  <script>
+    // If local Chart.js not present, load CDN fallback
+    (function(){
+      if (typeof Chart === 'undefined') {
+        var s = document.createElement('script');
+        s.src = 'https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js';
+        s.async = false;
+        document.head.appendChild(s);
+      }
+    })();
+  </script>
   <script>
     // Helper: convert numbers to Persian digits for display
     function toPersianDigits(num){ return String(num).replace(/[0-9]/g,d=>'۰۱۲۳۴۵۶۷۸۹'[d]) }
