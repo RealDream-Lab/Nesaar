@@ -173,7 +173,8 @@ try {
 
     // All expected columns found; now create target table and prepare insert
     // Determine target table name based on examType (k or e)
-    $targetTable = strtolower($examType) === 'k' ? 'k' : 'e';
+    // Use descriptive table names 'k-exams' and 'e-exams'
+    $targetTable = strtolower($examType) === 'k' ? 'k-exams' : 'e-exams';
 
     // Drop target table if exists
     $pdo->query("DROP TABLE IF EXISTS `" . $targetTable . "`");
