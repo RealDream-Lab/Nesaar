@@ -206,16 +206,33 @@ if ($licenseStatus['valid'] !== true) {
             padding: 10px 0;
         }
 
-        /* Remove scrollbar from SweetAlert inputs */
-        .swal2-input {
-            overflow: hidden !important;
-            overflow-x: hidden !important;
-            overflow-y: hidden !important;
-            resize: none !important;
+        /* Tweak SweetAlert input appearance: center and improve desktop look */
+        .swal2-html-container {
+            /* center inline HTML content inside the modal */
+            text-align: center;
+            overflow: visible !important;
         }
 
-        .swal2-html-container {
-            overflow: visible !important;
+        .swal2-input {
+            display: block;
+            width: 14rem;
+            max-width: 92%;
+            margin: 0.6rem auto !important;
+            padding: 0.6rem 0.85rem !important;
+            border-radius: 10px !important;
+            border: 1px solid #d6dbe0 !important;
+            box-shadow: 0 4px 10px rgba(16, 24, 40, 0.06) inset !important;
+            font-size: 1.05rem !important;
+            text-align: center !important;
+            direction: ltr !important;
+            font-family: 'Vazir', sans-serif !important;
+            background: #ffffff !important;
+            color: #333 !important;
+        }
+
+        /* Slightly larger input on very wide screens */
+        @media (min-width: 1400px) {
+            .swal2-input { width: 18rem; }
         }
 
         .course-item.active {
