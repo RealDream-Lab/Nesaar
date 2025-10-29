@@ -475,7 +475,9 @@ async function renderReportsChart() {
         const datasets = times.map((time, idx) => {
             const dataArr = labels.map(date => (dateMap[date] && dateMap[date][time]) ? dateMap[date][time] : 0);
             return {
-                label: time,
+                // keep original (latin) label if needed, but display Persian digits in legend
+                _rawLabel: time,
+                label: (typeof toPersianDigits === 'function') ? toPersianDigits(time) : time,
                 data: dataArr,
                 backgroundColor: palette[idx % palette.length]
             };
@@ -520,6 +522,13 @@ async function renderReportsChart() {
             id: 'valueAbove',
             afterDatasetsDraw(chart) {
                 const { ctx } = chart;
+                // derive font from chart options to preserve size, but prefer Vazir family
+                const fontOpts = (chart.options && chart.options.font) ? chart.options.font : (Chart && Chart.defaults && Chart.defaults.font ? Chart.defaults.font : {});
+                const fontWeight = fontOpts.weight || '600';
+                const fontSize = fontOpts.size || 12;
+                const fontFamily = fontOpts.family || 'Vazir, sans-serif';
+                const fontStr = `${fontWeight} ${fontSize}px ${fontFamily}`;
+
                 chart.data.datasets.forEach((dataset, datasetIndex) => {
                     const meta = chart.getDatasetMeta(datasetIndex);
                     meta.data.forEach((element, index) => {
@@ -530,7 +539,7 @@ async function renderReportsChart() {
                         ctx.save();
                         // use dark color so text reads on light card backgrounds
                         ctx.fillStyle = '#0b2a44';
-                        ctx.font = '600 12px Vazir, sans-serif';
+                        ctx.font = fontStr;
                         ctx.textAlign = 'center';
                         // Convert to Persian digits if helper exists
                         const text = (typeof toPersianDigits === 'function') ? toPersianDigits(value) : String(value);
@@ -541,44 +550,39 @@ async function renderReportsChart() {
             }
         };
 
+        // convert x-axis labels (dates) to Persian digits for display
+        const displayLabels = (typeof toPersianDigits === 'function') ? labels.map(l => toPersianDigits(l)) : labels;
+
         reportsChartInstance = new Chart(ctx, {
             type: 'bar',
             data: {
-                labels: labels,
+                labels: displayLabels,
                 datasets: datasets
             },
             options: {
                 responsive: true,
                 // prefer a 16:9 viewing frame
                 maintainAspectRatio: true,
-                aspectRatio: 16/9,
+                aspectRatio: 16 / 9,
                 scales: {
                     x: {
-                        ticks: { color: '#0b2a44' },
+                        ticks: { color: '#0b2a44', font: { family: 'Vazir, sans-serif' } },
                         grid: { display: false },
                         stacked: false
                     },
                     y: {
                         beginAtZero: true,
-                        ticks: { color: '#0b2a44', precision: 0,
-                            callback: function(value) { return (typeof toPersianDigits === 'function') ? toPersianDigits(value) : value; }
+                        ticks: {
+                            color: '#0b2a44', precision: 0, font: { family: 'Vazir, sans-serif' },
+                            callback: function (value) { return (typeof toPersianDigits === 'function') ? toPersianDigits(value) : value; }
                         },
                         grid: { color: 'rgba(11,42,68,0.06)' }
                     }
                 },
                 plugins: {
-                    legend: { display: true, position: 'top', labels: { color: '#0b2a44' } },
-                    tooltip: {
-                        enabled: true,
-                        callbacks: {
-                            label: function(context) {
-                                const v = context.raw || 0;
-                                const label = context.dataset.label || '';
-                                const valText = (typeof toPersianDigits === 'function') ? toPersianDigits(v) : String(v);
-                                return `${label}: ${valText}`;
-                            }
-                        }
-                    }
+                    legend: { display: true, position: 'top', labels: { color: '#0b2a44', font: { family: 'Vazir, sans-serif' } } },
+                    // tooltips disabled per user request
+                    tooltip: { enabled: false }
                 }
             },
             plugins: [valueAbovePlugin]
