@@ -149,6 +149,11 @@ async function loadDashboardData() {
             document.getElementById('totalCourses').textContent = stats.totalCourses || 0;
             document.getElementById('nextExamStudents').textContent = stats.nextExamStudents || 0;
             document.getElementById('nextExamDateTime').textContent = stats.nextExamDateTime || 'آزمونی یافت نشد';
+            // Remaining future exam sessions (from now onwards)
+            if (typeof stats.remainingSessions !== 'undefined') {
+                const el = document.getElementById('remainingSessions');
+                if (el) el.textContent = stats.remainingSessions;
+            }
             // no breakdown in the top stat card; breakdown will be shown in the course list header
         }
     } catch (error) {
@@ -161,6 +166,19 @@ async function loadDashboardData() {
             });
         }
     }
+}
+
+// Placeholder action for the "جلسه باقیمانده" card. User will specify the exact action later.
+function showRemainingSessions() {
+    const el = document.getElementById('remainingSessions');
+    const count = el ? el.textContent : '-';
+    Swal.fire({
+        icon: 'info',
+        title: 'جلسات باقیمانده',
+        html: `<div style="text-align:right;line-height:1.8">تعداد جلسات باقیمانده: <strong>${toPersianDigits(count)}</strong><br>عملیات مرتبط با این کارت بعداً مشخص و اضافه خواهد شد.</div>`,
+        confirmButtonText: 'باشه',
+        customClass: { popup: 'swal2-rtl swal2-glass', confirmButton: 'btn btn-primary' }
+    });
 }
 
 // Update footer university name

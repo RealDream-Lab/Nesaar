@@ -79,11 +79,15 @@ try {
         $nextExamDateTime = 'آزمونی یافت نشد';
     }
 
+    // Count remaining future sessions
+    $remainingSessions = count($futureExams);
+
     echo json_encode([
         'totalStudents' => $totalStudents,
         'totalCourses' => $totalCourses,
         'nextExamStudents' => $nextExamStudents,
-        'nextExamDateTime' => $nextExamDateTime
+        'nextExamDateTime' => $nextExamDateTime,
+        'remainingSessions' => $remainingSessions
     ], JSON_UNESCAPED_UNICODE);
 } catch (Exception $e) {
     error_log('Statistics error: ' . $e->getMessage());
