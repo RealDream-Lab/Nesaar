@@ -903,7 +903,7 @@ function clearReport() {
 async function showStudentReport() {
     const { value: studentId } = await Swal.fire({
         title: 'جستجوی دانشجو',
-        html: '<input id="studentIdInput" class="swal2-input" placeholder="شماره دانشجویی را وارد کنید" style="font-family: Vazir, sans-serif; direction: ltr; text-align: center; overflow: hidden; resize: none; outline: none;">',
+        html: '<input id="studentIdInput" type="tel" inputmode="numeric" class="swal2-input" placeholder="شماره دانشجویی" style="font-family: Vazir, sans-serif; direction: ltr; text-align: center; overflow: hidden; resize: none; outline: none;">',
         focusConfirm: false,
         showCancelButton: true,
         confirmButtonText: 'جستجو',
@@ -1046,7 +1046,7 @@ async function showStudentReport() {
 async function showCourseReport() {
     const { value: courseCode } = await Swal.fire({
         title: 'جستجوی درس',
-        html: '<input id="courseCodeInput" class="swal2-input" placeholder="کد درس را وارد کنید" style="font-family: Vazir, sans-serif; direction: ltr; text-align: center; overflow: hidden; resize: none; outline: none;">',
+        html: '<input id="courseCodeInput" type="tel" inputmode="numeric" class="swal2-input" placeholder="کد درس" style="font-family: Vazir, sans-serif; direction: ltr; text-align: center; overflow: hidden; resize: none; outline: none;">',
         focusConfirm: false,
         showCancelButton: true,
         confirmButtonText: 'جستجو',
