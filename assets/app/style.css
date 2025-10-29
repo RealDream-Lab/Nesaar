@@ -365,6 +365,15 @@ body::after {
   width: 100% !important;
   height: 100% !important;
 }
+
+/* Mini pie styles inside report card */
+.mini-pie {
+  width: 140px !important;
+  height: 140px !important;
+  display: block;
+  margin: 0 auto;
+}
+.mini-pie + div { text-align: center; }
 .reports-chart-placeholder {
   padding: 1.5rem;
   color: var(--text-muted);

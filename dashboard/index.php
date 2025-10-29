@@ -110,6 +110,17 @@ if ($licenseStatus['valid'] !== true) {
                 <div class="chart-wrapper">
                     <canvas id="reportsChart" aria-label="نمودار جلسات آینده" role="img"></canvas>
                 </div>
+                <div id="reportsPieContainer" class="pies-single d-none">
+                    <div class="pie-controls mb-2">
+                        <button class="btn btn-outline-primary me-2" id="pieBtnCourse" onclick="switchPie('course')">نمودار دروس</button>
+                        <button class="btn btn-outline-primary me-2" id="pieBtnExamType" onclick="switchPie('examType')">نوع آزمون</button>
+                        <button class="btn btn-outline-primary" id="pieBtnCourseType" onclick="switchPie('courseType')">نوع درس</button>
+                    </div>
+                    <div class="pie-main-wrapper">
+                        <canvas id="pieMain" aria-label="نمودار گزارش"></canvas>
+                    </div>
+                    <div id="pieLegend" class="pie-legend mt-2"></div>
+                </div>
             </div>
 
             <!-- Latest Request Report -->

@@ -1708,6 +1708,29 @@ async function showNextExamReport() {
                         </div>
                     </li>
             `;
+
+                // Insert mini pie charts area (course / exam-type / course-type)
+                html += `
+                    <li class="list-group-item">
+                        <div id="miniPieSection" class="d-flex flex-column gap-2">
+                            <h6 class="mb-2">آمار سریع جلسه (پیش‌نمایش)</h6>
+                            <div class="d-flex flex-row align-items-start gap-3">
+                                <div class="text-center">
+                                    <canvas id="miniPieCourse" class="mini-pie"></canvas>
+                                    <div><button id="btnShowCoursePie" class="btn btn-sm btn-outline-primary mt-2">نمایش فراوانی دروس</button></div>
+                                </div>
+                                <div class="text-center">
+                                    <canvas id="miniPieExamType" class="mini-pie"></canvas>
+                                    <div><button id="btnShowExamTypePie" class="btn btn-sm btn-outline-primary mt-2">نمایش نوع آزمون</button></div>
+                                </div>
+                                <div class="text-center">
+                                    <canvas id="miniPieCourseType" class="mini-pie"></canvas>
+                                    <div><button id="btnShowCourseTypePie" class="btn btn-sm btn-outline-primary mt-2">نمایش نوع درس</button></div>
+                                </div>
+                            </div>
+                        </div>
+                    </li>
+                `;
             courses.forEach(course => {
                 html += `
 					<li class="list-group-item d-flex justify-content-between align-items-center course-item" style="cursor: pointer;" onclick="filterStudentsByCourse('${course.course_code}')">
@@ -1776,7 +1799,9 @@ async function showNextExamReport() {
 
         document.getElementById('reportContent').innerHTML = html;
         document.getElementById('reportCard').style.display = 'block';
-        setTimeout(scrollReportCardIntoView, 100);
+    setTimeout(scrollReportCardIntoView, 100);
+    // Render mini pies for this report
+    try { renderMiniPiesFromReport(data); } catch (e) { console.error('Could not render mini pies:', e); }
         // clear any custom title after rendering
         try { delete window.customExamReportTitle; } catch (e) { window.customExamReportTitle = undefined; }
 
@@ -1794,5 +1819,104 @@ async function showNextExamReport() {
                 }
             });
         }
+    }
+}
+
+// Mini pie chart instances for the report card
+let miniPieInstances = { course: null, examType: null, courseType: null };
+let largePieInstance = null;
+
+function destroyMiniPies() {
+    try {
+        Object.values(miniPieInstances).forEach(inst => { if (inst && typeof inst.destroy === 'function') inst.destroy(); });
+    } catch (e) { /* ignore */ }
+    miniPieInstances = { course: null, examType: null, courseType: null };
+}
+
+function renderMiniPiesFromReport(data) {
+    // data: response from getNextExamReport.php
+    try {
+        const courses = data.courses || [];
+        const examTypeCounts = data.examTypeCounts || {};
+        const courseTypeCounts = data.courseTypeCounts || {};
+
+        // Prepare course pie data (limit to top 10 to avoid clutter)
+        const courseLabels = courses.map(c => `${c.course_name}`);
+        const courseValues = courses.map(c => Number(c.student_count) || 0);
+
+        // Exam type
+        const examLabels = Object.keys(examTypeCounts);
+        const examValues = examLabels.map(k => Number(examTypeCounts[k]) || 0);
+
+        // Course type
+        const ctLabels = Object.keys(courseTypeCounts);
+        const ctValues = ctLabels.map(k => Number(courseTypeCounts[k]) || 0);
+
+        // Colors
+        const palette = ['#1a6fa6','#ff8a65','#7bd5ff','#9ccc65','#ffca28','#7e57c2','#26a69a','#ef5350','#90a4ae','#5c6bc0'];
+
+        destroyMiniPies();
+
+        // Course pie
+        const cCtx = document.getElementById('miniPieCourse').getContext('2d');
+        miniPieInstances.course = new Chart(cCtx, {
+            type: 'doughnut',
+            data: { labels: courseLabels, datasets: [{ data: courseValues, backgroundColor: courseLabels.map((_,i)=>palette[i%palette.length]), borderColor: 'rgba(255,255,255,0.6)', borderWidth: 4 }] },
+            options: { responsive: false, plugins: { legend: { display: false } }, cutout: '30%' }
+        });
+
+        // Exam type pie
+        const eCtx = document.getElementById('miniPieExamType').getContext('2d');
+        miniPieInstances.examType = new Chart(eCtx, {
+            type: 'doughnut',
+            data: { labels: examLabels, datasets: [{ data: examValues, backgroundColor: examLabels.map((_,i)=>palette[i%palette.length]), borderColor: 'rgba(255,255,255,0.6)', borderWidth: 4 }] },
+            options: { responsive: false, plugins: { legend: { display: false } }, cutout: '40%' }
+        });
+
+        // Course type pie
+        const ctCtx = document.getElementById('miniPieCourseType').getContext('2d');
+        miniPieInstances.courseType = new Chart(ctCtx, {
+            type: 'doughnut',
+            data: { labels: ctLabels, datasets: [{ data: ctValues, backgroundColor: ctLabels.map((_,i)=>palette[i%palette.length]), borderColor: 'rgba(255,255,255,0.6)', borderWidth: 4 }] },
+            options: { responsive: false, plugins: { legend: { display: false } }, cutout: '40%' }
+        });
+
+        // Wire buttons to open large view
+        document.getElementById('btnShowCoursePie').addEventListener('click', () => showLargePie('fراوانی دروس', courseLabels, courseValues, palette));
+        document.getElementById('btnShowExamTypePie').addEventListener('click', () => showLargePie('نوع آزمون', examLabels, examValues, palette));
+        document.getElementById('btnShowCourseTypePie').addEventListener('click', () => showLargePie('نوع درس', ctLabels, ctValues, palette));
+
+    } catch (err) {
+        console.error('Error rendering mini pies:', err);
+    }
+}
+
+function showLargePie(title, labels, values, palette) {
+    try {
+        Swal.fire({
+            title: title,
+            html: `<div style="width:100%;height:380px"><canvas id="largePieCanvas" style="width:100%;height:100%"></canvas></div>`,
+            width: '50rem',
+            showCancelButton: false,
+            confirmButtonText: 'باشه',
+            customClass: { popup: 'swal2-rtl swal2-glass', confirmButton: 'btn btn-primary' },
+            willOpen: () => {
+                // placeholder
+            },
+            didOpen: () => {
+                try { if (largePieInstance) largePieInstance.destroy(); } catch(e){}
+                const ctx = document.getElementById('largePieCanvas').getContext('2d');
+                largePieInstance = new Chart(ctx, {
+                    type: 'doughnut',
+                    data: { labels: labels, datasets: [{ data: values, backgroundColor: labels.map((_,i)=>palette[i%palette.length]), borderColor: 'rgba(255,255,255,0.7)', borderWidth: 6 }] },
+                    options: { responsive: true, maintainAspectRatio: false, cutout: '30%', plugins: { legend: { position: 'right' } } }
+                });
+            },
+            willClose: () => {
+                try { if (largePieInstance) { largePieInstance.destroy(); largePieInstance = null; } } catch(e){}
+            }
+        });
+    } catch (err) {
+        console.error('Error showing large pie:', err);
     }
 }
