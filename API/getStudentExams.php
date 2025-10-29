@@ -85,8 +85,28 @@ $student_id = $credentials['student_id'];
 $national_id = $credentials['national_id'];
 
 // کوئری امن
-$sql = "
-SELECT 
+$seatHasExamType = false;
+$courseHasExamType = false;
+try {
+    $colStmt = $pdo->prepare("SELECT COLUMN_NAME FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'exam_seats' AND COLUMN_NAME = 'exam_type'");
+    $colStmt->execute();
+    $seatHasExamType = (bool)$colStmt->fetchColumn();
+    $colStmt2 = $pdo->prepare("SELECT COLUMN_NAME FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'courses' AND COLUMN_NAME = 'exam_type'");
+    $colStmt2->execute();
+    $courseHasExamType = (bool)$colStmt2->fetchColumn();
+} catch (Exception $e) {
+    // ignore and proceed with defaults
+}
+
+// Build select for exam_type depending on schema
+$examTypeSelect = "'' AS exam_type";
+if ($seatHasExamType) {
+    $examTypeSelect = "es.exam_type AS exam_type";
+} elseif ($courseHasExamType) {
+    $examTypeSelect = "c.exam_type AS exam_type";
+}
+
+$sql = "SELECT 
     s.student_id AS student_id,
     s.national_id AS national_id,
     s.first_name AS first_name,
@@ -96,18 +116,18 @@ SELECT
     c.course_name AS course_name,
     c.exam_date AS exam_date,
     c.exam_time AS exam_time,
-    es.exam_type AS exam_type,
+    " . $examTypeSelect . ",
     c.course_type AS course_type,
-    e.seat_number AS seat_number,
-    e.building AS building,
-    e.class_name AS class_name,
-    e.seat_row AS seat_row
+    es.seat_number AS seat_number,
+    es.building AS building,
+    es.class_name AS class_name,
+    es.seat_row AS seat_row
 FROM 
-    exam_seats e
+    exam_seats es
 JOIN 
-    students s ON e.student_id = s.student_id
+    students s ON es.student_id = s.student_id
 JOIN 
-    courses c ON e.course_code = c.course_code
+    courses c ON es.course_code = c.course_code
 WHERE 
     s.student_id = :student_id
     AND s.national_id = :national_id
