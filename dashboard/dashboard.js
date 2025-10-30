@@ -175,8 +175,6 @@ async function loadDashboardData() {
         }
     // Always (re)render the reports chart after loading statistics
     try { renderReportsChart(); } catch (e) { console.error('Chart render failed:', e); }
-    // Show release notice for v3.0.0 (once per session)
-    try { showReleaseNotice(); } catch (e) { /* ignore */ }
     } catch (error) {
         console.error('Error loading dashboard data:', error);
         if (!error?.isLicenseError) {
@@ -292,36 +290,7 @@ async function updateFooterUniversity() {
 }
 updateFooterUniversity();
 
-// Show release notice for v3.0.0 once per session
-function showReleaseNotice() {
-    try {
-        if (sessionStorage.getItem('release_v3_0_0_shown')) return;
-        const title = 'نسخه ۳.۰.۰ منتشر شد';
-        const html = `
-            <div style="text-align:right;line-height:1.8">
-                <p>تغییرات مهم این نسخه:</p>
-                <ul style="text-align:right;direction:rtl;">
-                    <li>اضافه شدن گزارش‌های متنوع به پنل مدیریت.</li>
-                    <li>اضافه شدن نمودارهای تحلیلی (Chart.js) در بخش گزارش‌ها.</li>
-                    <li>به‌روزرسانی مستندات و ثبت تغییرات در Changelog.</li>
-                </ul>
-                <p style="margin-top:0.6rem;color:var(--text-muted)">برای مشاهده جزئیات به CHANGELOG مراجعه کنید.</p>
-            </div>`;
-
-        Swal.fire({
-            icon: 'info',
-            title: title,
-            html: html,
-            confirmButtonText: 'متوجه شدم',
-            showCancelButton: false,
-            customClass: { popup: 'swal2-rtl swal2-glass', confirmButton: 'btn btn-primary' }
-        }).then(() => {
-            try { sessionStorage.setItem('release_v3_0_0_shown', '1'); } catch (e) { /* ignore */ }
-        });
-    } catch (e) {
-        console.warn('Could not show release notice:', e);
-    }
-}
+// Release notice is handled by the service worker; inline notice removed to avoid duplication.
 
 // Footer click event
 const copyrightFooter = document.getElementById('copyrightFooter');
@@ -771,8 +740,8 @@ async function renderReportsChart() {
                         displayColors: false,
                         bodyFont: { family: 'Vazir, sans-serif' },
                         callbacks: {
-                            title: function() { return ''; },
-                            label: function(context) {
+                            title: function () { return ''; },
+                            label: function (context) {
                                 // Prefer raw value, fallback to parsed y value
                                 const raw = (typeof context.raw !== 'undefined') ? context.raw : (context.parsed && context.parsed.y ? context.parsed.y : 0);
                                 const v = Number(raw) || 0;

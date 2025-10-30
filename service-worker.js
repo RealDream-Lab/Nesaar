@@ -1,7 +1,7 @@
 // Bump cache to force refresh of updated assets (app.js, style.css, index.php)
 // Increment this when you want clients to fetch the new assets.
-const CACHE_NAME = 'exam-seat-v2.4.10';
-const VERSION = '۲.۴.۱۰';
+const CACHE_NAME = 'exam-seat-v3.0.0';
+const VERSION = '۳.۰.۰';
 const urlsToCache = [
   '/',
   '/index.php',
@@ -14,6 +14,8 @@ const urlsToCache = [
   '/assets/sweetalert2/sweetalert2.min.js',
   '/assets/crypto-js.min.js',
   '/assets/app/app.js',
+  '/assets/app/version.js',
+  '/assets/vendor/chartjs/chart.min.js',
   '/dashboard/dashboard.js',
   '/assets/app/logo.png',
   '/assets/app/Pnulogo.png',
@@ -88,7 +90,9 @@ self.addEventListener('activate', event => {
             version: CACHE_NAME,
             tagVersion: `نسخه ${VERSION}`,
             changes: [
-              'طراحی مینی‌کارت آزمون‌های باقی‌مانده'
+              'اضافه شدن گزارش‌های متنوع به پنل مدیریت',
+              'افزودن نمودارهای تحلیلی (Chart.js) در بخش گزارش‌ها',
+              'به‌روزرسانی فایل‌های استاتیک و مستندات'
             ]
           });
         });
