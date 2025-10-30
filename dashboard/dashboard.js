@@ -2011,9 +2011,9 @@ function renderMiniPiesFromReport(data) {
         miniPieInstances.course = new Chart(cCtx, {
             type: 'doughnut',
             data: { labels: courseLabels, datasets: [{ data: courseValues, backgroundColor: courseLabels.map((_, i) => palette[i % palette.length]), borderColor: 'rgba(255,255,255,0.6)', borderWidth: 4 }] },
-            options: { 
-                responsive: false, 
-                plugins: { 
+            options: {
+                responsive: false,
+                plugins: {
                     legend: { display: false },
                     tooltip: {
                         enabled: true,
@@ -2037,9 +2037,9 @@ function renderMiniPiesFromReport(data) {
         miniPieInstances.examType = new Chart(eCtx, {
             type: 'doughnut',
             data: { labels: examLabels, datasets: [{ data: examValues, backgroundColor: examLabels.map((_, i) => palette[i % palette.length]), borderColor: 'rgba(255,255,255,0.6)', borderWidth: 4 }] },
-            options: { 
-                responsive: false, 
-                plugins: { 
+            options: {
+                responsive: false,
+                plugins: {
                     legend: { display: false },
                     tooltip: {
                         enabled: true,
@@ -2063,9 +2063,9 @@ function renderMiniPiesFromReport(data) {
         miniPieInstances.courseType = new Chart(ctCtx, {
             type: 'doughnut',
             data: { labels: ctLabels, datasets: [{ data: ctValues, backgroundColor: ctLabels.map((_, i) => palette[i % palette.length]), borderColor: 'rgba(255,255,255,0.6)', borderWidth: 4 }] },
-            options: { 
-                responsive: false, 
-                plugins: { 
+            options: {
+                responsive: false,
+                plugins: {
                     legend: { display: false },
                     tooltip: {
                         enabled: true,
