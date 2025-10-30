@@ -87,6 +87,32 @@ if ($licenseStatus['valid'] !== true) {
                     </div>
                 </div>
             </div>
+            </div>
+
+            <!-- Extra single-line dashboard cards (added as requested) -->
+            <div class="row mt-3">
+                <div class="col-md-4">
+                    <div class="dashboard-card stat-card" style="cursor: default;">
+                        <div class="stat-box" style="display:flex;align-items:center;justify-content:center;padding:1.25rem 0;">
+                            <p id="customCardOne" style="font-size:1.25rem;font-weight:700;margin:0;">کارت شماره یک</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="dashboard-card stat-card" style="cursor: default;">
+                        <div class="stat-box" style="display:flex;align-items:center;justify-content:center;padding:1.25rem 0;">
+                            <p id="customCardTwo" style="font-size:1.25rem;font-weight:700;margin:0;">کارت شماره دو</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="dashboard-card stat-card" style="cursor: default;">
+                        <div class="stat-box" style="display:flex;align-items:center;justify-content:center;padding:1.25rem 0;">
+                            <p id="customCardThree" style="font-size:1.25rem;font-weight:700;margin:0;">کارت شماره سه</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
 
             <!-- Database Update (moved to bottom) -->
 

@@ -2003,8 +2003,8 @@ async function showNextExamReport() {
                 </div>
         `;
 
-        // Show course list only if more than one course
-        if (courses && courses.length > 1) {
+        // Show course list for any number of courses (including one)
+        if (courses) {
             // Prepare header breakdown badges from API (examTypeCounts and courseTypeCounts)
             // Render number badge (gray) first, then a label badge using the same color mapping as in the course rows
             const et = data.examTypeCounts || {};
@@ -2190,83 +2190,121 @@ function renderMiniPiesFromReport(data) {
 
         destroyMiniPies();
 
-        // Course pie
-        const cCtx = document.getElementById('miniPieCourse').getContext('2d');
-        miniPieInstances.course = new Chart(cCtx, {
-            type: 'doughnut',
-            data: { labels: courseLabels, datasets: [{ data: courseValues, backgroundColor: courseLabels.map((_, i) => palette[i % palette.length]), borderColor: 'rgba(255,255,255,0.6)', borderWidth: 4 }] },
-            options: {
-                responsive: false,
-                plugins: {
-                    legend: { display: false },
-                    tooltip: {
-                        enabled: true,
-                        displayColors: false,
-                        title: { display: false },
-                        bodyFont: { family: 'Vazir, sans-serif' },
-                        callbacks: {
-                            label: function (context) {
-                                const v = context.raw || 0;
-                                try { return toPersianDigits(v); } catch (e) { return String(v); }
+        // Course pie (DPR-aware)
+        (function () {
+            const miniCourseEl = document.getElementById('miniPieCourse');
+            if (!miniCourseEl) return;
+            const ratio = window.devicePixelRatio || 1;
+            const cssW = miniCourseEl.clientWidth || 140;
+            const cssH = miniCourseEl.clientHeight || 140;
+            // set backing store size to CSS pixels * DPR
+            miniCourseEl.width = Math.max(1, Math.floor(cssW * ratio));
+            miniCourseEl.height = Math.max(1, Math.floor(cssH * ratio));
+            // keep CSS size unchanged
+            miniCourseEl.style.width = cssW + 'px';
+            miniCourseEl.style.height = cssH + 'px';
+            const cCtx = miniCourseEl.getContext('2d');
+            try { cCtx.setTransform(ratio, 0, 0, ratio, 0, 0); } catch (e) { /* ignore if not supported */ }
+            miniPieInstances.course = new Chart(cCtx, {
+                type: 'pie',
+                data: { labels: courseLabels, datasets: [{ data: courseValues, backgroundColor: courseLabels.map((_, i) => palette[i % palette.length]), borderColor: 'rgba(255,255,255,0.6)', borderWidth: 4 }] },
+                options: {
+                    responsive: false,
+                    devicePixelRatio: ratio,
+                    plugins: {
+                        legend: { display: false },
+                        tooltip: {
+                            enabled: true,
+                            displayColors: false,
+                            title: { display: false },
+                            bodyFont: { family: 'Vazir, sans-serif' },
+                            callbacks: {
+                                label: function (context) {
+                                    const v = context.raw || 0;
+                                    try { return toPersianDigits(v); } catch (e) { return String(v); }
+                                }
                             }
                         }
                     }
-                },
-                cutout: '30%'
-            }
-        });
+                }
+            });
+        })();
 
-        // Exam type pie
-        const eCtx = document.getElementById('miniPieExamType').getContext('2d');
-        miniPieInstances.examType = new Chart(eCtx, {
-            type: 'doughnut',
-            data: { labels: examLabels, datasets: [{ data: examValues, backgroundColor: examLabels.map((_, i) => palette[i % palette.length]), borderColor: 'rgba(255,255,255,0.6)', borderWidth: 4 }] },
-            options: {
-                responsive: false,
-                plugins: {
-                    legend: { display: false },
-                    tooltip: {
-                        enabled: true,
-                        displayColors: false,
-                        title: { display: false },
-                        bodyFont: { family: 'Vazir, sans-serif' },
-                        callbacks: {
-                            label: function (context) {
-                                const v = context.raw || 0;
-                                try { return toPersianDigits(v); } catch (e) { return String(v); }
+        // Exam type pie (DPR-aware)
+        (function () {
+            const miniExamEl = document.getElementById('miniPieExamType');
+            if (!miniExamEl) return;
+            const ratio = window.devicePixelRatio || 1;
+            const cssW = miniExamEl.clientWidth || 140;
+            const cssH = miniExamEl.clientHeight || 140;
+            miniExamEl.width = Math.max(1, Math.floor(cssW * ratio));
+            miniExamEl.height = Math.max(1, Math.floor(cssH * ratio));
+            miniExamEl.style.width = cssW + 'px';
+            miniExamEl.style.height = cssH + 'px';
+            const eCtx = miniExamEl.getContext('2d');
+            try { eCtx.setTransform(ratio, 0, 0, ratio, 0, 0); } catch (e) { }
+            miniPieInstances.examType = new Chart(eCtx, {
+                type: 'pie',
+                data: { labels: examLabels, datasets: [{ data: examValues, backgroundColor: examLabels.map((_, i) => palette[i % palette.length]), borderColor: 'rgba(255,255,255,0.6)', borderWidth: 4 }] },
+                options: {
+                    responsive: false,
+                    devicePixelRatio: ratio,
+                    plugins: {
+                        legend: { display: false },
+                        tooltip: {
+                            enabled: true,
+                            displayColors: false,
+                            title: { display: false },
+                            bodyFont: { family: 'Vazir, sans-serif' },
+                            callbacks: {
+                                label: function (context) {
+                                    const v = context.raw || 0;
+                                    try { return toPersianDigits(v); } catch (e) { return String(v); }
+                                }
                             }
                         }
                     }
-                },
-                cutout: '40%'
-            }
-        });
+                }
+            });
+        })();
 
-        // Course type pie
-        const ctCtx = document.getElementById('miniPieCourseType').getContext('2d');
-        miniPieInstances.courseType = new Chart(ctCtx, {
-            type: 'doughnut',
-            data: { labels: ctLabels, datasets: [{ data: ctValues, backgroundColor: ctLabels.map((_, i) => palette[i % palette.length]), borderColor: 'rgba(255,255,255,0.6)', borderWidth: 4 }] },
-            options: {
-                responsive: false,
-                plugins: {
-                    legend: { display: false },
-                    tooltip: {
-                        enabled: true,
-                        displayColors: false,
-                        title: { display: false },
-                        bodyFont: { family: 'Vazir, sans-serif' },
-                        callbacks: {
-                            label: function (context) {
-                                const v = context.raw || 0;
-                                try { return toPersianDigits(v); } catch (e) { return String(v); }
+        // Course type pie (DPR-aware)
+        (function () {
+            const miniCtEl = document.getElementById('miniPieCourseType');
+            if (!miniCtEl) return;
+            const ratio = window.devicePixelRatio || 1;
+            const cssW = miniCtEl.clientWidth || 140;
+            const cssH = miniCtEl.clientHeight || 140;
+            miniCtEl.width = Math.max(1, Math.floor(cssW * ratio));
+            miniCtEl.height = Math.max(1, Math.floor(cssH * ratio));
+            miniCtEl.style.width = cssW + 'px';
+            miniCtEl.style.height = cssH + 'px';
+            const ctCtx = miniCtEl.getContext('2d');
+            try { ctCtx.setTransform(ratio, 0, 0, ratio, 0, 0); } catch (e) { }
+            miniPieInstances.courseType = new Chart(ctCtx, {
+                type: 'pie',
+                data: { labels: ctLabels, datasets: [{ data: ctValues, backgroundColor: ctLabels.map((_, i) => palette[i % palette.length]), borderColor: 'rgba(255,255,255,0.6)', borderWidth: 4 }] },
+                options: {
+                    responsive: false,
+                    devicePixelRatio: ratio,
+                    plugins: {
+                        legend: { display: false },
+                        tooltip: {
+                            enabled: true,
+                            displayColors: false,
+                            title: { display: false },
+                            bodyFont: { family: 'Vazir, sans-serif' },
+                            callbacks: {
+                                label: function (context) {
+                                    const v = context.raw || 0;
+                                    try { return toPersianDigits(v); } catch (e) { return String(v); }
+                                }
                             }
                         }
                     }
-                },
-                cutout: '40%'
-            }
-        });
+                }
+            });
+        })();
 
         // Make canvases clickable to open large view (buttons removed)
         try {
