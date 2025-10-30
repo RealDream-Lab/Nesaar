@@ -1976,9 +1976,14 @@ async function showNextExamReport() {
                             <td rowspan="4" style="width: 36%; vertical-align: middle; text-align: center;">
                                 <div style="display:flex;flex-direction:column;align-items:center;gap:8px;padding:8px;">
                                     <!-- Session report icon moved here -->
-                                    <button id="printSessionReportBtn" class="btn btn-outline-primary btn-sm p-0" type="button" title="چاپ صورتجلسه" onclick="try{ printSessionReport(); }catch(e){ console.error(e); }" style="display:inline-block;">
-                                        <img src="/assets/app/report.png" alt="صورتجلسه" style="width:140px;height:140px;object-fit:contain;display:block;pointer-events:none;">
-                                    </button>
+                                    <div style="display:flex;gap:10px;align-items:center;justify-content:center;">
+                                        <button id="printSeatNumbersBtn" class="btn btn-outline-primary btn-sm p-0" type="button" title="چاپ شماره صندلی" onclick="try{ printSeatNumbersReport(); }catch(e){ console.error(e); }" style="display:inline-block;">
+                                            <img src="/assets/app/Seat.png" alt="شماره صندلی" style="width:140px;height:140px;object-fit:contain;display:block;pointer-events:none;">
+                                        </button>
+                                        <button id="printSessionReportBtn" class="btn btn-outline-primary btn-sm p-0" type="button" title="چاپ صورتجلسه" onclick="try{ printSessionReport(); }catch(e){ console.error(e); }" style="display:inline-block;">
+                                            <img src="/assets/app/report.png" alt="صورتجلسه" style="width:140px;height:140px;object-fit:contain;display:block;pointer-events:none;">
+                                        </button>
+                                    </div>
                                 </div>
                             </td>
                         </tr>
@@ -2281,55 +2286,13 @@ function renderMiniPiesFromReport(data) {
         try {
             const miniSection = document.getElementById('miniPieSection');
             if (miniSection) {
-                // ensure button exists only once
-                let btn = miniSection.querySelector('#printSeatNumbersBtn');
-                if (!btn) {
-                    btn = document.createElement('button');
-                    btn.id = 'printSeatNumbersBtn';
-                    btn.type = 'button';
-                    // Make the button visually an icon, no extra padding so it aligns with mini canvases
-                    btn.className = 'btn btn-outline-primary btn-sm p-0';
-                    btn.style.marginRight = '0.6rem';
-                    btn.style.marginLeft = '0.6rem';
-                    btn.title = 'چاپ شماره صندلی';
-                    // Use the PWA icon as the button content and size it to match mini-chart canvases
-                    const img = document.createElement('img');
-                    img.src = '/pwa-icons/icon-192.png';
-                    img.alt = 'چاپ';
-                    // match mini-pie canonical size (140x140) so icon aligns visually with canvases
-                    img.style.width = '140px';
-                    img.style.height = '140px';
-                    img.style.objectFit = 'contain';
-                    img.style.display = 'block';
-                    img.style.pointerEvents = 'none';
-                    // remove inner text and append image
-                    btn.appendChild(img);
-                    // append after canvases container if present
-                    const container = miniSection.querySelector('.d-flex.flex-row');
-                    if (container) {
-                        // create a wrapper to keep canvases and buttons aligned
-                        const wrapper = document.createElement('div');
-                        wrapper.className = 'd-flex align-items-center gap-2';
-                        // move existing children (canvases) into wrapper
-                        while (container.firstChild) wrapper.appendChild(container.firstChild);
-                        // append the seat-number print button
-                        wrapper.appendChild(btn);
-
-                        // session report button moved into the details table (do not append here)
-                        container.appendChild(wrapper);
-                    } else {
-                        miniSection.appendChild(btn);
-                    }
-                }
-                btn.onclick = () => {
-                    try { printSeatNumbersReport(); } catch (e) { console.error('Print report failed:', e); }
-                };
-                // attach session-report click handler if present
-                const sessionBtn = miniSection.querySelector('#printSessionReportBtn');
-                if (sessionBtn) {
-                    sessionBtn.onclick = () => {
-                        try { printSessionReport(); } catch (e) { console.error('Print session report failed:', e); }
-                    };
+                // Rewrap the existing mini-pie canvases so layout stays consistent.
+                const container = miniSection.querySelector('.d-flex.flex-row');
+                if (container) {
+                    const wrapper = document.createElement('div');
+                    wrapper.className = 'd-flex align-items-center gap-2';
+                    while (container.firstChild) wrapper.appendChild(container.firstChild);
+                    container.appendChild(wrapper);
                 }
             }
         } catch (e) { /* ignore */ }
