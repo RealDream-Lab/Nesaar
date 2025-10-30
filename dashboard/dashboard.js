@@ -1868,16 +1868,13 @@ async function showNextExamReport() {
                             <h6 class="mb-2">آمار سریع جلسه (پیش‌نمایش)</h6>
                             <div class="d-flex flex-row justify-content-center align-items-center gap-3">
                                 <div class="text-center">
-                                    <canvas id="miniPieCourse" class="mini-pie"></canvas>
-                                    <div><button id="btnShowCoursePie" class="btn btn-sm btn-outline-primary mt-2">نمایش فراوانی دروس</button></div>
+                                    <canvas id="miniPieCourse" class="mini-pie" aria-label="نمایش فراوانی دروس" role="img" title="نمایش فراوانی دروس"></canvas>
                                 </div>
                                 <div class="text-center">
-                                    <canvas id="miniPieExamType" class="mini-pie"></canvas>
-                                    <div><button id="btnShowExamTypePie" class="btn btn-sm btn-outline-primary mt-2">نمایش نوع آزمون</button></div>
+                                    <canvas id="miniPieExamType" class="mini-pie" aria-label="نمایش نوع آزمون" role="img" title="نمایش نوع آزمون"></canvas>
                                 </div>
                                 <div class="text-center">
-                                    <canvas id="miniPieCourseType" class="mini-pie"></canvas>
-                                    <div><button id="btnShowCourseTypePie" class="btn btn-sm btn-outline-primary mt-2">نمایش نوع درس</button></div>
+                                    <canvas id="miniPieCourseType" class="mini-pie" aria-label="نمایش نوع درس" role="img" title="نمایش نوع درس"></canvas>
                                 </div>
                             </div>
                         </div>
@@ -2014,7 +2011,25 @@ function renderMiniPiesFromReport(data) {
         miniPieInstances.course = new Chart(cCtx, {
             type: 'doughnut',
             data: { labels: courseLabels, datasets: [{ data: courseValues, backgroundColor: courseLabels.map((_, i) => palette[i % palette.length]), borderColor: 'rgba(255,255,255,0.6)', borderWidth: 4 }] },
-            options: { responsive: false, plugins: { legend: { display: false } }, cutout: '30%' }
+            options: { 
+                responsive: false, 
+                plugins: { 
+                    legend: { display: false },
+                    tooltip: {
+                        enabled: true,
+                        displayColors: false,
+                        title: { display: false },
+                        bodyFont: { family: 'Vazir, sans-serif' },
+                        callbacks: {
+                            label: function (context) {
+                                const v = context.raw || 0;
+                                try { return toPersianDigits(v); } catch (e) { return String(v); }
+                            }
+                        }
+                    }
+                },
+                cutout: '30%'
+            }
         });
 
         // Exam type pie
@@ -2022,7 +2037,25 @@ function renderMiniPiesFromReport(data) {
         miniPieInstances.examType = new Chart(eCtx, {
             type: 'doughnut',
             data: { labels: examLabels, datasets: [{ data: examValues, backgroundColor: examLabels.map((_, i) => palette[i % palette.length]), borderColor: 'rgba(255,255,255,0.6)', borderWidth: 4 }] },
-            options: { responsive: false, plugins: { legend: { display: false } }, cutout: '40%' }
+            options: { 
+                responsive: false, 
+                plugins: { 
+                    legend: { display: false },
+                    tooltip: {
+                        enabled: true,
+                        displayColors: false,
+                        title: { display: false },
+                        bodyFont: { family: 'Vazir, sans-serif' },
+                        callbacks: {
+                            label: function (context) {
+                                const v = context.raw || 0;
+                                try { return toPersianDigits(v); } catch (e) { return String(v); }
+                            }
+                        }
+                    }
+                },
+                cutout: '40%'
+            }
         });
 
         // Course type pie
@@ -2030,13 +2063,40 @@ function renderMiniPiesFromReport(data) {
         miniPieInstances.courseType = new Chart(ctCtx, {
             type: 'doughnut',
             data: { labels: ctLabels, datasets: [{ data: ctValues, backgroundColor: ctLabels.map((_, i) => palette[i % palette.length]), borderColor: 'rgba(255,255,255,0.6)', borderWidth: 4 }] },
-            options: { responsive: false, plugins: { legend: { display: false } }, cutout: '40%' }
+            options: { 
+                responsive: false, 
+                plugins: { 
+                    legend: { display: false },
+                    tooltip: {
+                        enabled: true,
+                        displayColors: false,
+                        title: { display: false },
+                        bodyFont: { family: 'Vazir, sans-serif' },
+                        callbacks: {
+                            label: function (context) {
+                                const v = context.raw || 0;
+                                try { return toPersianDigits(v); } catch (e) { return String(v); }
+                            }
+                        }
+                    }
+                },
+                cutout: '40%'
+            }
         });
 
-        // Wire buttons to open large view
-        document.getElementById('btnShowCoursePie').addEventListener('click', () => showLargePie('فراوانی دروس', courseLabels, courseValues, palette));
-        document.getElementById('btnShowExamTypePie').addEventListener('click', () => showLargePie('نوع آزمون', examLabels, examValues, palette));
-        document.getElementById('btnShowCourseTypePie').addEventListener('click', () => showLargePie('نوع درس', ctLabels, ctValues, palette));
+        // Make canvases clickable to open large view (buttons removed)
+        try {
+            const miniCourseEl = document.getElementById('miniPieCourse');
+            if (miniCourseEl) miniCourseEl.onclick = () => showLargePie('فراوانی دروس', courseLabels, courseValues, palette);
+        } catch (e) { /* ignore */ }
+        try {
+            const miniExamEl = document.getElementById('miniPieExamType');
+            if (miniExamEl) miniExamEl.onclick = () => showLargePie('نوع آزمون', examLabels, examValues, palette);
+        } catch (e) { /* ignore */ }
+        try {
+            const miniCourseTypeEl = document.getElementById('miniPieCourseType');
+            if (miniCourseTypeEl) miniCourseTypeEl.onclick = () => showLargePie('نوع درس', ctLabels, ctValues, palette);
+        } catch (e) { /* ignore */ }
 
     } catch (err) {
         console.error('Error rendering mini pies:', err);

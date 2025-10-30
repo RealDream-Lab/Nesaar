@@ -400,6 +400,7 @@ body::after {
   display: block;
   margin: 0 auto;
 }
+.mini-pie { cursor: pointer; }
 .mini-pie + div { text-align: center; }
 .reports-chart-placeholder {
   padding: 1.5rem;
