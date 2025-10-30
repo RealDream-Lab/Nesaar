@@ -1,4 +1,3 @@
-// Device detection and SweetAlert for non-desktop users
 function isDesktopDevice() {
     const isTouch = 'ontouchstart' in window || navigator.maxTouchPoints > 1;
     const width = window.innerWidth || document.documentElement.clientWidth;
@@ -52,9 +51,8 @@ async function printSessionReport() {
             return (a.exam_type || '').localeCompare(b.exam_type || '');
         });
 
-        // Helpers
-        const toPersianDigits = (s) => String(s).replace(/[0-9]/g, d => '۰۱۲۳۴۵۶۷۸۹'[d]);
-        const esc = (txt) => { const d = document.createElement('div'); d.textContent = txt || ''; return d.innerHTML; };
+    const toPersianDigits = (s) => String(s).replace(/[0-9]/g, d => '۰۱۲۳۴۵۶۷۸۹'[d]);
+    const esc = (txt) => { const d = document.createElement('div'); d.textContent = txt || ''; return d.innerHTML; };
 
         // Compute semester & academic year based on examDate (expecting YYYY/MM/DD)
         let semesterLabel = 'نامشخص';
@@ -91,7 +89,7 @@ async function printSessionReport() {
 
         // Prepare printable HTML (portrait A4) with 20 courses per page
         const fontHref = (window.location && window.location.origin ? window.location.origin : '') + '/assets/fonts/vazir/vazir.css';
-        // Use compact page margins (match seat-numbers report) so browsers render similar print-preview
+        // compact page margins to match seat-numbers report
         let html = `<!doctype html><html lang="fa" dir="rtl"><head><meta charset="utf-8"><title>صورتجلسه آزمون</title><link rel="stylesheet" href="${fontHref}">`;
         html += `<style>
             /* compact A4 portrait margins (aligned with seat-number report) */
@@ -125,7 +123,7 @@ async function printSessionReport() {
         </style>`;
         html += `</head><body>`;
 
-        // header html to reuse on each page
+        
         const university = esc(document.getElementById('footerText')?.textContent || '');
         const headerHtml = `
                         <div class="header">
@@ -144,8 +142,7 @@ async function printSessionReport() {
 
         const perPage = 20;
         const pages = Math.ceil(courses.length / perPage);
-        // Note: don't use literal '\n' entries — HTML ignores plain newlines. Use CSS margins for spacing.
-        const signers = [
+    const signers = [
             'پس از انقضای مهلت آزمون، پاسخنامه‌ها جمع‌آوری و بعد از شمارش و کنترل با لیست حضور و غیاب و تایید، تحویل ستاد امتحانات گردید.',
             'دکتر الهام قاسمی فر - رئیس مرکز',
             'مهدی حسنی - مسئول آموزش',
@@ -155,7 +152,7 @@ async function printSessionReport() {
         ];
 
         function buildTable(slice, startIndex) {
-            // Removed "نوع آزمون" column per user request and renamed "آمارش" -> "آمار"
+            // table header
             let t = '<table class="courses"><thead><tr>' +
                 '<th style="width:4%">ردیف</th>' +
                 '<th style="width:8%">کد درس</th>' +
@@ -208,7 +205,7 @@ async function printSessionReport() {
 
         html += `</body></html>`;
 
-        // print via hidden iframe
+        
         const iframe = document.createElement('iframe');
         iframe.style.position = 'fixed';
         iframe.style.left = '-10000px';
