@@ -7,6 +7,175 @@ function isDesktopDevice() {
     return !isTouch && width > 900 && !isMobileUA;
 }
 
+// Build and open a printable "صورتجلسه آزمون" (session report).
+// Uses the same exam date/time displayed in #nextExamDateTime and calls API/getNextExamReport.php
+async function printSessionReport() {
+    try {
+        const nextExamDateTimeText = document.getElementById('nextExamDateTime')?.textContent || '';
+        if (!nextExamDateTimeText || nextExamDateTimeText === 'بارگذاری...' || nextExamDateTimeText === 'آزمونی یافت نشد') {
+            return Swal.fire({ icon: 'info', title: 'اطلاعات', text: 'آزمون بعدی یافت نشد', confirmButtonText: 'باشه', customClass: { popup: 'swal2-rtl swal2-glass', confirmButton: 'btn btn-primary' } });
+        }
+
+        const parts = nextExamDateTimeText.split('|').map(s => s.trim());
+        if (parts.length !== 2) {
+            return Swal.fire({ icon: 'error', title: 'خطا', text: 'فرمت تاریخ و ساعت نامعتبر است', confirmButtonText: 'باشه', customClass: { popup: 'swal2-rtl swal2-glass', confirmButton: 'btn btn-primary' } });
+        }
+        const examTime = parts[0];
+        const examDate = parts[1];
+
+        const resp = await guardedFetch(`../API/getNextExamReport.php?exam_date=${encodeURIComponent(examDate)}&exam_time=${encodeURIComponent(examTime)}`, { cache: 'no-store' });
+        const data = await resp.json();
+        if (data.error) {
+            return Swal.fire({ icon: 'error', title: 'خطا', text: data.error || 'خطا در دریافت اطلاعات', confirmButtonText: 'باشه', customClass: { popup: 'swal2-rtl swal2-glass', confirmButton: 'btn btn-primary' } });
+        }
+
+        const courses = Array.isArray(data.courses) ? data.courses.slice() : [];
+        if (!courses.length) {
+            return Swal.fire({ icon: 'info', title: 'اطلاعات', text: 'هیچ درسی برای این جلسه وجود ندارد', confirmButtonText: 'باشه', customClass: { popup: 'swal2-rtl swal2-glass', confirmButton: 'btn btn-primary' } });
+        }
+
+        // Show loading modal while preparing the session report
+        Swal.fire({
+            title: 'در حال ساخت صورتجلسه',
+            html: 'لطفاً منتظر بمانید...',
+            allowOutsideClick: false,
+            didOpen: () => { Swal.showLoading(); },
+            customClass: { popup: 'swal2-rtl swal2-glass' },
+            showConfirmButton: false
+        });
+
+        // Sort: electronic (الکترونیکی) first, then others; then by numeric course_code
+        courses.sort((a, b) => {
+            if ((a.exam_type || '') === (b.exam_type || '')) return (Number(a.course_code) || 0) - (Number(b.course_code) || 0);
+            if ((a.exam_type || '') === 'الکترونیکی') return -1;
+            if ((b.exam_type || '') === 'الکترونیکی') return 1;
+            return (a.exam_type || '').localeCompare(b.exam_type || '');
+        });
+
+        // Helpers
+        const toPersianDigits = (s) => String(s).replace(/[0-9]/g, d => '۰۱۲۳۴۵۶۷۸۹'[d]);
+        const esc = (txt) => { const d = document.createElement('div'); d.textContent = txt || ''; return d.innerHTML; };
+
+        // Compute semester & academic year based on examDate (expecting YYYY/MM/DD)
+        let semesterLabel = 'نامشخص';
+        try {
+            const partsDate = (examDate || '').split('/').map(s => s.replace(/[^0-9]/g, ''));
+            if (partsDate.length >= 2) {
+                const year = parseInt(partsDate[0], 10);
+                const month = parseInt(partsDate[1], 10);
+                if ([9, 10].includes(month)) semesterLabel = 'نیمسال اول';
+                else if ([2, 3].includes(month)) semesterLabel = 'نیمسال دوم';
+                else if ([5, 6].includes(month)) semesterLabel = 'دوره تابستان';
+                else { if (month >= 7 && month <= 12) semesterLabel = 'نیمسال اول'; else if (month >= 1 && month <= 4) semesterLabel = 'نیمسال دوم'; }
+            }
+        } catch (e) { /* ignore */ }
+
+        // Academic year display: if نیمسال اول => year - year+1, else previousYear - year
+        let acadStart = 0, acadEnd = 0;
+        try {
+            const partsDate = (examDate || '').split('/').map(s => s.replace(/[^0-9]/g, ''));
+            const year = parseInt(partsDate[0], 10) || new Date().getFullYear();
+            if (semesterLabel === 'نیمسال اول') { acadStart = year; acadEnd = year + 1; }
+            else { acadStart = year - 1; acadEnd = year; }
+        } catch (e) { acadStart = 0; acadEnd = 0; }
+
+        const persAcad = `${toPersianDigits(acadStart)}-${toPersianDigits(acadEnd)}`;
+
+        // Prepare printable HTML (portrait A4) with 20 courses per page
+        const fontHref = (window.location && window.location.origin ? window.location.origin : '') + '/assets/fonts/vazir/vazir.css';
+        let html = `<!doctype html><html lang="fa" dir="rtl"><head><meta charset="utf-8"><title>صورتجلسه آزمون</title><link rel="stylesheet" href="${fontHref}">`;
+        html += `<style>@page{size:A4 portrait;margin:18mm;} body{font-family:Vazir, Tahoma, Arial, sans-serif;color:#111;margin:0;padding:0;} .sheet{width:210mm;box-sizing:border-box;padding:12mm;} .header{display:flex;gap:12px;align-items:center;justify-content:space-between;} .logo{width:90px;height:90px;object-fit:contain;} .header-right{flex:1;text-align:center;} .institute{font-size:12pt;font-weight:700;margin-top:6px;} .title{font-size:18pt;font-weight:800;margin:6px 0;} .university{font-size:13pt;color:#222;margin-bottom:6px;} .divider{height:1px;background:#111;margin:8px 0 12px 0;opacity:0.85;} .meta{font-size:11pt;text-align:right;color:#222;margin-bottom:10px;} .meta strong{font-weight:800;} .courses{width:100%;border-collapse:collapse;font-size:11pt;} .courses th,.courses td{padding:8px 10px;border-bottom:1px solid #e0e0e0;} .courses thead th{background:#efefef;font-weight:800;text-align:center;} .courses tbody tr:nth-child(odd){background:#fafafa;} .courses td.name{text-align:right;} .courses td.center{text-align:center;} .footer-signs{margin-top:18mm;} .sheet{ page-break-after: always; } .sheet:last-child{ page-break-after: auto; } @media print{ .no-print{display:none !important;} }</style>`;
+        html += `</head><body>`;
+
+        // header html to reuse on each page
+        const university = esc(document.getElementById('footerText')?.textContent || '');
+        const headerHtml = `
+            <div class="header">
+              <div style="flex:0 0 120px; text-align:right;">
+                <img src="/assets/app/Pnulogo.png" alt="PnuLogo" class="logo">
+                <div style="font-size:10pt;margin-top:6px;text-align:center;">مرکز سنجش و آزمون</div>
+              </div>
+              <div class="header-right">
+                <div class="title">صورتجلسه آزمون</div>
+                <div class="university">${university || 'دانشگاه پیام نور'}</div>
+              </div>
+              <div style="width:120px;"></div>
+            </div>
+            <div class="divider"></div>
+            <div class="meta">آزمون دروس زیر در ${semesterLabel} سالتحصیلی ${persAcad} با حضور امضاء كنندگان زیر در ساعت ${toPersianDigits(examTime)} مورخ ${toPersianDigits(examDate)} شروع گردید. ( نمونه سوال ضمیمه می باشد )</div>`;
+
+        const perPage = 20;
+        const pages = Math.ceil(courses.length / perPage);
+        const signers = [
+            'دكتر الهام قاسمی فر - رئیس مرکز',
+            'مهدی حسنی - مسئول آموزش',
+            'سید احمد موسوی - مسئول جلسه',
+            'فاطمه محمدی - ناظر',
+            'حسین رضایی - کارشناس اجرا'
+        ];
+
+        function buildTable(slice, startIndex) {
+            let t = '<table class="courses"><thead><tr><th style="width:6%">ردیف</th><th style="width:18%">کد درس</th><th style="width:46%">نام درس</th><th style="width:10%">نفر</th><th style="width:20%">نوع</th></tr></thead><tbody>';
+            slice.forEach((c, idx) => {
+                t += `<tr><td class="center">${toPersianDigits(startIndex + idx + 1)}</td><td class="center">${esc(c.course_code || '')}</td><td class="name">${esc(c.course_name || '')}</td><td class="center">${toPersianDigits(c.student_count || 0)}</td><td class="center">${esc(c.course_type || c.exam_type || '')}</td></tr>`;
+            });
+            t += '</tbody></table>';
+            return t;
+        }
+
+        for (let p = 0; p < pages; p++) {
+            const start = p * perPage;
+            const slice = courses.slice(start, start + perPage);
+            html += `<div class="sheet">`;
+            html += headerHtml;
+            html += buildTable(slice, start);
+
+            // signers block on every page
+            html += `<div class="footer-signs"><div style="margin-top:12mm;">`;
+            signers.forEach(s => {
+                html += `<div style="margin-bottom:10px;text-align:right;font-size:11pt;"><div style="display:block;border-top:1px solid #111;padding-top:6px;width:60%;">${esc(s)}</div></div>`;
+            });
+            html += `</div></div>`;
+
+            html += `</div>`; // .sheet
+        }
+
+        html += `</body></html>`;
+
+        // print via hidden iframe
+        const iframe = document.createElement('iframe');
+        iframe.style.position = 'fixed';
+        iframe.style.left = '-10000px';
+        iframe.style.top = '0';
+        iframe.style.width = '210mm';
+        iframe.style.height = '297mm';
+        iframe.style.border = '0';
+        iframe.style.visibility = 'hidden';
+        document.body.appendChild(iframe);
+
+        try {
+            const idoc = iframe.contentDocument || iframe.contentWindow.document;
+            idoc.open();
+            idoc.write(html);
+            idoc.close();
+            // close loading modal before opening print dialog
+            try { Swal.close(); } catch (e) { }
+            setTimeout(() => {
+                try { iframe.contentWindow.focus(); iframe.contentWindow.print(); } catch (e) { console.error('Print error:', e); }
+                setTimeout(() => { try { document.body.removeChild(iframe); } catch (e) { } }, 500);
+            }, 400);
+        } catch (e) {
+            try { document.body.removeChild(iframe); } catch (er) { }
+            try { Swal.close(); } catch (er) { }
+            Swal.fire({ icon: 'error', title: 'خطا', text: 'خطا در چاپ صورتجلسه', confirmButtonText: 'باشه', customClass: { popup: 'swal2-rtl swal2-glass', confirmButton: 'btn btn-primary' } });
+        }
+
+    } catch (err) {
+        console.error('Error building session report:', err);
+        Swal.fire({ icon: 'error', title: 'خطا', text: 'خطا در آماده‌سازی صورتجلسه', confirmButtonText: 'باشه', customClass: { popup: 'swal2-rtl swal2-glass', confirmButton: 'btn btn-primary' } });
+    }
+}
+
 function toPersianDigits(num) {
     return String(num).replace(/[0-9]/g, d => '۰۱۲۳۴۵۶۷۸۹'[d]);
 }
@@ -1794,30 +1963,40 @@ async function showNextExamReport() {
         window.allStudents = students;
 
         const headerTitle = window.customExamReportTitle || 'جزئیات جلسه آزمون';
+        // Build a 3-column details table: the last column is a rowspan cell that
+        // aggregates the key info and hosts action buttons (print seat numbers / session report)
         let html = `
             <div class="mb-4">
                 <h5 class="text-primary mb-3">${headerTitle}</h5>
-				<div class="table-responsive">
-					<table class="table table-bordered">
-						<tr>
-							<th style="width: 30%;">تاریخ آزمون</th>
-							<td>${data.exam_date}</td>
-						</tr>
-						<tr>
-							<th>ساعت آزمون</th>
-							<td>${data.exam_time}</td>
-						</tr>
-						<tr>
-							<th>تعداد دروس</th>
-							<td><span class="text-secondary">${courses.length}</span> درس</td>
-						</tr>
-						<tr>
-							<th>تعداد دانشجویان</th>
-							<td><span class="text-secondary">${students.length}</span> نفر</td>
-						</tr>
-					</table>
-				</div>
-		`;
+                <div class="table-responsive">
+                    <table class="table table-bordered">
+                        <tr>
+                            <th style="width: 28%;">تاریخ آزمون</th>
+                            <td style="width: 36%;">${data.exam_date}</td>
+                            <td rowspan="4" style="width: 36%; vertical-align: middle; text-align: center;">
+                                <div style="display:flex;flex-direction:column;align-items:center;gap:8px;padding:8px;">
+                                    <!-- Session report icon moved here -->
+                                    <button id="printSessionReportBtn" class="btn btn-outline-primary btn-sm p-0" type="button" title="چاپ صورتجلسه" onclick="try{ printSessionReport(); }catch(e){ console.error(e); }" style="display:inline-block;">
+                                        <img src="/assets/app/report.png" alt="صورتجلسه" style="width:140px;height:140px;object-fit:contain;display:block;pointer-events:none;">
+                                    </button>
+                                </div>
+                            </td>
+                        </tr>
+                        <tr>
+                            <th>ساعت آزمون</th>
+                            <td>${data.exam_time}</td>
+                        </tr>
+                        <tr>
+                            <th>تعداد دروس</th>
+                            <td><span class="text-secondary">${courses.length}</span> درس</td>
+                        </tr>
+                        <tr>
+                            <th>تعداد دانشجویان</th>
+                            <td><span class="text-secondary">${students.length}</span> نفر</td>
+                        </tr>
+                    </table>
+                </div>
+        `;
 
         // Show course list only if more than one course
         if (courses && courses.length > 1) {
@@ -2128,12 +2307,15 @@ function renderMiniPiesFromReport(data) {
                     // append after canvases container if present
                     const container = miniSection.querySelector('.d-flex.flex-row');
                     if (container) {
-                        // create a wrapper to keep canvases and button aligned
+                        // create a wrapper to keep canvases and buttons aligned
                         const wrapper = document.createElement('div');
                         wrapper.className = 'd-flex align-items-center gap-2';
                         // move existing children (canvases) into wrapper
                         while (container.firstChild) wrapper.appendChild(container.firstChild);
+                        // append the seat-number print button
                         wrapper.appendChild(btn);
+
+                        // session report button moved into the details table (do not append here)
                         container.appendChild(wrapper);
                     } else {
                         miniSection.appendChild(btn);
@@ -2142,6 +2324,13 @@ function renderMiniPiesFromReport(data) {
                 btn.onclick = () => {
                     try { printSeatNumbersReport(); } catch (e) { console.error('Print report failed:', e); }
                 };
+                // attach session-report click handler if present
+                const sessionBtn = miniSection.querySelector('#printSessionReportBtn');
+                if (sessionBtn) {
+                    sessionBtn.onclick = () => {
+                        try { printSessionReport(); } catch (e) { console.error('Print session report failed:', e); }
+                    };
+                }
             }
         } catch (e) { /* ignore */ }
 
@@ -2211,6 +2400,16 @@ function printSeatNumbersReport() {
         if (!students.length) {
             return Swal.fire({ icon: 'info', title: 'اطلاعات', text: 'هیچ دانشجویی برای چاپ یافت نشد', confirmButtonText: 'باشه', customClass: { popup: 'swal2-rtl swal2-glass', confirmButton: 'btn btn-primary' } });
         }
+
+        // Show loading modal while preparing the printable document
+        Swal.fire({
+            title: 'در حال ساخت گزارش شماره صندلی',
+            html: 'لطفاً منتظر بمانید...',
+            allowOutsideClick: false,
+            didOpen: () => { Swal.showLoading(); },
+            customClass: { popup: 'swal2-rtl swal2-glass' },
+            showConfirmButton: false
+        });
 
         // Normalize fields and sort by numeric seat_number when possible
         const normalize = (s) => ({
@@ -2427,6 +2626,8 @@ function printSeatNumbersReport() {
                     fullDoc.open();
                     fullDoc.write(finalHtml);
                     fullDoc.close();
+                    // close loading modal before opening print dialog
+                    try { Swal.close(); } catch (e) { }
                     setTimeout(() => {
                         try { iframe.contentWindow.focus(); iframe.contentWindow.print(); } catch (e) { console.error('Print error:', e); }
                         // remove iframe after a short delay
@@ -2434,6 +2635,7 @@ function printSeatNumbersReport() {
                     }, 300);
                 } catch (e) {
                     document.body.removeChild(iframe);
+                    try { Swal.close(); } catch (er) { }
                     Swal.fire({ icon: 'error', title: 'خطا', text: 'خطا در چاپ از iframe', confirmButtonText: 'باشه', customClass: { popup: 'swal2-rtl swal2-glass', confirmButton: 'btn btn-primary' } });
                 }
             } else {
@@ -2457,6 +2659,7 @@ function printSeatNumbersReport() {
                     return Swal.fire({ icon: 'error', title: 'خطا', text: 'لطفاً باز شدن پنجره جدید را در مرورگر فعال کنید', confirmButtonText: 'باشه', customClass: { popup: 'swal2-rtl swal2-glass', confirmButton: 'btn btn-primary' } });
                 }
                 w.document.open(); w.document.write(fallbackHtml); w.document.close();
+                try { Swal.close(); } catch (er) { }
                 setTimeout(() => { try { w.focus(); w.print(); } catch (e) { console.error('Print error:', e); } }, 450);
             }
         })();
