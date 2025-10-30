@@ -89,30 +89,9 @@ if ($licenseStatus['valid'] !== true) {
             </div>
             </div>
 
-            <!-- Extra single-line dashboard cards (added as requested) -->
-            <div class="row mt-3">
-                <div class="col-md-4">
-                    <div class="dashboard-card stat-card" style="cursor: default;">
-                        <div class="stat-box" style="display:flex;align-items:center;justify-content:center;padding:1.25rem 0;">
-                            <p id="customCardOne" style="font-size:1.25rem;font-weight:700;margin:0;">کارت شماره یک</p>
-                        </div>
-                    </div>
-                </div>
-                <div class="col-md-4">
-                    <div class="dashboard-card stat-card" style="cursor: default;">
-                        <div class="stat-box" style="display:flex;align-items:center;justify-content:center;padding:1.25rem 0;">
-                            <p id="customCardTwo" style="font-size:1.25rem;font-weight:700;margin:0;">کارت شماره دو</p>
-                        </div>
-                    </div>
-                </div>
-                <div class="col-md-4">
-                    <div class="dashboard-card stat-card" style="cursor: default;">
-                        <div class="stat-box" style="display:flex;align-items:center;justify-content:center;padding:1.25rem 0;">
-                            <p id="customCardThree" style="font-size:1.25rem;font-weight:700;margin:0;">کارت شماره سه</p>
-                        </div>
-                    </div>
-                </div>
-            </div>
+            <!-- Converted custom cards into three full-width red buttons (side-by-side) -->
+            <!-- Buttons are placed under the main reports chart below so they together span the full width -->
+            <!-- The IDs are preserved for compatibility with any JS hooks (customCardOne/Two/Three) -->
 
             <!-- Database Update (moved to bottom) -->
 
@@ -131,6 +110,19 @@ if ($licenseStatus['valid'] !== true) {
                             <canvas id="smallPieCourseType" class="small-pie" aria-label="نمودار نوع درس" role="img"></canvas>
                             <div class="mt-1 text-muted small">نوع درس</div>
                         </div>
+                    </div>
+                </div>
+
+                <!-- Three red buttons under the main chart (each fills its column width) -->
+                <div class="row mt-3 g-2" id="customButtonsRow">
+                    <div class="col-12 col-md-4">
+                        <button id="customCardOne" class="btn btn-danger w-100" type="button" style="font-size:1.1rem;font-weight:700;">کارت شماره یک</button>
+                    </div>
+                    <div class="col-12 col-md-4">
+                        <button id="customCardTwo" class="btn btn-danger w-100" type="button" style="font-size:1.1rem;font-weight:700;">کارت شماره دو</button>
+                    </div>
+                    <div class="col-12 col-md-4">
+                        <button id="customCardThree" class="btn btn-danger w-100" type="button" style="font-size:1.1rem;font-weight:700;">کارت شماره سه</button>
                     </div>
                 </div>
             </div>

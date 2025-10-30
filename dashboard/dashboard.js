@@ -59,7 +59,9 @@ async function printSessionReport() {
         // Compute semester & academic year based on examDate (expecting YYYY/MM/DD)
         let semesterLabel = 'نامشخص';
         try {
-            const partsDate = (examDate || '').split('/').map(s => s.replace(/[^0-9]/g, ''));
+            // Normalize Persian digits to ASCII before parsing (handles inputs like "۱۴۰۴/۱۰/۰۲")
+            const persianToLatin = (s) => String(s || '').replace(/[۰-۹]/g, d => '0123456789'['۰۱۲۳۴۵۶۷۸۹'.indexOf(d)]);
+            const partsDate = (examDate || '').split('/').map(s => persianToLatin(s).replace(/[^0-9]/g, ''));
             if (partsDate.length >= 2) {
                 const year = parseInt(partsDate[0], 10);
                 const month = parseInt(partsDate[1], 10);
@@ -73,28 +75,64 @@ async function printSessionReport() {
         // Academic year display: if نیمسال اول => year - year+1, else previousYear - year
         let acadStart = 0, acadEnd = 0;
         try {
-            const partsDate = (examDate || '').split('/').map(s => s.replace(/[^0-9]/g, ''));
+            // reuse Persian->Latin helper from above
+            const persianToLatin = (s) => String(s || '').replace(/[۰-۹]/g, d => '0123456789'['۰۱۲۳۴۵۶۷۸۹'.indexOf(d)]);
+            const partsDate = (examDate || '').split('/').map(s => persianToLatin(s).replace(/[^0-9]/g, ''));
             const year = parseInt(partsDate[0], 10) || new Date().getFullYear();
             if (semesterLabel === 'نیمسال اول') { acadStart = year; acadEnd = year + 1; }
             else { acadStart = year - 1; acadEnd = year; }
         } catch (e) { acadStart = 0; acadEnd = 0; }
 
-        const persAcad = `${toPersianDigits(acadStart)}-${toPersianDigits(acadEnd)}`;
+        // Ensure the smaller year is always on the left (e.g. ۱۴۰۴-۱۴۰۵ not ۱۴۰۵-۱۴۰۴)
+        const acadLeft = Math.min(Number(acadStart) || 0, Number(acadEnd) || 0);
+        const acadRight = Math.max(Number(acadStart) || 0, Number(acadEnd) || 0);
+        // Wrap academic-year in an LTR embedding to avoid bidi reordering in RTL documents
+        const persAcad = `<span dir="ltr" style="unicode-bidi: embed; direction: ltr;">${toPersianDigits(acadLeft)}-${toPersianDigits(acadRight)}</span>`;
 
         // Prepare printable HTML (portrait A4) with 20 courses per page
         const fontHref = (window.location && window.location.origin ? window.location.origin : '') + '/assets/fonts/vazir/vazir.css';
+        // Use compact page margins (match seat-numbers report) so browsers render similar print-preview
         let html = `<!doctype html><html lang="fa" dir="rtl"><head><meta charset="utf-8"><title>صورتجلسه آزمون</title><link rel="stylesheet" href="${fontHref}">`;
-        html += `<style>@page{size:A4 portrait;margin:18mm;} body{font-family:Vazir, Tahoma, Arial, sans-serif;color:#111;margin:0;padding:0;} .sheet{width:210mm;box-sizing:border-box;padding:12mm;} .header{display:flex;gap:12px;align-items:center;justify-content:space-between;} .logo{width:90px;height:90px;object-fit:contain;} .header-right{flex:1;text-align:center;} .institute{font-size:12pt;font-weight:700;margin-top:6px;} .title{font-size:18pt;font-weight:800;margin:6px 0;} .university{font-size:13pt;color:#222;margin-bottom:6px;} .divider{height:1px;background:#111;margin:8px 0 12px 0;opacity:0.85;} .meta{font-size:11pt;text-align:right;color:#222;margin-bottom:10px;} .meta strong{font-weight:800;} .courses{width:100%;border-collapse:collapse;font-size:11pt;} .courses th,.courses td{padding:8px 10px;border-bottom:1px solid #e0e0e0;} .courses thead th{background:#efefef;font-weight:800;text-align:center;} .courses tbody tr:nth-child(odd){background:#fafafa;} .courses td.name{text-align:right;} .courses td.center{text-align:center;} .footer-signs{margin-top:18mm;} .sheet{ page-break-after: always; } .sheet:last-child{ page-break-after: auto; } @media print{ .no-print{display:none !important;} }</style>`;
+        html += `<style>
+            /* compact A4 portrait margins (aligned with seat-number report) */
+            @page { size: A4 portrait; margin: 4mm; }
+            body { font-family: Vazir, Tahoma, Arial, sans-serif; color: #111; margin: 0; padding: 0; }
+            /* Each sheet is an A4 page with relative positioning so footer can be pinned */
+            /* reduced padding so printed content uses more of the page (helps some browsers avoid adding headers/footers) */
+            .sheet { width: 210mm; box-sizing: border-box; padding: 6mm; position: relative; min-height: calc(297mm - 12mm); page-break-after: always; }
+            .sheet:last-child { page-break-after: auto; }
+            .header { display:flex; gap:8px; align-items:center; justify-content:space-between; }
+            .logo { width: 110px; height: 110px; object-fit: contain; display:block; margin:0 auto; }
+            .header-right { flex: 1; text-align: center; }
+            .title { font-size: 16pt; font-weight: 800; margin: 4px 0; }
+            .university { font-size: 11pt; color: #222; margin-bottom: 6px; }
+            .divider { height: 1px; background: #111; margin: 6px 0 8px 0; opacity: 0.85; }
+            .meta { font-size: 10pt; text-align: right; color: #222; margin-bottom: 8px; }
+            .courses { width: 100%; border-collapse: collapse; font-size: 10pt; margin-bottom: 36mm; }
+            .courses th, .courses td { padding: 5px 6px; border-bottom: 1px solid #e0e0e0; }
+            .courses thead th { background: #efefef; font-weight: 800; text-align: center; }
+            .courses tbody tr:nth-child(odd) { background: #fafafa; }
+            .courses td.name { text-align: right; }
+            .courses td.center { text-align: center; }
+            /* Footer/signatures pinned to bottom of the printable area (use smaller inset) */
+            .footer-signs { position: absolute; left: 6mm; right: 6mm; bottom: 6mm; }
+            /* Full-width paragraph note with bottom border */
+            .footer-signs .footer-note { display:block; font-size: 10pt; text-align: right; margin-bottom: 8px; border-bottom:1px solid #111; padding-bottom:6px; }
+            /* Space between each signer (use margin, not literal newlines) */
+            /* Increased spacing per user request */
+            .footer-signs .sign { margin: 24px 0; text-align: right; font-size: 10pt; }
+            @media print { .no-print { display: none !important; } }
+        </style>`;
         html += `</head><body>`;
 
         // header html to reuse on each page
         const university = esc(document.getElementById('footerText')?.textContent || '');
         const headerHtml = `
-            <div class="header">
-              <div style="flex:0 0 120px; text-align:right;">
-                <img src="/assets/app/Pnulogo.png" alt="PnuLogo" class="logo">
-                <div style="font-size:10pt;margin-top:6px;text-align:center;">مرکز سنجش و آزمون</div>
-              </div>
+                        <div class="header">
+                            <div style="flex:0 0 140px; text-align:center;">
+                                <img src="/assets/app/Pnulogo.png" alt="PnuLogo" class="logo">
+                                <div style="width:110px;margin:6px auto 0 auto;font-size:10pt;text-align:center;">مرکز سنجش و آزمون</div>
+                            </div>
               <div class="header-right">
                 <div class="title">صورتجلسه آزمون</div>
                 <div class="university">${university || 'دانشگاه پیام نور'}</div>
@@ -102,12 +140,14 @@ async function printSessionReport() {
               <div style="width:120px;"></div>
             </div>
             <div class="divider"></div>
-            <div class="meta">آزمون دروس زیر در ${semesterLabel} سالتحصیلی ${persAcad} با حضور امضاء كنندگان زیر در ساعت ${toPersianDigits(examTime)} مورخ ${toPersianDigits(examDate)} شروع گردید. ( نمونه سوال ضمیمه می باشد )</div>`;
+            <div class="meta">آزمون دروس زیر در ${semesterLabel} سالتحصیلی ${persAcad} با حضور امضاء کنندگان زیر در ساعت ${toPersianDigits(examTime)} مورخ ${toPersianDigits(examDate)} شروع گردید. (نمونه سوال ضمیمه می باشد)</div>`;
 
         const perPage = 20;
         const pages = Math.ceil(courses.length / perPage);
+        // Note: don't use literal '\n' entries — HTML ignores plain newlines. Use CSS margins for spacing.
         const signers = [
-            'دكتر الهام قاسمی فر - رئیس مرکز',
+            'پس از انقضای مهلت آزمون، پاسخنامه‌ها جمع‌آوری و بعد از شمارش و کنترل با لیست حضور و غیاب و تایید، تحویل ستاد امتحانات گردید.',
+            'دکتر الهام قاسمی فر - رئیس مرکز',
             'مهدی حسنی - مسئول آموزش',
             'سید احمد موسوی - مسئول جلسه',
             'فاطمه محمدی - ناظر',
@@ -115,9 +155,27 @@ async function printSessionReport() {
         ];
 
         function buildTable(slice, startIndex) {
-            let t = '<table class="courses"><thead><tr><th style="width:6%">ردیف</th><th style="width:18%">کد درس</th><th style="width:46%">نام درس</th><th style="width:10%">نفر</th><th style="width:20%">نوع</th></tr></thead><tbody>';
+            // Removed "نوع آزمون" column per user request and renamed "آمارش" -> "آمار"
+            let t = '<table class="courses"><thead><tr>' +
+                '<th style="width:4%">ردیف</th>' +
+                '<th style="width:8%">کد درس</th>' +
+                '<th style="width:50%">نام درس</th>' +
+                '<th style="width:18%">تعداد</th>' +
+                '<th style="width:20%">حاضر / غایب</th>' +
+                '</tr></thead><tbody>';
             slice.forEach((c, idx) => {
-                t += `<tr><td class="center">${toPersianDigits(startIndex + idx + 1)}</td><td class="center">${esc(c.course_code || '')}</td><td class="name">${esc(c.course_name || '')}</td><td class="center">${toPersianDigits(c.student_count || 0)}</td><td class="center">${esc(c.course_type || c.exam_type || '')}</td></tr>`;
+                const code = esc(c.course_code || '');
+                const name = esc(c.course_name || '');
+                const count = Number(c.student_count || c.count || 0) || 0;
+                // Placeholder text for manual filling: حاضرین ____ نفر / غایبین ____ نفر
+                const statsPlaceholder = ' ___  /  ___ ';
+                t += `<tr>` +
+                    `<td class="center">${toPersianDigits(startIndex + idx + 1)}</td>` +
+                    `<td class="center">${code}</td>` +
+                    `<td class="name">${name}</td>` +
+                    `<td class="center">${toPersianDigits(count)}</td>` +
+                    `<td class="center">${statsPlaceholder}</td>` +
+                    `</tr>`;
             });
             t += '</tbody></table>';
             return t;
@@ -130,12 +188,20 @@ async function printSessionReport() {
             html += headerHtml;
             html += buildTable(slice, start);
 
-            // signers block on every page
-            html += `<div class="footer-signs"><div style="margin-top:12mm;">`;
-            signers.forEach(s => {
-                html += `<div style="margin-bottom:10px;text-align:right;font-size:11pt;"><div style="display:block;border-top:1px solid #111;padding-top:6px;width:60%;">${esc(s)}</div></div>`;
+            // signers block pinned to bottom on every page
+            html += `<div class="footer-signs">`;
+            signers.forEach((s, i) => {
+                // skip empty/whitespace-only entries just in case
+                if (!s || String(s).trim() === '') return;
+                if (i === 0) {
+                    // first item is a paragraph/note; render full-width with bottom border
+                    html += `<div class="footer-note">${esc(s)}</div>`;
+                } else {
+                    // render signer name as a single line; spacing controlled by CSS
+                    html += `<div class="sign">${esc(s)}</div>`;
+                }
             });
-            html += `</div></div>`;
+            html += `</div>`;
 
             html += `</div>`; // .sheet
         }
