@@ -1866,7 +1866,7 @@ async function showNextExamReport() {
                     <li class="list-group-item">
                         <div id="miniPieSection" class="d-flex flex-column gap-2">
                             <h6 class="mb-2">آمار سریع جلسه (پیش‌نمایش)</h6>
-                            <div class="d-flex flex-row align-items-start gap-3">
+                            <div class="d-flex flex-row justify-content-center align-items-center gap-3">
                                 <div class="text-center">
                                     <canvas id="miniPieCourse" class="mini-pie"></canvas>
                                     <div><button id="btnShowCoursePie" class="btn btn-sm btn-outline-primary mt-2">نمایش فراوانی دروس</button></div>
