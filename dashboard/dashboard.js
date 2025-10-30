@@ -51,8 +51,8 @@ async function printSessionReport() {
             return (a.exam_type || '').localeCompare(b.exam_type || '');
         });
 
-    const toPersianDigits = (s) => String(s).replace(/[0-9]/g, d => '۰۱۲۳۴۵۶۷۸۹'[d]);
-    const esc = (txt) => { const d = document.createElement('div'); d.textContent = txt || ''; return d.innerHTML; };
+        const toPersianDigits = (s) => String(s).replace(/[0-9]/g, d => '۰۱۲۳۴۵۶۷۸۹'[d]);
+        const esc = (txt) => { const d = document.createElement('div'); d.textContent = txt || ''; return d.innerHTML; };
 
         // Compute semester & academic year based on examDate (expecting YYYY/MM/DD)
         let semesterLabel = 'نامشخص';
@@ -123,7 +123,7 @@ async function printSessionReport() {
         </style>`;
         html += `</head><body>`;
 
-        
+
         const university = esc(document.getElementById('footerText')?.textContent || '');
         const headerHtml = `
                         <div class="header">
@@ -142,7 +142,7 @@ async function printSessionReport() {
 
         const perPage = 20;
         const pages = Math.ceil(courses.length / perPage);
-    const signers = [
+        const signers = [
             'پس از انقضای مهلت آزمون، پاسخنامه‌ها جمع‌آوری و بعد از شمارش و کنترل با لیست حضور و غیاب و تایید، تحویل ستاد امتحانات گردید.',
             'دکتر الهام قاسمی فر - رئیس مرکز',
             'مهدی حسنی - مسئول آموزش',
@@ -205,7 +205,7 @@ async function printSessionReport() {
 
         html += `</body></html>`;
 
-        
+
         const iframe = document.createElement('iframe');
         iframe.style.position = 'fixed';
         iframe.style.left = '-10000px';
