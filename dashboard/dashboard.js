@@ -2098,6 +2098,53 @@ function renderMiniPiesFromReport(data) {
             if (miniCourseTypeEl) miniCourseTypeEl.onclick = () => showLargePie('نوع درس', ctLabels, ctValues, palette);
         } catch (e) { /* ignore */ }
 
+        // Add a "چاپ شماره صندلی" button next to the mini pies for printable seat list
+        try {
+            const miniSection = document.getElementById('miniPieSection');
+            if (miniSection) {
+                // ensure button exists only once
+                let btn = miniSection.querySelector('#printSeatNumbersBtn');
+                if (!btn) {
+                    btn = document.createElement('button');
+                    btn.id = 'printSeatNumbersBtn';
+                    btn.type = 'button';
+                    // Make the button visually an icon, no extra padding so it aligns with mini canvases
+                    btn.className = 'btn btn-outline-primary btn-sm p-0';
+                    btn.style.marginRight = '0.6rem';
+                    btn.style.marginLeft = '0.6rem';
+                    btn.title = 'چاپ شماره صندلی';
+                    // Use the PWA icon as the button content and size it to match mini-chart canvases
+                    const img = document.createElement('img');
+                    img.src = '/pwa-icons/icon-192.png';
+                    img.alt = 'چاپ';
+                    // match mini-pie canonical size (140x140) so icon aligns visually with canvases
+                    img.style.width = '140px';
+                    img.style.height = '140px';
+                    img.style.objectFit = 'contain';
+                    img.style.display = 'block';
+                    img.style.pointerEvents = 'none';
+                    // remove inner text and append image
+                    btn.appendChild(img);
+                    // append after canvases container if present
+                    const container = miniSection.querySelector('.d-flex.flex-row');
+                    if (container) {
+                        // create a wrapper to keep canvases and button aligned
+                        const wrapper = document.createElement('div');
+                        wrapper.className = 'd-flex align-items-center gap-2';
+                        // move existing children (canvases) into wrapper
+                        while (container.firstChild) wrapper.appendChild(container.firstChild);
+                        wrapper.appendChild(btn);
+                        container.appendChild(wrapper);
+                    } else {
+                        miniSection.appendChild(btn);
+                    }
+                }
+                btn.onclick = () => {
+                    try { printSeatNumbersReport(); } catch (e) { console.error('Print report failed:', e); }
+                };
+            }
+        } catch (e) { /* ignore */ }
+
     } catch (err) {
         console.error('Error rendering mini pies:', err);
     }
@@ -2154,5 +2201,268 @@ function showLargePie(title, labels, values, palette) {
         });
     } catch (err) {
         console.error('Error showing large pie:', err);
+    }
+}
+
+// Build and open a printable seat numbers report. Uses window.allStudents (set by showNextExamReport)
+function printSeatNumbersReport() {
+    try {
+        const students = Array.isArray(window.allStudents) ? window.allStudents.slice() : [];
+        if (!students.length) {
+            return Swal.fire({ icon: 'info', title: 'اطلاعات', text: 'هیچ دانشجویی برای چاپ یافت نشد', confirmButtonText: 'باشه', customClass: { popup: 'swal2-rtl swal2-glass', confirmButton: 'btn btn-primary' } });
+        }
+
+        // Normalize fields and sort by numeric seat_number when possible
+        const normalize = (s) => ({
+            first_name: s.first_name || s.firstname || s.name || '',
+            last_name: s.last_name || s.lastname || s.lastName || '',
+            course_name: s.course_name || s.courseName || s.course || '',
+            seat_number: (typeof s.seat_number !== 'undefined') ? String(s.seat_number) : ''
+        });
+
+        const entries = students.map(normalize);
+
+        // Sort by last name then first name (Persian-aware locale where possible)
+        entries.sort((a, b) => {
+            const lnA = (a.last_name || '').trim();
+            const lnB = (b.last_name || '').trim();
+            if (lnA !== lnB) return lnA.localeCompare(lnB, 'fa') || lnA.localeCompare(lnB);
+            const fnA = (a.first_name || '').trim();
+            const fnB = (b.first_name || '').trim();
+            return fnA.localeCompare(fnB, 'fa') || fnA.localeCompare(fnB);
+        });
+
+        // Pagination: FORCE 50 entries per printed page as requested. Use two columns (25+25) for density.
+        const twoColumn = true; // force two-column to maximize rows per page for printed layout
+        const perPageTotal = 50; // fixed to 50 per page
+        const perColumn = twoColumn ? Math.floor(perPageTotal / 2) : perPageTotal; // 25 when two-column
+        const perPage = perPageTotal;
+        const totalPages = Math.max(1, Math.ceil(entries.length / perPage));
+
+        // Build printable HTML
+        const title = document.querySelector('#nextExamDateTime')?.textContent || '';
+        const university = (document.getElementById('footerText')?.textContent) || '';
+
+        function esc(txt) { const d = document.createElement('div'); d.textContent = txt || ''; return d.innerHTML; }
+
+        const fontHref = (window.location && window.location.origin ? window.location.origin : '') + '/assets/fonts/vazir/vazir.css';
+        let docHtml = `<!doctype html><html lang="fa" dir="rtl"><head><meta charset="utf-8"><title>گزارش شماره صندلی</title><link rel="stylesheet" href="${fontHref}">`;
+        docHtml += `<style>
+            /* Use A4 landscape for printing (افقی). Compact margins for denser layout. */
+            @page { size: A4 landscape; margin: 4mm; }
+                /* Increased font for readability while still attempting 50 rows per page. */
+            body { font-family: Vazir, Tahoma, Arial, sans-serif; color: #111; font-size: 8.5pt; }
+            .report-header { text-align: center; margin-bottom: 4px; }
+            .report-title { font-size: 12pt; font-weight: 700; margin-bottom:2px }
+            /* Show only date/time here (no "نسار - university"). Make it more prominent. */
+            .report-meta { font-size: 20pt; color: #111; margin-top:2px; font-weight: 900; }
+            .page { page-break-after: always; margin-bottom: 0; }
+            table { width: 100%; border-collapse: collapse; table-layout: fixed; font-size: 8.5pt; line-height: 1.06; }
+            th, td { padding: 4px 6px; text-align: right; border-bottom: 0.5px solid #e0e0e0; font-size: 8.5pt; }
+            thead th { background: #efefef; font-weight: 700; font-size: 9pt; padding: 5px 6px; text-align: center; }
+            /* Center seat-number column specifically */
+            .seat-col { text-align: center; }
+            tbody tr:nth-child(odd) { background: #fafafa; }
+            td { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+            .col-wrap { display: flex; gap: 6px; position: relative; }
+            .col { width: 50%; }
+            .col-wrap::before { content: ''; position: absolute; left: 50%; top: 0; bottom: 0; width: 0.6px; background: #bdbdbd; transform: translateX(-0.3px); }
+            .col { padding-right: 6px; }
+            .small-muted { color: #666; font-size: 8pt; }
+            @media print {
+                .no-print { display: none !important; }
+                .page { page-break-after: always; }
+            }
+        </style>`;
+        docHtml += `</head><body>`;
+
+        for (let p = 0; p < totalPages; p++) {
+            docHtml += `<div class="page">`;
+            docHtml += `<div class="report-header"><div class="report-title">گزارش شماره صندلی</div>`;
+            docHtml += `<div class="report-meta">${esc(title)}</div></div>`;
+
+            if (twoColumn) {
+                // left and right columns: take the page slice (up to perPage) and split it evenly
+                const start = p * perPage;
+                const pageSlice = entries.slice(start, start + perPage);
+                const half = Math.ceil(pageSlice.length / 2);
+                const left = pageSlice.slice(0, half);
+                const right = pageSlice.slice(half);
+                docHtml += `<div class="col-wrap">`;
+                [left, right].forEach((colArr, colIndex) => {
+                    docHtml += `<div class="col"><table><thead><tr><th style="width:6%">ردیف</th><th style="width:28%">نام و نام خانوادگی</th><th style="width:54%">نام درس</th><th class="seat-col" style="width:12%">صندلی</th></tr></thead><tbody>`;
+                    colArr.forEach((row, idx) => {
+                        // compute global index relative to the page slice
+                        const globalIndex = start + (colIndex === 0 ? idx : half + idx);
+                        docHtml += `<tr>`;
+                        // Rowno
+                        docHtml += `<td>${esc(globalIndex + 1)}</td>`;
+                        // Display as "LastName FirstName"
+                        const fullName = esc((row.last_name || '') + ' ' + (row.first_name || ''));
+                        const courseName = esc(row.course_name || '');
+                        docHtml += `<td title="${fullName}">${fullName}</td>`;
+                        docHtml += `<td title="${courseName}">${courseName}</td>`;
+                        docHtml += `<td class="seat-col">${esc(row.seat_number || '')}</td>`;
+                        docHtml += `</tr>`;
+                    });
+                    docHtml += `</tbody></table></div>`;
+                });
+                docHtml += `</div>`;
+            } else {
+                const start = p * perPage;
+                const slice = entries.slice(start, start + perPage);
+                docHtml += `<div><table><thead><tr><th style="width:6%">ردیف</th><th style="width:28%">نام و نام خانوادگی</th><th style="width:54%">نام درس</th><th class="seat-col" style="width:12%">صندلی</th></tr></thead><tbody>`;
+                slice.forEach((row, idx) => {
+                    const globalIndex = start + idx;
+                    docHtml += `<tr>`;
+                    docHtml += `<td>${esc(globalIndex + 1)}</td>`;
+                    const fullName2 = esc((row.last_name || '') + ' ' + (row.first_name || ''));
+                    const courseName2 = esc(row.course_name || '');
+                    docHtml += `<td title="${fullName2}">${fullName2}</td>`;
+                    docHtml += `<td title="${courseName2}">${courseName2}</td>`;
+                    docHtml += `<td class="seat-col">${esc(row.seat_number || '')}</td>`;
+                    docHtml += `</tr>`;
+                });
+                docHtml += `</tbody></table></div>`;
+            }
+
+            docHtml += `</div>`; // .page
+        }
+
+        docHtml += `</body></html>`;
+
+        // Dynamic fitting: try to render the first page inside a hidden iframe using decreasing font sizes
+        // until 50 rows fit (or until minFont reached). If fit, print from the iframe; otherwise fall back.
+        const desiredPerPage = perPage; // 50
+        const firstPageEntries = entries.slice(0, desiredPerPage);
+
+        // Increase the starting font to be more readable per user's request.
+        const minFontPt = 6.5;
+        let testFontPt = 9.5; // starting point (increased for readability)
+        let fits = false;
+
+        // helper to build a single-page HTML used for measurement
+        function buildSinglePageHtml(fontPt) {
+            const fh = (window.location && window.location.origin ? window.location.origin : '') + '/assets/fonts/vazir/vazir.css';
+            let h = `<!doctype html><html lang="fa" dir="rtl"><head><meta charset="utf-8"><title>پیش‌نمایش چاپ</title><link rel="stylesheet" href="${fh}">`;
+            h += `<style>
+                @page { size: A4 landscape; margin: 4mm; }
+                html,body { margin:0; padding:0; }
+                body { font-family: Vazir, Tahoma, Arial, sans-serif; color:#111; font-size: ${fontPt}pt; }
+                .page { width: 297mm; height: 210mm; box-sizing: border-box; overflow: hidden; padding: 6mm; }
+                table { width: 100%; border-collapse: collapse; table-layout: fixed; font-size: ${fontPt}pt; }
+                th, td { padding: 3px 5px; text-align: right; border-bottom: 0.5px solid #e0e0e0; }
+                thead th { background:#efefef; font-weight:700; text-align: center; }
+                .seat-col { text-align: center; }
+                .col-wrap { display:flex; gap:6px; position:relative; }
+                .col { width:50%; }
+            </style></head><body>`;
+            h += `<div class="page">`;
+            // create balanced two-column layout for firstPageEntries
+            const half = Math.ceil(firstPageEntries.length / 2);
+            const left = firstPageEntries.slice(0, half);
+            const right = firstPageEntries.slice(half);
+            h += `<div class="col-wrap">`;
+            [left, right].forEach((colArr, ci) => {
+                h += `<div class="col"><table><thead><tr><th style="width:6%">ردیف</th><th style="width:28%">نام و نام خانوادگی</th><th style="width:54%">نام درس</th><th style="width:12%">صندلی</th></tr></thead><tbody>`;
+                colArr.forEach((r, idx) => {
+                    const globalIndex = (ci === 0 ? idx : half + idx);
+                    const fullName = (r.last_name || '') + ' ' + (r.first_name || '');
+                    const courseName = r.course_name || '';
+                    h += `<tr><td>${globalIndex + 1}</td><td title="${fullName}">${fullName}</td><td title="${courseName}">${courseName}</td><td class="seat-col">${r.seat_number || ''}</td></tr>`;
+                });
+                h += `</tbody></table></div>`;
+            });
+            h += `</div></div></body></html>`;
+            return h;
+        }
+
+        // create hidden iframe for testing
+        const iframe = document.createElement('iframe');
+        iframe.style.position = 'fixed';
+        iframe.style.left = '-10000px';
+        iframe.style.top = '0';
+        iframe.style.width = '297mm';
+        iframe.style.height = '210mm';
+        iframe.style.border = '0';
+        iframe.style.visibility = 'hidden';
+        document.body.appendChild(iframe);
+
+        const tryFit = () => new Promise(resolve => {
+            try {
+                const doc = iframe.contentDocument || iframe.contentWindow.document;
+                doc.open();
+                doc.write(buildSinglePageHtml(testFontPt));
+                doc.close();
+                // allow layout to settle
+                setTimeout(() => {
+                    const pageEl = doc.querySelector('.page');
+                    if (!pageEl) return resolve(false);
+                    // scrollHeight vs clientHeight to detect overflow
+                    const fitsNow = pageEl.scrollHeight <= pageEl.clientHeight + 1; // allow 1px leeway
+                    resolve(fitsNow);
+                }, 180);
+            } catch (e) { resolve(false); }
+        });
+
+        (async () => {
+            while (testFontPt >= minFontPt) {
+                // try fit with current font
+                // eslint-disable-next-line no-await-in-loop
+                fits = await tryFit();
+                if (fits) break;
+                testFontPt = Math.round((testFontPt - 0.25) * 100) / 100; // step down
+            }
+
+            if (fits) {
+                // print using the fitting iframe (full document with same font)
+                try {
+                    const fullDoc = iframe.contentDocument || iframe.contentWindow.document;
+                    // replace body with full docHtml but adjust only general font sizes to testFontPt
+                    // Use a targeted regex for numeric pt values to avoid touching .report-meta specifically,
+                    // then inject a high-specificity rule to ensure the date/time stays large and bold.
+                    let finalHtml = docHtml.replace(/font-size:\s*[\d.]+pt;/g, `font-size: ${testFontPt}pt;`);
+                    // Ensure report-meta remains prominent regardless of global replacements
+                    finalHtml = finalHtml.replace('</head>', `<style>.report-meta{font-size:20pt !important; font-weight:900 !important;}</style></head>`);
+                    fullDoc.open();
+                    fullDoc.write(finalHtml);
+                    fullDoc.close();
+                    setTimeout(() => {
+                        try { iframe.contentWindow.focus(); iframe.contentWindow.print(); } catch (e) { console.error('Print error:', e); }
+                        // remove iframe after a short delay
+                        setTimeout(() => { try { document.body.removeChild(iframe); } catch (e) { } }, 500);
+                    }, 300);
+                } catch (e) {
+                    document.body.removeChild(iframe);
+                    Swal.fire({ icon: 'error', title: 'خطا', text: 'خطا در چاپ از iframe', confirmButtonText: 'باشه', customClass: { popup: 'swal2-rtl swal2-glass', confirmButton: 'btn btn-primary' } });
+                }
+            } else {
+                // cleanup test iframe
+                try { document.body.removeChild(iframe); } catch (e) { }
+                // fallback: reduce perPage to 44 and print in a new window
+                const fallbackPerPage = 44;
+                const pages = Math.max(1, Math.ceil(entries.length / fallbackPerPage));
+                let fallbackHtml = `<!doctype html><html lang="fa" dir="rtl"><head><meta charset="utf-8"><title>گزارش شماره صندلی</title><link rel="stylesheet" href="${fontHref}">`;
+                fallbackHtml += `<style>@page{size:A4 landscape;margin:6mm;} body{font-family:Vazir, Tahoma, Arial, sans-serif;font-size:8.5pt;} table{width:100%;border-collapse:collapse;table-layout:fixed;} th,td{padding:4px 6px;text-align:right;border-bottom:0.5px solid #e0e0e0;}</style></head><body>`;
+                for (let p = 0; p < pages; p++) {
+                    const startIdx = p * fallbackPerPage;
+                    const slice = entries.slice(startIdx, startIdx + fallbackPerPage);
+                    fallbackHtml += `<div class="page"><table><thead><tr><th>ردیف</th><th>نام</th><th>درس</th><th class="seat-col">صندلی</th></tr></thead><tbody>`;
+                    slice.forEach((r, i) => { fallbackHtml += `<tr><td>${startIdx + i + 1}</td><td>${esc((r.last_name || '') + ' ' + (r.first_name || ''))}</td><td>${esc(r.course_name || '')}</td><td class="seat-col">${esc(r.seat_number || '')}</td></tr>`; });
+                    fallbackHtml += `</tbody></table></div>`;
+                }
+                fallbackHtml += `</body></html>`;
+                const w = window.open('', '_blank');
+                if (!w) {
+                    return Swal.fire({ icon: 'error', title: 'خطا', text: 'لطفاً باز شدن پنجره جدید را در مرورگر فعال کنید', confirmButtonText: 'باشه', customClass: { popup: 'swal2-rtl swal2-glass', confirmButton: 'btn btn-primary' } });
+                }
+                w.document.open(); w.document.write(fallbackHtml); w.document.close();
+                setTimeout(() => { try { w.focus(); w.print(); } catch (e) { console.error('Print error:', e); } }, 450);
+            }
+        })();
+
+    } catch (err) {
+        console.error('Error building printable report:', err);
+        Swal.fire({ icon: 'error', title: 'خطا', text: 'خطا در آماده‌سازی گزارش چاپ', confirmButtonText: 'باشه', customClass: { popup: 'swal2-rtl swal2-glass', confirmButton: 'btn btn-primary' } });
     }
 }

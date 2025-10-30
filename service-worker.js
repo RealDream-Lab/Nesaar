@@ -1,7 +1,7 @@
 // Bump cache to force refresh of updated assets (app.js, style.css, index.php)
 // Increment this when you want clients to fetch the new assets.
-const CACHE_NAME = 'exam-seat-v3.0.0';
-const VERSION = '۳.۰.۰';
+const CACHE_NAME = 'exam-seat-v3.0.1';
+const VERSION = '۳.۰.۱';
 const urlsToCache = [
   '/',
   '/index.php',
@@ -89,10 +89,9 @@ self.addEventListener('activate', event => {
             type: 'sw-update',
             version: CACHE_NAME,
             tagVersion: `نسخه ${VERSION}`,
+            // Replace previous messages: show only the new change added in this release
             changes: [
-              'اضافه شدن گزارش‌های متنوع به پنل مدیریت',
-              'افزودن نمودارهای تحلیلی (Chart.js) در بخش گزارش‌ها',
-              'به‌روزرسانی فایل‌های استاتیک و مستندات'
+              'افزودن قابلیت چاپ شماره صندلی با تنظیمات چاپ دو‌ستونه، وسط‌چین کردن ستون صندلی و بهبود فونت گزارش'
             ]
           });
         });

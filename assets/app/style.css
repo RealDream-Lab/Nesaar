@@ -402,6 +402,37 @@ body::after {
 }
 .mini-pie { cursor: pointer; }
 .mini-pie + div { text-align: center; }
+
+/* Print button (icon) should match mini-pie size and have subtle hover like other dashboard elements */
+#printSeatNumbersBtn {
+  background: transparent !important;
+  border: none !important;
+  padding: 0 !important;
+  width: 140px;
+  height: 140px;
+  display: inline-block;
+  border-radius: 8px;
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+#printSeatNumbersBtn img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  display: block;
+  pointer-events: none;
+}
+/* Avoid the default bootstrap outline/blue background on hover; just subtle lift */
+#printSeatNumbersBtn:hover, #printSeatNumbersBtn:focus {
+  transform: translateY(-4px);
+  /* intentionally no box-shadow or blue background — subtle lift only */
+  background: transparent !important;
+}
+/* Small screens: match mini-pie responsive size */
+@media (max-width: 900px) {
+  #printSeatNumbersBtn { width: 100px; height: 100px; }
+}
+.mini-pie { cursor: pointer; }
+.mini-pie + div { text-align: center; }
 .reports-chart-placeholder {
   padding: 1.5rem;
   color: var(--text-muted);
