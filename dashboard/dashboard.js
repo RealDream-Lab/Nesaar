@@ -173,8 +173,8 @@ async function loadDashboardData() {
             }
             // no breakdown in the top stat card; breakdown will be shown in the course list header
         }
-    // Always (re)render the reports chart after loading statistics
-    try { renderReportsChart(); } catch (e) { console.error('Chart render failed:', e); }
+        // Always (re)render the reports chart after loading statistics
+        try { renderReportsChart(); } catch (e) { console.error('Chart render failed:', e); }
     } catch (error) {
         console.error('Error loading dashboard data:', error);
         if (!error?.isLicenseError) {
