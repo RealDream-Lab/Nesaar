@@ -130,7 +130,7 @@ async function printSessionReport() {
 
         // headerHtml is built after loading configuration so we can prefer cfg.University
 
-        const perPage = 16;
+        const perPage = 15;
         const pages = Math.ceil(courses.length / perPage);
 
         // Load config so we can use configured signatory names (Boss, HeadOfEDU, Chairman)
@@ -380,6 +380,126 @@ document.getElementById('logoutBtn').addEventListener('click', () => {
     document.cookie = 'adminSession=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;';
     window.location.href = '../';
 });
+
+// Edit Roles (placeholder) — opens a modal to manage roles (implementation can be added later)
+// Edit Roles — edit four config names: AdminNickName, BossNickName, HeadOfEDU, Chairman
+// Flow: 1) confirm warning -> 2) show turquoise-styled form prefilled from getConfig.php -> 3) on Save, show confirmation -> 4) POST to API/saveConfig.php
+try {
+    const editBtn = document.getElementById('editRolesBtn');
+    if (editBtn) {
+        editBtn.addEventListener('click', async () => {
+            // First confirmation (warn about changing session-report info)
+            const first = await Swal.fire({
+                title: 'تأیید تغییر اطلاعات صورتجلسه',
+                text: 'این عمل باعث تغییر اطلاعات صورتجلسه‌های آزمون خواهد شد. آیا مطمئن هستید که می‌خواهید ادامه دهید؟',
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonText: 'بله، ادامه',
+                cancelButtonText: 'لغو',
+                reverseButtons: true,
+                customClass: { popup: 'swal2-rtl swal2-glass', confirmButton: 'btn btn-danger', cancelButton: 'btn btn-secondary' }
+            });
+            if (!first.isConfirmed) return;
+
+            // Load current config
+            let cfg = {};
+            try {
+                const cfgResp = await guardedFetch('../API/getConfig.php', { cache: 'no-store' });
+                if (cfgResp && cfgResp.ok) cfg = await cfgResp.json();
+            } catch (e) {
+                console.warn('Could not load config for edit roles modal', e);
+            }
+
+            const adminVal = cfg.AdminNickName || '';
+            const bossVal = cfg.BossNickName || '';
+            const headVal = cfg.HeadOfEDU || '';
+            const chairVal = cfg.Chairman || '';
+
+            // local escape helper (avoid relying on functions defined elsewhere)
+            const escapeHtml = (text) => { const div = document.createElement('div'); div.textContent = text || ''; return div.innerHTML; };
+
+            // Form HTML: use SweetAlert's glass popup background (don't add a bright inner background)
+            // Inputs use transparent background and subtle borders so the modal looks like the existing glass theme
+            const formHtml = `
+                <div style="text-align: right; direction: rtl;">
+                    <div style="padding:8px; border-radius:6px;">
+                        <div style="margin-bottom:8px; font-weight:700; color:inherit;">ویرایش نقش‌ها و نام‌های امضا‌کننده</div>
+
+                        <label style="display:block;font-size:0.92rem;margin-top:6px;color:inherit;">نام نمایشی کاربر (نمایش در هدر)</label>
+                        <input id="er_admin" class="swal2-input" placeholder="نام نمایشی کاربر" style="margin-bottom:6px;border:1px solid rgba(255,255,255,0.08);background:transparent;color:inherit;box-shadow:none;" value="${escapeHtml(adminVal)}">
+
+                        <label style="display:block;font-size:0.92rem;margin-top:6px;color:inherit;">نام و نام خانوادگی رئیس مرکز</label>
+                        <input id="er_boss" class="swal2-input" placeholder="رئیس مرکز" style="margin-bottom:6px;border:1px solid rgba(255,255,255,0.08);background:transparent;color:inherit;box-shadow:none;" value="${escapeHtml(bossVal)}">
+
+                        <label style="display:block;font-size:0.92rem;margin-top:6px;color:inherit;">نام و نام خانوادگی رئیس اداره آموزش</label>
+                        <input id="er_head" class="swal2-input" placeholder="رئیس اداره آموزش" style="margin-bottom:6px;border:1px solid rgba(255,255,255,0.08);background:transparent;color:inherit;box-shadow:none;" value="${escapeHtml(headVal)}">
+
+                        <label style="display:block;font-size:0.92rem;margin-top:6px;color:inherit;">نام و نام خانوادگی مسئول جلسه</label>
+                        <input id="er_chair" class="swal2-input" placeholder="مسئول جلسه" style="margin-bottom:6px;border:1px solid rgba(255,255,255,0.08);background:transparent;color:inherit;box-shadow:none;" value="${escapeHtml(chairVal)}">
+                    </div>
+                </div>`;
+
+            const modalResult = await Swal.fire({
+                title: 'ویرایش نقش‌ها',
+                html: formHtml,
+                showCancelButton: true,
+                confirmButtonText: 'ذخیره',
+                cancelButtonText: 'انصراف',
+                focusConfirm: false,
+                customClass: { popup: 'swal2-rtl swal2-glass' },
+                preConfirm: () => {
+                    const admin = document.getElementById('er_admin')?.value || '';
+                    const boss = document.getElementById('er_boss')?.value || '';
+                    const head = document.getElementById('er_head')?.value || '';
+                    const chair = document.getElementById('er_chair')?.value || '';
+                    // return values to then handle save confirmation
+                    return { AdminNickName: admin.trim(), BossNickName: boss.trim(), HeadOfEDU: head.trim(), Chairman: chair.trim() };
+                }
+            });
+
+            if (!modalResult.isConfirmed) return;
+
+            const values = modalResult.value || {};
+
+            // Second confirmation before saving
+            const second = await Swal.fire({
+                title: 'تأیید نهایی',
+                text: 'ذخیره تغییرات باعث به‌روز‌رسانی اطلاعات صورتجلسه‌ها خواهد شد. آیا مطمئن به ذخیره هستید؟',
+                icon: 'question',
+                showCancelButton: true,
+                confirmButtonText: 'بله، ذخیره کن',
+                cancelButtonText: 'لغو',
+                reverseButtons: true,
+                customClass: { popup: 'swal2-rtl swal2-glass', confirmButton: 'btn btn-primary', cancelButton: 'btn btn-secondary' }
+            });
+            if (!second.isConfirmed) return;
+
+            // Perform save
+            try {
+                const saveResp = await guardedFetch('../API/saveConfig.php', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json; charset=utf-8' },
+                    body: JSON.stringify(values)
+                });
+                const saveJson = await saveResp.json();
+                if (saveJson && saveJson.success) {
+                    // Update displayed admin name if changed
+                    if (values.AdminNickName) {
+                        try { document.getElementById('adminUsername').textContent = values.AdminNickName; } catch (e) { }
+                    }
+                    await Swal.fire({ icon: 'success', title: 'ذخیره شد', text: 'اطلاعات با موفقیت ذخیره شد', confirmButtonText: 'باشه', customClass: { popup: 'swal2-rtl swal2-glass', confirmButton: 'btn btn-primary' } });
+                } else {
+                    throw new Error((saveJson && saveJson.error) ? saveJson.error : 'خطا در ذخیره تنظیمات');
+                }
+            } catch (err) {
+                console.error('Save config failed:', err);
+                await Swal.fire({ icon: 'error', title: 'خطا', text: (err && err.message) ? err.message : 'خطا در ذخیره تنظیمات', confirmButtonText: 'باشه', customClass: { popup: 'swal2-rtl swal2-glass', confirmButton: 'btn btn-primary' } });
+            }
+        });
+    }
+} catch (e) {
+    console.warn('Edit roles handler attach failed', e);
+}
 
 // Load dashboard data
 async function loadDashboardData() {
