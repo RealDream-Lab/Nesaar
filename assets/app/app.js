@@ -1036,43 +1036,64 @@ document.addEventListener('DOMContentLoaded', () => {
 
                 // Validate credentials
                 if (studentId === expectedUsername && nationalId === expectedPassword) {
-                    // Check if AdminNickName exists
-                    if (!config.AdminNickName) {
-                        // Ask for admin nickname
-                        const { value: nickname } = await Swal.fire({
-                            icon: 'question',
-                            title: 'نام نمایشی',
-                            text: 'لطفاً نام نمایشی خود را وارد کنید:',
-                            input: 'text',
-                            inputPlaceholder: 'مثال: آرتین حسنی',
+                    // If any of the display/name fields are missing, ask once and save them together
+                    const missing = [];
+                    if (!config.AdminNickName) missing.push('AdminNickName');
+                    if (!config.BossNickName) missing.push('BossNickName');
+                    if (!config.HeadOfEDU) missing.push('HeadOfEDU');
+                    if (!config.Chairman) missing.push('Chairman');
+
+                    if (missing.length) {
+                        const { value: formValues } = await Swal.fire({
+                            title: 'اطلاعات امضاءکنندگان',
+                            html: `
+                                <div style="text-align:right;direction:rtl;">
+                                    <label style="font-weight:600;">نام نمایشی شما (نمایش در داشبورد)</label>
+                                    <input id="swal-adminnick" class="swal2-input" value="${escapeHtml(config.AdminNickName || '')}" placeholder="مثال: آرتین حسنی">
+
+                                    <label style="font-weight:600;">نام و نام خانوادگی رئیس مرکز</label>
+                                    <input id="swal-boss" class="swal2-input" value="${escapeHtml(config.BossNickName || '')}" placeholder="مثال: دكتر الهام قاسمي فر">
+
+                                    <label style="font-weight:600;">نام و نام خانوادگی رئیس اداره آموزش</label>
+                                    <input id="swal-headofedu" class="swal2-input" value="${escapeHtml(config.HeadOfEDU || '')}" placeholder="مثال: مهدی حسنی">
+
+                                    <label style="font-weight:600;">نام و نام خانوادگی مسئول جلسه</label>
+                                    <input id="swal-chairman" class="swal2-input" value="${escapeHtml(config.Chairman || '')}" placeholder="مثال: سید احمد موسوی">
+                                </div>
+                            `,
+                            focusConfirm: false,
                             showCancelButton: false,
-                            allowOutsideClick: false,
-                            confirmButtonText: 'تأیید',
-                            inputValidator: (value) => {
-                                if (!value || value.trim() === '') {
-                                    return 'وارد کردن نام نمایشی الزامی است';
+                            confirmButtonText: 'ذخیره',
+                            preConfirm: () => {
+                                const admin = document.getElementById('swal-adminnick')?.value.trim() || '';
+                                const boss = document.getElementById('swal-boss')?.value.trim() || '';
+                                const headofedu = document.getElementById('swal-headofedu')?.value.trim() || '';
+                                const chairman = document.getElementById('swal-chairman')?.value.trim() || '';
+                                if (!admin || !boss || !headofedu || !chairman) {
+                                    Swal.showValidationMessage('لطفاً همهٔ فیلدها را پر کنید');
+                                    return false;
                                 }
+                                return { AdminNickName: admin, BossNickName: boss, HeadOfEDU: headofedu, Chairman: chairman };
                             },
-                            customClass: {
-                                popup: 'swal2-rtl swal2-glass'
-                            }
+                            customClass: { popup: 'swal2-rtl swal2-glass' }
                         });
 
-                        if (nickname && nickname.trim()) {
-                            // Save AdminNickName to database
+                        if (formValues) {
                             try {
-                                const saveResponse = await guardedFetch('API/saveAdminNickName.php', {
+                                const saveResponse = await guardedFetch('API/saveConfig.php', {
                                     method: 'POST',
                                     headers: { 'Content-Type': 'application/json' },
-                                    body: JSON.stringify({ nickName: nickname.trim() })
+                                    body: JSON.stringify(formValues)
                                 });
                                 const saveResult = await saveResponse.json();
                                 if (!saveResult.success) {
-                                    throw new Error('Failed to save nickname');
+                                    throw new Error(saveResult.error || 'Failed to save configuration');
                                 }
+                                // Refresh local config variable so following code sees the new values
+                                appConfig = await loadConfig();
                             } catch (error) {
-                                console.error('Error saving nickname:', error);
-                                showAlert('error', 'خطا', 'خطا در ذخیره نام نمایشی');
+                                console.error('Error saving admin/signature info:', error);
+                                showAlert('error', 'خطا', 'خطا در ذخیره اطلاعات مدیریت');
                                 return;
                             }
                         }
