@@ -112,8 +112,8 @@ async function printSessionReport() {
             .courses tbody tr:nth-child(odd) { background: #fafafa; }
             .courses td.name { text-align: right; }
             .courses td.center { text-align: center; }
-            /* Footer/signatures pinned to bottom of the printable area (use slightly larger left inset so signatures aren't flush to the page edge) */
-            .footer-signs { position: absolute; left: 18mm; right: 6mm; bottom: 6mm; }
+            /* Footer/signatures pinned above the page-footer-bar so signatures aren't flush to the page edge */
+            .footer-signs { position: absolute; left: 18mm; right: 6mm; bottom: 12mm; }
             /* Full-width paragraph note with bottom border */
             .footer-signs .footer-note { display:block; font-size: 10pt; text-align: center; margin-bottom: 8px; border-bottom:1px solid #111; padding-bottom:6px; }
             /* Space between each signer (use margin, not literal newlines) */
@@ -121,37 +121,45 @@ async function printSessionReport() {
             .footer-signs .sign { margin: 24px 0; font-size: 10pt; display:flex; justify-content:space-between; align-items:center; }
             .footer-signs .sign .main { text-align: right; flex: 1 1 auto; }
             .footer-signs .sign .sig { flex: 0 0 120px; text-align: left; margin-left: 8px; }
+            /* Full-width page footer bar with centered bold page numbering */
+            .page-footer-bar { position: absolute; left: 0; right: 0; bottom: 0; height: 8mm; background: #444; color: #fff; display:flex; align-items:center; justify-content:center; font-weight: 700; font-size: 9pt; line-height:1; }
             @media print { .no-print { display: none !important; } }
         </style>`;
         html += `</head><body>`;
 
 
-        const university = esc(document.getElementById('footerText')?.textContent || '');
-        const headerHtml = `
-                        <div class="header">
-                            <div style="flex:0 0 140px; text-align:center;">
-                                <img src="/assets/app/Pnulogo.png" alt="PnuLogo" class="logo">
-                                <div style="width:110px;margin:6px auto 0 auto;font-size:10pt;text-align:center;">مرکز سنجش و آزمون</div>
-                            </div>
-              <div class="header-right">
-                <div class="title">صورتجلسه آزمون</div>
-                <div class="university">${university || 'دانشگاه پیام نور'}</div>
-              </div>
-              <div style="width:120px;"></div>
-            </div>
-            <div class="divider"></div>
-            <div class="meta">آزمون دروس زیر در ${semesterLabel} سالتحصیلی ${persAcad} با حضور امضاء کنندگان زیر در ساعت ${toPersianDigits(examTime)} مورخ ${toPersianDigits(examDate)} شروع گردید. (نمونه سوال ضمیمه می باشد)</div>`;
+        // headerHtml is built after loading configuration so we can prefer cfg.University
 
-        const perPage = 20;
+        const perPage = 16;
         const pages = Math.ceil(courses.length / perPage);
-        const signers = [
-            'پس از انقضای مهلت آزمون، پاسخنامه‌ها جمع‌آوری و بعد از شمارش و کنترل با لیست حضور و غیاب و تایید، تحویل ستاد امتحانات گردید.',
-            { main: 'نام و نام خانوادگی رئیس مرکز/ معاون مرکز/ سرپرست واحد: دکتر الهام قاسمی فر', sig: 'امضاء' },
-            { main: 'نام و نام خانوادگی مسئول آموزش: مهدی حسنی', sig: 'امضاء' },
-            { main: 'نام و نام خانوادگی مسئول جلسه: صمد آهوان', sig: 'امضاء' },
-            { main: 'نام و نام خانوادگی ناظران/مراقبان جلسه:', sig: 'امضاء' },
-            { main: 'نام و نام خانوادگی بازرس اعزامی از استان/سازمان مرکزی:', sig: 'امضاء' }
-        ];
+
+        // Load config so we can use configured signatory names (Boss, HeadOfEDU, Chairman)
+        let cfg = {};
+        try {
+            const cfgResp = await guardedFetch('../API/getConfig.php', { cache: 'no-store' });
+            if (cfgResp && cfgResp.ok) cfg = await cfgResp.json();
+        } catch (e) { /* ignore */ }
+        const bossName = esc(cfg.BossNickName || '');
+        const headName = esc(cfg.HeadOfEDU || '');
+        const chairName = esc(cfg.Chairman || '');
+
+        // Prefer the configured University name; fall back to footer text. Remove any leading "نسار -" prefix.
+        let university = esc(cfg.University || (document.getElementById('footerText')?.textContent || ''));
+        university = university.replace(/^نسار\s*-\s*/i, '').trim();
+        const headerHtml = `
+                                                <div class="header">
+                                                        <div style="flex:0 0 140px; text-align:center;">
+                                                                <img src="/assets/app/Pnulogo.png" alt="PnuLogo" class="logo">
+                                                                <div style="width:110px;margin:6px auto 0 auto;font-size:10pt;text-align:center;font-weight:900;">مرکز سنجش و آزمون</div>
+                                                        </div>
+                            <div class="header-right">
+                                <div class="title">صورتجلسه آزمون</div>
+                                <div class="university">${university || 'دانشگاه پیام نور'}</div>
+                            </div>
+                            <div style="width:120px;"></div>
+                        </div>
+                        <div class="divider"></div>
+                        <div class="meta">آزمون دروس زیر در ${semesterLabel} سالتحصیلی ${persAcad} با حضور امضاء کنندگان زیر در ساعت ${toPersianDigits(examTime)} مورخ ${toPersianDigits(examDate)} شروع گردید. (نمونه سوال ضمیمه می باشد)</div>`;
 
         function buildTable(slice, startIndex) {
             // table header
@@ -187,21 +195,31 @@ async function printSessionReport() {
             html += headerHtml;
             html += buildTable(slice, start);
 
-            // signers block pinned to bottom on every page
+            // footer/signatures: use configured signatory names (Boss, HeadOfEDU, Chairman)
             html += `<div class="footer-signs">`;
-            signers.forEach((s, i) => {
-                if (!s) return;
-                if (typeof s === 'string') {
-                    // paragraph note
-                    html += `<div class="footer-note">${esc(s)}</div>`;
-                    return;
-                }
-                // s is an object with { main, sig }
-                const main = esc(s.main || '');
-                const sig = esc(s.sig || '');
-                html += `<div class="sign"><div class="main">${main}</div><div class="sig">${sig}</div></div>`;
-            });
+            // paragraph note (keeps previous informative sentence)
+            html += `<div class="footer-note">پس از انقضای مهلت آزمون، پاسخنامه‌ها جمع‌آوری و بعد از شمارش و کنترل با لیست حضور و غیاب و تایید، تحویل ستاد امتحانات گردید.</div>`;
+
+            // Row 1: رئیس مرکز / معاون / سرپرست واحد
+            const bossLabel = `نام و نام خانوادگی رئیس مرکز/ معاون مرکز/ سرپرست واحد: ${bossName || '________________'}`;
+            html += `<div class="sign"><div class="main">${bossLabel}</div><div class="sig">امضاء</div></div>`;
+
+            // Row 2: مسئول آموزش
+            const headLabel = `نام و نام خانوادگی رئیس اداره آموزش: ${headName || '________________'}`;
+            html += `<div class="sign"><div class="main">${headLabel}</div><div class="sig">امضاء</div></div>`;
+
+            // Row 3: مسئول جلسه
+            const chairLabel = `نام و نام خانوادگی مسئول جلسه: ${chairName || '________________'}`;
+            html += `<div class="sign"><div class="main">${chairLabel}</div><div class="sig">امضاء</div></div>`;
+
+            // Additional signers requested by admin: supervisors and dispatched inspector
+            html += `<div class="sign"><div class="main">نام و نام خانوادگی ناظران/مراقبان جلسه:</div><div class="sig">امضاء</div></div>`;
+            html += `<div class="sign"><div class="main">نام و نام خانوادگی بازرس اعزامی از استان/سازمان مرکزی:</div><div class="sig">امضاء</div></div>`;
+
             html += `</div>`;
+
+            // page footer bar with page numbering (Persian digits)
+            html += `<div class="page-footer-bar">صفحه ${toPersianDigits(p + 1)} از ${toPersianDigits(pages)}</div>`;
 
             html += `</div>`; // .sheet
         }
