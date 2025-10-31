@@ -201,6 +201,8 @@ body::after {
   margin-bottom: 2rem;
   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
   border: 1px solid rgba(255, 255, 255, 0.3);
+  position: relative;
+  overflow: hidden;
 }
 
 .dashboard-card {
@@ -1053,4 +1055,18 @@ body.login-active #loginRow {
 /* Prevent page shift when SweetAlert opens */
 body.swal2-shown {
   padding-right: calc(100vw - 100%) !important;
+}
+
+/* Rotating icon animation for edit roles button */
+@keyframes rotate {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.rotating-icon {
+  animation: rotate 10s linear infinite;
 }

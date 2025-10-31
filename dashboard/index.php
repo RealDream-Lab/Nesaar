@@ -44,17 +44,19 @@ if ($licenseStatus['valid'] !== true) {
             <!-- Header -->
             <div class="dashboard-header">
                 <div class="d-flex justify-content-between align-items-center">
-                    <div class="admin-info">
-                        <div>
-                            <h5 class="mb-0">خوش آمدید</h5>
-                            <small class="text-muted" id="adminUsername">مدیر سیستم</small>
+                    <div class="d-flex align-items-center">
+                        <!-- Image button for Edit Roles: keeps id editRolesBtn so existing JS continues to work -->
+                        <button id="editRolesBtn" class="btn btn-icon p-0" type="button" title="ویرایش نقش‌ها" style="background:transparent;border:none;margin-left:-20px;">
+                            <img src="/dashboard/config.png" alt="ویرایش نقش‌ها" class="rotating-icon" style="width:40px;height:40px;object-fit:contain;display:block;">
+                        </button>
+                        <div class="admin-info" style="margin-right:24px;">
+                            <div>
+                                <h5 class="mb-0">خوش آمدید</h5>
+                                <small class="text-muted" id="adminUsername">مدیر سیستم</small>
+                            </div>
                         </div>
                     </div>
                     <div class="d-flex align-items-center">
-                        <!-- Image button for Edit Roles: keeps id editRolesBtn so existing JS continues to work -->
-                        <button id="editRolesBtn" class="btn btn-icon p-0 me-3" type="button" title="ویرایش نقش‌ها" style="background:transparent;border:none;">
-                            <img src="/dashboard/members.png" alt="ویرایش نقش‌ها" style="width:40px;height:40px;object-fit:contain;display:block;">
-                        </button>
                         <button class="btn btn-logout ms-3" id="logoutBtn">خروج</button>
                     </div>
                 </div>
