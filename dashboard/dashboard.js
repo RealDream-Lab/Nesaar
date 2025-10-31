@@ -2599,7 +2599,7 @@ function showLargePie(title, labels, values, palette) {
 }
 
 // Build and open a printable seat numbers report. Uses window.allStudents (set by showNextExamReport)
-function printSeatNumbersReport() {
+async function printSeatNumbersReport() {
     try {
         const students = Array.isArray(window.allStudents) ? window.allStudents.slice() : [];
         if (!students.length) {
@@ -2645,7 +2645,20 @@ function printSeatNumbersReport() {
 
         // Build printable HTML
         const title = document.querySelector('#nextExamDateTime')?.textContent || '';
-        const university = (document.getElementById('footerText')?.textContent) || '';
+        // Prefer configured University from server; fall back to footerText
+        let university = '';
+        try {
+            const cfgResp = await guardedFetch('../API/getConfig.php', { cache: 'no-store' });
+            if (cfgResp && cfgResp.ok) {
+                const cfg = await cfgResp.json();
+                university = (cfg.University || (document.getElementById('footerText')?.textContent || '')).replace(/^نسار\s*-\s*/i, '').trim();
+            } else {
+                university = (document.getElementById('footerText')?.textContent || '');
+            }
+        } catch (e) {
+            university = (document.getElementById('footerText')?.textContent || '');
+        }
+        if (!university) university = 'گزارش شماره صندلی';
 
         function esc(txt) { const d = document.createElement('div'); d.textContent = txt || ''; return d.innerHTML; }
 
@@ -2682,7 +2695,7 @@ function printSeatNumbersReport() {
 
         for (let p = 0; p < totalPages; p++) {
             docHtml += `<div class="page">`;
-            docHtml += `<div class="report-header"><div class="report-title">گزارش شماره صندلی</div>`;
+            docHtml += `<div class="report-header"><div class="report-title">${esc(university)}</div>`;
             docHtml += `<div class="report-meta">${esc(title)}</div></div>`;
 
             if (twoColumn) {
