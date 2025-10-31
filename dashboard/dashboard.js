@@ -2182,10 +2182,13 @@ async function showNextExamReport() {
                                     <!-- Session report icon moved here -->
                                     <div style="display:flex;gap:10px;align-items:center;justify-content:center;">
                                         <button id="printSeatNumbersBtn" class="btn btn-outline-primary btn-sm p-0" type="button" title="چاپ شماره صندلی" onclick="try{ printSeatNumbersReport(); }catch(e){ console.error(e); }" style="display:inline-block;">
-                                            <img src="/assets/app/Seat.png" alt="شماره صندلی" style="width:140px;height:140px;object-fit:contain;display:block;pointer-events:none;">
+                                            <img src="/assets/app/seat.png" alt="شماره صندلی" style="width:140px;height:140px;object-fit:contain;display:block;pointer-events:none;">
                                         </button>
                                         <button id="printSessionReportBtn" class="btn btn-outline-primary btn-sm p-0" type="button" title="چاپ صورتجلسه" onclick="try{ printSessionReport(); }catch(e){ console.error(e); }" style="display:inline-block;">
                                             <img src="/assets/app/report.png" alt="صورتجلسه" style="width:140px;height:140px;object-fit:contain;display:block;pointer-events:none;">
+                                        </button>
+                                        <button id="examEssentialsBtn" class="btn btn-outline-primary btn-sm p-0" type="button" title="ملزومات آزمون" onclick="try{ examEssentialsHandler(); }catch(e){ console.error(e); }" style="display:inline-block;">
+                                            <img src="/assets/app/Essentials.png" alt="ملزومات آزمون" style="width:140px;height:140px;object-fit:contain;display:block;pointer-events:none;">
                                         </button>
                                     </div>
                                 </div>
@@ -3022,4 +3025,15 @@ async function printSeatNumbersReport() {
         console.error('Error building printable report:', err);
         Swal.fire({ icon: 'error', title: 'خطا', text: 'خطا در آماده‌سازی گزارش چاپ', confirmButtonText: 'باشه', customClass: { popup: 'swal2-rtl swal2-glass', confirmButton: 'btn btn-primary' } });
     }
+}
+
+// Placeholder function for exam essentials handler
+async function examEssentialsHandler() {
+    Swal.fire({
+        icon: 'info',
+        title: 'ملزومات آزمون',
+        text: 'این قابلیت به زودی اضافه خواهد شد',
+        confirmButtonText: 'باشه',
+        customClass: { popup: 'swal2-rtl swal2-glass', confirmButton: 'btn btn-primary' }
+    });
 }

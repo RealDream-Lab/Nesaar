@@ -119,18 +119,6 @@ if ($licenseStatus['valid'] !== true) {
                     </div>
                 </div>
 
-                <!-- Three red buttons under the main chart (each fills its column width) -->
-                <div class="row mt-3 g-2" id="customButtonsRow">
-                    <div class="col-12 col-md-4">
-                        <button id="customCardOne" class="btn btn-danger w-100" type="button" style="font-size:1.1rem;font-weight:700;">دفترچه منشی</button>
-                    </div>
-                    <div class="col-12 col-md-4">
-                        <button id="customCardTwo" class="btn btn-danger w-100" type="button" style="font-size:1.1rem;font-weight:700;">دفترچه اتاق قرنطینه</button>
-                    </div>
-                    <div class="col-12 col-md-4">
-                        <button id="customCardThree" class="btn btn-danger w-100" type="button" style="font-size:1.1rem;font-weight:700;"> برچسب پاکت‌های تشریحی</button>
-                    </div>
-                </div>
             </div>
 
             <!-- Latest Request Report -->
