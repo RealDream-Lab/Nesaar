@@ -112,13 +112,15 @@ async function printSessionReport() {
             .courses tbody tr:nth-child(odd) { background: #fafafa; }
             .courses td.name { text-align: right; }
             .courses td.center { text-align: center; }
-            /* Footer/signatures pinned to bottom of the printable area (use smaller inset) */
-            .footer-signs { position: absolute; left: 6mm; right: 6mm; bottom: 6mm; }
+            /* Footer/signatures pinned to bottom of the printable area (use slightly larger left inset so signatures aren't flush to the page edge) */
+            .footer-signs { position: absolute; left: 18mm; right: 6mm; bottom: 6mm; }
             /* Full-width paragraph note with bottom border */
             .footer-signs .footer-note { display:block; font-size: 10pt; text-align: center; margin-bottom: 8px; border-bottom:1px solid #111; padding-bottom:6px; }
             /* Space between each signer (use margin, not literal newlines) */
-            /* Increased spacing per user request */
-            .footer-signs .sign { margin: 24px 0; text-align: right; font-size: 10pt; }
+            /* Increased spacing per user request and layout for signature block */
+            .footer-signs .sign { margin: 24px 0; font-size: 10pt; display:flex; justify-content:space-between; align-items:center; }
+            .footer-signs .sign .main { text-align: right; flex: 1 1 auto; }
+            .footer-signs .sign .sig { flex: 0 0 120px; text-align: left; margin-left: 8px; }
             @media print { .no-print { display: none !important; } }
         </style>`;
         html += `</head><body>`;
@@ -144,11 +146,11 @@ async function printSessionReport() {
         const pages = Math.ceil(courses.length / perPage);
         const signers = [
             'پس از انقضای مهلت آزمون، پاسخنامه‌ها جمع‌آوری و بعد از شمارش و کنترل با لیست حضور و غیاب و تایید، تحویل ستاد امتحانات گردید.',
-            'دکتر الهام قاسمی فر - رئیس مرکز',
-            'مهدی حسنی - مسئول آموزش',
-            'سید احمد موسوی - مسئول جلسه',
-            'فاطمه محمدی - ناظر',
-            'حسین رضایی - کارشناس اجرا'
+            { main: 'نام و نام خانوادگی رئیس مرکز/ معاون مرکز/ سرپرست واحد: دکتر الهام قاسمی فر', sig: 'امضاء' },
+            { main: 'نام و نام خانوادگی مسئول آموزش: مهدی حسنی', sig: 'امضاء' },
+            { main: 'نام و نام خانوادگی مسئول جلسه: صمد آهوان', sig: 'امضاء' },
+            { main: 'نام و نام خانوادگی ناظران/مراقبان جلسه:', sig: 'امضاء' },
+            { main: 'نام و نام خانوادگی بازرس اعزامی از استان/سازمان مرکزی:', sig: 'امضاء' }
         ];
 
         function buildTable(slice, startIndex) {
@@ -188,15 +190,16 @@ async function printSessionReport() {
             // signers block pinned to bottom on every page
             html += `<div class="footer-signs">`;
             signers.forEach((s, i) => {
-                // skip empty/whitespace-only entries just in case
-                if (!s || String(s).trim() === '') return;
-                if (i === 0) {
-                    // first item is a paragraph/note; render full-width with bottom border
+                if (!s) return;
+                if (typeof s === 'string') {
+                    // paragraph note
                     html += `<div class="footer-note">${esc(s)}</div>`;
-                } else {
-                    // render signer name as a single line; spacing controlled by CSS
-                    html += `<div class="sign">${esc(s)}</div>`;
+                    return;
                 }
+                // s is an object with { main, sig }
+                const main = esc(s.main || '');
+                const sig = esc(s.sig || '');
+                html += `<div class="sign"><div class="main">${main}</div><div class="sig">${sig}</div></div>`;
             });
             html += `</div>`;
 
