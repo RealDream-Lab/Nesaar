@@ -2621,7 +2621,10 @@ async function printSeatNumbersReport() {
             first_name: s.first_name || s.firstname || s.name || '',
             last_name: s.last_name || s.lastname || s.lastName || '',
             course_name: s.course_name || s.courseName || s.course || '',
-            seat_number: (typeof s.seat_number !== 'undefined') ? String(s.seat_number) : ''
+            seat_number: (typeof s.seat_number !== 'undefined') ? String(s.seat_number) : '',
+            // optional location fields returned by API: building and class/room name
+            building: s.building || s.building_name || s.location || '',
+            class_name: s.class_name || s.room || s.class || ''
         });
 
         const entries = students.map(normalize);
@@ -2744,6 +2747,124 @@ async function printSeatNumbersReport() {
             }
 
             docHtml += `</div>`; // .page
+        }
+
+        // Append a separate "کروکی" page that maps seat-number ranges to building/class
+        try {
+            // Robust parser for seat_number values. Handles:
+            // - single numbers ("12")
+            // - multiple numbers separated by commas/spaces ("1,2,3" or "1 2 3")
+            // - ranges using hyphen or the word 'تا' ("1-25" or "1 تا 25") -> expands the range
+            const parseSeatNumbers = (raw) => {
+                if (!raw && raw !== 0) return [];
+                const s = String(raw).trim();
+                const nums = [];
+
+                // detect explicit range like "12-25" or with en/em dash
+                const rangeMatch = s.match(/(\d+)\s*[-–—]\s*(\d+)/);
+                if (rangeMatch) {
+                    const a = parseInt(rangeMatch[1], 10);
+                    const b = parseInt(rangeMatch[2], 10);
+                    if (!Number.isNaN(a) && !Number.isNaN(b)) {
+                        const start = Math.min(a, b);
+                        const end = Math.max(a, b);
+                        // protect against absurd ranges
+                        const maxSpan = 1000;
+                        const span = Math.min(end - start + 1, maxSpan);
+                        for (let i = 0; i < span; i++) nums.push(start + i);
+                        return nums;
+                    }
+                }
+
+                // detect Persian "تا" or variants like "1 تا 25"
+                const persRange = s.match(/(\d+)\s*(?:تا|تا‌)\s*(\d+)/i);
+                if (persRange) {
+                    const a = parseInt(persRange[1], 10);
+                    const b = parseInt(persRange[2], 10);
+                    if (!Number.isNaN(a) && !Number.isNaN(b)) {
+                        const start = Math.min(a, b);
+                        const end = Math.max(a, b);
+                        const maxSpan = 1000;
+                        const span = Math.min(end - start + 1, maxSpan);
+                        for (let i = 0; i < span; i++) nums.push(start + i);
+                        return nums;
+                    }
+                }
+
+                // fallback: extract all digit sequences and return them
+                const matches = s.match(/\d+/g);
+                if (matches && matches.length) {
+                    for (const m of matches) {
+                        const v = parseInt(m, 10);
+                        if (!Number.isNaN(v)) nums.push(v);
+                    }
+                }
+
+                return nums;
+            };
+
+            const groups = {};
+            entries.forEach(r => {
+                const b = (r.building || '').trim() || 'بدون ساختمان';
+                const c = (r.class_name || '').trim() || 'بدون کلاس';
+                const key = b + '||' + c;
+                if (!groups[key]) groups[key] = { building: b, class_name: c, nums: [] };
+                try {
+                    const parsed = parseSeatNumbers(r.seat_number);
+                    if (parsed && parsed.length) {
+                        groups[key].nums.push(...parsed);
+                    }
+                } catch (e) {
+                    // ignore single malformed entries
+                }
+            });
+
+            const groupKeys = Object.keys(groups);
+            if (groupKeys.length) {
+                // Build one row per group (class/room): compute unique min/max and unique count
+                const rows = [];
+                groupKeys.forEach(k => {
+                    const g = groups[k];
+                    const uniq = Array.from(new Set(g.nums)).sort((a, b) => a - b);
+                    const start = uniq.length ? uniq[0] : null;
+                    const end = uniq.length ? uniq[uniq.length - 1] : null;
+                    const count = uniq.length;
+                    if (start !== null) rows.push({ building: g.building, class_name: g.class_name, start, end, count });
+                });
+
+                // sort globally by start (ascending), then by building/class as tie-breaker
+                rows.sort((a, b) => (a.start - b.start) || a.building.localeCompare(b.building, 'fa') || a.class_name.localeCompare(b.class_name, 'fa'));
+
+                let mapHtml = `<div class="page">`;
+                // make title much larger for kroki
+                mapHtml += `<div class="report-header"><div class="report-title" style="font-size:28pt; font-weight:900; line-height:1;">کروکی محل استقرار صندلی‌ها</div></div>`;
+                // remove explanatory paragraph per request and increase table font
+                mapHtml += `<div style="padding:8px;">
+                    <table style="width:100%;border-collapse:collapse;margin-top:8px;font-size:12pt;">
+                        <thead>
+                            <tr style="background:#efefef;font-weight:700;text-align:center;">
+                                <th style="padding:8px;border:1px solid #ddd;">از شماره</th>
+                                <th style="padding:8px;border:1px solid #ddd;">تا شماره</th>
+                                <th style="padding:8px;border:1px solid #ddd;">تعداد</th>
+                                <th style="padding:8px;border:1px solid #ddd;">ساختمان</th>
+                                <th style="padding:8px;border:1px solid #ddd;">کلاس / اتاق</th>
+                            </tr>
+                        </thead>
+                        <tbody>`;
+
+                rows.forEach(r => {
+                    const from = toPersianDigits(r.start);
+                    const to = toPersianDigits(r.end);
+                    const cnt = toPersianDigits(r.count);
+                    mapHtml += `<tr style="text-align:center;"><td style="padding:8px;border:1px solid #ddd;">${from}</td><td style="padding:8px;border:1px solid #ddd;">${to}</td><td style="padding:8px;border:1px solid #ddd;">${cnt}</td><td style="padding:8px;border:1px solid #ddd;">${esc(r.building)}</td><td style="padding:8px;border:1px solid #ddd;">${esc(r.class_name)}</td></tr>`;
+                });
+
+                mapHtml += `</tbody></table></div></div>`;
+                docHtml += mapHtml;
+            }
+        } catch (e) {
+            // non-fatal; if kroki generation fails, keep printing other pages
+            console.warn('Could not build kroki page:', e);
         }
 
         docHtml += `</body></html>`;
