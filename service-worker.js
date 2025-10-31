@@ -1,7 +1,7 @@
 // Bump cache to force refresh of updated assets (app.js, style.css, index.php)
 // Increment this when you want clients to fetch the new assets.
-const CACHE_NAME = 'exam-seat-v3.1.0';
-const VERSION = '۳.۱.۰';
+const CACHE_NAME = 'exam-seat-v3.1.1';
+const VERSION = '۳.۱.۱';
 const urlsToCache = [
   '/',
   '/index.php',
@@ -89,9 +89,9 @@ self.addEventListener('activate', event => {
             type: 'sw-update',
             version: CACHE_NAME,
             tagVersion: `نسخه ${VERSION}`,
-            // Replace previous messages: show only the new changes added in this release
+            // Only show the short release headline per request
             changes: [
-              'افزودن قابلیت "صورتجلسه آزمون‌ها" برای چاپ A4 عمودی: 16 درس در صفحه، سربرگ دانشگاه، امضاهای صفحه‌ای و شماره صفحات'
+              'بهبود گزارشات داشبورد مدیریت'
             ]
           });
         });
