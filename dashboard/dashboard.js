@@ -2668,9 +2668,19 @@ async function printSeatNumbersReport() {
         const fontHref = (window.location && window.location.origin ? window.location.origin : '') + '/assets/fonts/vazir/vazir.css';
         let docHtml = `<!doctype html><html lang="fa" dir="rtl"><head><meta charset="utf-8"><title>گزارش شماره صندلی</title><link rel="stylesheet" href="${fontHref}">`;
         docHtml += `<style>
-            /* Use A4 landscape for printing (افقی). Compact margins for denser layout. */
+            /* Default: Use A4 landscape for the seat-list pages. Kroki will request a portrait page. */
             @page { size: A4 landscape; margin: 4mm; }
-                /* Increased font for readability while still attempting 50 rows per page. */
+            /* Named portrait page for kroki (browser support varies; modern Chromium honors this) */
+            @page portrait { size: A4 portrait; margin: 6mm; }
+            /* Ensure kroki page uses the named @page */
+            .kroki-page { page: portrait; box-sizing:border-box; padding:6mm; }
+            /* Make table columns fixed and allow wrapping so nothing overflows the page */
+            .kroki-page table { table-layout: fixed; width: 100%; box-sizing: border-box; }
+            .kroki-page table th, .kroki-page table td { word-break: break-word; white-space: normal; overflow-wrap: anywhere; box-sizing: border-box; }
+            .kroki-page table th { font-size: 11pt; }
+            /* Reset page/body margins to avoid extra offsets and ensure content fits the @page box */
+            html,body { margin:0; padding:0; }
+            /* Increased font for readability while still attempting 50 rows per page. */
             body { font-family: Vazir, Tahoma, Arial, sans-serif; color: #111; font-size: 8.5pt; }
             .report-header { text-align: center; margin-bottom: 4px; }
             .report-title { font-size: 12pt; font-weight: 700; margin-bottom:2px }
@@ -2678,7 +2688,7 @@ async function printSeatNumbersReport() {
             .report-meta { font-size: 20pt; color: #111; margin-top:2px; font-weight: 900; }
             .page { page-break-after: always; margin-bottom: 0; }
             table { width: 100%; border-collapse: collapse; table-layout: fixed; font-size: 8.5pt; line-height: 1.06; }
-            th, td { padding: 4px 6px; text-align: right; border-bottom: 0.5px solid #e0e0e0; font-size: 8.5pt; }
+            th, td { padding: 4px 6px; text-align: right; border-bottom: 0.5px solid #e0e0e0; font-size: 8.5pt; box-sizing: border-box; }
             thead th { background: #efefef; font-weight: 700; font-size: 9pt; padding: 5px 6px; text-align: center; }
             /* Center seat-number column specifically */
             .seat-col { text-align: center; }
@@ -2689,6 +2699,8 @@ async function printSeatNumbersReport() {
             .col-wrap::before { content: ''; position: absolute; left: 50%; top: 0; bottom: 0; width: 0.6px; background: #bdbdbd; transform: translateX(-0.3px); }
             .col { padding-right: 6px; }
             .small-muted { color: #666; font-size: 8pt; }
+            /* Avoid an extra blank page at the end caused by page-break-after on .page */
+            .page:last-child { page-break-after: auto; }
             @media print {
                 .no-print { display: none !important; }
                 .page { page-break-after: always; }
@@ -2835,19 +2847,21 @@ async function printSeatNumbersReport() {
                 // sort globally by start (ascending), then by building/class as tie-breaker
                 rows.sort((a, b) => (a.start - b.start) || a.building.localeCompare(b.building, 'fa') || a.class_name.localeCompare(b.class_name, 'fa'));
 
-                let mapHtml = `<div class="page">`;
-                // make title much larger for kroki
-                mapHtml += `<div class="report-header"><div class="report-title" style="font-size:28pt; font-weight:900; line-height:1;">کروکی محل استقرار صندلی‌ها</div></div>`;
+                let mapHtml = `<div class="page kroki-page">`;
+                // make title much larger for kroki (42pt) and include session date/time below
+                mapHtml += `<div class="report-header"><div class="report-title" style="font-size:42pt; font-weight:900; line-height:1;">کروکی محل استقرار صندلی‌ها</div>`;
+                // include the session date/time under the title (reuse the report title variable)
+                mapHtml += `<div class="report-meta" style="font-size:14pt;margin-top:6px;font-weight:700;">${esc(title)}</div></div>`;
                 // remove explanatory paragraph per request and increase table font
                 mapHtml += `<div style="padding:8px;">
-                    <table style="width:100%;border-collapse:collapse;margin-top:8px;font-size:12pt;">
+                    <table style="width:100%;border-collapse:collapse;margin-top:8px;font-size:12pt; table-layout: fixed;">
                         <thead>
                             <tr style="background:#efefef;font-weight:700;text-align:center;">
-                                <th style="padding:8px;border:1px solid #ddd;">از شماره</th>
-                                <th style="padding:8px;border:1px solid #ddd;">تا شماره</th>
-                                <th style="padding:8px;border:1px solid #ddd;">تعداد</th>
-                                <th style="padding:8px;border:1px solid #ddd;">ساختمان</th>
-                                <th style="padding:8px;border:1px solid #ddd;">کلاس / اتاق</th>
+                                <th style="padding:8px;border:1px solid #ddd;width:12%">از شماره</th>
+                                <th style="padding:8px;border:1px solid #ddd;width:12%">تا شماره</th>
+                                <th style="padding:8px;border:1px solid #ddd;width:10%">تعداد</th>
+                                <th style="padding:8px;border:1px solid #ddd;width:30%">ساختمان</th>
+                                <th style="padding:8px;border:1px solid #ddd;width:36%">کلاس / اتاق</th>
                             </tr>
                         </thead>
                         <tbody>`;
