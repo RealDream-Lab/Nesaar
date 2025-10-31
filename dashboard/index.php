@@ -50,7 +50,13 @@ if ($licenseStatus['valid'] !== true) {
                             <small class="text-muted" id="adminUsername">مدیر سیستم</small>
                         </div>
                     </div>
-                    <button class="btn btn-logout" id="logoutBtn">خروج</button>
+                    <div class="d-flex align-items-center">
+                        <!-- Image button for Edit Roles: keeps id editRolesBtn so existing JS continues to work -->
+                        <button id="editRolesBtn" class="btn btn-icon p-0 me-3" type="button" title="ویرایش نقش‌ها" style="background:transparent;border:none;">
+                            <img src="/dashboard/members.png" alt="ویرایش نقش‌ها" style="width:40px;height:40px;object-fit:contain;display:block;">
+                        </button>
+                        <button class="btn btn-logout ms-3" id="logoutBtn">خروج</button>
+                    </div>
                 </div>
             </div> <!-- Stats -->
             <div class="row">
@@ -116,13 +122,13 @@ if ($licenseStatus['valid'] !== true) {
                 <!-- Three red buttons under the main chart (each fills its column width) -->
                 <div class="row mt-3 g-2" id="customButtonsRow">
                     <div class="col-12 col-md-4">
-                        <button id="customCardOne" class="btn btn-danger w-100" type="button" style="font-size:1.1rem;font-weight:700;">کارت شماره یک</button>
+                        <button id="customCardOne" class="btn btn-danger w-100" type="button" style="font-size:1.1rem;font-weight:700;">دفترچه منشی</button>
                     </div>
                     <div class="col-12 col-md-4">
-                        <button id="customCardTwo" class="btn btn-danger w-100" type="button" style="font-size:1.1rem;font-weight:700;">کارت شماره دو</button>
+                        <button id="customCardTwo" class="btn btn-danger w-100" type="button" style="font-size:1.1rem;font-weight:700;">دفترچه اتاق قرنطینه</button>
                     </div>
                     <div class="col-12 col-md-4">
-                        <button id="customCardThree" class="btn btn-danger w-100" type="button" style="font-size:1.1rem;font-weight:700;">کارت شماره سه</button>
+                        <button id="customCardThree" class="btn btn-danger w-100" type="button" style="font-size:1.1rem;font-weight:700;"> برچسب پاکت‌های تشریحی</button>
                     </div>
                 </div>
             </div>
