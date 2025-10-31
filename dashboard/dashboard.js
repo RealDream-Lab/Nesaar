@@ -115,7 +115,7 @@ async function printSessionReport() {
             /* Footer/signatures pinned to bottom of the printable area (use smaller inset) */
             .footer-signs { position: absolute; left: 6mm; right: 6mm; bottom: 6mm; }
             /* Full-width paragraph note with bottom border */
-            .footer-signs .footer-note { display:block; font-size: 10pt; text-align: right; margin-bottom: 8px; border-bottom:1px solid #111; padding-bottom:6px; }
+            .footer-signs .footer-note { display:block; font-size: 10pt; text-align: center; margin-bottom: 8px; border-bottom:1px solid #111; padding-bottom:6px; }
             /* Space between each signer (use margin, not literal newlines) */
             /* Increased spacing per user request */
             .footer-signs .sign { margin: 24px 0; text-align: right; font-size: 10pt; }
@@ -156,9 +156,9 @@ async function printSessionReport() {
             let t = '<table class="courses"><thead><tr>' +
                 '<th style="width:4%">ردیف</th>' +
                 '<th style="width:8%">کد درس</th>' +
-                '<th style="width:50%">نام درس</th>' +
-                '<th style="width:18%">تعداد</th>' +
-                '<th style="width:20%">حاضر / غایب</th>' +
+                '<th style="width:60%">نام درس</th>' +
+                '<th style="width:13%">تعداد</th>' +
+                '<th style="width:15%">حاضر / غایب</th>' +
                 '</tr></thead><tbody>';
             slice.forEach((c, idx) => {
                 const code = esc(c.course_code || '');
