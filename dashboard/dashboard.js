@@ -2848,8 +2848,8 @@ async function printSeatNumbersReport() {
                 rows.sort((a, b) => (a.start - b.start) || a.building.localeCompare(b.building, 'fa') || a.class_name.localeCompare(b.class_name, 'fa'));
 
                 let mapHtml = `<div class="page kroki-page">`;
-                // make title much larger for kroki (42pt) and include session date/time below
-                mapHtml += `<div class="report-header"><div class="report-title" style="font-size:42pt; font-weight:900; line-height:1;">کروکی محل استقرار صندلی‌ها</div>`;
+                // make title much larger for kroki (use class so we can force it later) and include session date/time below
+                mapHtml += `<div class="report-header"><div class="report-title kroki-title-large" style="font-weight:900; line-height:1;">کروکی محل استقرار صندلی‌ها</div>`;
                 // include the session date/time under the title (reuse the report title variable)
                 mapHtml += `<div class="report-meta" style="font-size:14pt;margin-top:6px;font-weight:700;">${esc(title)}</div></div>`;
                 // remove explanatory paragraph per request and increase table font
@@ -2975,7 +2975,8 @@ async function printSeatNumbersReport() {
                     // then inject a high-specificity rule to ensure the date/time stays large and bold.
                     let finalHtml = docHtml.replace(/font-size:\s*[\d.]+pt;/g, `font-size: ${testFontPt}pt;`);
                     // Ensure report-meta remains prominent regardless of global replacements
-                    finalHtml = finalHtml.replace('</head>', `<style>.report-meta{font-size:20pt !important; font-weight:900 !important;}</style></head>`);
+                    // Also force the kroki title size (42pt) by appending a specific rule after replacements.
+                    finalHtml = finalHtml.replace('</head>', `<style>.report-meta{font-size:20pt !important; font-weight:900 !important;} .kroki-page .kroki-title-large{font-size: 32pt !important; font-weight:900 !important;}</style></head>`);
                     fullDoc.open();
                     fullDoc.write(finalHtml);
                     fullDoc.close();
