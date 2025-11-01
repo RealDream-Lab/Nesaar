@@ -3127,16 +3127,21 @@ async function printEssentialsSecretary() {
             @page { size: A4 portrait; margin: 6mm; }
             html, body { margin: 0; padding: 0; }
             body { font-family: Vazir, Tahoma, Arial, sans-serif; color: #111; font-size: 11pt; }
+            body { counter-reset: page; }
             .page { width: 210mm; min-height: 297mm; box-sizing: border-box; padding: 8mm; }
-            .header { background: #333; color: #fff; padding: 10px 14px; border-radius:6px; text-align: center; }
+            .header { background: transparent; color: #000; padding: 6px 8px; text-align: center; }
             .header .title { font-size: 22pt; font-weight:900; }
-            .header .meta { font-size: 14pt; margin-top:6px; color:#ddd; }
+            .header .meta { font-size: 14pt; margin-top:6px; color:#000; }
             .course { margin-top: 10mm; }
+            .course { page-break-inside: avoid; }
             .course .course-head { font-weight:800; font-size:12.5pt; margin-bottom:6px; }
             .nested { margin-top:6px; border-collapse:collapse; width:100%; }
             .nested th, .nested td { border:1px solid #ddd; padding:6px 8px; text-align:right; }
             .nested thead th { background:#f1f1f1; font-weight:700; }
             .small { font-size:10pt; color:#555; }
+            .printed-footer { position: fixed; left: 0; right: 0; bottom: 6mm; text-align:center; font-size:10pt; color:#666; }
+            .printed-footer::after { content: "صفحه " counter(page); }
+            @media print { .no-print { display:none !important; } }
         </style></head><body>`;
 
     // Header: white background, black text, larger date/time
@@ -3249,7 +3254,9 @@ async function printEssentialsSecretary() {
             docHtml += `</div>`;
         }
 
-        docHtml += `</div></body></html>`;
+    // add a fixed footer which will show page numbers when printing
+    docHtml += `<div class="printed-footer"></div>`;
+    docHtml += `</div></body></html>`;
 
         const iframe = document.createElement('iframe');
         iframe.style.position = 'fixed';
