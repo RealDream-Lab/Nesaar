@@ -529,7 +529,7 @@ async function loadDashboardData() {
                 if (el) {
                     // If there are no remaining sessions, show the text and disable interaction
                     if (!stats.remainingSessions || stats.remainingSessions === 0) {
-                        el.textContent = 'آزمونی وجود ندارد';
+                        el.textContent = '۰';
                         if (card) {
                             card.classList.add('stat-card-disabled');
                             // remove pointer cursor
@@ -2163,10 +2163,10 @@ async function showNextExamReport() {
         const courses = data.courses;
         const students = data.students;
 
-    // Store students and full report globally for other actions (printing, essentials)
-    window.allStudents = students;
-    // keep the full report response so printing helpers can reuse it
-    window.currentExamReport = data;
+        // Store students and full report globally for other actions (printing, essentials)
+        window.allStudents = students;
+        // keep the full report response so printing helpers can reuse it
+        window.currentExamReport = data;
 
         const headerTitle = window.customExamReportTitle || 'جزئیات جلسه آزمون';
         // Build a 3-column details table: the last column is a rowspan cell that
@@ -3027,7 +3027,7 @@ async function printSeatNumbersReport() {
         // Log full error for debugging and show a helpful message to the user.
         console.error('Error building printable report (printEssentialsSecretary):', err);
         const msg = (err && (err.message || err.toString())) ? String(err.message || err) : 'خطا در آماده‌سازی گزارش چاپ';
-        const stack = (err && err.stack) ? String(err.stack).split('\n').slice(0,5).join('\n') : '';
+        const stack = (err && err.stack) ? String(err.stack).split('\n').slice(0, 5).join('\n') : '';
         Swal.fire({ icon: 'error', title: 'خطا', html: `<div style="text-align:right">${esc(msg)}<br/><pre style="text-align:left;white-space:pre-wrap;font-size:0.8rem;color:#666">${esc(stack)}</pre></div>`, confirmButtonText: 'باشه', customClass: { popup: 'swal2-rtl swal2-glass', confirmButton: 'btn btn-primary' } });
     }
 }
@@ -3076,6 +3076,9 @@ async function printEssentialsSecretary() {
 
         // Use the current exam report if available
         const report = window.currentExamReport || { exam_date: '', exam_time: '', courses: [], students: window.allStudents || [] };
+
+        // local esc helper (some contexts may not expose the global esc)
+        const esc = (txt) => { try { const d = document.createElement('div'); d.textContent = txt || ''; return d.innerHTML; } catch (e) { return String(txt || ''); } };
 
         // Helper: parse seat numbers (supports ranges and Persian 'تا')
         const parseSeatNumbers = (raw) => {
@@ -3189,14 +3192,14 @@ async function printEssentialsSecretary() {
                     const rows = [];
                     gkeys.forEach(k => {
                         const g = groups[k];
-                        const uniq = Array.from(new Set(g.nums)).sort((a,b)=>a-b);
+                        const uniq = Array.from(new Set(g.nums)).sort((a, b) => a - b);
                         const start = uniq.length ? uniq[0] : null;
                         const end = uniq.length ? uniq[uniq.length - 1] : null;
                         const count = uniq.length;
                         if (start !== null) rows.push({ building: g.building, class_name: g.class_name, start, end, count });
                     });
                     // sort by building/class or start
-                    rows.sort((a,b) => (a.building.localeCompare(b.building,'fa') || a.class_name.localeCompare(b.class_name,'fa') || a.start - b.start));
+                    rows.sort((a, b) => (a.building.localeCompare(b.building, 'fa') || a.class_name.localeCompare(b.class_name, 'fa') || a.start - b.start));
                     rows.forEach(r => {
                         docHtml += `<tr><td>${esc(r.building)}</td><td>${esc(r.class_name)}</td><td style="text-align:center">${toPersianDigits(r.start)}</td><td style="text-align:center">${toPersianDigits(r.end)}</td><td style="text-align:center">${toPersianDigits(r.count)}</td></tr>`;
                     });
@@ -3247,7 +3250,7 @@ async function printEssentialsSecretary() {
         try { console.error('Error building printable report (detailed):', err && err.stack ? err.stack : err); } catch (e) { console.error('Error logging failed', e); }
         // show detailed error to the user to help debugging (trim long stacks)
         const msg = (err && err.message) ? String(err.message) : 'خطا در آماده‌سازی گزارش چاپ';
-        const stack = (err && err.stack) ? String(err.stack).split('\n').slice(0,6).join('\n') : '';
+        const stack = (err && err.stack) ? String(err.stack).split('\n').slice(0, 6).join('\n') : '';
         Swal.fire({ icon: 'error', title: 'خطا در آماده‌سازی گزارش چاپ', html: `<div style="text-align:right;direction:ltr;white-space:pre-wrap;">${esc(msg)}<br><small style='color:#666;margin-top:8px;display:block;'>${esc(stack)}</small></div>`, confirmButtonText: 'باشه', customClass: { popup: 'swal2-rtl swal2-glass', confirmButton: 'btn btn-primary' } });
     }
 }
