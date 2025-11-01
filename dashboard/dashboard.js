@@ -3031,9 +3031,257 @@ async function printSeatNumbersReport() {
 async function examEssentialsHandler() {
     Swal.fire({
         icon: 'info',
-        title: 'ملزومات آزمون',
-        text: 'این قابلیت به زودی اضافه خواهد شد',
-        confirmButtonText: 'باشه',
-        customClass: { popup: 'swal2-rtl swal2-glass', confirmButton: 'btn btn-primary' }
+        title: 'ملزومات جلسه آزمون',
+        html: `
+            <div style="display:flex;flex-direction:column;gap:12px;margin-top:1rem;">
+                <button id="essentialsSecretaryBtn" class="btn btn-primary w-100" style="padding:12px;font-size:1rem;font-weight:600;" onclick="try{ Swal.close(); printEssentialsSecretary(); }catch(e){ console.error(e); }">
+                    ملزومات منشی جلسه
+                </button>
+                <button id="essentialsReproductionBtn" class="btn btn-primary w-100" style="padding:12px;font-size:1rem;font-weight:600;" onclick="try{ Swal.close(); printEssentialsReproduction(); }catch(e){ console.error(e); }">
+                    ملزومات اتاق تکثیر
+                </button>
+                <button id="essentialsDescriptiveBtn" class="btn btn-primary w-100" style="padding:12px;font-size:1rem;font-weight:600;" onclick="try{ Swal.close(); printEssentialsDescriptive(); }catch(e){ console.error(e); }">
+                    برچسب پاکت‌های تشریحی
+                </button>
+                <button id="essentialsTestBtn" class="btn btn-primary w-100" style="padding:12px;font-size:1rem;font-weight:600;" onclick="try{ Swal.close(); printEssentialsTest(); }catch(e){ console.error(e); }">
+                    برچسب پاکت‌های تستی
+                </button>
+            </div>
+        `,
+        showConfirmButton: false,
+        showCancelButton: false,
+        customClass: { popup: 'swal2-rtl swal2-glass' }
     });
+}
+
+// Print function for Secretary Essentials (A4)
+async function printEssentialsSecretary() {
+    try {
+        Swal.fire({
+            title: 'در حال ساخت گزارش',
+            html: 'لطفاً منتظر بمانید...',
+            allowOutsideClick: false,
+            didOpen: () => { Swal.showLoading(); },
+            customClass: { popup: 'swal2-rtl swal2-glass' },
+            showConfirmButton: false
+        });
+
+        const fontHref = (window.location && window.location.origin ? window.location.origin : '') + '/assets/fonts/vazir/vazir.css';
+        const university = (document.getElementById('footerText')?.textContent || '').trim().replace(/^نسار\s*-\s*/, '') || 'گزارش ملزومات منشی جلسه';
+
+        let docHtml = `<!doctype html><html lang="fa" dir="rtl"><head><meta charset="utf-8"><title>ملزومات منشی جلسه</title><link rel="stylesheet" href="${fontHref}">`;
+        docHtml += `<style>
+            @page { size: A4 portrait; margin: 6mm; }
+            html, body { margin: 0; padding: 0; }
+            body { font-family: Vazir, Tahoma, Arial, sans-serif; color: #111; font-size: 12pt; }
+            .page { width: 210mm; height: 297mm; box-sizing: border-box; padding: 10mm; }
+            @media print {
+                .no-print { display: none !important; }
+            }
+        </style></head><body>`;
+        docHtml += `<div class="page">`;
+        docHtml += `<div style="text-align:center;font-size:18pt;font-weight:700;margin-bottom:20mm;">${university}</div>`;
+        docHtml += `<div style="text-align:center;font-size:16pt;font-weight:600;margin-bottom:10mm;">ملزومات منشی جلسه</div>`;
+        docHtml += `<div style="text-align:center;color:#666;margin-top:50mm;">محتوای گزارش به زودی اضافه خواهد شد</div>`;
+        docHtml += `</div></body></html>`;
+
+        const iframe = document.createElement('iframe');
+        iframe.style.position = 'fixed';
+        iframe.style.left = '-10000px';
+        iframe.style.top = '0';
+        iframe.style.width = '210mm';
+        iframe.style.height = '297mm';
+        iframe.style.border = '0';
+        iframe.style.visibility = 'hidden';
+        document.body.appendChild(iframe);
+
+        const doc = iframe.contentDocument || iframe.contentWindow.document;
+        doc.open();
+        doc.write(docHtml);
+        doc.close();
+
+        try { Swal.close(); } catch (e) { }
+        setTimeout(() => {
+            try { iframe.contentWindow.focus(); iframe.contentWindow.print(); } catch (e) { console.error('Print error:', e); }
+            setTimeout(() => { try { document.body.removeChild(iframe); } catch (e) { } }, 500);
+        }, 300);
+
+    } catch (err) {
+        console.error('Error building printable report:', err);
+        Swal.fire({ icon: 'error', title: 'خطا', text: 'خطا در آماده‌سازی گزارش چاپ', confirmButtonText: 'باشه', customClass: { popup: 'swal2-rtl swal2-glass', confirmButton: 'btn btn-primary' } });
+    }
+}
+
+// Print function for Reproduction Essentials (A4)
+async function printEssentialsReproduction() {
+    try {
+        Swal.fire({
+            title: 'در حال ساخت گزارش',
+            html: 'لطفاً منتظر بمانید...',
+            allowOutsideClick: false,
+            didOpen: () => { Swal.showLoading(); },
+            customClass: { popup: 'swal2-rtl swal2-glass' },
+            showConfirmButton: false
+        });
+
+        const fontHref = (window.location && window.location.origin ? window.location.origin : '') + '/assets/fonts/vazir/vazir.css';
+        const university = (document.getElementById('footerText')?.textContent || '').trim().replace(/^نسار\s*-\s*/, '') || 'گزارش ملزومات اتاق تکثیر';
+
+        let docHtml = `<!doctype html><html lang="fa" dir="rtl"><head><meta charset="utf-8"><title>ملزومات اتاق تکثیر</title><link rel="stylesheet" href="${fontHref}">`;
+        docHtml += `<style>
+            @page { size: A4 portrait; margin: 6mm; }
+            html, body { margin: 0; padding: 0; }
+            body { font-family: Vazir, Tahoma, Arial, sans-serif; color: #111; font-size: 12pt; }
+            .page { width: 210mm; height: 297mm; box-sizing: border-box; padding: 10mm; }
+            @media print {
+                .no-print { display: none !important; }
+            }
+        </style></head><body>`;
+        docHtml += `<div class="page">`;
+        docHtml += `<div style="text-align:center;font-size:18pt;font-weight:700;margin-bottom:20mm;">${university}</div>`;
+        docHtml += `<div style="text-align:center;font-size:16pt;font-weight:600;margin-bottom:10mm;">ملزومات اتاق تکثیر</div>`;
+        docHtml += `<div style="text-align:center;color:#666;margin-top:50mm;">محتوای گزارش به زودی اضافه خواهد شد</div>`;
+        docHtml += `</div></body></html>`;
+
+        const iframe = document.createElement('iframe');
+        iframe.style.position = 'fixed';
+        iframe.style.left = '-10000px';
+        iframe.style.top = '0';
+        iframe.style.width = '210mm';
+        iframe.style.height = '297mm';
+        iframe.style.border = '0';
+        iframe.style.visibility = 'hidden';
+        document.body.appendChild(iframe);
+
+        const doc = iframe.contentDocument || iframe.contentWindow.document;
+        doc.open();
+        doc.write(docHtml);
+        doc.close();
+
+        try { Swal.close(); } catch (e) { }
+        setTimeout(() => {
+            try { iframe.contentWindow.focus(); iframe.contentWindow.print(); } catch (e) { console.error('Print error:', e); }
+            setTimeout(() => { try { document.body.removeChild(iframe); } catch (e) { } }, 500);
+        }, 300);
+
+    } catch (err) {
+        console.error('Error building printable report:', err);
+        Swal.fire({ icon: 'error', title: 'خطا', text: 'خطا در آماده‌سازی گزارش چاپ', confirmButtonText: 'باشه', customClass: { popup: 'swal2-rtl swal2-glass', confirmButton: 'btn btn-primary' } });
+    }
+}
+
+// Print function for Descriptive Labels (A5)
+async function printEssentialsDescriptive() {
+    try {
+        Swal.fire({
+            title: 'در حال ساخت گزارش',
+            html: 'لطفاً منتظر بمانید...',
+            allowOutsideClick: false,
+            didOpen: () => { Swal.showLoading(); },
+            customClass: { popup: 'swal2-rtl swal2-glass' },
+            showConfirmButton: false
+        });
+
+        const fontHref = (window.location && window.location.origin ? window.location.origin : '') + '/assets/fonts/vazir/vazir.css';
+        const university = (document.getElementById('footerText')?.textContent || '').trim().replace(/^نسار\s*-\s*/, '') || 'برچسب پاکت‌های تشریحی';
+
+        let docHtml = `<!doctype html><html lang="fa" dir="rtl"><head><meta charset="utf-8"><title>برچسب پاکت‌های تشریحی</title><link rel="stylesheet" href="${fontHref}">`;
+        docHtml += `<style>
+            @page { size: A5 landscape; margin: 4mm; }
+            html, body { margin: 0; padding: 0; }
+            body { font-family: Vazir, Tahoma, Arial, sans-serif; color: #111; font-size: 10pt; }
+            .page { width: 210mm; height: 148mm; box-sizing: border-box; padding: 8mm; }
+            @media print {
+                .no-print { display: none !important; }
+            }
+        </style></head><body>`;
+        docHtml += `<div class="page">`;
+        docHtml += `<div style="text-align:center;font-size:16pt;font-weight:700;margin-bottom:15mm;">${university}</div>`;
+        docHtml += `<div style="text-align:center;font-size:14pt;font-weight:600;margin-bottom:8mm;">برچسب پاکت‌های تشریحی</div>`;
+        docHtml += `<div style="text-align:center;color:#666;margin-top:30mm;">محتوای گزارش به زودی اضافه خواهد شد</div>`;
+        docHtml += `</div></body></html>`;
+
+        const iframe = document.createElement('iframe');
+        iframe.style.position = 'fixed';
+        iframe.style.left = '-10000px';
+        iframe.style.top = '0';
+        iframe.style.width = '210mm';
+        iframe.style.height = '148mm';
+        iframe.style.border = '0';
+        iframe.style.visibility = 'hidden';
+        document.body.appendChild(iframe);
+
+        const doc = iframe.contentDocument || iframe.contentWindow.document;
+        doc.open();
+        doc.write(docHtml);
+        doc.close();
+
+        try { Swal.close(); } catch (e) { }
+        setTimeout(() => {
+            try { iframe.contentWindow.focus(); iframe.contentWindow.print(); } catch (e) { console.error('Print error:', e); }
+            setTimeout(() => { try { document.body.removeChild(iframe); } catch (e) { } }, 500);
+        }, 300);
+
+    } catch (err) {
+        console.error('Error building printable report:', err);
+        Swal.fire({ icon: 'error', title: 'خطا', text: 'خطا در آماده‌سازی گزارش چاپ', confirmButtonText: 'باشه', customClass: { popup: 'swal2-rtl swal2-glass', confirmButton: 'btn btn-primary' } });
+    }
+}
+
+// Print function for Test Labels (A5)
+async function printEssentialsTest() {
+    try {
+        Swal.fire({
+            title: 'در حال ساخت گزارش',
+            html: 'لطفاً منتظر بمانید...',
+            allowOutsideClick: false,
+            didOpen: () => { Swal.showLoading(); },
+            customClass: { popup: 'swal2-rtl swal2-glass' },
+            showConfirmButton: false
+        });
+
+        const fontHref = (window.location && window.location.origin ? window.location.origin : '') + '/assets/fonts/vazir/vazir.css';
+        const university = (document.getElementById('footerText')?.textContent || '').trim().replace(/^نسار\s*-\s*/, '') || 'برچسب پاکت‌های تستی';
+
+        let docHtml = `<!doctype html><html lang="fa" dir="rtl"><head><meta charset="utf-8"><title>برچسب پاکت‌های تستی</title><link rel="stylesheet" href="${fontHref}">`;
+        docHtml += `<style>
+            @page { size: A5 landscape; margin: 4mm; }
+            html, body { margin: 0; padding: 0; }
+            body { font-family: Vazir, Tahoma, Arial, sans-serif; color: #111; font-size: 10pt; }
+            .page { width: 210mm; height: 148mm; box-sizing: border-box; padding: 8mm; }
+            @media print {
+                .no-print { display: none !important; }
+            }
+        </style></head><body>`;
+        docHtml += `<div class="page">`;
+        docHtml += `<div style="text-align:center;font-size:16pt;font-weight:700;margin-bottom:15mm;">${university}</div>`;
+        docHtml += `<div style="text-align:center;font-size:14pt;font-weight:600;margin-bottom:8mm;">برچسب پاکت‌های تستی</div>`;
+        docHtml += `<div style="text-align:center;color:#666;margin-top:30mm;">محتوای گزارش به زودی اضافه خواهد شد</div>`;
+        docHtml += `</div></body></html>`;
+
+        const iframe = document.createElement('iframe');
+        iframe.style.position = 'fixed';
+        iframe.style.left = '-10000px';
+        iframe.style.top = '0';
+        iframe.style.width = '210mm';
+        iframe.style.height = '148mm';
+        iframe.style.border = '0';
+        iframe.style.visibility = 'hidden';
+        document.body.appendChild(iframe);
+
+        const doc = iframe.contentDocument || iframe.contentWindow.document;
+        doc.open();
+        doc.write(docHtml);
+        doc.close();
+
+        try { Swal.close(); } catch (e) { }
+        setTimeout(() => {
+            try { iframe.contentWindow.focus(); iframe.contentWindow.print(); } catch (e) { console.error('Print error:', e); }
+            setTimeout(() => { try { document.body.removeChild(iframe); } catch (e) { } }, 500);
+        }, 300);
+
+    } catch (err) {
+        console.error('Error building printable report:', err);
+        Swal.fire({ icon: 'error', title: 'خطا', text: 'خطا در آماده‌سازی گزارش چاپ', confirmButtonText: 'باشه', customClass: { popup: 'swal2-rtl swal2-glass', confirmButton: 'btn btn-primary' } });
+    }
 }
