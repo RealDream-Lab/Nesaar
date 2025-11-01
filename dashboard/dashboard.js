@@ -3165,11 +3165,14 @@ async function printEssentialsSecretary() {
             if (!coursesForType.length) continue;
 
             // exam type header: bold, light text on dark background
-            docHtml += `<div class="course">`;
+            docHtml += `<div class="course-type-group">`;
             docHtml += `<div class="etype" style="display:inline-block;background:#000;color:#fff;font-weight:900;padding:6px 12px;border-radius:6px;font-size:16pt;margin-bottom:10px;">${esc(exType || 'سایر')}</div>`;
             docHtml += `<div style="height:8px"></div>`;
 
             for (const course of coursesForType) {
+                // start per-course container so we can force page-breaks for کتبی courses
+                const mustPageBreakBefore = (course.course_type === 'کتبی');
+                docHtml += `<div class="course" style="${mustPageBreakBefore ? 'page-break-before: always;' : ''} page-break-inside: avoid;">`;
                 usedCourses.add(course.course_code);
                 // students for this course and exam type
                 const stu = students.filter(s => s.course_code === course.course_code && (s.exam_type || '') === exType);
@@ -3194,7 +3197,7 @@ async function printEssentialsSecretary() {
                 });
 
                 // render nested table: order from/to/count before building/class
-                docHtml += `<table class="nested" style="table-layout:fixed;width:100%;"><thead><tr>` +
+                docHtml += `<table class="nested" style="table-layout:fixed;width:100%;page-break-inside:avoid;"><thead><tr>` +
                            `<th style="width:12%;text-align:center;">از شماره</th>` +
                            `<th style="width:12%;text-align:center;">تا شماره</th>` +
                            `<th style="width:10%;text-align:center;">تعداد</th>` +
@@ -3227,9 +3230,11 @@ async function printEssentialsSecretary() {
                     });
                 }
                 docHtml += `</tbody></table>`;
+                // close per-course container
+                docHtml += `</div>`;
             }
 
-            docHtml += `</div>`; // end course group
+            docHtml += `</div>`; // end course-type-group
         }
 
         // If there are courses not caught by examOrder (no exam_type students), include them at the end
