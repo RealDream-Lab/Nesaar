@@ -46,7 +46,7 @@ if ($licenseStatus['valid'] !== true) {
                 <div class="d-flex justify-content-between align-items-center">
                     <div class="d-flex align-items-center">
                         <!-- Image button for Edit Roles: keeps id editRolesBtn so existing JS continues to work -->
-                        <button id="editRolesBtn" class="btn btn-icon p-0" type="button" title="ویرایش نقش‌ها" style="background:transparent;border:none;margin-left:-20px;">
+                        <button id="editRolesBtn" class="btn btn-icon p-0" type="button" title="ویرایش نقش‌ها" style="background:transparent;border:none;margin-inline-end:-18px;padding:0;">
                             <img src="/dashboard/config.png" alt="ویرایش نقش‌ها" class="rotating-icon" style="width:40px;height:40px;object-fit:contain;display:block;">
                         </button>
                         <div class="admin-info" style="margin-right:24px;">
@@ -57,7 +57,9 @@ if ($licenseStatus['valid'] !== true) {
                         </div>
                     </div>
                     <div class="d-flex align-items-center">
-                        <button class="btn btn-logout ms-3" id="logoutBtn">خروج</button>
+                        <button class="btn btn-logout" id="logoutBtn" type="button" title="خروج" style="background:transparent;border:none;margin-inline-start:-18px;padding:0;">
+                            <img src="/dashboard/logout.png" alt="خروج" style="width:40px;height:40px;object-fit:contain;display:block;transform:rotate(180deg);">
+                        </button>
                     </div>
                 </div>
             </div> <!-- Stats -->

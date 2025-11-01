@@ -1070,3 +1070,13 @@ body.swal2-shown {
 .rotating-icon {
   animation: rotate 20s linear infinite;
 }
+
+/* Logout button icon styles */
+#logoutBtn img {
+  transition: transform 0.15s ease, opacity 0.15s ease;
+}
+
+#logoutBtn:hover img {
+  transform: translateY(-2px);
+  opacity: 0.85;
+}
