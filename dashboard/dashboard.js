@@ -2163,8 +2163,10 @@ async function showNextExamReport() {
         const courses = data.courses;
         const students = data.students;
 
-        // Store students globally for filtering
-        window.allStudents = students;
+    // Store students and full report globally for other actions (printing, essentials)
+    window.allStudents = students;
+    // keep the full report response so printing helpers can reuse it
+    window.currentExamReport = data;
 
         const headerTitle = window.customExamReportTitle || 'جزئیات جلسه آزمون';
         // Build a 3-column details table: the last column is a rowspan cell that
@@ -3022,8 +3024,11 @@ async function printSeatNumbersReport() {
         })();
 
     } catch (err) {
-        console.error('Error building printable report:', err);
-        Swal.fire({ icon: 'error', title: 'خطا', text: 'خطا در آماده‌سازی گزارش چاپ', confirmButtonText: 'باشه', customClass: { popup: 'swal2-rtl swal2-glass', confirmButton: 'btn btn-primary' } });
+        // Log full error for debugging and show a helpful message to the user.
+        console.error('Error building printable report (printEssentialsSecretary):', err);
+        const msg = (err && (err.message || err.toString())) ? String(err.message || err) : 'خطا در آماده‌سازی گزارش چاپ';
+        const stack = (err && err.stack) ? String(err.stack).split('\n').slice(0,5).join('\n') : '';
+        Swal.fire({ icon: 'error', title: 'خطا', html: `<div style="text-align:right">${esc(msg)}<br/><pre style="text-align:left;white-space:pre-wrap;font-size:0.8rem;color:#666">${esc(stack)}</pre></div>`, confirmButtonText: 'باشه', customClass: { popup: 'swal2-rtl swal2-glass', confirmButton: 'btn btn-primary' } });
     }
 }
 
@@ -3069,20 +3074,151 @@ async function printEssentialsSecretary() {
         const fontHref = (window.location && window.location.origin ? window.location.origin : '') + '/assets/fonts/vazir/vazir.css';
         const university = (document.getElementById('footerText')?.textContent || '').trim().replace(/^نسار\s*-\s*/, '') || 'گزارش ملزومات منشی جلسه';
 
+        // Use the current exam report if available
+        const report = window.currentExamReport || { exam_date: '', exam_time: '', courses: [], students: window.allStudents || [] };
+
+        // Helper: parse seat numbers (supports ranges and Persian 'تا')
+        const parseSeatNumbers = (raw) => {
+            if (!raw && raw !== 0) return [];
+            const s = String(raw).trim();
+            const nums = [];
+            const rangeMatch = s.match(/(\d+)\s*[-–—]\s*(\d+)/);
+            if (rangeMatch) {
+                const a = parseInt(rangeMatch[1], 10);
+                const b = parseInt(rangeMatch[2], 10);
+                if (!Number.isNaN(a) && !Number.isNaN(b)) {
+                    const start = Math.min(a, b);
+                    const end = Math.max(a, b);
+                    const maxSpan = 1000;
+                    const span = Math.min(end - start + 1, maxSpan);
+                    for (let i = 0; i < span; i++) nums.push(start + i);
+                    return nums;
+                }
+            }
+            const persRange = s.match(/(\d+)\s*(?:تا|تا\u200c)\s*(\d+)/i);
+            if (persRange) {
+                const a = parseInt(persRange[1], 10);
+                const b = parseInt(persRange[2], 10);
+                if (!Number.isNaN(a) && !Number.isNaN(b)) {
+                    const start = Math.min(a, b);
+                    const end = Math.max(a, b);
+                    const maxSpan = 1000;
+                    const span = Math.min(end - start + 1, maxSpan);
+                    for (let i = 0; i < span; i++) nums.push(start + i);
+                    return nums;
+                }
+            }
+            const matches = s.match(/\d+/g);
+            if (matches && matches.length) {
+                for (const m of matches) {
+                    const v = parseInt(m, 10);
+                    if (!Number.isNaN(v)) nums.push(v);
+                }
+            }
+            return nums;
+        };
+
+        // Build HTML
         let docHtml = `<!doctype html><html lang="fa" dir="rtl"><head><meta charset="utf-8"><title>ملزومات منشی جلسه</title><link rel="stylesheet" href="${fontHref}">`;
         docHtml += `<style>
             @page { size: A4 portrait; margin: 6mm; }
             html, body { margin: 0; padding: 0; }
-            body { font-family: Vazir, Tahoma, Arial, sans-serif; color: #111; font-size: 12pt; }
-            .page { width: 210mm; height: 297mm; box-sizing: border-box; padding: 10mm; }
-            @media print {
-                .no-print { display: none !important; }
-            }
+            body { font-family: Vazir, Tahoma, Arial, sans-serif; color: #111; font-size: 11pt; }
+            .page { width: 210mm; min-height: 297mm; box-sizing: border-box; padding: 8mm; }
+            .header { background: #333; color: #fff; padding: 10px 14px; border-radius:6px; text-align: center; }
+            .header .title { font-size: 22pt; font-weight:900; }
+            .header .meta { font-size: 14pt; margin-top:6px; color:#ddd; }
+            .course { margin-top: 10mm; }
+            .course .course-head { font-weight:800; font-size:12.5pt; margin-bottom:6px; }
+            .nested { margin-top:6px; border-collapse:collapse; width:100%; }
+            .nested th, .nested td { border:1px solid #ddd; padding:6px 8px; text-align:right; }
+            .nested thead th { background:#f1f1f1; font-weight:700; }
+            .small { font-size:10pt; color:#555; }
         </style></head><body>`;
+
+        // Header: big dark band with title and exam date/time
+        const examDate = report.exam_date || '';
+        const examTime = report.exam_time || '';
         docHtml += `<div class="page">`;
-        docHtml += `<div style="text-align:center;font-size:18pt;font-weight:700;margin-bottom:20mm;">${university}</div>`;
-        docHtml += `<div style="text-align:center;font-size:16pt;font-weight:600;margin-bottom:10mm;">ملزومات منشی جلسه</div>`;
-        docHtml += `<div style="text-align:center;color:#666;margin-top:50mm;">محتوای گزارش به زودی اضافه خواهد شد</div>`;
+        docHtml += `<div class="header"><div class="title">گزارش شماره صندلی</div><div class="meta">${toPersianDigits(examDate)} &nbsp; ${toPersianDigits(examTime)}</div></div>`;
+
+        // Prepare students and courses
+        const students = report.students || [];
+        const courses = report.courses || [];
+
+        // We'll order by exam type: الکترونیکی first, then کتبی, then others
+        const examOrder = ['الکترونیکی', 'کتبی'];
+        const usedCourses = new Set();
+
+        for (const exType of examOrder.concat([''])) {
+            // find courses that have students with this exam type
+            const coursesForType = courses.filter(c => {
+                const s = students.find(st => st.course_code === c.course_code && (st.exam_type || '') === exType);
+                return !!s;
+            });
+            if (!coursesForType.length) continue;
+
+            docHtml += `<div class="course"><div class="course-head">${exType || 'سایر'}: </div>`;
+
+            for (const course of coursesForType) {
+                usedCourses.add(course.course_code);
+                // students for this course and exam type
+                const stu = students.filter(s => s.course_code === course.course_code && (s.exam_type || '') === exType);
+                const total = stu.length;
+                docHtml += `<div style="margin-bottom:6px;"><strong>${course.course_code}</strong> — ${esc(course.course_name || '')} &nbsp; <span class="small">(تعداد: ${toPersianDigits(total)})</span></div>`;
+
+                // Group by building + class_name
+                const groups = {};
+                stu.forEach(s => {
+                    const b = (s.building || '').trim() || 'بدون ساختمان';
+                    const cl = (s.class_name || '').trim() || 'بدون کلاس';
+                    const key = b + '||' + cl;
+                    if (!groups[key]) groups[key] = { building: b, class_name: cl, nums: [] };
+                    try {
+                        const parsed = parseSeatNumbers(s.seat_number);
+                        if (parsed && parsed.length) groups[key].nums.push(...parsed);
+                    } catch (e) { /* ignore invalid */ }
+                });
+
+                // render nested table
+                docHtml += `<table class="nested"><thead><tr><th style="width:18%">ساختمان</th><th style="width:20%">کلاس / اتاق</th><th style="width:22%">از شماره</th><th style="width:22%">تا شماره</th><th style="width:18%">تعداد</th></tr></thead><tbody>`;
+                const gkeys = Object.keys(groups);
+                if (!gkeys.length) {
+                    docHtml += `<tr><td colspan="5" style="text-align:center">بدون اطلاعات کروکی برای این درس</td></tr>`;
+                } else {
+                    const rows = [];
+                    gkeys.forEach(k => {
+                        const g = groups[k];
+                        const uniq = Array.from(new Set(g.nums)).sort((a,b)=>a-b);
+                        const start = uniq.length ? uniq[0] : null;
+                        const end = uniq.length ? uniq[uniq.length - 1] : null;
+                        const count = uniq.length;
+                        if (start !== null) rows.push({ building: g.building, class_name: g.class_name, start, end, count });
+                    });
+                    // sort by building/class or start
+                    rows.sort((a,b) => (a.building.localeCompare(b.building,'fa') || a.class_name.localeCompare(b.class_name,'fa') || a.start - b.start));
+                    rows.forEach(r => {
+                        docHtml += `<tr><td>${esc(r.building)}</td><td>${esc(r.class_name)}</td><td style="text-align:center">${toPersianDigits(r.start)}</td><td style="text-align:center">${toPersianDigits(r.end)}</td><td style="text-align:center">${toPersianDigits(r.count)}</td></tr>`;
+                    });
+                }
+                docHtml += `</tbody></table>`;
+            }
+
+            docHtml += `</div>`; // end course group
+        }
+
+        // If there are courses not caught by examOrder (no exam_type students), include them at the end
+        const remainingCourses = courses.filter(c => !usedCourses.has(c.course_code));
+        if (remainingCourses.length) {
+            docHtml += `<div class="course"><div class="course-head">سایر دروس:</div>`;
+            remainingCourses.forEach(course => {
+                const stu = students.filter(s => s.course_code === course.course_code);
+                const total = stu.length;
+                docHtml += `<div style="margin-bottom:6px;"><strong>${course.course_code}</strong> — ${esc(course.course_name || '')} &nbsp; <span class="small">(تعداد: ${toPersianDigits(total)})</span></div>`;
+            });
+            docHtml += `</div>`;
+        }
+
         docHtml += `</div></body></html>`;
 
         const iframe = document.createElement('iframe');
@@ -3107,8 +3243,12 @@ async function printEssentialsSecretary() {
         }, 300);
 
     } catch (err) {
-        console.error('Error building printable report:', err);
-        Swal.fire({ icon: 'error', title: 'خطا', text: 'خطا در آماده‌سازی گزارش چاپ', confirmButtonText: 'باشه', customClass: { popup: 'swal2-rtl swal2-glass', confirmButton: 'btn btn-primary' } });
+        // log full error for debugging
+        try { console.error('Error building printable report (detailed):', err && err.stack ? err.stack : err); } catch (e) { console.error('Error logging failed', e); }
+        // show detailed error to the user to help debugging (trim long stacks)
+        const msg = (err && err.message) ? String(err.message) : 'خطا در آماده‌سازی گزارش چاپ';
+        const stack = (err && err.stack) ? String(err.stack).split('\n').slice(0,6).join('\n') : '';
+        Swal.fire({ icon: 'error', title: 'خطا در آماده‌سازی گزارش چاپ', html: `<div style="text-align:right;direction:ltr;white-space:pre-wrap;">${esc(msg)}<br><small style='color:#666;margin-top:8px;display:block;'>${esc(stack)}</small></div>`, confirmButtonText: 'باشه', customClass: { popup: 'swal2-rtl swal2-glass', confirmButton: 'btn btn-primary' } });
     }
 }
 
