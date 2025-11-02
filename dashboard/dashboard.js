@@ -3249,8 +3249,8 @@ async function printEssentialsSecretary() {
         const students = report.students || [];
         const courses = report.courses || [];
 
-        // We'll order by exam type: الکترونیکی first, then کتبی, then others
-        const examOrder = ['الکترونیکی', 'کتبی'];
+        // Secretary report shows only written exam courses
+        const examOrder = ['کتبی'];
         const usedCourses = new Set();
 
         let hadPrevTypeCourses = false;
