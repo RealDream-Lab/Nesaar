@@ -3499,7 +3499,7 @@ async function printEssentialsReproduction() {
             .header .title { font-size: 16pt; font-weight:900; margin-top:0; }
             .header .meta { font-size: 12pt; margin-top:4px; color:#000; font-weight:700; }
             .course { margin-top: 3mm; page-break-inside: avoid; break-inside: avoid; -webkit-column-break-inside: avoid; -webkit-page-break-inside: avoid; }
-            .course-inner { width:95%; margin:0 auto; }
+            .course-inner { width:100%; margin:0 auto; }
             .course-header { width:100%; margin-bottom:2px; border-collapse:collapse; table-layout:fixed; }
             .course-header td { box-sizing:border-box; }
             .course-header .course-index { width:8%; background:#000; color:#fff; text-align:center; font-weight:900; padding:4px 0; border-radius:4px; font-size:11pt; }
@@ -3530,7 +3530,8 @@ async function printEssentialsReproduction() {
         // 1) Electronic section: summary rows only (course code + name + count)
         const electronicCourses = courses.filter(c => students.some(st => st.course_code === c.course_code && (st.exam_type || '') === 'الکترونیکی'));
         if (electronicCourses.length) {
-            docHtml += `<div class="etypeBar"><div class="label">الکترونیکی</div></div>`;
+            docHtml += `<div style="page-break-inside: avoid; break-inside: avoid; -webkit-column-break-inside: avoid; -webkit-page-break-inside: avoid;">`;
+            docHtml += `<div class="etypeBar" style="margin-top:8px;"><div class="label">الکترونیکی</div></div>`;
             // Use same inner container width as written to avoid left overflow
             docHtml += `<div class="course" style="page-break-inside: avoid; break-inside: avoid; -webkit-column-break-inside: avoid; -webkit-page-break-inside: avoid;"><div class="course-inner">`;
             docHtml += `<table class="simple-list"><thead><tr><th style="width:8%">#</th><th style="width:18%">کد</th><th>نام درس</th><th style="width:18%">تعداد</th></tr></thead><tbody>`;
@@ -3552,6 +3553,7 @@ async function printEssentialsReproduction() {
             if (i === 0) docHtml += `<tr><td colspan=\"4\" style=\"text-align:center\">بدون درس الکترونیکی</td></tr>`;
             docHtml += `</tbody></table>`;
             docHtml += `</div></div>`;
+            docHtml += `</div>`;
         }
 
         // 2) Written section: full detail like secretary
