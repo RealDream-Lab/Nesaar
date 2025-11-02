@@ -1,7 +1,7 @@
 // Bump cache to force refresh of updated assets (app.js, style.css, index.php)
 // Increment this when you want clients to fetch the new assets.
-const CACHE_NAME = 'exam-seat-v3.2.3';
-const VERSION = '۳.۲.۳';
+const CACHE_NAME = 'exam-seat-v3.2.4';
+const VERSION = '۳.۲.۴';
 const urlsToCache = [
   '/',
   '/index.php',
@@ -91,7 +91,7 @@ self.addEventListener('activate', event => {
             tagVersion: `نسخه ${VERSION}`,
             // release headline requested by product owner
             changes: [
-              'رفع قطعی مشکل صفحه خالی اضافی در گزارش ملزومات اتاق تکثیر'
+              'اصلاح تراز و چینش جداول در گزارش ملزومات اتاق تکثیر'
             ]
           });
         });
