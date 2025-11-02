@@ -6,6 +6,11 @@ function isDesktopDevice() {
     return !isTouch && width > 900 && !isMobileUA;
 }
 
+// Global safety: if any print dialog closes (printed or canceled), ensure any pending loader closes
+try {
+    window.addEventListener('afterprint', () => { try { Swal.close(); } catch (e) { } }, false);
+} catch (e) { /* ignore */ }
+
 // Build and open a printable "صورتجلسه آزمون" (session report).
 // Uses the same exam date/time displayed in #nextExamDateTime and calls API/getNextExamReport.php
 async function printSessionReport() {
@@ -3199,7 +3204,7 @@ async function printEssentialsSecretary() {
                 courseIndex += 1;
                 docHtml += `<table class="course-header"><tr>` +
                     `<td class="course-index">${toPersianDigits(courseIndex)}</td>` +
-                    `<td class="course-info">${esc(course.course_code)} | ${esc(course.course_name || '')}</td>` +
+                    `<td class="course-info">${toPersianDigits(`${esc(course.course_code)} | ${esc(course.course_name || '')}`)}</td>` +
                     `<td class="course-total">${toPersianDigits(total)} نفر</td>` +
                     `</tr></table>`;
 
@@ -3244,8 +3249,8 @@ async function printEssentialsSecretary() {
                             `<td style="text-align:center;padding:3px 6px;font-size:11pt;">${toPersianDigits(r.start)}</td>` +
                             `<td style="text-align:center;padding:3px 6px;font-size:11pt;">${toPersianDigits(r.end)}</td>` +
                             `<td style="text-align:center;padding:3px 6px;font-size:11pt;">${toPersianDigits(r.count)}</td>` +
-                            `<td style="padding:3px 6px;font-size:10pt;text-align:right;">${esc(r.building)}</td>` +
-                            `<td style="padding:3px 6px;font-size:10pt;text-align:right;">${esc(r.class_name)}</td>` +
+                            `<td style="padding:3px 6px;font-size:10pt;text-align:right;">${toPersianDigits(esc(r.building))}</td>` +
+                            `<td style="padding:3px 6px;font-size:10pt;text-align:right;">${toPersianDigits(esc(r.class_name))}</td>` +
                             `</tr>`;
                     });
                 }
@@ -3265,7 +3270,9 @@ async function printEssentialsSecretary() {
             remainingCourses.forEach(course => {
                 const stu = students.filter(s => s.course_code === course.course_code);
                 const total = stu.length;
-                docHtml += `<div style="margin-bottom:6px;"><strong>${course.course_code}</strong> — ${esc(course.course_name || '')} &nbsp; <span class="small">(تعداد: ${toPersianDigits(total)})</span></div>`;
+                const codeStr = toPersianDigits(esc(course.course_code));
+                const nameStr = toPersianDigits(esc(course.course_name || ''));
+                docHtml += `<div style="margin-bottom:6px;"><strong>${codeStr}</strong> — ${nameStr} &nbsp; <span class="small">(تعداد: ${toPersianDigits(total)})</span></div>`;
             });
             docHtml += `</div>`;
         }
@@ -3288,6 +3295,7 @@ async function printEssentialsSecretary() {
         doc.open();
         doc.write(docHtml);
         doc.close();
+        // close loading before opening print dialog
         try { Swal.close(); } catch (e) { }
 
         // Remove any completely-empty trailing .page the generator might have produced
@@ -3304,9 +3312,33 @@ async function printEssentialsSecretary() {
             // ignore
         }
 
-        // Print and cleanup iframe
-        try { iframe.contentWindow.focus(); iframe.contentWindow.print(); } catch (e) { console.error('Print error:', e); }
-        setTimeout(() => { try { document.body.removeChild(iframe); } catch (e) { } }, 500);
+        // Print and robust cleanup: close any spinner even if user cancels print
+        const cw = iframe.contentWindow;
+        let cleaned = false;
+        const cleanup = () => {
+            if (cleaned) return;
+            cleaned = true;
+            try { Swal.close(); } catch (e) { }
+            try { document.body.removeChild(iframe); } catch (e) { }
+            try { window.removeEventListener('focus', onFocusOnce, true); } catch (e) { }
+        };
+        const onFocusOnce = () => { setTimeout(cleanup, 150); };
+        try {
+            if (cw) {
+                cw.onafterprint = cleanup;
+                // Safari/Firefox fallback: when print dialog closes, focus returns to window
+                window.addEventListener('focus', onFocusOnce, true);
+                cw.focus();
+                cw.print();
+                // Absolute fallback in case neither event fires
+                setTimeout(cleanup, 5000);
+            } else {
+                setTimeout(cleanup, 300);
+            }
+        } catch (e) {
+            console.error('Print error:', e);
+            setTimeout(cleanup, 300);
+        }
 
     } catch (err) {
         // log full error for debugging
@@ -3333,20 +3365,179 @@ async function printEssentialsReproduction() {
         const fontHref = (window.location && window.location.origin ? window.location.origin : '') + '/assets/fonts/vazir/vazir.css';
         const university = (document.getElementById('footerText')?.textContent || '').trim().replace(/^نسار\s*-\s*/, '') || 'گزارش ملزومات اتاق تکثیر';
 
+        // Use the current exam report if available
+        const report = window.currentExamReport || { exam_date: '', exam_time: '', courses: [], students: window.allStudents || [] };
+
+        const esc = (txt) => { try { const d = document.createElement('div'); d.textContent = txt || ''; return d.innerHTML; } catch (e) { return String(txt || ''); } };
+        const parseSeatNumbers = (raw) => {
+            if (!raw && raw !== 0) return [];
+            const s = String(raw).trim();
+            const nums = [];
+            const rangeMatch = s.match(/(\d+)\s*[-–—]\s*(\d+)/);
+            if (rangeMatch) {
+                const a = parseInt(rangeMatch[1], 10);
+                const b = parseInt(rangeMatch[2], 10);
+                if (!Number.isNaN(a) && !Number.isNaN(b)) {
+                    const start = Math.min(a, b);
+                    const end = Math.max(a, b);
+                    const maxSpan = 1000;
+                    const span = Math.min(end - start + 1, maxSpan);
+                    for (let i = 0; i < span; i++) nums.push(start + i);
+                    return nums;
+                }
+            }
+            const persRange = s.match(/(\d+)\s*(?:تا|تا\u200c)\s*(\d+)/i);
+            if (persRange) {
+                const a = parseInt(persRange[1], 10);
+                const b = parseInt(persRange[2], 10);
+                if (!Number.isNaN(a) && !Number.isNaN(b)) {
+                    const start = Math.min(a, b);
+                    const end = Math.max(a, b);
+                    const maxSpan = 1000;
+                    const span = Math.min(end - start + 1, maxSpan);
+                    for (let i = 0; i < span; i++) nums.push(start + i);
+                    return nums;
+                }
+            }
+            const matches = s.match(/\d+/g);
+            if (matches && matches.length) {
+                for (const m of matches) {
+                    const v = parseInt(m, 10);
+                    if (!Number.isNaN(v)) nums.push(v);
+                }
+            }
+            return nums;
+        };
+
         let docHtml = `<!doctype html><html lang="fa" dir="rtl"><head><meta charset="utf-8"><title>ملزومات اتاق تکثیر</title><link rel="stylesheet" href="${fontHref}">`;
         docHtml += `<style>
             @page { size: A4 portrait; margin: 6mm; }
             html, body { margin: 0; padding: 0; }
-            body { font-family: Vazir, Tahoma, Arial, sans-serif; color: #111; font-size: 12pt; }
-            .page { width: 210mm; height: 297mm; box-sizing: border-box; padding: 10mm; }
-            @media print {
-                .no-print { display: none !important; }
-            }
+            body { font-family: Vazir, Tahoma, Arial, sans-serif; color: #111; font-size: 11pt; }
+            .page { width: 210mm; min-height: 297mm; box-sizing: border-box; padding: 6mm 8mm 8mm 8mm; overflow: visible; }
+            .header { background: transparent; color: #000; padding: 2px 4px 4px 4px; text-align: center; margin-bottom:4px; }
+            .header .title { font-size: 16pt; font-weight:900; margin-top:0; }
+            .header .meta { font-size: 12pt; margin-top:4px; color:#000; font-weight:700; }
+            .course { margin-top: 3mm; page-break-inside: avoid; break-inside: avoid; -webkit-column-break-inside: avoid; -webkit-page-break-inside: avoid; }
+            .course-inner { width:95%; margin:0 auto; }
+            .course-header { width:100%; margin-bottom:2px; border-collapse:collapse; table-layout:fixed; }
+            .course-header td { box-sizing:border-box; }
+            .course-header .course-index { width:8%; background:#000; color:#fff; text-align:center; font-weight:900; padding:4px 0; border-radius:4px; font-size:11pt; }
+            .course-header .course-info { width:77%; text-align:right; font-size:13pt; font-weight:700; padding:0 8px 0 0; }
+            .course-header .course-total { width:15%; text-align:left; font-size:12pt; font-weight:700; padding:0 4px 0 0; }
+            .nested { margin-top:4px; border-collapse:collapse; width:100%; box-sizing:border-box; table-layout:fixed; max-width:100%; min-width:0; }
+            .nested, .nested th, .nested td { box-sizing: border-box; }
+            .nested th, .nested td { border:1px solid #ddd; padding:3px 6px; text-align:right; overflow-wrap:anywhere; word-break:break-word; }
+            .nested thead th { background:#f1f1f1; font-weight:700; text-align:center; font-size:10pt; }
+            .nested thead { display: table-header-group; }
+            .etypeBar .label { display:block; width:100%; background:#000; color:#fff; font-weight:900; padding:8px 0; border-radius:0; font-size:15pt; text-align:center; }
+            .simple-list { width:100%; border-collapse:collapse; margin-top:6px; }
+            .simple-list th, .simple-list td { border:1px solid #ddd; padding:4px 6px; font-size:12pt; }
+            .simple-list thead th { background:#f1f1f1; text-align:center; }
         </style></head><body>`;
+
+        const examDate = report.exam_date || '';
+        const examTime = report.exam_time || '';
         docHtml += `<div class="page">`;
-        docHtml += `<div style="text-align:center;font-size:18pt;font-weight:700;margin-bottom:20mm;">${university}</div>`;
-        docHtml += `<div style="text-align:center;font-size:16pt;font-weight:600;margin-bottom:10mm;">ملزومات اتاق تکثیر</div>`;
-        docHtml += `<div style="text-align:center;color:#666;margin-top:50mm;">محتوای گزارش به زودی اضافه خواهد شد</div>`;
+        docHtml += `<div class="header" style="background:transparent;color:#000;padding:4px 2px 6px 2px;text-align:center;">` +
+            `<div class="title" style="font-size:16pt;font-weight:900;color:#000;margin-bottom:2px;">ملزومات اتاق تکثیر</div>` +
+            `<div class="meta" style="font-size:12pt;margin-top:2px;color:#000;font-weight:700;">${toPersianDigits(examTime)} &nbsp; | &nbsp; ${toPersianDigits(examDate)}</div>` +
+            `</div>`;
+
+        const students = report.students || [];
+        const courses = report.courses || [];
+
+        // 1) Electronic section: summary rows only (course code + name + count)
+        const electronicCourses = courses.filter(c => students.some(st => st.course_code === c.course_code && (st.exam_type || '') === 'الکترونیکی'));
+        if (electronicCourses.length) {
+            docHtml += `<div class="etypeBar"><div class="label">الکترونیکی</div></div>`;
+            // Use same inner container width as written to avoid left overflow
+            docHtml += `<div class="course" style="page-break-inside: avoid; break-inside: avoid; -webkit-column-break-inside: avoid; -webkit-page-break-inside: avoid;"><div class="course-inner">`;
+            docHtml += `<table class="simple-list"><thead><tr><th style="width:8%">#</th><th style="width:18%">کد</th><th>نام درس</th><th style="width:18%">تعداد</th></tr></thead><tbody>`;
+            let i = 0;
+            electronicCourses.forEach(course => {
+                const cnt = students.filter(s => s.course_code === course.course_code && (s.exam_type || '') === 'الکترونیکی').length;
+                if (cnt > 0) {
+                    i += 1;
+                    const codeCell = toPersianDigits(esc(course.course_code || ''));
+                    const nameCell = toPersianDigits(esc(course.course_name || ''));
+                    docHtml += `<tr>` +
+                        `<td style=\"text-align:center;font-weight:700;\">${toPersianDigits(i)}</td>` +
+                        `<td style=\"text-align:center;\">${codeCell}</td>` +
+                        `<td style=\"text-align:right;\">${nameCell}</td>` +
+                        `<td style=\"text-align:center;font-weight:700;\">${toPersianDigits(cnt)}</td>` +
+                        `</tr>`;
+                }
+            });
+            if (i === 0) docHtml += `<tr><td colspan=\"4\" style=\"text-align:center\">بدون درس الکترونیکی</td></tr>`;
+            docHtml += `</tbody></table>`;
+            docHtml += `</div></div>`;
+        }
+
+        // 2) Written section: full detail like secretary
+        const writtenCourses = courses.filter(c => students.some(st => st.course_code === c.course_code && (st.exam_type || '') === 'کتبی'));
+        if (writtenCourses.length) {
+            docHtml += `<div class="etypeBar" style="margin-top:8px;"><div class="label">کتبی</div></div>`;
+            let courseIndex = 0;
+            writtenCourses.forEach(course => {
+                const stu = students.filter(s => s.course_code === course.course_code && (s.exam_type || '') === 'کتبی');
+                const total = stu.length;
+                courseIndex += 1;
+                docHtml += `<div class="course" style="page-break-inside: avoid; break-inside: avoid; -webkit-column-break-inside: avoid; -webkit-page-break-inside: avoid;"><div class="course-inner">`;
+                docHtml += `<table class="course-header"><tr>` +
+                    `<td class="course-index">${toPersianDigits(courseIndex)}</td>` +
+                    `<td class="course-info">${toPersianDigits(`${esc(course.course_code)} | ${esc(course.course_name || '')}`)}</td>` +
+                    `<td class="course-total">${toPersianDigits(total)} نفر</td>` +
+                    `</tr></table>`;
+
+                const groups = {};
+                stu.forEach(s => {
+                    const b = (s.building || '').trim() || 'بدون ساختمان';
+                    const cl = (s.class_name || '').trim() || 'بدون کلاس';
+                    const key = b + '||' + cl;
+                    if (!groups[key]) groups[key] = { building: b, class_name: cl, nums: [] };
+                    try {
+                        const parsed = parseSeatNumbers(s.seat_number);
+                        if (parsed && parsed.length) groups[key].nums.push(...parsed);
+                    } catch (e) { /* ignore */ }
+                });
+
+                docHtml += `<table class="nested" style="table-layout:fixed;width:100%;page-break-inside:avoid;min-width:0;"><thead><tr>` +
+                    `<th style="width:12%;text-align:center;">از شماره</th>` +
+                    `<th style="width:12%;text-align:center;">تا شماره</th>` +
+                    `<th style="width:12%;text-align:center;">تعداد</th>` +
+                    `<th style="width:34%;text-align:center;">ساختمان</th>` +
+                    `<th style="width:30%;text-align:center;">کلاس / اتاق</th>` +
+                    `</tr></thead><tbody>`;
+                const gkeys = Object.keys(groups);
+                if (!gkeys.length) {
+                    docHtml += `<tr><td colspan="5" style="text-align:center">بدون اطلاعات کروکی برای این درس</td></tr>`;
+                } else {
+                    const rows = [];
+                    gkeys.forEach(k => {
+                        const g = groups[k];
+                        const uniq = Array.from(new Set(g.nums)).sort((a, b) => a - b);
+                        const start = uniq.length ? uniq[0] : null;
+                        const end = uniq.length ? uniq[uniq.length - 1] : null;
+                        const count = uniq.length;
+                        if (start !== null) rows.push({ building: g.building, class_name: g.class_name, start, end, count });
+                    });
+                    rows.sort((a, b) => (a.building.localeCompare(b.building, 'fa') || a.class_name.localeCompare(b.class_name, 'fa') || a.start - b.start));
+                    rows.forEach(r => {
+                        docHtml += `<tr>` +
+                            `<td style="text-align:center;padding:3px 6px;font-size:11pt;">${toPersianDigits(r.start)}</td>` +
+                            `<td style="text-align:center;padding:3px 6px;font-size:11pt;">${toPersianDigits(r.end)}</td>` +
+                            `<td style="text-align:center;padding:3px 6px;font-size:11pt;">${toPersianDigits(r.count)}</td>` +
+                            `<td style="padding:3px 6px;font-size:10pt;text-align:right;">${toPersianDigits(esc(r.building))}</td>` +
+                            `<td style="padding:3px 6px;font-size:10pt;text-align:right;">${toPersianDigits(esc(r.class_name))}</td>` +
+                            `</tr>`;
+                    });
+                }
+                docHtml += `</tbody></table>`;
+                docHtml += `</div></div>`;
+            });
+        }
+
         docHtml += `</div></body></html>`;
 
         const iframe = document.createElement('iframe');
@@ -3364,11 +3555,46 @@ async function printEssentialsReproduction() {
         doc.write(docHtml);
         doc.close();
 
+        // Close loading before opening print dialog
         try { Swal.close(); } catch (e) { }
-        setTimeout(() => {
-            try { iframe.contentWindow.focus(); iframe.contentWindow.print(); } catch (e) { console.error('Print error:', e); }
-            setTimeout(() => { try { document.body.removeChild(iframe); } catch (e) { } }, 500);
-        }, 300);
+
+        // Remove any completely-empty trailing .page if present
+        try {
+            const idoc = iframe.contentDocument || iframe.contentWindow.document;
+            const pages = idoc.querySelectorAll('.page');
+            if (pages && pages.length) {
+                const last = pages[pages.length - 1];
+                if (last && (!last.textContent || last.textContent.trim().length === 0)) {
+                    last.parentNode.removeChild(last);
+                }
+            }
+        } catch (e) { }
+
+        // Print and robust cleanup similar to secretary
+        const cw = iframe.contentWindow;
+        let cleaned = false;
+        const cleanup = () => {
+            if (cleaned) return;
+            cleaned = true;
+            try { Swal.close(); } catch (e) { }
+            try { document.body.removeChild(iframe); } catch (e) { }
+            try { window.removeEventListener('focus', onFocusOnce, true); } catch (e) { }
+        };
+        const onFocusOnce = () => { setTimeout(cleanup, 150); };
+        try {
+            if (cw) {
+                cw.onafterprint = cleanup;
+                window.addEventListener('focus', onFocusOnce, true);
+                cw.focus();
+                cw.print();
+                setTimeout(cleanup, 5000);
+            } else {
+                setTimeout(cleanup, 300);
+            }
+        } catch (e) {
+            console.error('Print error:', e);
+            setTimeout(cleanup, 300);
+        }
 
     } catch (err) {
         console.error('Error building printable report:', err);
@@ -3422,11 +3648,34 @@ async function printEssentialsDescriptive() {
         doc.write(docHtml);
         doc.close();
 
+        // Close loading before print dialog
         try { Swal.close(); } catch (e) { }
-        setTimeout(() => {
-            try { iframe.contentWindow.focus(); iframe.contentWindow.print(); } catch (e) { console.error('Print error:', e); }
-            setTimeout(() => { try { document.body.removeChild(iframe); } catch (e) { } }, 500);
-        }, 300);
+
+        // Robust print + cleanup
+        const cw = iframe.contentWindow;
+        let cleaned = false;
+        const cleanup = () => {
+            if (cleaned) return;
+            cleaned = true;
+            try { Swal.close(); } catch (e) { }
+            try { document.body.removeChild(iframe); } catch (e) { }
+            try { window.removeEventListener('focus', onFocusOnce, true); } catch (e) { }
+        };
+        const onFocusOnce = () => { setTimeout(cleanup, 150); };
+        try {
+            if (cw) {
+                cw.onafterprint = cleanup;
+                window.addEventListener('focus', onFocusOnce, true);
+                cw.focus();
+                cw.print();
+                setTimeout(cleanup, 5000);
+            } else {
+                setTimeout(cleanup, 300);
+            }
+        } catch (e) {
+            console.error('Print error:', e);
+            setTimeout(cleanup, 300);
+        }
 
     } catch (err) {
         console.error('Error building printable report:', err);
@@ -3480,11 +3729,34 @@ async function printEssentialsTest() {
         doc.write(docHtml);
         doc.close();
 
+        // Close loading before print dialog
         try { Swal.close(); } catch (e) { }
-        setTimeout(() => {
-            try { iframe.contentWindow.focus(); iframe.contentWindow.print(); } catch (e) { console.error('Print error:', e); }
-            setTimeout(() => { try { document.body.removeChild(iframe); } catch (e) { } }, 500);
-        }, 300);
+
+        // Robust print + cleanup
+        const cw = iframe.contentWindow;
+        let cleaned = false;
+        const cleanup = () => {
+            if (cleaned) return;
+            cleaned = true;
+            try { Swal.close(); } catch (e) { }
+            try { document.body.removeChild(iframe); } catch (e) { }
+            try { window.removeEventListener('focus', onFocusOnce, true); } catch (e) { }
+        };
+        const onFocusOnce = () => { setTimeout(cleanup, 150); };
+        try {
+            if (cw) {
+                cw.onafterprint = cleanup;
+                window.addEventListener('focus', onFocusOnce, true);
+                cw.focus();
+                cw.print();
+                setTimeout(cleanup, 5000);
+            } else {
+                setTimeout(cleanup, 300);
+            }
+        } catch (e) {
+            console.error('Print error:', e);
+            setTimeout(cleanup, 300);
+        }
 
     } catch (err) {
         console.error('Error building printable report:', err);
