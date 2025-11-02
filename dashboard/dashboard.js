@@ -3169,7 +3169,6 @@ async function printEssentialsSecretary() {
         const examOrder = ['الکترونیکی', 'کتبی'];
         const usedCourses = new Set();
 
-        let insertedWrittenBreak = false;
         let hadPrevTypeCourses = false;
         let courseIndex = 0; // global running index for displayed course rows
         for (const exType of examOrder.concat([''])) {
@@ -3181,13 +3180,12 @@ async function printEssentialsSecretary() {
             if (!coursesForType.length) continue;
 
             // For written exams (کتبی) insert a single page-break before the whole group
-            // if (exType === 'کتبی' && hadPrevTypeCourses && !insertedWrittenBreak) {
-            //     docHtml += `<div style="page-break-before: always;"></div>`;
-            //     insertedWrittenBreak = true;
-            // }
+            // Instead of injecting an empty DIV (which can cause a blank page), apply the
+            // page-break-before style to the header element itself for the first کتبی group.
+            let ctStyle = '';
 
             // exam type header: full-width black bar with centered white bold text
-            docHtml += `<div class="course-type-group"><div class="etypeBar"><div class="label">${esc(exType || 'سایر')}</div></div></div>`;
+            docHtml += `<div class="course-type-group" ${ctStyle}><div class="etypeBar"><div class="label">${esc(exType || 'سایر')}</div></div></div>`;
 
             for (const course of coursesForType) {
                 // start per-course container so we can force page-breaks for کتبی courses
@@ -3290,14 +3288,25 @@ async function printEssentialsSecretary() {
         doc.open();
         doc.write(docHtml);
         doc.close();
-
         try { Swal.close(); } catch (e) { }
 
-        // Calculate total pages by measuring the iframe document height vs A4 pixel height, then set the totalPages span
-        setTimeout(() => {
-            try { iframe.contentWindow.focus(); iframe.contentWindow.print(); } catch (e) { console.error('Print error:', e); }
-            setTimeout(() => { try { document.body.removeChild(iframe); } catch (e) { } }, 500);
-        }, 300);
+        // Remove any completely-empty trailing .page the generator might have produced
+        try {
+            const idoc = iframe.contentDocument || iframe.contentWindow.document;
+            const pages = idoc.querySelectorAll('.page');
+            if (pages && pages.length) {
+                const last = pages[pages.length - 1];
+                if (last && (!last.textContent || last.textContent.trim().length === 0)) {
+                    last.parentNode.removeChild(last);
+                }
+            }
+        } catch (e) {
+            // ignore
+        }
+
+        // Print and cleanup iframe
+        try { iframe.contentWindow.focus(); iframe.contentWindow.print(); } catch (e) { console.error('Print error:', e); }
+        setTimeout(() => { try { document.body.removeChild(iframe); } catch (e) { } }, 500);
 
     } catch (err) {
         // log full error for debugging
