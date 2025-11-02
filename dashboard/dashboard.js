@@ -8,16 +8,16 @@ function isDesktopDevice() {
 
 // Global safety: if any print dialog closes (printed or canceled), ensure any pending loader closes
 try {
-    window.addEventListener('afterprint', () => { try { closeSwalLoadingHard(); } catch (e) {} }, false);
+    window.addEventListener('afterprint', () => { try { closeSwalLoadingHard(); } catch (e) { } }, false);
 } catch (e) { /* ignore */ }
 
 // Hard-close any SweetAlert loading spinner left in DOM
 function closeSwalLoadingHard() {
     try {
         if (window.Swal && typeof Swal.close === 'function') {
-            try { Swal.close(); } catch (e) {}
+            try { Swal.close(); } catch (e) { }
         }
-    } catch (e) {}
+    } catch (e) { }
     try {
         const nodes = document.querySelectorAll('.swal2-container, .swal2-popup, .swal2-backdrop-show, .swal2-loading, .swal2-actions.swal2-loading');
         nodes.forEach(el => {
