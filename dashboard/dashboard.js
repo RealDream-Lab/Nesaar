@@ -34,6 +34,33 @@ function closeSwalLoadingHard() {
     } catch (e) { /* ignore */ }
 }
 
+// Ensure iframe fonts are loaded (or timeout) then call print
+function safePrintIframe(iframe, cw) {
+    try {
+        const idoc = iframe.contentDocument || iframe.contentWindow.document;
+        const fontsReady = idoc && idoc.fonts && idoc.fonts.ready ? idoc.fonts.ready : Promise.resolve();
+        // wait up to 1500ms for fonts to load, then print
+        Promise.race([fontsReady, new Promise(r => setTimeout(r, 1500))]).then(() => {
+            try { cw.focus(); cw.print(); } catch (e) { console.error('Print error:', e); }
+        }).catch(() => { try { cw.focus(); cw.print(); } catch (e) { console.error('Print error:', e); } });
+    } catch (e) {
+        try { cw.focus(); cw.print(); } catch (err) { console.error('Print error:', err); }
+    }
+}
+
+// Ensure a popped window has fonts loaded before printing (used for fallback windows)
+function safePrintWindow(win) {
+    try {
+        const idoc = (win && win.document) ? win.document : null;
+        const fontsReady = idoc && idoc.fonts && idoc.fonts.ready ? idoc.fonts.ready : Promise.resolve();
+        Promise.race([fontsReady, new Promise(r => setTimeout(r, 1500))]).then(() => {
+            try { win.focus(); win.print(); } catch (e) { console.error('Print error (window):', e); }
+        }).catch(() => { try { win.focus(); win.print(); } catch (e) { console.error('Print error (window):', e); } });
+    } catch (e) {
+        try { win.focus(); win.print(); } catch (err) { console.error('Print error (window):', err); }
+    }
+}
+
 // If user started an essentials print from the menu, re-open the menu after print closes
 function reopenEssentialsMenuIfRequested() {
     try {
@@ -283,7 +310,7 @@ async function printSessionReport() {
             // close loading modal before opening print dialog
             try { Swal.close(); } catch (e) { }
             setTimeout(() => {
-                try { iframe.contentWindow.focus(); iframe.contentWindow.print(); } catch (e) { console.error('Print error:', e); }
+                try { safePrintIframe(iframe, iframe.contentWindow); } catch (e) { console.error('Print error:', e); }
                 setTimeout(() => { try { document.body.removeChild(iframe); } catch (e) { } }, 500);
             }, 400);
         } catch (e) {
@@ -3026,7 +3053,7 @@ async function printSeatNumbersReport() {
                     // close loading modal before opening print dialog
                     try { Swal.close(); } catch (e) { }
                     setTimeout(() => {
-                        try { iframe.contentWindow.focus(); iframe.contentWindow.print(); } catch (e) { console.error('Print error:', e); }
+                        try { safePrintIframe(iframe, iframe.contentWindow); } catch (e) { console.error('Print error:', e); }
                         // remove iframe after a short delay
                         setTimeout(() => { try { document.body.removeChild(iframe); } catch (e) { } }, 500);
                     }, 300);
@@ -3057,7 +3084,7 @@ async function printSeatNumbersReport() {
                 }
                 w.document.open(); w.document.write(fallbackHtml); w.document.close();
                 try { Swal.close(); } catch (er) { }
-                setTimeout(() => { try { w.focus(); w.print(); } catch (e) { console.error('Print error:', e); } }, 450);
+                setTimeout(() => { try { safePrintWindow(w); } catch (e) { console.error('Print error (fallback window):', e); } }, 450);
             }
         })();
 
@@ -3382,8 +3409,7 @@ async function printEssentialsSecretary() {
                 cw.onafterprint = cleanup;
                 // Safari/Firefox fallback: when print dialog closes, focus returns to window
                 window.addEventListener('focus', onFocusOnce, true);
-                cw.focus();
-                cw.print();
+                try { safePrintIframe(iframe, cw); } catch (e) { console.error('Print invoke error:', e); }
                 // Absolute fallback in case neither event fires
                 setTimeout(cleanup, 5000);
             } else {
@@ -3531,6 +3557,7 @@ async function printEssentialsReproduction() {
         // 2) Written section: full detail like secretary
         const writtenCourses = courses.filter(c => students.some(st => st.course_code === c.course_code && (st.exam_type || '') === 'کتبی'));
         if (writtenCourses.length) {
+            docHtml += `<div style="page-break-inside: avoid; break-inside: avoid; -webkit-column-break-inside: avoid; -webkit-page-break-inside: avoid;">`;
             docHtml += `<div class="etypeBar" style="margin-top:8px;"><div class="label">کتبی</div></div>`;
             let courseIndex = 0;
             writtenCourses.forEach(course => {
@@ -3590,6 +3617,7 @@ async function printEssentialsReproduction() {
                 docHtml += `</tbody></table>`;
                 docHtml += `</div></div>`;
             });
+            docHtml += `</div>`;
         }
 
         docHtml += `</div></body></html>`;
@@ -3640,8 +3668,7 @@ async function printEssentialsReproduction() {
             if (cw) {
                 cw.onafterprint = cleanup;
                 window.addEventListener('focus', onFocusOnce, true);
-                cw.focus();
-                cw.print();
+                try { safePrintIframe(iframe, cw); } catch (e) { console.error('Print invoke error:', e); }
                 setTimeout(cleanup, 5000);
             } else {
                 setTimeout(cleanup, 300);
@@ -3722,8 +3749,7 @@ async function printEssentialsDescriptive() {
             if (cw) {
                 cw.onafterprint = cleanup;
                 window.addEventListener('focus', onFocusOnce, true);
-                cw.focus();
-                cw.print();
+                try { safePrintIframe(iframe, cw); } catch (e) { console.error('Print invoke error:', e); }
                 setTimeout(cleanup, 5000);
             } else {
                 setTimeout(cleanup, 300);
@@ -3804,8 +3830,7 @@ async function printEssentialsTest() {
             if (cw) {
                 cw.onafterprint = cleanup;
                 window.addEventListener('focus', onFocusOnce, true);
-                cw.focus();
-                cw.print();
+                try { safePrintIframe(iframe, cw); } catch (e) { console.error('Print invoke error:', e); }
                 setTimeout(cleanup, 5000);
             } else {
                 setTimeout(cleanup, 300);
