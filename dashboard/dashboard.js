@@ -8,8 +8,28 @@ function isDesktopDevice() {
 
 // Global safety: if any print dialog closes (printed or canceled), ensure any pending loader closes
 try {
-    window.addEventListener('afterprint', () => { try { Swal.close(); } catch (e) { } }, false);
+    window.addEventListener('afterprint', () => { try { closeSwalLoadingHard(); } catch (e) {} }, false);
 } catch (e) { /* ignore */ }
+
+// Hard-close any SweetAlert loading spinner left in DOM
+function closeSwalLoadingHard() {
+    try {
+        if (window.Swal && typeof Swal.close === 'function') {
+            try { Swal.close(); } catch (e) {}
+        }
+    } catch (e) {}
+    try {
+        const nodes = document.querySelectorAll('.swal2-container, .swal2-popup, .swal2-backdrop-show, .swal2-loading, .swal2-actions.swal2-loading');
+        nodes.forEach(el => {
+            try {
+                const isLoading = el.getAttribute && el.getAttribute('data-loading') === 'true';
+                if (isLoading || el.classList.contains('swal2-loading')) {
+                    el.remove();
+                }
+            } catch (e) { /* ignore node issues */ }
+        });
+    } catch (e) { /* ignore */ }
+}
 
 // Build and open a printable "صورتجلسه آزمون" (session report).
 // Uses the same exam date/time displayed in #nextExamDateTime and calls API/getNextExamReport.php
@@ -3318,7 +3338,7 @@ async function printEssentialsSecretary() {
         const cleanup = () => {
             if (cleaned) return;
             cleaned = true;
-            try { Swal.close(); } catch (e) { }
+            try { closeSwalLoadingHard(); } catch (e) { }
             try { document.body.removeChild(iframe); } catch (e) { }
             try { window.removeEventListener('focus', onFocusOnce, true); } catch (e) { }
         };
@@ -3576,7 +3596,7 @@ async function printEssentialsReproduction() {
         const cleanup = () => {
             if (cleaned) return;
             cleaned = true;
-            try { Swal.close(); } catch (e) { }
+            try { closeSwalLoadingHard(); } catch (e) { }
             try { document.body.removeChild(iframe); } catch (e) { }
             try { window.removeEventListener('focus', onFocusOnce, true); } catch (e) { }
         };
@@ -3657,7 +3677,7 @@ async function printEssentialsDescriptive() {
         const cleanup = () => {
             if (cleaned) return;
             cleaned = true;
-            try { Swal.close(); } catch (e) { }
+            try { closeSwalLoadingHard(); } catch (e) { }
             try { document.body.removeChild(iframe); } catch (e) { }
             try { window.removeEventListener('focus', onFocusOnce, true); } catch (e) { }
         };
@@ -3738,7 +3758,7 @@ async function printEssentialsTest() {
         const cleanup = () => {
             if (cleaned) return;
             cleaned = true;
-            try { Swal.close(); } catch (e) { }
+            try { closeSwalLoadingHard(); } catch (e) { }
             try { document.body.removeChild(iframe); } catch (e) { }
             try { window.removeEventListener('focus', onFocusOnce, true); } catch (e) { }
         };
