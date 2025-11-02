@@ -1,3 +1,3 @@
 // Application version exposed to frontend
-// Bumped for release 3.1.2
-window.APP_VERSION = '3.1.2';
+// Bumped for release 3.2.0
+window.APP_VERSION = '3.2.0';
