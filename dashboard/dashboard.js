@@ -3218,11 +3218,12 @@ async function printEssentialsSecretary() {
             .header .meta { font-size: 12pt; margin-top:4px; color:#000; font-weight:700; }
             .course { margin-top: 3mm; page-break-inside: avoid; break-inside: avoid; -webkit-column-break-inside: avoid; -webkit-page-break-inside: avoid; }
             .course .course-head { font-weight:800; font-size:12.5pt; margin-bottom:2px; }
+            .course-inner { width:96%; margin:0 auto; }
             .course-header { width:100%; margin-bottom:2px; border-collapse:collapse; table-layout:fixed; }
             .course-header td { box-sizing:border-box; }
-            .course-header .course-index { width:8%; background:#000; color:#fff; text-align:center; font-weight:900; padding:4px 0; border-radius:4px; font-size:11pt; }
-            .course-header .course-info { width:75%; text-align:right; font-size:13pt; font-weight:700; padding:0 8px 0 0; }
-            .course-header .course-total { width:17%; text-align:left; font-size:12pt; font-weight:700; padding:0 0 0 6px; }
+            .course-header .course-index { width:6%; background:#000; color:#fff; text-align:center; font-weight:900; padding:4px 0; border-radius:4px; font-size:11pt; box-sizing:border-box; }
+            .course-header .course-info { width:74%; text-align:right; font-size:13pt; font-weight:700; padding:0 8px 0 0; box-sizing:border-box; }
+            .course-header .course-total { width:20%; text-align:left; font-size:12pt; font-weight:700; padding:0 0 0 8px; box-sizing:border-box; white-space:nowrap; }
             .nested { margin-top:4px; border-collapse:collapse; width:100%; box-sizing:border-box; table-layout:fixed; max-width:100%; min-width:0; }
             .nested, .nested th, .nested td { box-sizing: border-box; }
             .nested th, .nested td { border:1px solid #ddd; padding:3px 6px; text-align:right; overflow-wrap:anywhere; word-break:break-word; }
@@ -3232,7 +3233,7 @@ async function printEssentialsSecretary() {
             .course-type-group { width:96%; text-align:center; margin:0 auto 6px auto; }
             /* full-width black bar for exam type */
             .etypeBar { display:block; width:100%; text-align:center; }
-            .etypeBar .label { display:block; width:100%; background:#000; color:#fff; font-weight:900; padding:8px 0; border-radius:0; font-size:15pt; }
+            .etypeBar .label { display:block; width:100%; background:#000; color:#fff; font-weight:900; padding:8px 0; border-radius:0; font-size:15pt; box-sizing:border-box; }
             @media print { .no-print { display:none !important; } }
         </style></head><body>`;
 
@@ -3302,10 +3303,10 @@ async function printEssentialsSecretary() {
 
                 // render nested table: order from/to/count before building/class
                 docHtml += `<table class="nested" style="table-layout:fixed;width:100%;page-break-inside:avoid;min-width:0;"><thead><tr>` +
-                    `<th style="width:12%;text-align:center;">از شماره</th>` +
-                    `<th style="width:12%;text-align:center;">تا شماره</th>` +
-                    `<th style="width:12%;text-align:center;">تعداد</th>` +
-                    `<th style="width:34%;text-align:center;">ساختمان</th>` +
+                    `<th style="width:11%;text-align:center;">از شماره</th>` +
+                    `<th style="width:11%;text-align:center;">تا شماره</th>` +
+                    `<th style="width:11%;text-align:center;">تعداد</th>` +
+                    `<th style="width:33%;text-align:center;">ساختمان</th>` +
                     `<th style="width:30%;text-align:center;">کلاس / اتاق</th>` +
                     `</tr></thead><tbody>`;
                 const gkeys = Object.keys(groups);
