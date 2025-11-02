@@ -91,7 +91,7 @@ self.addEventListener('activate', event => {
             tagVersion: `نسخه ${VERSION}`,
             // release headline requested by product owner
             changes: [
-              'اصلاح تراز و چینش جداول در گزارش ملزومات اتاق تکثیر'
+              'اصلاح تراز جداول در گزارش ملزومات اتاق تکثیر'
             ]
           });
         });
