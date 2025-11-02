@@ -19,15 +19,25 @@ function closeSwalLoadingHard() {
         }
     } catch (e) { }
     try {
-        const nodes = document.querySelectorAll('.swal2-container, .swal2-popup, .swal2-backdrop-show, .swal2-loading, .swal2-actions.swal2-loading');
-        nodes.forEach(el => {
-            try {
-                const isLoading = el.getAttribute && el.getAttribute('data-loading') === 'true';
-                if (isLoading || el.classList.contains('swal2-loading')) {
-                    el.remove();
-                }
-            } catch (e) { /* ignore node issues */ }
-        });
+        // If a loading popup exists, remove its container entirely
+        const loadingPopup = document.querySelector('.swal2-popup.swal2-loading');
+        if (loadingPopup) {
+            const container = loadingPopup.closest('.swal2-container');
+            if (container) {
+                container.remove();
+            } else {
+                loadingPopup.remove();
+            }
+        }
+        // As a safety net, remove any stray containers/backdrops
+        document.querySelectorAll('.swal2-container').forEach(el => { try { el.remove(); } catch (e) {} });
+        document.querySelectorAll('.swal2-backdrop-show').forEach(el => { try { el.remove(); } catch (e) {} });
+        // Clear SweetAlert body flags/paddings
+        document.body && document.body.classList && document.body.classList.remove('swal2-shown');
+        document.documentElement && document.documentElement.classList && document.documentElement.classList.remove('swal2-shown');
+        if (document.body) {
+            try { document.body.style.removeProperty('padding-right'); } catch (e) {}
+        }
     } catch (e) { /* ignore */ }
 }
 
