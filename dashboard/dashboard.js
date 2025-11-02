@@ -3221,15 +3221,15 @@ async function printEssentialsSecretary() {
             .course-header { width:100%; margin-bottom:2px; border-collapse:collapse; table-layout:fixed; }
             .course-header td { box-sizing:border-box; }
             .course-header .course-index { width:8%; background:#000; color:#fff; text-align:center; font-weight:900; padding:4px 0; border-radius:4px; font-size:11pt; }
-            .course-header .course-info { width:77%; text-align:right; font-size:13pt; font-weight:700; padding:0 8px 0 0; }
-            .course-header .course-total { width:15%; text-align:left; font-size:12pt; font-weight:700; padding:0 4px 0 0; }
+            .course-header .course-info { width:75%; text-align:right; font-size:13pt; font-weight:700; padding:0 8px 0 0; }
+            .course-header .course-total { width:17%; text-align:left; font-size:12pt; font-weight:700; padding:0 0 0 6px; }
             .nested { margin-top:4px; border-collapse:collapse; width:100%; box-sizing:border-box; table-layout:fixed; max-width:100%; min-width:0; }
             .nested, .nested th, .nested td { box-sizing: border-box; }
             .nested th, .nested td { border:1px solid #ddd; padding:3px 6px; text-align:right; overflow-wrap:anywhere; word-break:break-word; }
             .nested thead th { background:#f1f1f1; font-weight:700; text-align:center; font-size:10pt; }
             .nested thead { display: table-header-group; }
             .small { font-size:10pt; color:#555; }
-            .course-type-group { width:100%; text-align:center; margin-bottom:6px; }
+            .course-type-group { width:96%; text-align:center; margin:0 auto 6px auto; }
             /* full-width black bar for exam type */
             .etypeBar { display:block; width:100%; text-align:center; }
             .etypeBar .label { display:block; width:100%; background:#000; color:#fff; font-weight:900; padding:8px 0; border-radius:0; font-size:15pt; }
@@ -3249,8 +3249,8 @@ async function printEssentialsSecretary() {
         const students = report.students || [];
         const courses = report.courses || [];
 
-        // Secretary report shows only written exam courses
-        const examOrder = ['کتبی'];
+    // Show both sections in secretary list: electronic first, then written
+    const examOrder = ['الکترونیکی', 'کتبی'];
         const usedCourses = new Set();
 
         let hadPrevTypeCourses = false;
@@ -3274,7 +3274,7 @@ async function printEssentialsSecretary() {
             for (const course of coursesForType) {
                 // start per-course container so we can force page-breaks for کتبی courses
                 // wrap the whole course block and try to avoid splitting it across pages
-                docHtml += `<div class="course" style="page-break-inside: avoid; break-inside: avoid; -webkit-column-break-inside: avoid; -webkit-page-break-inside: avoid;">`;
+                docHtml += `<div class="course" style="page-break-inside: avoid; break-inside: avoid; -webkit-column-break-inside: avoid; -webkit-page-break-inside: avoid;"><div class="course-inner">`;
                 usedCourses.add(course.course_code);
                 // students for this course and exam type
                 const stu = students.filter(s => s.course_code === course.course_code && (s.exam_type || '') === exType);
@@ -3335,7 +3335,7 @@ async function printEssentialsSecretary() {
                 }
                 docHtml += `</tbody></table>`;
                 // close per-course container
-                docHtml += `</div>`;
+                docHtml += `</div></div>`;
                 hadPrevTypeCourses = true;
             }
 
