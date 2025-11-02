@@ -3217,7 +3217,6 @@ async function printEssentialsSecretary() {
             .header .title { font-size: 16pt; font-weight:900; margin-top:0; }
             .header .meta { font-size: 12pt; margin-top:4px; color:#000; font-weight:700; }
             .course { margin-top: 3mm; page-break-inside: avoid; break-inside: avoid; -webkit-column-break-inside: avoid; -webkit-page-break-inside: avoid; }
-            .course-inner { width:95%; margin:0 auto; }
             .course .course-head { font-weight:800; font-size:12.5pt; margin-bottom:2px; }
             .course-header { width:100%; margin-bottom:2px; border-collapse:collapse; table-layout:fixed; }
             .course-header td { box-sizing:border-box; }
@@ -3275,7 +3274,7 @@ async function printEssentialsSecretary() {
             for (const course of coursesForType) {
                 // start per-course container so we can force page-breaks for کتبی courses
                 // wrap the whole course block and try to avoid splitting it across pages
-                docHtml += `<div class="course" style="page-break-inside: avoid; break-inside: avoid; -webkit-column-break-inside: avoid; -webkit-page-break-inside: avoid;"><div class="course-inner">`;
+                docHtml += `<div class="course" style="page-break-inside: avoid; break-inside: avoid; -webkit-column-break-inside: avoid; -webkit-page-break-inside: avoid;">`;
                 usedCourses.add(course.course_code);
                 // students for this course and exam type
                 const stu = students.filter(s => s.course_code === course.course_code && (s.exam_type || '') === exType);
@@ -3336,7 +3335,7 @@ async function printEssentialsSecretary() {
                 }
                 docHtml += `</tbody></table>`;
                 // close per-course container
-                docHtml += `</div></div>`;
+                docHtml += `</div>`;
                 hadPrevTypeCourses = true;
             }
 
@@ -3527,41 +3526,31 @@ async function printEssentialsReproduction() {
         const students = report.students || [];
         const courses = report.courses || [];
 
-        // 1) Electronic section: same layout as written but simplified content
+        // 1) Electronic section: summary rows only (course code + name + count)
         const electronicCourses = courses.filter(c => students.some(st => st.course_code === c.course_code && (st.exam_type || '') === 'الکترونیکی'));
         if (electronicCourses.length) {
             docHtml += `<div class="etypeBar"><div class="label">الکترونیکی</div></div>`;
+            // Use same inner container width as written to avoid left overflow
+            docHtml += `<div class="course" style="page-break-inside: avoid; break-inside: avoid; -webkit-column-break-inside: avoid; -webkit-page-break-inside: avoid;"><div class="course-inner">`;
+            docHtml += `<table class="simple-list"><thead><tr><th style="width:8%">#</th><th style="width:18%">کد</th><th>نام درس</th><th style="width:18%">تعداد</th></tr></thead><tbody>`;
             let i = 0;
             electronicCourses.forEach(course => {
                 const cnt = students.filter(s => s.course_code === course.course_code && (s.exam_type || '') === 'الکترونیکی').length;
                 if (cnt > 0) {
                     i += 1;
-                    docHtml += `<div class="course" style="page-break-inside: avoid; break-inside: avoid; -webkit-column-break-inside: avoid; -webkit-page-break-inside: avoid;"><div class="course-inner">`;
-                    docHtml += `<table class="course-header"><tr>` +
-                        `<td class="course-index">${toPersianDigits(i)}</td>` +
-                        `<td class="course-info">${toPersianDigits(`${esc(course.course_code)} | ${esc(course.course_name || '')}`)}</td>` +
-                        `<td class="course-total">${toPersianDigits(cnt)} نفر</td>` +
-                        `</tr></table>`;
-
-                    // Simplified nested table for electronic: just total count
-                    docHtml += `<table class="nested" style="table-layout:fixed;width:100%;page-break-inside:avoid;min-width:0;"><thead><tr>` +
-                        `<th style="width:12%;text-align:center;">از شماره</th>` +
-                        `<th style="width:12%;text-align:center;">تا شماره</th>` +
-                        `<th style="width:12%;text-align:center;">تعداد</th>` +
-                        `<th style="width:34%;text-align:center;">ساختمان</th>` +
-                        `<th style="width:30%;text-align:center;">کلاس / اتاق</th>` +
-                        `</tr></thead><tbody>`;
+                    const codeCell = toPersianDigits(esc(course.course_code || ''));
+                    const nameCell = toPersianDigits(esc(course.course_name || ''));
                     docHtml += `<tr>` +
-                        `<td style="text-align:center;padding:3px 6px;font-size:11pt;">-</td>` +
-                        `<td style="text-align:center;padding:3px 6px;font-size:11pt;">-</td>` +
-                        `<td style="text-align:center;padding:3px 6px;font-size:11pt;">${toPersianDigits(cnt)}</td>` +
-                        `<td style="padding:3px 6px;font-size:10pt;text-align:right;">الکترونیکی</td>` +
-                        `<td style="padding:3px 6px;font-size:10pt;text-align:right;">-</td>` +
+                        `<td style=\"text-align:center;font-weight:700;\">${toPersianDigits(i)}</td>` +
+                        `<td style=\"text-align:center;\">${codeCell}</td>` +
+                        `<td style=\"text-align:right;\">${nameCell}</td>` +
+                        `<td style=\"text-align:center;font-weight:700;\">${toPersianDigits(cnt)}</td>` +
                         `</tr>`;
-                    docHtml += `</tbody></table>`;
-                    docHtml += `</div></div>`;
                 }
             });
+            if (i === 0) docHtml += `<tr><td colspan=\"4\" style=\"text-align:center\">بدون درس الکترونیکی</td></tr>`;
+            docHtml += `</tbody></table>`;
+            docHtml += `</div></div>`;
         }
 
         // 2) Written section: full detail like secretary
