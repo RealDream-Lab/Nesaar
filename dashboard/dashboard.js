@@ -938,7 +938,7 @@ function loadChartJsIfNeeded() {
                         try { configureChartDefaults(); } catch (e) { /* ignore */ }
                         return resolve();
                     }
-                    return reject(new Error('Chart.js loaded but Chart is undefined'));
+                    return reject(new Error('Failed to load Chart.js'));
                 };
                 script.onerror = () => reject(new Error('Failed to load Chart.js'));
                 document.head.appendChild(script);
@@ -3127,31 +3127,39 @@ async function printEssentialsSecretary() {
             @page { size: A4 portrait; margin: 6mm; }
             html, body { margin: 0; padding: 0; }
             body { font-family: Vazir, Tahoma, Arial, sans-serif; color: #111; font-size: 11pt; }
-            body { counter-reset: page; }
-            .page { width: 210mm; min-height: 297mm; box-sizing: border-box; padding: 8mm; }
-            .header { background: transparent; color: #000; padding: 6px 8px; text-align: center; }
-            .header .title { font-size: 22pt; font-weight:900; }
-            .header .meta { font-size: 14pt; margin-top:6px; color:#000; }
-            .course { margin-top: 10mm; }
-            .course { page-break-inside: avoid; }
-            .course .course-head { font-weight:800; font-size:12.5pt; margin-bottom:6px; }
-            .nested { margin-top:6px; border-collapse:collapse; width:100%; }
-            .nested th, .nested td { border:1px solid #ddd; padding:6px 8px; text-align:right; }
-            .nested thead th { background:#f1f1f1; font-weight:700; }
+            .page { width: 210mm; min-height: 297mm; box-sizing: border-box; padding: 6mm 8mm 8mm 8mm; overflow: visible; }
+            .header { background: transparent; color: #000; padding: 2px 4px 4px 4px; text-align: center; margin-bottom:4px; }
+            .header .title { font-size: 16pt; font-weight:900; margin-top:0; }
+            .header .meta { font-size: 12pt; margin-top:4px; color:#000; font-weight:700; }
+            .course { margin-top: 3mm; page-break-inside: avoid; break-inside: avoid; -webkit-column-break-inside: avoid; -webkit-page-break-inside: avoid; }
+            .course-inner { width:95%; margin:0 auto; }
+            .course .course-head { font-weight:800; font-size:12.5pt; margin-bottom:2px; }
+            .course-header { width:100%; margin-bottom:2px; border-collapse:collapse; table-layout:fixed; }
+            .course-header td { box-sizing:border-box; }
+            .course-header .course-index { width:8%; background:#000; color:#fff; text-align:center; font-weight:900; padding:4px 0; border-radius:4px; font-size:11pt; }
+            .course-header .course-info { width:77%; text-align:right; font-size:13pt; font-weight:700; padding:0 8px 0 0; }
+            .course-header .course-total { width:15%; text-align:left; font-size:12pt; font-weight:700; padding:0 4px 0 0; }
+            .nested { margin-top:4px; border-collapse:collapse; width:100%; box-sizing:border-box; table-layout:fixed; max-width:100%; min-width:0; }
+            .nested, .nested th, .nested td { box-sizing: border-box; }
+            .nested th, .nested td { border:1px solid #ddd; padding:3px 6px; text-align:right; overflow-wrap:anywhere; word-break:break-word; }
+            .nested thead th { background:#f1f1f1; font-weight:700; text-align:center; font-size:10pt; }
+            .nested thead { display: table-header-group; }
             .small { font-size:10pt; color:#555; }
-            .printed-footer { position: fixed; left: 0; right: 0; bottom: 6mm; text-align:center; font-size:10pt; color:#666; }
-            .printed-footer::after { content: "صفحه " counter(page); }
+            .course-type-group { width:100%; text-align:center; margin-bottom:6px; }
+            /* full-width black bar for exam type */
+            .etypeBar { display:block; width:100%; text-align:center; }
+            .etypeBar .label { display:block; width:100%; background:#000; color:#fff; font-weight:900; padding:8px 0; border-radius:0; font-size:15pt; }
             @media print { .no-print { display:none !important; } }
         </style></head><body>`;
 
-    // Header: white background, black text, larger date/time
-    const examDate = report.exam_date || '';
-    const examTime = report.exam_time || '';
-    docHtml += `<div class="page">`;
-    docHtml += `<div class="header" style="background:transparent;color:#000;padding:8px 4px;text-align:center;">` +
-           `<div class="title" style="font-size:20pt;font-weight:900;color:#000;">لیست منشی جلسه</div>` +
-           `<div class="meta" style="font-size:16pt;margin-top:6px;color:#000;font-weight:700;">${toPersianDigits(examDate)} &nbsp; ${toPersianDigits(examTime)}</div>` +
-           `</div>`;
+        // Header: white background, black text, larger date/time
+        const examDate = report.exam_date || '';
+        const examTime = report.exam_time || '';
+        docHtml += `<div class="page">`;
+        docHtml += `<div class="header" style="background:transparent;color:#000;padding:4px 2px 6px 2px;text-align:center;">` +
+            `<div class="title" style="font-size:16pt;font-weight:900;color:#000;margin-bottom:2px;">لیست منشی جلسه</div>` +
+            `<div class="meta" style="font-size:12pt;margin-top:2px;color:#000;font-weight:700;">${toPersianDigits(examTime)} &nbsp; | &nbsp; ${toPersianDigits(examDate)}</div>` +
+            `</div>`;
 
         // Prepare students and courses
         const students = report.students || [];
@@ -3161,6 +3169,9 @@ async function printEssentialsSecretary() {
         const examOrder = ['الکترونیکی', 'کتبی'];
         const usedCourses = new Set();
 
+        let insertedWrittenBreak = false;
+        let hadPrevTypeCourses = false;
+        let courseIndex = 0; // global running index for displayed course rows
         for (const exType of examOrder.concat([''])) {
             // find courses that have students with this exam type
             const coursesForType = courses.filter(c => {
@@ -3169,24 +3180,30 @@ async function printEssentialsSecretary() {
             });
             if (!coursesForType.length) continue;
 
-            // exam type header: bold, light text on dark background
-            docHtml += `<div class="course-type-group">`;
-            docHtml += `<div class="etype" style="display:inline-block;background:#000;color:#fff;font-weight:900;padding:6px 12px;border-radius:6px;font-size:16pt;margin-bottom:10px;">${esc(exType || 'سایر')}</div>`;
-            docHtml += `<div style="height:8px"></div>`;
+            // For written exams (کتبی) insert a single page-break before the whole group
+            // if (exType === 'کتبی' && hadPrevTypeCourses && !insertedWrittenBreak) {
+            //     docHtml += `<div style="page-break-before: always;"></div>`;
+            //     insertedWrittenBreak = true;
+            // }
+
+            // exam type header: full-width black bar with centered white bold text
+            docHtml += `<div class="course-type-group"><div class="etypeBar"><div class="label">${esc(exType || 'سایر')}</div></div></div>`;
 
             for (const course of coursesForType) {
                 // start per-course container so we can force page-breaks for کتبی courses
-                const mustPageBreakBefore = (course.course_type === 'کتبی');
-                docHtml += `<div class="course" style="${mustPageBreakBefore ? 'page-break-before: always;' : ''} page-break-inside: avoid;">`;
+                // wrap the whole course block and try to avoid splitting it across pages
+                docHtml += `<div class="course" style="page-break-inside: avoid; break-inside: avoid; -webkit-column-break-inside: avoid; -webkit-page-break-inside: avoid;"><div class="course-inner">`;
                 usedCourses.add(course.course_code);
                 // students for this course and exam type
                 const stu = students.filter(s => s.course_code === course.course_code && (s.exam_type || '') === exType);
                 const total = stu.length;
-                // Course header: code | name  and count on the left as "NN نفر"
-                docHtml += `<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">` +
-                           `<div style="font-size:13pt;font-weight:700;">${esc(course.course_code)} | ${esc(course.course_name || '')}</div>` +
-                           `<div style="font-size:12pt;color:#000;font-weight:700;">${toPersianDigits(total)} نفر</div>` +
-                           `</div>`;
+                // Course header: row index | code | name  and count on the left as "NN نفر"
+                courseIndex += 1;
+                docHtml += `<table class="course-header"><tr>` +
+                    `<td class="course-index">${toPersianDigits(courseIndex)}</td>` +
+                    `<td class="course-info">${esc(course.course_code)} | ${esc(course.course_name || '')}</td>` +
+                    `<td class="course-total">${toPersianDigits(total)} نفر</td>` +
+                    `</tr></table>`;
 
                 // Group by building + class_name
                 const groups = {};
@@ -3202,13 +3219,13 @@ async function printEssentialsSecretary() {
                 });
 
                 // render nested table: order from/to/count before building/class
-                docHtml += `<table class="nested" style="table-layout:fixed;width:100%;page-break-inside:avoid;"><thead><tr>` +
-                           `<th style="width:12%;text-align:center;">از شماره</th>` +
-                           `<th style="width:12%;text-align:center;">تا شماره</th>` +
-                           `<th style="width:10%;text-align:center;">تعداد</th>` +
-                           `<th style="width:36%;text-align:center;">ساختمان</th>` +
-                           `<th style="width:30%;text-align:center;">کلاس / اتاق</th>` +
-                           `</tr></thead><tbody>`;
+                docHtml += `<table class="nested" style="table-layout:fixed;width:100%;page-break-inside:avoid;min-width:0;"><thead><tr>` +
+                    `<th style="width:12%;text-align:center;">از شماره</th>` +
+                    `<th style="width:12%;text-align:center;">تا شماره</th>` +
+                    `<th style="width:12%;text-align:center;">تعداد</th>` +
+                    `<th style="width:34%;text-align:center;">ساختمان</th>` +
+                    `<th style="width:30%;text-align:center;">کلاس / اتاق</th>` +
+                    `</tr></thead><tbody>`;
                 const gkeys = Object.keys(groups);
                 if (!gkeys.length) {
                     docHtml += `<tr><td colspan="5" style="text-align:center">بدون اطلاعات کروکی برای این درس</td></tr>`;
@@ -3226,17 +3243,18 @@ async function printEssentialsSecretary() {
                     rows.sort((a, b) => (a.building.localeCompare(b.building, 'fa') || a.class_name.localeCompare(b.class_name, 'fa') || a.start - b.start));
                     rows.forEach(r => {
                         docHtml += `<tr>` +
-                                   `<td style="text-align:center;padding:6px 8px;">${toPersianDigits(r.start)}</td>` +
-                                   `<td style="text-align:center;padding:6px 8px;">${toPersianDigits(r.end)}</td>` +
-                                   `<td style="text-align:center;padding:6px 8px;">${toPersianDigits(r.count)}</td>` +
-                                   `<td style="padding:6px 8px;">${esc(r.building)}</td>` +
-                                   `<td style="padding:6px 8px;">${esc(r.class_name)}</td>` +
-                                   `</tr>`;
+                            `<td style="text-align:center;padding:3px 6px;font-size:11pt;">${toPersianDigits(r.start)}</td>` +
+                            `<td style="text-align:center;padding:3px 6px;font-size:11pt;">${toPersianDigits(r.end)}</td>` +
+                            `<td style="text-align:center;padding:3px 6px;font-size:11pt;">${toPersianDigits(r.count)}</td>` +
+                            `<td style="padding:3px 6px;font-size:10pt;text-align:right;">${esc(r.building)}</td>` +
+                            `<td style="padding:3px 6px;font-size:10pt;text-align:right;">${esc(r.class_name)}</td>` +
+                            `</tr>`;
                     });
                 }
                 docHtml += `</tbody></table>`;
                 // close per-course container
-                docHtml += `</div>`;
+                docHtml += `</div></div>`;
+                hadPrevTypeCourses = true;
             }
 
             docHtml += `</div>`; // end course-type-group
@@ -3254,9 +3272,9 @@ async function printEssentialsSecretary() {
             docHtml += `</div>`;
         }
 
-    // add a fixed footer which will show page numbers when printing
-    docHtml += `<div class="printed-footer"></div>`;
-    docHtml += `</div></body></html>`;
+        // add a fixed footer which will show page numbers when printing. total will be filled by parent script.
+        // docHtml += `<div class="printed-footer"><span class="totalPages"></span></div>`;
+        docHtml += `</div></body></html>`;
 
         const iframe = document.createElement('iframe');
         iframe.style.position = 'fixed';
@@ -3274,6 +3292,8 @@ async function printEssentialsSecretary() {
         doc.close();
 
         try { Swal.close(); } catch (e) { }
+
+        // Calculate total pages by measuring the iframe document height vs A4 pixel height, then set the totalPages span
         setTimeout(() => {
             try { iframe.contentWindow.focus(); iframe.contentWindow.print(); } catch (e) { console.error('Print error:', e); }
             setTimeout(() => { try { document.body.removeChild(iframe); } catch (e) { } }, 500);
