@@ -8,7 +8,10 @@ function isDesktopDevice() {
 
 // Global safety: if any print dialog closes (printed or canceled), ensure any pending loader closes
 try {
-    window.addEventListener('afterprint', () => { try { closeSwalLoadingHard(); } catch (e) { } }, false);
+    window.addEventListener('afterprint', () => {
+        try { closeSwalLoadingHard(); } catch (e) {}
+        try { reopenEssentialsMenuIfRequested(); } catch (e) {}
+    }, false);
 } catch (e) { /* ignore */ }
 
 // Hard-close any SweetAlert loading spinner left in DOM
@@ -28,6 +31,16 @@ function closeSwalLoadingHard() {
                 }
             } catch (e) { /* ignore node issues */ }
         });
+    } catch (e) { /* ignore */ }
+}
+
+// If user started an essentials print from the menu, re-open the menu after print closes
+function reopenEssentialsMenuIfRequested() {
+    try {
+        if (window._reopenEssentialsMenu) {
+            window._reopenEssentialsMenu = false;
+            setTimeout(() => { try { examEssentialsHandler(); } catch (e) { console.error('Reopen menu failed:', e); } }, 200);
+        }
     } catch (e) { /* ignore */ }
 }
 
@@ -3088,6 +3101,8 @@ async function examEssentialsHandler() {
 // Uses a short delay to ensure SweetAlert has time to remove DOM nodes
 // before we open a new loading modal inside the print function.
 function startEssentialsPrint(kind) {
+    // Mark that we want to reopen the essentials menu after the print dialog closes
+    try { window._reopenEssentialsMenu = true; } catch (e) { window._reopenEssentialsMenu = true; }
     try { Swal.close(); } catch (e) { /* ignore */ }
     // small delay to allow SweetAlert teardown (animations/DOM) to complete
     setTimeout(() => {
@@ -3359,6 +3374,7 @@ async function printEssentialsSecretary() {
             try { closeSwalLoadingHard(); } catch (e) { }
             try { document.body.removeChild(iframe); } catch (e) { }
             try { window.removeEventListener('focus', onFocusOnce, true); } catch (e) { }
+            try { reopenEssentialsMenuIfRequested(); } catch (e) { }
         };
         const onFocusOnce = () => { setTimeout(cleanup, 150); };
         try {
@@ -3617,6 +3633,7 @@ async function printEssentialsReproduction() {
             try { closeSwalLoadingHard(); } catch (e) { }
             try { document.body.removeChild(iframe); } catch (e) { }
             try { window.removeEventListener('focus', onFocusOnce, true); } catch (e) { }
+            try { reopenEssentialsMenuIfRequested(); } catch (e) { }
         };
         const onFocusOnce = () => { setTimeout(cleanup, 150); };
         try {
@@ -3698,6 +3715,7 @@ async function printEssentialsDescriptive() {
             try { closeSwalLoadingHard(); } catch (e) { }
             try { document.body.removeChild(iframe); } catch (e) { }
             try { window.removeEventListener('focus', onFocusOnce, true); } catch (e) { }
+            try { reopenEssentialsMenuIfRequested(); } catch (e) { }
         };
         const onFocusOnce = () => { setTimeout(cleanup, 150); };
         try {
@@ -3779,6 +3797,7 @@ async function printEssentialsTest() {
             try { closeSwalLoadingHard(); } catch (e) { }
             try { document.body.removeChild(iframe); } catch (e) { }
             try { window.removeEventListener('focus', onFocusOnce, true); } catch (e) { }
+            try { reopenEssentialsMenuIfRequested(); } catch (e) { }
         };
         const onFocusOnce = () => { setTimeout(cleanup, 150); };
         try {
