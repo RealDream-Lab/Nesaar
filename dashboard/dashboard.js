@@ -30,13 +30,13 @@ function closeSwalLoadingHard() {
             }
         }
         // As a safety net, remove any stray containers/backdrops
-        document.querySelectorAll('.swal2-container').forEach(el => { try { el.remove(); } catch (e) {} });
-        document.querySelectorAll('.swal2-backdrop-show').forEach(el => { try { el.remove(); } catch (e) {} });
+        document.querySelectorAll('.swal2-container').forEach(el => { try { el.remove(); } catch (e) { } });
+        document.querySelectorAll('.swal2-backdrop-show').forEach(el => { try { el.remove(); } catch (e) { } });
         // Clear SweetAlert body flags/paddings
         document.body && document.body.classList && document.body.classList.remove('swal2-shown');
         document.documentElement && document.documentElement.classList && document.documentElement.classList.remove('swal2-shown');
         if (document.body) {
-            try { document.body.style.removeProperty('padding-right'); } catch (e) {}
+            try { document.body.style.removeProperty('padding-right'); } catch (e) { }
         }
     } catch (e) { /* ignore */ }
 }
@@ -3351,13 +3351,19 @@ async function printEssentialsSecretary() {
             try { closeSwalLoadingHard(); } catch (e) { }
             try { document.body.removeChild(iframe); } catch (e) { }
             try { window.removeEventListener('focus', onFocusOnce, true); } catch (e) { }
+            try { document.removeEventListener('visibilitychange', onVisibility, true); } catch (e) { }
+            try { window.removeEventListener('pageshow', onPageShow, true); } catch (e) { }
         };
         const onFocusOnce = () => { setTimeout(cleanup, 150); };
+        const onVisibility = () => { if (document.visibilityState === 'visible') setTimeout(cleanup, 100); };
+        const onPageShow = () => { setTimeout(cleanup, 100); };
         try {
             if (cw) {
                 cw.onafterprint = cleanup;
                 // Safari/Firefox fallback: when print dialog closes, focus returns to window
                 window.addEventListener('focus', onFocusOnce, true);
+                document.addEventListener('visibilitychange', onVisibility, true);
+                window.addEventListener('pageshow', onPageShow, true);
                 cw.focus();
                 cw.print();
                 // Absolute fallback in case neither event fires
@@ -3609,12 +3615,18 @@ async function printEssentialsReproduction() {
             try { closeSwalLoadingHard(); } catch (e) { }
             try { document.body.removeChild(iframe); } catch (e) { }
             try { window.removeEventListener('focus', onFocusOnce, true); } catch (e) { }
+            try { document.removeEventListener('visibilitychange', onVisibility, true); } catch (e) { }
+            try { window.removeEventListener('pageshow', onPageShow, true); } catch (e) { }
         };
         const onFocusOnce = () => { setTimeout(cleanup, 150); };
+        const onVisibility = () => { if (document.visibilityState === 'visible') setTimeout(cleanup, 100); };
+        const onPageShow = () => { setTimeout(cleanup, 100); };
         try {
             if (cw) {
                 cw.onafterprint = cleanup;
                 window.addEventListener('focus', onFocusOnce, true);
+                document.addEventListener('visibilitychange', onVisibility, true);
+                window.addEventListener('pageshow', onPageShow, true);
                 cw.focus();
                 cw.print();
                 setTimeout(cleanup, 5000);
@@ -3690,12 +3702,18 @@ async function printEssentialsDescriptive() {
             try { closeSwalLoadingHard(); } catch (e) { }
             try { document.body.removeChild(iframe); } catch (e) { }
             try { window.removeEventListener('focus', onFocusOnce, true); } catch (e) { }
+            try { document.removeEventListener('visibilitychange', onVisibility, true); } catch (e) { }
+            try { window.removeEventListener('pageshow', onPageShow, true); } catch (e) { }
         };
         const onFocusOnce = () => { setTimeout(cleanup, 150); };
+        const onVisibility = () => { if (document.visibilityState === 'visible') setTimeout(cleanup, 100); };
+        const onPageShow = () => { setTimeout(cleanup, 100); };
         try {
             if (cw) {
                 cw.onafterprint = cleanup;
                 window.addEventListener('focus', onFocusOnce, true);
+                document.addEventListener('visibilitychange', onVisibility, true);
+                window.addEventListener('pageshow', onPageShow, true);
                 cw.focus();
                 cw.print();
                 setTimeout(cleanup, 5000);
@@ -3771,12 +3789,18 @@ async function printEssentialsTest() {
             try { closeSwalLoadingHard(); } catch (e) { }
             try { document.body.removeChild(iframe); } catch (e) { }
             try { window.removeEventListener('focus', onFocusOnce, true); } catch (e) { }
+            try { document.removeEventListener('visibilitychange', onVisibility, true); } catch (e) { }
+            try { window.removeEventListener('pageshow', onPageShow, true); } catch (e) { }
         };
         const onFocusOnce = () => { setTimeout(cleanup, 150); };
+        const onVisibility = () => { if (document.visibilityState === 'visible') setTimeout(cleanup, 100); };
+        const onPageShow = () => { setTimeout(cleanup, 100); };
         try {
             if (cw) {
                 cw.onafterprint = cleanup;
                 window.addEventListener('focus', onFocusOnce, true);
+                document.addEventListener('visibilitychange', onVisibility, true);
+                window.addEventListener('pageshow', onPageShow, true);
                 cw.focus();
                 cw.print();
                 setTimeout(cleanup, 5000);
