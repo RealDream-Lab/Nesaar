@@ -19,25 +19,15 @@ function closeSwalLoadingHard() {
         }
     } catch (e) { }
     try {
-        // If a loading popup exists, remove its container entirely
-        const loadingPopup = document.querySelector('.swal2-popup.swal2-loading');
-        if (loadingPopup) {
-            const container = loadingPopup.closest('.swal2-container');
-            if (container) {
-                container.remove();
-            } else {
-                loadingPopup.remove();
-            }
-        }
-        // As a safety net, remove any stray containers/backdrops
-        document.querySelectorAll('.swal2-container').forEach(el => { try { el.remove(); } catch (e) { } });
-        document.querySelectorAll('.swal2-backdrop-show').forEach(el => { try { el.remove(); } catch (e) { } });
-        // Clear SweetAlert body flags/paddings
-        document.body && document.body.classList && document.body.classList.remove('swal2-shown');
-        document.documentElement && document.documentElement.classList && document.documentElement.classList.remove('swal2-shown');
-        if (document.body) {
-            try { document.body.style.removeProperty('padding-right'); } catch (e) { }
-        }
+        const nodes = document.querySelectorAll('.swal2-container, .swal2-popup, .swal2-backdrop-show, .swal2-loading, .swal2-actions.swal2-loading');
+        nodes.forEach(el => {
+            try {
+                const isLoading = el.getAttribute && el.getAttribute('data-loading') === 'true';
+                if (isLoading || el.classList.contains('swal2-loading')) {
+                    el.remove();
+                }
+            } catch (e) { /* ignore node issues */ }
+        });
     } catch (e) { /* ignore */ }
 }
 
@@ -3074,16 +3064,16 @@ async function examEssentialsHandler() {
         title: 'ملزومات جلسه آزمون',
         html: `
             <div style="display:flex;flex-direction:column;gap:12px;margin-top:1rem;">
-                <button id="essentialsSecretaryBtn" class="btn btn-primary w-100" style="padding:12px;font-size:1rem;font-weight:600;" onclick="try{ Swal.close(); printEssentialsSecretary(); }catch(e){ console.error(e); }">
+                <button id="essentialsSecretaryBtn" class="btn btn-primary w-100" style="padding:12px;font-size:1rem;font-weight:600;" onclick="try{ startEssentialsPrint('secretary'); }catch(e){ console.error(e); }">
                     ملزومات منشی جلسه
                 </button>
-                <button id="essentialsReproductionBtn" class="btn btn-primary w-100" style="padding:12px;font-size:1rem;font-weight:600;" onclick="try{ Swal.close(); printEssentialsReproduction(); }catch(e){ console.error(e); }">
+                <button id="essentialsReproductionBtn" class="btn btn-primary w-100" style="padding:12px;font-size:1rem;font-weight:600;" onclick="try{ startEssentialsPrint('reproduction'); }catch(e){ console.error(e); }">
                     ملزومات اتاق تکثیر
                 </button>
-                <button id="essentialsDescriptiveBtn" class="btn btn-primary w-100" style="padding:12px;font-size:1rem;font-weight:600;" onclick="try{ Swal.close(); printEssentialsDescriptive(); }catch(e){ console.error(e); }">
+                <button id="essentialsDescriptiveBtn" class="btn btn-primary w-100" style="padding:12px;font-size:1rem;font-weight:600;" onclick="try{ startEssentialsPrint('descriptive'); }catch(e){ console.error(e); }">
                     برچسب پاکت‌های تشریحی
                 </button>
-                <button id="essentialsTestBtn" class="btn btn-primary w-100" style="padding:12px;font-size:1rem;font-weight:600;" onclick="try{ Swal.close(); printEssentialsTest(); }catch(e){ console.error(e); }">
+                <button id="essentialsTestBtn" class="btn btn-primary w-100" style="padding:12px;font-size:1rem;font-weight:600;" onclick="try{ startEssentialsPrint('test'); }catch(e){ console.error(e); }">
                     برچسب پاکت‌های تستی
                 </button>
             </div>
@@ -3092,6 +3082,24 @@ async function examEssentialsHandler() {
         showCancelButton: false,
         customClass: { popup: 'swal2-rtl swal2-glass' }
     });
+}
+
+// Helper to start print after safely closing the selector modal.
+// Uses a short delay to ensure SweetAlert has time to remove DOM nodes
+// before we open a new loading modal inside the print function.
+function startEssentialsPrint(kind) {
+    try { Swal.close(); } catch (e) { /* ignore */ }
+    // small delay to allow SweetAlert teardown (animations/DOM) to complete
+    setTimeout(() => {
+        try {
+            if (kind === 'secretary') printEssentialsSecretary();
+            else if (kind === 'reproduction') printEssentialsReproduction();
+            else if (kind === 'descriptive') printEssentialsDescriptive();
+            else if (kind === 'test') printEssentialsTest();
+        } catch (e) {
+            console.error('startEssentialsPrint error:', e);
+        }
+    }, 100);
 }
 
 // Print function for Secretary Essentials (A4)
@@ -3351,19 +3359,13 @@ async function printEssentialsSecretary() {
             try { closeSwalLoadingHard(); } catch (e) { }
             try { document.body.removeChild(iframe); } catch (e) { }
             try { window.removeEventListener('focus', onFocusOnce, true); } catch (e) { }
-            try { document.removeEventListener('visibilitychange', onVisibility, true); } catch (e) { }
-            try { window.removeEventListener('pageshow', onPageShow, true); } catch (e) { }
         };
         const onFocusOnce = () => { setTimeout(cleanup, 150); };
-        const onVisibility = () => { if (document.visibilityState === 'visible') setTimeout(cleanup, 100); };
-        const onPageShow = () => { setTimeout(cleanup, 100); };
         try {
             if (cw) {
                 cw.onafterprint = cleanup;
                 // Safari/Firefox fallback: when print dialog closes, focus returns to window
                 window.addEventListener('focus', onFocusOnce, true);
-                document.addEventListener('visibilitychange', onVisibility, true);
-                window.addEventListener('pageshow', onPageShow, true);
                 cw.focus();
                 cw.print();
                 // Absolute fallback in case neither event fires
@@ -3615,18 +3617,12 @@ async function printEssentialsReproduction() {
             try { closeSwalLoadingHard(); } catch (e) { }
             try { document.body.removeChild(iframe); } catch (e) { }
             try { window.removeEventListener('focus', onFocusOnce, true); } catch (e) { }
-            try { document.removeEventListener('visibilitychange', onVisibility, true); } catch (e) { }
-            try { window.removeEventListener('pageshow', onPageShow, true); } catch (e) { }
         };
         const onFocusOnce = () => { setTimeout(cleanup, 150); };
-        const onVisibility = () => { if (document.visibilityState === 'visible') setTimeout(cleanup, 100); };
-        const onPageShow = () => { setTimeout(cleanup, 100); };
         try {
             if (cw) {
                 cw.onafterprint = cleanup;
                 window.addEventListener('focus', onFocusOnce, true);
-                document.addEventListener('visibilitychange', onVisibility, true);
-                window.addEventListener('pageshow', onPageShow, true);
                 cw.focus();
                 cw.print();
                 setTimeout(cleanup, 5000);
@@ -3702,18 +3698,12 @@ async function printEssentialsDescriptive() {
             try { closeSwalLoadingHard(); } catch (e) { }
             try { document.body.removeChild(iframe); } catch (e) { }
             try { window.removeEventListener('focus', onFocusOnce, true); } catch (e) { }
-            try { document.removeEventListener('visibilitychange', onVisibility, true); } catch (e) { }
-            try { window.removeEventListener('pageshow', onPageShow, true); } catch (e) { }
         };
         const onFocusOnce = () => { setTimeout(cleanup, 150); };
-        const onVisibility = () => { if (document.visibilityState === 'visible') setTimeout(cleanup, 100); };
-        const onPageShow = () => { setTimeout(cleanup, 100); };
         try {
             if (cw) {
                 cw.onafterprint = cleanup;
                 window.addEventListener('focus', onFocusOnce, true);
-                document.addEventListener('visibilitychange', onVisibility, true);
-                window.addEventListener('pageshow', onPageShow, true);
                 cw.focus();
                 cw.print();
                 setTimeout(cleanup, 5000);
@@ -3789,18 +3779,12 @@ async function printEssentialsTest() {
             try { closeSwalLoadingHard(); } catch (e) { }
             try { document.body.removeChild(iframe); } catch (e) { }
             try { window.removeEventListener('focus', onFocusOnce, true); } catch (e) { }
-            try { document.removeEventListener('visibilitychange', onVisibility, true); } catch (e) { }
-            try { window.removeEventListener('pageshow', onPageShow, true); } catch (e) { }
         };
         const onFocusOnce = () => { setTimeout(cleanup, 150); };
-        const onVisibility = () => { if (document.visibilityState === 'visible') setTimeout(cleanup, 100); };
-        const onPageShow = () => { setTimeout(cleanup, 100); };
         try {
             if (cw) {
                 cw.onafterprint = cleanup;
                 window.addEventListener('focus', onFocusOnce, true);
-                document.addEventListener('visibilitychange', onVisibility, true);
-                window.addEventListener('pageshow', onPageShow, true);
                 cw.focus();
                 cw.print();
                 setTimeout(cleanup, 5000);
