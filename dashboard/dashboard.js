@@ -3213,7 +3213,7 @@ async function printEssentialsSecretary() {
             html, body { margin: 0; padding: 0; }
             body { font-family: Vazir, Tahoma, Arial, sans-serif; color: #111; font-size: 11pt; }
             .page { width: 210mm; min-height: 297mm; box-sizing: border-box; padding: 6mm 8mm 8mm 8mm; overflow: visible; }
-            .header { background: transparent; color: #000; padding: 2px 4px 4px 4px; text-align: center; margin-bottom:4px; }
+            .header { background: transparent; color: #000; padding: 2px 8mm 4px 8mm; text-align: center; margin-bottom:4px; }
             .header .title { font-size: 16pt; font-weight:900; margin-top:0; }
             .header .meta { font-size: 12pt; margin-top:4px; color:#000; font-weight:700; }
             .course { margin-top: 3mm; page-break-inside: avoid; break-inside: avoid; -webkit-column-break-inside: avoid; -webkit-page-break-inside: avoid; }
