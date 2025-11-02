@@ -3213,27 +3213,29 @@ async function printEssentialsSecretary() {
             html, body { margin: 0; padding: 0; }
             body { font-family: Vazir, Tahoma, Arial, sans-serif; color: #111; font-size: 11pt; }
             .page { width: 210mm; min-height: 297mm; box-sizing: border-box; padding: 6mm 8mm 8mm 8mm; overflow: visible; }
-            .header { background: transparent; color: #000; padding: 2px 8mm 4px 8mm; text-align: center; margin-bottom:4px; }
+            .header { background: transparent; color: #000; padding: 2px 4px 4px 4px; text-align: center; margin-bottom:4px; }
             .header .title { font-size: 16pt; font-weight:900; margin-top:0; }
             .header .meta { font-size: 12pt; margin-top:4px; color:#000; font-weight:700; }
+            .exam-type-section { width:96%; margin:12px auto 0 auto; }
+            .exam-type-section.break-before { page-break-before: always; }
             .course { margin-top: 3mm; page-break-inside: avoid; break-inside: avoid; -webkit-column-break-inside: avoid; -webkit-page-break-inside: avoid; }
+            .course-inner { width:100%; margin:0 auto; }
             .course .course-head { font-weight:800; font-size:12.5pt; margin-bottom:2px; }
-            .course-inner { width:96%; margin:0 auto; }
             .course-header { width:100%; margin-bottom:2px; border-collapse:collapse; table-layout:fixed; }
             .course-header td { box-sizing:border-box; }
-            .course-header .course-index { width:6%; background:#000; color:#fff; text-align:center; font-weight:900; padding:4px 0; border-radius:4px; font-size:11pt; box-sizing:border-box; }
-            .course-header .course-info { width:74%; text-align:right; font-size:13pt; font-weight:700; padding:0 8px 0 0; box-sizing:border-box; }
-            .course-header .course-total { width:20%; text-align:left; font-size:12pt; font-weight:700; padding:0 0 0 8px; box-sizing:border-box; white-space:nowrap; }
+            .course-header .course-index { width:8%; background:#000; color:#fff; text-align:center; font-weight:900; padding:4px 0; border-radius:4px; font-size:11pt; }
+            .course-header .course-info { width:77%; text-align:right; font-size:13pt; font-weight:700; padding:0 8px 0 0; }
+            .course-header .course-total { width:15%; text-align:left; font-size:12pt; font-weight:700; padding:0 4px 0 0; }
             .nested { margin-top:4px; border-collapse:collapse; width:100%; box-sizing:border-box; table-layout:fixed; max-width:100%; min-width:0; }
             .nested, .nested th, .nested td { box-sizing: border-box; }
             .nested th, .nested td { border:1px solid #ddd; padding:3px 6px; text-align:right; overflow-wrap:anywhere; word-break:break-word; }
             .nested thead th { background:#f1f1f1; font-weight:700; text-align:center; font-size:10pt; }
             .nested thead { display: table-header-group; }
             .small { font-size:10pt; color:#555; }
-            .course-type-group { width:96%; text-align:center; margin:0 auto 6px auto; }
-            /* full-width black bar for exam type */
+            .course-type-group { width:100%; text-align:center; margin-bottom:6px; }
+            /* type header spans same width as tables to keep alignment consistent */
             .etypeBar { display:block; width:100%; text-align:center; }
-            .etypeBar .label { display:block; width:100%; background:#000; color:#fff; font-weight:900; padding:8px 0; border-radius:0; font-size:15pt; box-sizing:border-box; }
+            .etypeBar .label { display:block; width:100%; background:#000; color:#fff; font-weight:900; padding:8px 0; border-radius:8px; font-size:15pt; }
             @media print { .no-print { display:none !important; } }
         </style></head><body>`;
 
@@ -3250,8 +3252,8 @@ async function printEssentialsSecretary() {
         const students = report.students || [];
         const courses = report.courses || [];
 
-    // Show both sections in secretary list: electronic first, then written
-    const examOrder = ['الکترونیکی', 'کتبی'];
+        // We'll order by exam type: الکترونیکی first, then کتبی, then others
+        const examOrder = ['الکترونیکی', 'کتبی'];
         const usedCourses = new Set();
 
         let hadPrevTypeCourses = false;
@@ -3267,10 +3269,10 @@ async function printEssentialsSecretary() {
             // For written exams (کتبی) insert a single page-break before the whole group
             // Instead of injecting an empty DIV (which can cause a blank page), apply the
             // page-break-before style to the header element itself for the first کتبی group.
-            let ctStyle = '';
-
-            // exam type header: full-width black bar with centered white bold text
-            docHtml += `<div class="course-type-group" ${ctStyle}><div class="etypeBar"><div class="label">${esc(exType || 'سایر')}</div></div></div>`;
+            const sectionClass = 'exam-type-section';
+            // exam type wrapper keeps header and tables aligned
+            docHtml += `<div class="${sectionClass}">`;
+            docHtml += `<div class="course-type-group"><div class="etypeBar"><div class="label">${esc(exType || 'سایر')}</div></div></div>`;
 
             for (const course of coursesForType) {
                 // start per-course container so we can force page-breaks for کتبی courses
@@ -3303,10 +3305,10 @@ async function printEssentialsSecretary() {
 
                 // render nested table: order from/to/count before building/class
                 docHtml += `<table class="nested" style="table-layout:fixed;width:100%;page-break-inside:avoid;min-width:0;"><thead><tr>` +
-                    `<th style="width:11%;text-align:center;">از شماره</th>` +
-                    `<th style="width:11%;text-align:center;">تا شماره</th>` +
-                    `<th style="width:11%;text-align:center;">تعداد</th>` +
-                    `<th style="width:33%;text-align:center;">ساختمان</th>` +
+                    `<th style="width:12%;text-align:center;">از شماره</th>` +
+                    `<th style="width:12%;text-align:center;">تا شماره</th>` +
+                    `<th style="width:12%;text-align:center;">تعداد</th>` +
+                    `<th style="width:34%;text-align:center;">ساختمان</th>` +
                     `<th style="width:30%;text-align:center;">کلاس / اتاق</th>` +
                     `</tr></thead><tbody>`;
                 const gkeys = Object.keys(groups);
@@ -3340,7 +3342,7 @@ async function printEssentialsSecretary() {
                 hadPrevTypeCourses = true;
             }
 
-            docHtml += `</div>`; // end course-type-group
+            docHtml += `</div>`; // end exam-type-section
         }
 
         // If there are courses not caught by examOrder (no exam_type students), include them at the end
@@ -3494,12 +3496,12 @@ async function printEssentialsReproduction() {
             @page { size: A4 portrait; margin: 6mm; }
             html, body { margin: 0; padding: 0; }
             body { font-family: Vazir, Tahoma, Arial, sans-serif; color: #111; font-size: 11pt; }
-            .page { width: 210mm; box-sizing: border-box; padding: 6mm 8mm 8mm 8mm; overflow: visible; }
+            .page { width: 210mm; box-sizing: border-box; padding: 6mm 18mm 8mm 18mm; overflow: visible; }
             .header { background: transparent; color: #000; padding: 2px 4px 4px 4px; text-align: center; margin-bottom:4px; }
             .header .title { font-size: 16pt; font-weight:900; margin-top:0; }
             .header .meta { font-size: 12pt; margin-top:4px; color:#000; font-weight:700; }
             .course { margin-top: 3mm; page-break-inside: avoid; break-inside: avoid; -webkit-column-break-inside: avoid; -webkit-page-break-inside: avoid; }
-            .course-inner { width:95%; margin:0 auto; }
+            .course-inner { width:96%; margin:0 auto; }
             .course-header { width:100%; margin-bottom:2px; border-collapse:collapse; table-layout:fixed; }
             .course-header td { box-sizing:border-box; }
             .course-header .course-index { width:8%; background:#000; color:#fff; text-align:center; font-weight:900; padding:4px 0; border-radius:4px; font-size:11pt; }
@@ -3510,7 +3512,9 @@ async function printEssentialsReproduction() {
             .nested th, .nested td { border:1px solid #ddd; padding:3px 6px; text-align:right; overflow-wrap:anywhere; word-break:break-word; }
             .nested thead th { background:#f1f1f1; font-weight:700; text-align:center; font-size:10pt; }
             .nested thead { display: table-header-group; }
-            .etypeBar .label { display:block; width:100%; background:#000; color:#fff; font-weight:900; padding:8px 0; border-radius:0; font-size:15pt; text-align:center; }
+            .course-type-group { width:96%; margin:12px auto 6px auto; text-align:center; }
+            .etypeBar { display:block; width:100%; text-align:center; }
+            .etypeBar .label { display:block; width:100%; background:#000; color:#fff; font-weight:900; padding:8px 0; border-radius:8px; font-size:15pt; text-align:center; }
             .simple-list { width:100%; border-collapse:collapse; margin-top:6px; }
             .simple-list th, .simple-list td { border:1px solid #ddd; padding:4px 6px; font-size:12pt; }
             .simple-list thead th { background:#f1f1f1; text-align:center; }
