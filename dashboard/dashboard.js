@@ -9,8 +9,8 @@ function isDesktopDevice() {
 // Global safety: if any print dialog closes (printed or canceled), ensure any pending loader closes
 try {
     window.addEventListener('afterprint', () => {
-        try { closeSwalLoadingHard(); } catch (e) {}
-        try { reopenEssentialsMenuIfRequested(); } catch (e) {}
+        try { closeSwalLoadingHard(); } catch (e) { }
+        try { reopenEssentialsMenuIfRequested(); } catch (e) { }
     }, false);
 } catch (e) { /* ignore */ }
 
