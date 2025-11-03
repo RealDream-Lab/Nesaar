@@ -116,16 +116,6 @@ if ($licenseStatus['valid'] !== true) {
                     <div class="chart-wrapper">
                         <canvas id="reportsChart" aria-label="نمودار جلسات آینده" role="img"></canvas>
                     </div>
-                    <div class="reports-side">
-                        <div class="small-pie-wrap text-center">
-                            <canvas id="smallPieExamType" class="small-pie" aria-label="نمودار نوع آزمون" role="img"></canvas>
-                            <div class="mt-1 text-muted small">نوع آزمون</div>
-                        </div>
-                        <div class="small-pie-wrap text-center">
-                            <canvas id="smallPieCourseType" class="small-pie" aria-label="نمودار نوع درس" role="img"></canvas>
-                            <div class="mt-1 text-muted small">نوع درس</div>
-                        </div>
-                    </div>
                 </div>
 
             </div>

@@ -1,7 +1,7 @@
 
 
-const CACHE_NAME = 'exam-seat-v3.3.1';
-const VERSION = '۳.۳.۱';
+const CACHE_NAME = 'exam-seat-v3.3.2';
+const VERSION = '۳.۳.۲';
 const urlsToCache = [
   '/',
   '/index.php',
@@ -91,7 +91,8 @@ self.addEventListener('activate', event => {
             tagVersion: `نسخه ${VERSION}`,
 
             changes: [
-              'هماهنگ‌سازی چیدمان و حاشیه گزارش‌های منشی و ملزومات تکثیر'
+              'بهبود عملکرد',
+              'بهینه سازی گزارشات'
             ]
           });
         });

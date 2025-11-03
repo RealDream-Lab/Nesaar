@@ -1147,131 +1147,7 @@ let chartDefaultsConfigured = false;
 let reportsResizeRegistered = false;
 let reportsResizeTimer = null;
 
-let smallPieExamTypeInstance = null;
-let smallPieCourseTypeInstance = null;
 
-function destroySmallOverviewPies() {
-    try { if (smallPieExamTypeInstance) { smallPieExamTypeInstance.destroy(); smallPieExamTypeInstance = null; } } catch (e) { }
-    try { if (smallPieCourseTypeInstance) { smallPieCourseTypeInstance.destroy(); smallPieCourseTypeInstance = null; } } catch (e) { }
-}
-
-function renderSmallOverviewPies(stats) {
-    if (!stats) return;
-    try {
-
-        if (typeof Chart === 'undefined') return;
-
-        const examTypeTotals = stats.futureExamTypeTotals || {};
-        const courseTypeTotals = stats.futureCourseTypeTotals || {};
-
-
-        const examLabels = Object.keys(examTypeTotals);
-        const examValues = examLabels.map(l => Number(examTypeTotals[l]) || 0);
-
-        const examCtx = document.getElementById('smallPieExamType');
-        const courseCtx = document.getElementById('smallPieCourseType');
-
-
-        const palette = ['#1a6fa6', '#ff8a65', '#7bd5ff', '#9ccc65', '#ffca28', '#7e57c2', '#26a69a', '#ef5350'];
-
-        destroySmallOverviewPies();
-
-        if (examCtx && examLabels.length) {
-            const examData = {
-                labels: examLabels.map(l => (typeof toPersianDigits === 'function') ? toPersianDigits(l) : l),
-                datasets: [{
-                    data: examValues,
-                    backgroundColor: examLabels.map((_, i) => palette[i % palette.length])
-                }]
-            };
-
-            const examOptions = {
-                responsive: true,
-                maintainAspectRatio: false,
-                plugins: {
-                    legend: { display: false },
-                    tooltip: {
-                        enabled: true,
-                        displayColors: false,
-                        callbacks: {
-
-                            title: function () { return ''; },
-                            label: function (ctx) {
-                                const val = ctx.raw || 0;
-                                const label = ctx.label || '';
-                                return `${label}: ${(typeof toPersianDigits === 'function') ? toPersianDigits(val) : val}`;
-                            }
-                        }
-                    }
-                },
-                elements: { arc: { borderWidth: 1 } }
-            };
-
-            smallPieExamTypeInstance = new Chart(examCtx.getContext('2d'), {
-                type: 'doughnut',
-                data: examData,
-                options: examOptions
-            });
-            // make the small canvas clickable to show a large modal preview
-            try {
-                const el = document.getElementById('smallPieExamType');
-                if (el) {
-                    el.style.cursor = 'pointer';
-                    el.onclick = function () { try { showLargePie('نوع آزمون', examLabels, examValues, palette); } catch (e) { console.error(e); } };
-                }
-            } catch (e) { /* ignore */ }
-        }
-
-        // Prepare course-type pie
-        const courseLabels = Object.keys(courseTypeTotals);
-        const courseValues = courseLabels.map(l => Number(courseTypeTotals[l]) || 0);
-        if (courseCtx && courseLabels.length) {
-            const courseData = {
-                labels: courseLabels.map(l => (typeof toPersianDigits === 'function') ? toPersianDigits(l) : l),
-                datasets: [{
-                    data: courseValues,
-                    backgroundColor: courseLabels.map((_, i) => palette[(i + 2) % palette.length])
-                }]
-            };
-
-            const courseOptions = {
-                responsive: true,
-                maintainAspectRatio: false,
-                plugins: {
-                    legend: { display: false },
-                    tooltip: {
-                        enabled: true,
-                        displayColors: false,
-                        callbacks: {
-                            title: function () { return ''; },
-                            label: function (ctx) {
-                                const val = ctx.raw || 0;
-                                const label = ctx.label || '';
-                                return `${label}: ${(typeof toPersianDigits === 'function') ? toPersianDigits(val) : val}`;
-                            }
-                        }
-                    }
-                },
-                elements: { arc: { borderWidth: 1 } }
-            };
-
-            smallPieCourseTypeInstance = new Chart(courseCtx.getContext('2d'), {
-                type: 'doughnut',
-                data: courseData,
-                options: courseOptions
-            });
-            try {
-                const el2 = document.getElementById('smallPieCourseType');
-                if (el2) {
-                    el2.style.cursor = 'pointer';
-                    el2.onclick = function () { try { showLargePie('نوع درس', courseLabels, courseValues, palette); } catch (e) { console.error(e); } };
-                }
-            } catch (e) { /* ignore */ }
-        }
-    } catch (e) {
-        console.warn('Could not render small overview pies:', e);
-    }
-}
 
 function configureChartDefaults() {
     if (chartDefaultsConfigured) return;
@@ -1445,7 +1321,7 @@ async function renderReportsChart() {
                 reportsChartInstance = null;
             }
             // destroy small overview pies as there's no data
-            try { destroySmallOverviewPies(); } catch (e) { /* ignore */ }
+            // try { destroySmallOverviewPies(); } catch (e) { /* ignore */ }
             // ensure placeholder exists
             let ph = card.querySelector('.reports-chart-placeholder');
             if (!ph) {
@@ -1546,7 +1422,7 @@ async function renderReportsChart() {
         }
 
         // Render the two small overview pies beside the main chart
-        try { renderSmallOverviewPies(stats); } catch (e) { console.warn('Could not render overview pies:', e); }
+        // try { renderSmallOverviewPies(stats); } catch (e) { console.warn('Could not render overview pies:', e); }
 
     } catch (error) {
         console.error('Error rendering reports chart:', error);
