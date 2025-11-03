@@ -19,3 +19,6 @@ database/*.txt
 *.original.js
 obfuscate.sh
 OBFUSCATION.md
+
+# Ignore backup directory for obfuscation
+backup/
