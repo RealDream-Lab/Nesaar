@@ -75,23 +75,37 @@ function reopenEssentialsMenuIfRequested() {
 // Uses the same exam date/time displayed in #nextExamDateTime and calls API/getNextExamReport.php
 async function printSessionReport() {
     try {
-        const nextExamDateTimeText = document.getElementById('nextExamDateTime')?.textContent || '';
-        if (!nextExamDateTimeText || nextExamDateTimeText === 'بارگذاری...' || nextExamDateTimeText === 'آزمونی یافت نشد') {
-            return Swal.fire({ icon: 'info', title: 'اطلاعات', text: 'آزمون بعدی یافت نشد', confirmButtonText: 'باشه', customClass: { popup: 'swal2-rtl swal2-glass', confirmButton: 'btn btn-primary' } });
-        }
+        let context = window._overrideExamContext && window._overrideExamContext.active ? window._overrideExamContext : window._lastExamContext;
+        let examDate = context?.exam_date;
+        let examTime = context?.exam_time;
 
-        const parts = nextExamDateTimeText.split('|').map(s => s.trim());
-        if (parts.length !== 2) {
-            return Swal.fire({ icon: 'error', title: 'خطا', text: 'فرمت تاریخ و ساعت نامعتبر است', confirmButtonText: 'باشه', customClass: { popup: 'swal2-rtl swal2-glass', confirmButton: 'btn btn-primary' } });
+        if (!examDate || !examTime) {
+            const nextExamDateTimeText = document.getElementById('nextExamDateTime')?.textContent || '';
+            if (!nextExamDateTimeText || nextExamDateTimeText === 'بارگذاری...' || nextExamDateTimeText === 'آزمونی یافت نشد') {
+                return Swal.fire({ icon: 'info', title: 'اطلاعات', text: 'آزمون بعدی یافت نشد', confirmButtonText: 'باشه', customClass: { popup: 'swal2-rtl swal2-glass', confirmButton: 'btn btn-primary' } });
+            }
+
+            const parts = nextExamDateTimeText.split('|').map(s => s.trim());
+            if (parts.length !== 2) {
+                return Swal.fire({ icon: 'error', title: 'خطا', text: 'فرمت تاریخ و ساعت نامعتبر است', confirmButtonText: 'باشه', customClass: { popup: 'swal2-rtl swal2-glass', confirmButton: 'btn btn-primary' } });
+            }
+            examTime = toEnglishDigits(parts[0]);
+            examDate = toEnglishDigits(parts[1]).replace(/-/g, '/');
+            setLastExamContext(examDate, examTime);
+        } else {
+            examTime = toEnglishDigits(examTime);
+            examDate = toEnglishDigits(examDate).replace(/-/g, '/');
+            setLastExamContext(examDate, examTime);
         }
-        const examTime = toEnglishDigits(parts[0]);
-        const examDate = toEnglishDigits(parts[1]).replace(/-/g, '/');
 
         const resp = await guardedFetch(`../API/getNextExamReport.php?exam_date=${encodeURIComponent(examDate)}&exam_time=${encodeURIComponent(examTime)}`, { cache: 'no-store' });
         const data = await resp.json();
         if (data.error) {
             return Swal.fire({ icon: 'error', title: 'خطا', text: data.error || 'خطا در دریافت اطلاعات', confirmButtonText: 'باشه', customClass: { popup: 'swal2-rtl swal2-glass', confirmButton: 'btn btn-primary' } });
         }
+
+        window.currentExamReport = data;
+        setLastExamContext(data.exam_date, data.exam_time);
 
         const courses = Array.isArray(data.courses) ? data.courses.slice() : [];
         if (!courses.length) {
@@ -340,6 +354,16 @@ function toEnglishDigits(value) {
     });
 }
 
+function setLastExamContext(examDate, examTime) {
+    if (!examDate || !examTime) return;
+    const normalizedDate = toEnglishDigits(String(examDate)).replace(/-/g, '/').trim();
+    const normalizedTime = toEnglishDigits(String(examTime)).trim();
+    window._lastExamContext = {
+        exam_date: normalizedDate,
+        exam_time: normalizedTime
+    };
+}
+
 // Return Bootstrap badge class for exam type labels across the dashboard
 function getExamBadgeClass(type) {
     if (!type) return 'bg-secondary';
@@ -584,18 +608,11 @@ try {
         infoBtn.addEventListener('click', async () => {
             const escapeAttr = (value) => String(value ?? '').replace(/["'&<>]/g, ch => ({ '"': '&quot;', "'": '&#39;', '&': '&amp;', '<': '&lt;', '>': '&gt;' }[ch]));
             const insightDefinitions = [
-                { key: 'busiestSession', label: 'شلوغ‌ترین جلسه آزمون', category: 'session', variant: 'insight-busy' },
-                { key: 'quietestSession', label: 'خلوت‌ترین جلسه آزمون', category: 'session', variant: 'insight-quiet' },
-                { key: 'maxWritten', label: 'بیشترین تعداد کتبی', category: 'session', variant: 'insight-written' },
-                { key: 'minWritten', label: 'کمترین تعداد کتبی', category: 'session', variant: 'insight-written' },
-                { key: 'maxElectronic', label: 'بیشترین تعداد الکترونیکی', category: 'session', variant: 'insight-electronic' },
-                { key: 'minElectronic', label: 'کمترین تعداد الکترونیکی', category: 'session', variant: 'insight-electronic' },
-                { key: 'maxCourseFrequency', label: 'بیشترین فراوانی درس', category: 'course', variant: 'insight-course' },
-                { key: 'minCourseFrequency', label: 'کمترین فراوانی درس', category: 'course', variant: 'insight-course' },
-                { key: 'maxDescriptiveHybrid', label: 'بیشترین تشریحی و تستی تشریحی', category: 'course', variant: 'insight-descriptive' },
-                { key: 'minDescriptiveHybrid', label: 'کمترین تشریحی و تستی تشریحی', category: 'course', variant: 'insight-descriptive' },
-                { key: 'maxTestCourse', label: 'بیشترین تستی', category: 'course', variant: 'insight-test' },
-                { key: 'minTestCourse', label: 'کمترین تستی', category: 'course', variant: 'insight-test' }
+                { key: 'busiestSession', label: 'شلوغ‌ترین جلسه آزمون', category: 'session', variant: 'insight-busy', valueKey: 'student_count', unit: 'نفر' },
+                { key: 'quietestSession', label: 'خلوت‌ترین جلسه آزمون', category: 'session', variant: 'insight-quiet', valueKey: 'student_count', unit: 'نفر' },
+                { key: 'maxCourseFrequency', label: 'بیشترین تعداد درس در جلسه', category: 'session', variant: 'insight-course', valueKey: 'course_count', unit: 'درس' },
+                { key: 'maxWritten', label: 'بیشترین تعداد کتبی', category: 'session', variant: 'insight-written', valueKey: 'student_count', unit: 'نفر' },
+                { key: 'maxElectronic', label: 'بیشترین تعداد الکترونیکی', category: 'session', variant: 'insight-electronic', valueKey: 'student_count', unit: 'نفر' }
             ];
 
             try {
@@ -620,10 +637,11 @@ try {
                     const entry = insights[def.key];
                     if (!entry) return;
 
-                    const count = Number(entry.student_count ?? entry.count ?? 0);
+                    const rawValue = def.valueKey ? entry[def.valueKey] : (entry.student_count ?? entry.count ?? entry.value ?? 0);
+                    const count = Number(rawValue ?? 0);
                     if (!Number.isFinite(count) || count < 0) return;
 
-                    const unitText = def.category === 'session' || def.category === 'course' ? 'نفر' : '';
+                    const unitText = def.unit || (def.category === 'session' ? 'نفر' : '');
                     const displayCount = unitText ? `${toPersianDigits(count)} ${unitText}` : toPersianDigits(count);
 
                     const rawTime = entry.exam_time || '';
@@ -633,16 +651,23 @@ try {
                     if (rawDate) line2Parts.push(rawDate);
                     const displayLine2 = line2Parts.length ? toPersianDigits(line2Parts.join(' | ')) : 'بدون تاریخ';
                     const displayCourseCode = entry.course_code ? toPersianDigits(entry.course_code) : '';
-                    const displayLabelText = (def.category === 'course' && displayCourseCode)
-                        ? `${def.label} - ${displayCourseCode}`
-                        : def.label;
+                    let displayLabelText = def.label;
+                    if (def.category === 'course' && displayCourseCode) {
+                        displayLabelText = `${displayLabelText} - ${displayCourseCode}`;
+                    }
+                    const tieCount = Number(entry.tie_count || 0);
+                    if (tieCount > 1) {
+                        displayLabelText = `${displayLabelText} (x${tieCount})`;
+                    }
 
                     const classes = ['session-mini-card', 'insight-card', def.variant].filter(Boolean).join(' ');
                     const attributes = [
                         `data-insight-type="${escapeAttr(def.category)}"`,
-                        `data-label="${escapeAttr(def.label)}"`,
+                        `data-label="${escapeAttr(displayLabelText)}"`,
+                        `data-label-base="${escapeAttr(def.label)}"`,
                         `data-count="${escapeAttr(count)}"`,
-                        `data-display-line2="${escapeAttr(displayLine2)}"`
+                        `data-display-line2="${escapeAttr(displayLine2)}"`,
+                        `data-tie-count="${escapeAttr(tieCount)}"`
                     ];
 
                     if (rawDate) attributes.push(`data-exam-date="${escapeAttr(rawDate)}"`);
@@ -650,6 +675,13 @@ try {
                     if (entry.course_code) attributes.push(`data-course-code="${escapeAttr(entry.course_code)}"`);
                     if (entry.course_name) attributes.push(`data-course-name="${escapeAttr(entry.course_name)}"`);
                     if (entry.course_type) attributes.push(`data-course-type="${escapeAttr(entry.course_type)}"`);
+                    if (Array.isArray(entry.matches) && entry.matches.length) {
+                        try {
+                            attributes.push(`data-matches="${escapeAttr(JSON.stringify(entry.matches))}"`);
+                        } catch (jsonErr) {
+                            console.warn('Failed to encode matches for insight', def.key, jsonErr);
+                        }
+                    }
 
                     cards.push(`
                         <div class="${classes}" ${attributes.join(' ')}>
@@ -673,49 +705,154 @@ try {
 
                 const cardsHtml = `<div class="session-mini-grid insight-grid">${cards.join('')}</div>`;
 
-                await Swal.fire({
-                    title: 'اطلاعات و آمار',
-                    html: cardsHtml,
-                    width: '110rem',
-                    showConfirmButton: false,
-                    showCloseButton: true,
-                    customClass: { popup: 'swal2-rtl swal2-glass' },
-                    didOpen: () => {
-                        const container = Swal.getHtmlContainer();
-                        if (!container) return;
-                        const cardNodes = container.querySelectorAll('.session-mini-card.insight-card');
-                        cardNodes.forEach(cardEl => {
-                            const type = cardEl.getAttribute('data-insight-type');
-                            const label = cardEl.getAttribute('data-label') || '';
-                            const displayLine2 = cardEl.getAttribute('data-display-line2') || '';
-                            const examDate = cardEl.getAttribute('data-exam-date');
-                            const examTime = cardEl.getAttribute('data-exam-time');
-                            const courseCode = cardEl.getAttribute('data-course-code');
-                            const courseName = cardEl.getAttribute('data-course-name');
+                function openTieModal(labelText, labelBase, matches) {
+                    let reopenMain = true;
+                    const parseDateParts = (rawDate) => {
+                        if (!rawDate) return { y: 0, m: 0, d: 0 };
+                        const normalized = toEnglishDigits(String(rawDate || '')).replace(/-/g, '/');
+                        const parts = normalized.split('/').map(p => parseInt(p, 10)).filter(n => Number.isFinite(n));
+                        return {
+                            y: parts[0] || 0,
+                            m: parts[1] || 0,
+                            d: parts[2] || 0
+                        };
+                    };
+                    const parseTimeParts = (rawTime) => {
+                        if (!rawTime) return { h: 0, min: 0, s: 0 };
+                        const normalized = toEnglishDigits(String(rawTime || '')).replace(/[^0-9:]/g, '');
+                        const parts = normalized.split(':').map(p => parseInt(p, 10)).filter(n => Number.isFinite(n));
+                        return {
+                            h: parts[0] || 0,
+                            min: parts[1] || 0,
+                            s: parts[2] || 0
+                        };
+                    };
+                    const sortedMatches = Array.isArray(matches) ? matches.slice().sort((a, b) => {
+                        const aDate = parseDateParts(a && a.exam_date);
+                        const bDate = parseDateParts(b && b.exam_date);
+                        if (aDate.y !== bDate.y) return aDate.y - bDate.y;
+                        if (aDate.m !== bDate.m) return aDate.m - bDate.m;
+                        if (aDate.d !== bDate.d) return aDate.d - bDate.d;
+                        const aTime = parseTimeParts(a && a.exam_time);
+                        const bTime = parseTimeParts(b && b.exam_time);
+                        if (aTime.h !== bTime.h) return aTime.h - bTime.h;
+                        if (aTime.min !== bTime.min) return aTime.min - bTime.min;
+                        if (aTime.s !== bTime.s) return aTime.s - bTime.s;
+                        return 0;
+                    }) : [];
+                    const cardsMarkup = sortedMatches.map(match => {
+                        const mTime = match.exam_time || '';
+                        const mDate = match.exam_date || '';
+                        const timeDisplay = mTime ? toPersianDigits(mTime) : 'بدون ساعت';
+                        const dateDisplay = mDate ? toPersianDigits(mDate) : 'بدون تاریخ';
+                        const combined = `${timeDisplay} | ${dateDisplay}`;
+                        return `
+                            <div class="session-mini-card insight-card insight-subcard" data-exam-time="${escapeAttr(mTime)}" data-exam-date="${escapeAttr(mDate)}">
+                                <div class="line1">${escapeAttr(combined)}</div>
+                            </div>
+                        `;
+                    }).join('');
 
-                            if (courseName) {
-                                const tooltip = courseCode ? `درس ${courseName} (کد ${courseCode})` : `درس ${courseName}`;
-                                cardEl.setAttribute('title', tooltip);
-                            } else if (courseCode) {
-                                cardEl.setAttribute('title', `کد درس ${courseCode}`);
-                            }
-
-                            cardEl.addEventListener('click', () => {
-                                Swal.close();
-                                if (type === 'session' && examDate && examTime) {
+                    return Swal.fire({
+                        title: labelText,
+                        html: `<div class="session-mini-grid insight-grid">${cardsMarkup}</div>`,
+                        width: '80rem',
+                        showConfirmButton: false,
+                        showCloseButton: true,
+                        allowOutsideClick: true,
+                        allowEscapeKey: true,
+                        customClass: { popup: 'swal2-rtl swal2-glass' },
+                        didOpen: () => {
+                            const wrap = Swal.getHtmlContainer();
+                            if (!wrap) return;
+                            wrap.querySelectorAll('.insight-subcard').forEach(subEl => {
+                                subEl.addEventListener('click', () => {
+                                    const subDate = subEl.getAttribute('data-exam-date');
+                                    const subTime = subEl.getAttribute('data-exam-time');
+                                    reopenMain = false;
+                                    Swal.close();
                                     setTimeout(() => {
-                                        applyNextExamOverride(examDate, examTime, { customTitle: `${label} (${displayLine2})` });
+                                        const persTime = subTime ? toPersianDigits(subTime) : '';
+                                        const persDate = subDate ? toPersianDigits(subDate) : '';
+                                        const customTitle = persTime && persDate ? `${labelBase} (${persTime} | ${persDate})` : labelBase;
+                                        applyNextExamOverride(subDate, subTime, { customTitle });
                                         showNextExamReport();
                                     }, 150);
-                                } else if (type === 'course' && courseCode) {
-                                    setTimeout(() => {
-                                        loadCourseReportByCode(courseCode, { showErrors: true });
-                                    }, 150);
+                                }, { once: true });
+                            });
+                        },
+                        willClose: () => {
+                            if (reopenMain) {
+                                setTimeout(() => {
+                                    openInsightsModal();
+                                }, 120);
+                            }
+                        }
+                    });
+                }
+
+                function openInsightsModal() {
+                    return Swal.fire({
+                        title: 'اطلاعات و آمار',
+                        html: cardsHtml,
+                        width: '110rem',
+                        showConfirmButton: false,
+                        showCloseButton: true,
+                        allowOutsideClick: true,
+                        allowEscapeKey: true,
+                        customClass: { popup: 'swal2-rtl swal2-glass' },
+                        didOpen: () => {
+                            const container = Swal.getHtmlContainer();
+                            if (!container) return;
+                            const cardNodes = container.querySelectorAll('.session-mini-card.insight-card');
+                            cardNodes.forEach(cardEl => {
+                                const type = cardEl.getAttribute('data-insight-type');
+                                const label = cardEl.getAttribute('data-label') || '';
+                                const labelBase = cardEl.getAttribute('data-label-base') || label;
+                                const displayLine2 = cardEl.getAttribute('data-display-line2') || '';
+                                const examDate = cardEl.getAttribute('data-exam-date');
+                                const examTime = cardEl.getAttribute('data-exam-time');
+                                const courseCode = cardEl.getAttribute('data-course-code');
+                                const courseName = cardEl.getAttribute('data-course-name');
+                                const tieCount = Number(cardEl.getAttribute('data-tie-count') || 0);
+                                const matchesJson = cardEl.getAttribute('data-matches');
+                                const matches = (() => {
+                                    if (!matchesJson) return [];
+                                    try { return JSON.parse(matchesJson); } catch (e) { return []; }
+                                })();
+
+                                if (courseName) {
+                                    const tooltip = courseCode ? `درس ${courseName} (کد ${courseCode})` : `درس ${courseName}`;
+                                    cardEl.setAttribute('title', tooltip);
+                                } else if (courseCode) {
+                                    cardEl.setAttribute('title', `کد درس ${courseCode}`);
                                 }
-                            }, { once: true });
-                        });
-                    }
-                });
+
+                                cardEl.addEventListener('click', () => {
+                                    if (type === 'session' && tieCount > 1 && matches.length) {
+                                        Swal.close();
+                                        setTimeout(() => {
+                                            openTieModal(label, labelBase, matches);
+                                        }, 100);
+                                    } else if (type === 'session' && examDate && examTime) {
+                                        Swal.close();
+                                        setTimeout(() => {
+                                            applyNextExamOverride(examDate, examTime, { customTitle: `${label} (${displayLine2})` });
+                                            showNextExamReport();
+                                        }, 150);
+                                    } else if (type === 'course' && courseCode) {
+                                        Swal.close();
+                                        setTimeout(() => {
+                                            loadCourseReportByCode(courseCode, { showErrors: true });
+                                        }, 150);
+                                    }
+                                }, { once: true });
+                            });
+                        }
+                    });
+                }
+
+                await openInsightsModal();
             } catch (err) {
                 console.error('Failed to load insights:', err);
                 if (!err?.isLicenseError) {
@@ -2348,6 +2485,8 @@ function applyNextExamOverride(examDate, examTime, options = {}) {
     const normalizedDate = toEnglishDigits(String(examDate)).replace(/-/g, '/');
     const normalizedTime = toEnglishDigits(String(examTime));
 
+    setLastExamContext(normalizedDate, normalizedTime);
+
     if (window._overrideExamContext && window._overrideExamContext.active) {
         // Update existing override with new values but keep original label reference
         window._overrideExamContext.exam_date = normalizedDate;
@@ -2382,6 +2521,7 @@ async function showNextExamReport() {
         if (override) {
             examTime = override.exam_time;
             examDate = override.exam_date;
+            setLastExamContext(examDate, examTime);
         } else {
             if (!nextEl) {
                 await Swal.fire({
@@ -2429,6 +2569,7 @@ async function showNextExamReport() {
 
             examTime = toEnglishDigits(parts[0]);
             examDate = toEnglishDigits(parts[1]).replace(/-/g, '/');
+            setLastExamContext(examDate, examTime);
         }
 
         // حذف Swal.fire بارگذاری
@@ -2457,6 +2598,7 @@ async function showNextExamReport() {
         window.allStudents = students;
         // keep the full report response so printing helpers can reuse it
         window.currentExamReport = data;
+        setLastExamContext(data.exam_date, data.exam_time);
 
         const headerTitle = window.customExamReportTitle || 'جزئیات جلسه آزمون';
         // Build a 3-column details table: the last column is a rowspan cell that
@@ -2903,9 +3045,82 @@ function showLargePie(title, labels, values, palette) {
 // Build and open a printable seat numbers report. Uses window.allStudents (set by showNextExamReport)
 async function printSeatNumbersReport() {
     try {
-        const students = Array.isArray(window.allStudents) ? window.allStudents.slice() : [];
+        const context = window._lastExamContext || null;
+        const normalizeDate = (value) => toEnglishDigits(String(value || '')).replace(/-/g, '/');
+        const normalizeTime = (value) => toEnglishDigits(String(value || ''));
+
+        async function getReportForContext(examDate, examTime) {
+            const response = await guardedFetch(`../API/getNextExamReport.php?exam_date=${encodeURIComponent(examDate)}&exam_time=${encodeURIComponent(examTime)}`, { cache: 'no-store' });
+            const data = await response.json();
+            if (data && !data.error) {
+                window.currentExamReport = data;
+                window.allStudents = Array.isArray(data.students) ? data.students : [];
+                setLastExamContext(data.exam_date, data.exam_time);
+                return data;
+            }
+            if (data && data.error) {
+                throw new Error(data.error);
+            }
+            throw new Error('گزارش جلسه در دسترس نیست');
+        }
+
+        let report = window.currentExamReport || null;
+        let needsFetch = false;
+        const ctxDate = context && context.exam_date ? normalizeDate(context.exam_date) : null;
+        const ctxTime = context && context.exam_time ? normalizeTime(context.exam_time) : null;
+
+        if (ctxDate && ctxTime) {
+            if (!report || !report.exam_date || !report.exam_time) {
+                needsFetch = true;
+            } else {
+                const repDate = normalizeDate(report.exam_date);
+                const repTime = normalizeTime(report.exam_time);
+                if (repDate !== ctxDate || repTime !== ctxTime) {
+                    needsFetch = true;
+                }
+            }
+        }
+
+        if (needsFetch && ctxDate && ctxTime) {
+            try {
+                report = await getReportForContext(ctxDate, ctxTime);
+            } catch (fetchErr) {
+                return Swal.fire({ icon: 'error', title: 'خطا', text: fetchErr.message || 'خطا در دریافت اطلاعات جلسه', confirmButtonText: 'باشه', customClass: { popup: 'swal2-rtl swal2-glass', confirmButton: 'btn btn-primary' } });
+            }
+        }
+
+        let students = [];
+        if (report && Array.isArray(report.students)) {
+            students = report.students.slice();
+        } else if (Array.isArray(window.allStudents)) {
+            students = window.allStudents.slice();
+        }
+
         if (!students.length) {
             return Swal.fire({ icon: 'info', title: 'اطلاعات', text: 'هیچ دانشجویی برای چاپ یافت نشد', confirmButtonText: 'باشه', customClass: { popup: 'swal2-rtl swal2-glass', confirmButton: 'btn btn-primary' } });
+        }
+
+        window.allStudents = students.slice();
+
+        if (!report) {
+            report = { exam_date: ctxDate || '', exam_time: ctxTime || '', students: students.slice() };
+        } else if (!Array.isArray(report.students)) {
+            report.students = students.slice();
+        }
+        window.currentExamReport = report;
+
+        const repDateRaw = report && report.exam_date ? report.exam_date : (context && context.exam_date ? context.exam_date : '');
+        const repTimeRaw = report && report.exam_time ? report.exam_time : (context && context.exam_time ? context.exam_time : '');
+        const repDateNorm = repDateRaw ? normalizeDate(repDateRaw) : '';
+        const repTimeNorm = repTimeRaw ? normalizeTime(repTimeRaw) : '';
+
+        let title = '';
+        const timeText = repTimeNorm ? toPersianDigits(repTimeNorm) : '';
+        const dateText = repDateNorm ? toPersianDigits(repDateNorm) : '';
+        if (timeText && dateText) title = `${timeText} | ${dateText}`;
+        else title = timeText || dateText || '';
+        if (!title) {
+            title = document.querySelector('#nextExamDateTime')?.textContent || '';
         }
 
         // Show loading modal while preparing the printable document
@@ -2949,7 +3164,6 @@ async function printSeatNumbersReport() {
         const totalPages = Math.max(1, Math.ceil(entries.length / perPage));
 
         // Build printable HTML
-        const title = document.querySelector('#nextExamDateTime')?.textContent || '';
         // Prefer configured University from server; fall back to footerText
         let university = '';
         try {
@@ -3391,8 +3605,50 @@ async function printEssentialsSecretary() {
         const fontHref = (window.location && window.location.origin ? window.location.origin : '') + '/assets/fonts/vazir/vazir.css';
         const university = (document.getElementById('footerText')?.textContent || '').trim().replace(/^نسار\s*-\s*/, '') || 'گزارش ملزومات منشی جلسه';
 
-        // Use the current exam report if available
-        const report = window.currentExamReport || { exam_date: '', exam_time: '', courses: [], students: window.allStudents || [] };
+        const context = window._lastExamContext || null;
+        const normalizeDate = (value) => toEnglishDigits(String(value || '')).replace(/-/g, '/');
+        const normalizeTime = (value) => toEnglishDigits(String(value || ''));
+
+        async function getReportForContext(examDate, examTime) {
+            const response = await guardedFetch(`../API/getNextExamReport.php?exam_date=${encodeURIComponent(examDate)}&exam_time=${encodeURIComponent(examTime)}`, { cache: 'no-store' });
+            const data = await response.json();
+            if (data && !data.error) {
+                window.currentExamReport = data;
+                window.allStudents = data.students || [];
+                setLastExamContext(data.exam_date, data.exam_time);
+                return data;
+            }
+            if (data && data.error) {
+                throw new Error(data.error);
+            }
+            throw new Error('گزارش جلسه در دسترس نیست');
+        }
+
+        let report = window.currentExamReport || null;
+        let needsFetch = false;
+        const ctxDate = context && context.exam_date ? normalizeDate(context.exam_date) : null;
+        const ctxTime = context && context.exam_time ? normalizeTime(context.exam_time) : null;
+
+        if (!report || !report.exam_date || !report.exam_time) {
+            needsFetch = Boolean(ctxDate && ctxTime);
+        } else if (ctxDate && ctxTime) {
+            const repDate = normalizeDate(report.exam_date);
+            const repTime = normalizeTime(report.exam_time);
+            if (repDate !== ctxDate || repTime !== ctxTime) {
+                needsFetch = true;
+            }
+        }
+
+        if (needsFetch && ctxDate && ctxTime) {
+            try {
+                report = await getReportForContext(ctxDate, ctxTime);
+            } catch (fetchErr) {
+                Swal.close();
+                return Swal.fire({ icon: 'error', title: 'خطا', text: fetchErr.message || 'خطا در دریافت اطلاعات جلسه', confirmButtonText: 'باشه', customClass: { popup: 'swal2-rtl swal2-glass', confirmButton: 'btn btn-primary' } });
+            }
+        }
+
+        report = report || { exam_date: '', exam_time: '', courses: [], students: window.allStudents || [] };
 
         // local esc helper (some contexts may not expose the global esc)
         const esc = (txt) => { try { const d = document.createElement('div'); d.textContent = txt || ''; return d.innerHTML; } catch (e) { return String(txt || ''); } };
@@ -3679,8 +3935,50 @@ async function printEssentialsReproduction() {
         const fontHref = (window.location && window.location.origin ? window.location.origin : '') + '/assets/fonts/vazir/vazir.css';
         const university = (document.getElementById('footerText')?.textContent || '').trim().replace(/^نسار\s*-\s*/, '') || 'گزارش ملزومات اتاق تکثیر';
 
-        // Use the current exam report if available
-        const report = window.currentExamReport || { exam_date: '', exam_time: '', courses: [], students: window.allStudents || [] };
+        const context = window._lastExamContext || null;
+        const normalizeDate = (value) => toEnglishDigits(String(value || '')).replace(/-/g, '/');
+        const normalizeTime = (value) => toEnglishDigits(String(value || ''));
+
+        async function getReportForContext(examDate, examTime) {
+            const response = await guardedFetch(`../API/getNextExamReport.php?exam_date=${encodeURIComponent(examDate)}&exam_time=${encodeURIComponent(examTime)}`, { cache: 'no-store' });
+            const data = await response.json();
+            if (data && !data.error) {
+                window.currentExamReport = data;
+                window.allStudents = data.students || [];
+                setLastExamContext(data.exam_date, data.exam_time);
+                return data;
+            }
+            if (data && data.error) {
+                throw new Error(data.error);
+            }
+            throw new Error('گزارش جلسه در دسترس نیست');
+        }
+
+        let report = window.currentExamReport || null;
+        let needsFetch = false;
+        const ctxDate = context && context.exam_date ? normalizeDate(context.exam_date) : null;
+        const ctxTime = context && context.exam_time ? normalizeTime(context.exam_time) : null;
+
+        if (!report || !report.exam_date || !report.exam_time) {
+            needsFetch = Boolean(ctxDate && ctxTime);
+        } else if (ctxDate && ctxTime) {
+            const repDate = normalizeDate(report.exam_date);
+            const repTime = normalizeTime(report.exam_time);
+            if (repDate !== ctxDate || repTime !== ctxTime) {
+                needsFetch = true;
+            }
+        }
+
+        if (needsFetch && ctxDate && ctxTime) {
+            try {
+                report = await getReportForContext(ctxDate, ctxTime);
+            } catch (fetchErr) {
+                Swal.close();
+                return Swal.fire({ icon: 'error', title: 'خطا', text: fetchErr.message || 'خطا در دریافت اطلاعات جلسه', confirmButtonText: 'باشه', customClass: { popup: 'swal2-rtl swal2-glass', confirmButton: 'btn btn-primary' } });
+            }
+        }
+
+        report = report || { exam_date: '', exam_time: '', courses: [], students: window.allStudents || [] };
 
         const esc = (txt) => { try { const d = document.createElement('div'); d.textContent = txt || ''; return d.innerHTML; } catch (e) { return String(txt || ''); } };
         const parseSeatNumbers = (raw) => {

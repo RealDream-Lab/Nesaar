@@ -319,7 +319,7 @@ body::after {
 }
 
 .table td {
-  font-size: 1.1rem;
+  font-size: .9rem;
   padding: 0.8rem 0.5rem;
 }
 
@@ -557,6 +557,13 @@ body::after {
 .session-mini-card.insight-card.insight-test { background: linear-gradient(140deg, rgba(234, 246, 255, 0.92), rgba(215, 237, 255, 0.92)); }
 .session-mini-card.insight-card.insight-written { background: linear-gradient(140deg, rgba(235, 250, 222, 0.92), rgba(221, 242, 204, 0.92)); }
 .session-mini-card.insight-card.insight-electronic { background: linear-gradient(140deg, rgba(255, 248, 220, 0.92), rgba(255, 241, 200, 0.92)); }
+
+.session-mini-card.insight-card.insight-subcard {
+  cursor: pointer;
+  min-height: 90px;
+  padding: 0.75rem 0.65rem;
+}
+.session-mini-card.insight-card.insight-subcard .line1 { font-size: 1.05rem; }
 
 
 /* Morning: solid light teal background */
