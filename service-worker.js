@@ -1,7 +1,7 @@
 
 
-const CACHE_NAME = 'exam-seat-v3.3.0';
-const VERSION = '۳.۳.۰';
+const CACHE_NAME = 'exam-seat-v3.3.1';
+const VERSION = '۳.۳.۱';
 const urlsToCache = [
   '/',
   '/index.php',
@@ -24,7 +24,7 @@ const urlsToCache = [
 ];
 
 self.addEventListener('install', event => {
-  
+
   self.skipWaiting();
   event.waitUntil(
     caches.open(CACHE_NAME).then(async cache => {
@@ -82,14 +82,14 @@ self.addEventListener('activate', event => {
       )
     ).then(() => {
       self.clients.claim();
-      
+
       self.clients.matchAll().then(clients => {
         clients.forEach(client => {
           client.postMessage({
             type: 'sw-update',
             version: CACHE_NAME,
             tagVersion: `نسخه ${VERSION}`,
-            
+
             changes: [
               'هماهنگ‌سازی چیدمان و حاشیه گزارش‌های منشی و ملزومات تکثیر'
             ]
