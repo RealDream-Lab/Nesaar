@@ -476,9 +476,22 @@ function checkAuth() {
 }
 
 // Logout
-document.getElementById('logoutBtn').addEventListener('click', () => {
-    document.cookie = 'adminSession=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;';
-    window.location.href = '../';
+document.getElementById('logoutBtn').addEventListener('click', async () => {
+    const result = await Swal.fire({
+        title: 'تأیید خروج',
+        text: 'آیا مطمئن هستید که می‌خواهید از داشبورد خارج شوید؟',
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonText: 'بله، خروج',
+        cancelButtonText: 'لغو',
+        reverseButtons: true,
+        customClass: { popup: 'swal2-rtl swal2-glass', confirmButton: 'btn btn-danger', cancelButton: 'btn btn-secondary' }
+    });
+
+    if (result.isConfirmed) {
+        document.cookie = 'adminSession=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;';
+        window.location.href = '../';
+    }
 });
 
 // Edit Roles (placeholder) — opens a modal to manage roles (implementation can be added later)
