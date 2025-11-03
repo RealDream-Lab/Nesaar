@@ -6,15 +6,15 @@ function isDesktopDevice() {
     return !isTouch && width > 900 && !isMobileUA;
 }
 
-// Global safety: if any print dialog closes (printed or canceled), ensure any pending loader closes
+
 try {
     window.addEventListener('afterprint', () => {
         try { closeSwalLoadingHard(); } catch (e) { }
         try { reopenEssentialsMenuIfRequested(); } catch (e) { }
     }, false);
-} catch (e) { /* ignore */ }
+} catch (e) { }
 
-// Hard-close any SweetAlert loading spinner left in DOM
+
 function closeSwalLoadingHard() {
     try {
         if (window.Swal && typeof Swal.close === 'function') {
@@ -29,17 +29,17 @@ function closeSwalLoadingHard() {
                 if (isLoading || el.classList.contains('swal2-loading')) {
                     el.remove();
                 }
-            } catch (e) { /* ignore node issues */ }
+            } catch (e) { }
         });
-    } catch (e) { /* ignore */ }
+    } catch (e) { }
 }
 
-// Ensure iframe fonts are loaded (or timeout) then call print
+
 function safePrintIframe(iframe, cw) {
     try {
         const idoc = iframe.contentDocument || iframe.contentWindow.document;
         const fontsReady = idoc && idoc.fonts && idoc.fonts.ready ? idoc.fonts.ready : Promise.resolve();
-        // wait up to 1500ms for fonts to load, then print
+
         Promise.race([fontsReady, new Promise(r => setTimeout(r, 1500))]).then(() => {
             try { cw.focus(); cw.print(); } catch (e) { console.error('Print error:', e); }
         }).catch(() => { try { cw.focus(); cw.print(); } catch (e) { console.error('Print error:', e); } });
@@ -48,7 +48,7 @@ function safePrintIframe(iframe, cw) {
     }
 }
 
-// Ensure a popped window has fonts loaded before printing (used for fallback windows)
+
 function safePrintWindow(win) {
     try {
         const idoc = (win && win.document) ? win.document : null;
@@ -61,18 +61,18 @@ function safePrintWindow(win) {
     }
 }
 
-// If user started an essentials print from the menu, re-open the menu after print closes
+
 function reopenEssentialsMenuIfRequested() {
     try {
         if (window._reopenEssentialsMenu) {
             window._reopenEssentialsMenu = false;
             setTimeout(() => { try { examEssentialsHandler(); } catch (e) { console.error('Reopen menu failed:', e); } }, 200);
         }
-    } catch (e) { /* ignore */ }
+    } catch (e) { }
 }
 
-// Build and open a printable "صورتجلسه آزمون" (session report).
-// Uses the same exam date/time displayed in #nextExamDateTime and calls API/getNextExamReport.php
+
+
 async function printSessionReport() {
     try {
         let context = window._overrideExamContext && window._overrideExamContext.active ? window._overrideExamContext : window._lastExamContext;
@@ -112,7 +112,7 @@ async function printSessionReport() {
             return Swal.fire({ icon: 'info', title: 'اطلاعات', text: 'هیچ درسی برای این جلسه وجود ندارد', confirmButtonText: 'باشه', customClass: { popup: 'swal2-rtl swal2-glass', confirmButton: 'btn btn-primary' } });
         }
 
-        // Show loading modal while preparing the session report
+
         Swal.fire({
             title: 'در حال ساخت صورتجلسه',
             html: 'لطفاً منتظر بمانید...',
@@ -122,7 +122,7 @@ async function printSessionReport() {
             showConfirmButton: false
         });
 
-        // Sort: electronic (الکترونیکی) first, then others; then by numeric course_code
+
         courses.sort((a, b) => {
             if ((a.exam_type || '') === (b.exam_type || '')) return (Number(a.course_code) || 0) - (Number(b.course_code) || 0);
             if ((a.exam_type || '') === 'الکترونیکی') return -1;
@@ -168,7 +168,7 @@ async function printSessionReport() {
 
         // Prepare printable HTML (portrait A4) with 20 courses per page
         const fontHref = (window.location && window.location.origin ? window.location.origin : '') + '/assets/fonts/vazir/vazir.css';
-        // compact page margins to match seat-numbers report
+
         let html = `<!doctype html><html lang="fa" dir="rtl"><head><meta charset="utf-8"><title>صورتجلسه آزمون</title><link rel="stylesheet" href="${fontHref}">`;
         html += `<style>
             /* compact A4 portrait margins (aligned with seat-number report) */
@@ -207,17 +207,17 @@ async function printSessionReport() {
         html += `</head><body>`;
 
 
-        // headerHtml is built after loading configuration so we can prefer cfg.University
+
 
         const perPage = 15;
         const pages = Math.ceil(courses.length / perPage);
 
-        // Load config so we can use configured signatory names (Boss, HeadOfEDU, Chairman)
+
         let cfg = {};
         try {
             const cfgResp = await guardedFetch('../API/getConfig.php', { cache: 'no-store' });
             if (cfgResp && cfgResp.ok) cfg = await cfgResp.json();
-        } catch (e) { /* ignore */ }
+        } catch (e) { }
         const bossName = esc(cfg.BossNickName || '');
         const headName = esc(cfg.HeadOfEDU || '');
         const chairName = esc(cfg.Chairman || '');
@@ -871,19 +871,37 @@ try {
     console.warn('Failed to init info stats button', e);
 }
 
-// Load dashboard data
+// Proctor module button
+try {
+    const proctorBtn = document.getElementById('proctorBtn');
+    if (proctorBtn) {
+        proctorBtn.addEventListener('click', async () => {
+            await Swal.fire({
+                icon: 'info',
+                title: 'ماژول مراقبین',
+                text: 'این بخش برای مدیریت مراقبین آزمون در دست توسعه است.',
+                confirmButtonText: 'باشه',
+                customClass: { popup: 'swal2-rtl swal2-glass', confirmButton: 'btn btn-primary' }
+            });
+        });
+    }
+} catch (e) {
+    console.warn('Failed to init proctor button', e);
+}
+
+
 async function loadDashboardData() {
     try {
-        // Get config
+
         const configResponse = await guardedFetch('../API/getConfig.php', { cache: 'no-store' });
         const config = await configResponse.json();
 
-        // Update admin nickname if available
+
         if (config.AdminNickName) {
             document.getElementById('adminUsername').textContent = config.AdminNickName;
         }
 
-        // Get statistics
+
         const statsResponse = await guardedFetch('../API/getStatistics.php', { cache: 'no-store' });
         const stats = await statsResponse.json();
 
@@ -892,17 +910,17 @@ async function loadDashboardData() {
             document.getElementById('totalCourses').textContent = stats.totalCourses || 0;
             document.getElementById('nextExamStudents').textContent = stats.nextExamStudents || 0;
             document.getElementById('nextExamDateTime').textContent = stats.nextExamDateTime || 'آزمونی یافت نشد';
-            // Remaining future exam sessions (from now onwards)
+
             if (typeof stats.remainingSessions !== 'undefined') {
                 const el = document.getElementById('remainingSessions');
                 const card = el ? el.closest('.dashboard-card') : null;
                 if (el) {
-                    // If there are no remaining sessions, show the text and disable interaction
+
                     if (!stats.remainingSessions || stats.remainingSessions === 0) {
                         el.textContent = '۰';
                         if (card) {
                             card.classList.add('stat-card-disabled');
-                            // remove pointer cursor
+
                             card.style.cursor = 'default';
                         }
                     } else {
@@ -914,9 +932,9 @@ async function loadDashboardData() {
                     }
                 }
             }
-            // no breakdown in the top stat card; breakdown will be shown in the course list header
+
         }
-        // Always (re)render the reports chart after loading statistics
+
         try { renderReportsChart(); } catch (e) { console.error('Chart render failed:', e); }
     } catch (error) {
         console.error('Error loading dashboard data:', error);
@@ -930,10 +948,10 @@ async function loadDashboardData() {
     }
 }
 
-// Placeholder action for the "جلسه باقیمانده" card. User will specify the exact action later.
+
 async function showRemainingSessions() {
     try {
-        // Ensure Chart.js is available before attempting to render
+
         try { await loadChartJsIfNeeded(); } catch (loadErr) {
             console.warn('Chart.js not available:', loadErr);
             const card = document.getElementById('reportsChartCard');
@@ -967,13 +985,13 @@ async function showRemainingSessions() {
             });
         }
 
-        // Build HTML grid of mini-cards: first line = total (bigger), second line = date | time
+
         let cardsHtml = '<div class="session-mini-grid">';
         future.forEach(f => {
             const time = f.exam_time;
             const date = f.exam_date;
             const total = f.student_count || 0;
-            // Determine morning vs afternoon: hour < 12 => morning
+
             const hour = parseInt((time || '00:00').split(':')[0], 10) || 0;
             const whenClass = hour < 12 ? 'morning' : 'afternoon';
             const label = `${time} | ${date}`;
@@ -1000,7 +1018,7 @@ async function showRemainingSessions() {
                         const t = card.getAttribute('data-exam-time');
                         const d = card.getAttribute('data-exam-date');
                         Swal.close();
-                        // Small delay to ensure modal closed
+
                         setTimeout(() => {
                             applyNextExamOverride(d, t, { customTitle: `آزمون تاریخ ${d} ساعت ${t}` });
                             showNextExamReport();
@@ -1015,7 +1033,7 @@ async function showRemainingSessions() {
     }
 }
 
-// Update footer university name
+
 async function updateFooterUniversity() {
     try {
         const response = await guardedFetch('../API/getConfig.php', { cache: 'no-store' });
@@ -1031,9 +1049,9 @@ async function updateFooterUniversity() {
 }
 updateFooterUniversity();
 
-// Release notice is handled by the service worker; inline notice removed to avoid duplication.
 
-// Footer click event
+
+
 const copyrightFooter = document.getElementById('copyrightFooter');
 if (copyrightFooter) {
     copyrightFooter.addEventListener('click', async () => {
@@ -1103,44 +1121,44 @@ if (copyrightFooter) {
     });
 }
 
-// Initialize
+
 if (checkAuth()) {
     loadDashboardData();
 }
 
-// Chart instance holder for reports chart
+
 let reportsChartInstance = null;
-// Ensure we only configure Chart.js defaults once
+
 let chartDefaultsConfigured = false;
-// Resize handling for reports chart (debounced)
+
 let reportsResizeRegistered = false;
 let reportsResizeTimer = null;
-// Small pie instances for overview pies
+
 let smallPieExamTypeInstance = null;
 let smallPieCourseTypeInstance = null;
 
 function destroySmallOverviewPies() {
-    try { if (smallPieExamTypeInstance) { smallPieExamTypeInstance.destroy(); smallPieExamTypeInstance = null; } } catch (e) { /* ignore */ }
-    try { if (smallPieCourseTypeInstance) { smallPieCourseTypeInstance.destroy(); smallPieCourseTypeInstance = null; } } catch (e) { /* ignore */ }
+    try { if (smallPieExamTypeInstance) { smallPieExamTypeInstance.destroy(); smallPieExamTypeInstance = null; } } catch (e) { }
+    try { if (smallPieCourseTypeInstance) { smallPieCourseTypeInstance.destroy(); smallPieCourseTypeInstance = null; } } catch (e) { }
 }
 
 function renderSmallOverviewPies(stats) {
     if (!stats) return;
     try {
-        // Ensure Chart.js loaded
+
         if (typeof Chart === 'undefined') return;
 
         const examTypeTotals = stats.futureExamTypeTotals || {};
         const courseTypeTotals = stats.futureCourseTypeTotals || {};
 
-        // Prepare exam-type pie
+
         const examLabels = Object.keys(examTypeTotals);
         const examValues = examLabels.map(l => Number(examTypeTotals[l]) || 0);
 
         const examCtx = document.getElementById('smallPieExamType');
         const courseCtx = document.getElementById('smallPieCourseType');
 
-        // Colors palette
+
         const palette = ['#1a6fa6', '#ff8a65', '#7bd5ff', '#9ccc65', '#ffca28', '#7e57c2', '#26a69a', '#ef5350'];
 
         destroySmallOverviewPies();
@@ -1163,7 +1181,7 @@ function renderSmallOverviewPies(stats) {
                         enabled: true,
                         displayColors: false,
                         callbacks: {
-                            // remove tooltip title to avoid duplicate lines; return single-line label
+
                             title: function () { return ''; },
                             label: function (ctx) {
                                 const val = ctx.raw || 0;
@@ -3184,30 +3202,22 @@ async function printSeatNumbersReport() {
         const fontHref = (window.location && window.location.origin ? window.location.origin : '') + '/assets/fonts/vazir/vazir.css';
         let docHtml = `<!doctype html><html lang="fa" dir="rtl"><head><meta charset="utf-8"><title>گزارش شماره صندلی</title><link rel="stylesheet" href="${fontHref}">`;
         docHtml += `<style>
-            /* Default: Use A4 landscape for the seat-list pages. Kroki will request a portrait page. */
-            @page { size: A4 landscape; margin: 4mm; }
-            /* Named portrait page for kroki (browser support varies; modern Chromium honors this) */
-            @page portrait { size: A4 portrait; margin: 6mm; }
-            /* Ensure kroki page uses the named @page */
-            .kroki-page { page: portrait; box-sizing:border-box; padding:6mm; }
-            /* Make table columns fixed and allow wrapping so nothing overflows the page */
-            .kroki-page table { table-layout: fixed; width: 100%; box-sizing: border-box; }
+                        @page { size: A4 landscape; margin: 4mm; }
+                        @page portrait { size: A4 portrait; margin: 6mm; }
+                        .kroki-page { page: portrait; box-sizing:border-box; padding:6mm; }
+                        .kroki-page table { table-layout: fixed; width: 100%; box-sizing: border-box; }
             .kroki-page table th, .kroki-page table td { word-break: break-word; white-space: normal; overflow-wrap: anywhere; box-sizing: border-box; }
             .kroki-page table th { font-size: 11pt; }
-            /* Reset page/body margins to avoid extra offsets and ensure content fits the @page box */
-            html,body { margin:0; padding:0; }
-            /* Increased font for readability while still attempting 50 rows per page. */
-            body { font-family: Vazir, Tahoma, Arial, sans-serif; color: #111; font-size: 8.5pt; }
+                        html,body { margin:0; padding:0; }
+                        body { font-family: Vazir, Tahoma, Arial, sans-serif; color: #111; font-size: 8.5pt; }
             .report-header { text-align: center; margin-bottom: 4px; }
             .report-title { font-size: 12pt; font-weight: 700; margin-bottom:2px }
-            /* Show only date/time here (no "نسار - university"). Make it more prominent. */
-            .report-meta { font-size: 20pt; color: #111; margin-top:2px; font-weight: 900; }
+                        .report-meta { font-size: 20pt; color: #111; margin-top:2px; font-weight: 900; }
             .page { page-break-after: always; margin-bottom: 0; }
             table { width: 100%; border-collapse: collapse; table-layout: fixed; font-size: 8.5pt; line-height: 1.06; }
             th, td { padding: 4px 6px; text-align: right; border-bottom: 0.5px solid #e0e0e0; font-size: 8.5pt; box-sizing: border-box; }
             thead th { background: #efefef; font-weight: 700; font-size: 9pt; padding: 5px 6px; text-align: center; }
-            /* Center seat-number column specifically */
-            .seat-col { text-align: center; }
+                        .seat-col { text-align: center; }
             tbody tr:nth-child(odd) { background: #fafafa; }
             td { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
             .col-wrap { display: flex; gap: 6px; position: relative; }
@@ -3364,11 +3374,11 @@ async function printSeatNumbersReport() {
                 rows.sort((a, b) => (a.start - b.start) || a.building.localeCompare(b.building, 'fa') || a.class_name.localeCompare(b.class_name, 'fa'));
 
                 let mapHtml = `<div class="page kroki-page">`;
-                // make title much larger for kroki (use class so we can force it later) and include session date/time below
+
                 mapHtml += `<div class="report-header"><div class="report-title kroki-title-large" style="font-weight:900; line-height:1;">کروکی محل استقرار صندلی‌ها</div>`;
-                // include the session date/time under the title (reuse the report title variable)
+
                 mapHtml += `<div class="report-meta" style="font-size:14pt;margin-top:6px;font-weight:700;">${esc(title)}</div></div>`;
-                // remove explanatory paragraph per request and increase table font
+
                 mapHtml += `<div style="padding:8px;">
                     <table style="width:100%;border-collapse:collapse;margin-top:8px;font-size:12pt; table-layout: fixed;">
                         <thead>
@@ -3393,23 +3403,23 @@ async function printSeatNumbersReport() {
                 docHtml += mapHtml;
             }
         } catch (e) {
-            // non-fatal; if kroki generation fails, keep printing other pages
+
             console.warn('Could not build kroki page:', e);
         }
 
         docHtml += `</body></html>`;
 
-        // Dynamic fitting: try to render the first page inside a hidden iframe using decreasing font sizes
-        // until 50 rows fit (or until minFont reached). If fit, print from the iframe; otherwise fall back.
-        const desiredPerPage = perPage; // 50
+
+
+        const desiredPerPage = perPage;
         const firstPageEntries = entries.slice(0, desiredPerPage);
 
-        // Increase the starting font to be more readable per user's request.
+
         const minFontPt = 6.5;
-        let testFontPt = 9.5; // starting point (increased for readability)
+        let testFontPt = 9.5;
         let fits = false;
 
-        // helper to build a single-page HTML used for measurement
+
         function buildSinglePageHtml(fontPt) {
             const fh = (window.location && window.location.origin ? window.location.origin : '') + '/assets/fonts/vazir/vazir.css';
             let h = `<!doctype html><html lang="fa" dir="rtl"><head><meta charset="utf-8"><title>پیش‌نمایش چاپ</title><link rel="stylesheet" href="${fh}">`;
@@ -3426,7 +3436,7 @@ async function printSeatNumbersReport() {
                 .col { width:50%; }
             </style></head><body>`;
             h += `<div class="page">`;
-            // create balanced two-column layout for firstPageEntries
+
             const half = Math.ceil(firstPageEntries.length / 2);
             const left = firstPageEntries.slice(0, half);
             const right = firstPageEntries.slice(half);
@@ -3462,12 +3472,12 @@ async function printSeatNumbersReport() {
                 doc.open();
                 doc.write(buildSinglePageHtml(testFontPt));
                 doc.close();
-                // allow layout to settle
+
                 setTimeout(() => {
                     const pageEl = doc.querySelector('.page');
                     if (!pageEl) return resolve(false);
-                    // scrollHeight vs clientHeight to detect overflow
-                    const fitsNow = pageEl.scrollHeight <= pageEl.clientHeight + 1; // allow 1px leeway
+
+                    const fitsNow = pageEl.scrollHeight <= pageEl.clientHeight + 1;
                     resolve(fitsNow);
                 }, 180);
             } catch (e) { resolve(false); }
@@ -3475,32 +3485,32 @@ async function printSeatNumbersReport() {
 
         (async () => {
             while (testFontPt >= minFontPt) {
-                // try fit with current font
-                // eslint-disable-next-line no-await-in-loop
+
+
                 fits = await tryFit();
                 if (fits) break;
-                testFontPt = Math.round((testFontPt - 0.25) * 100) / 100; // step down
+                testFontPt = Math.round((testFontPt - 0.25) * 100) / 100;
             }
 
             if (fits) {
-                // print using the fitting iframe (full document with same font)
+
                 try {
                     const fullDoc = iframe.contentDocument || iframe.contentWindow.document;
-                    // replace body with full docHtml but adjust only general font sizes to testFontPt
-                    // Use a targeted regex for numeric pt values to avoid touching .report-meta specifically,
-                    // then inject a high-specificity rule to ensure the date/time stays large and bold.
+
+
+
                     let finalHtml = docHtml.replace(/font-size:\s*[\d.]+pt;/g, `font-size: ${testFontPt}pt;`);
-                    // Ensure report-meta remains prominent regardless of global replacements
-                    // Also force the kroki title size (42pt) by appending a specific rule after replacements.
+
+
                     finalHtml = finalHtml.replace('</head>', `<style>.report-meta{font-size:20pt !important; font-weight:900 !important;} .kroki-page .kroki-title-large{font-size: 32pt !important; font-weight:900 !important;}</style></head>`);
                     fullDoc.open();
                     fullDoc.write(finalHtml);
                     fullDoc.close();
-                    // close loading modal before opening print dialog
+
                     try { Swal.close(); } catch (e) { }
                     setTimeout(() => {
                         try { safePrintIframe(iframe, iframe.contentWindow); } catch (e) { console.error('Print error:', e); }
-                        // remove iframe after a short delay
+
                         setTimeout(() => { try { document.body.removeChild(iframe); } catch (e) { } }, 500);
                     }, 300);
                 } catch (e) {
@@ -3509,9 +3519,9 @@ async function printSeatNumbersReport() {
                     Swal.fire({ icon: 'error', title: 'خطا', text: 'خطا در چاپ از iframe', confirmButtonText: 'باشه', customClass: { popup: 'swal2-rtl swal2-glass', confirmButton: 'btn btn-primary' } });
                 }
             } else {
-                // cleanup test iframe
+
                 try { document.body.removeChild(iframe); } catch (e) { }
-                // fallback: reduce perPage to 44 and print in a new window
+
                 const fallbackPerPage = 44;
                 const pages = Math.max(1, Math.ceil(entries.length / fallbackPerPage));
                 let fallbackHtml = `<!doctype html><html lang="fa" dir="rtl"><head><meta charset="utf-8"><title>گزارش شماره صندلی</title><link rel="stylesheet" href="${fontHref}">`;
@@ -3535,7 +3545,7 @@ async function printSeatNumbersReport() {
         })();
 
     } catch (err) {
-        // Log full error for debugging and show a helpful message to the user.
+
         console.error('Error building printable report (printEssentialsSecretary):', err);
         const msg = (err && (err.message || err.toString())) ? String(err.message || err) : 'خطا در آماده‌سازی گزارش چاپ';
         const stack = (err && err.stack) ? String(err.stack).split('\n').slice(0, 5).join('\n') : '';
@@ -3543,7 +3553,7 @@ async function printSeatNumbersReport() {
     }
 }
 
-// Placeholder function for exam essentials handler
+
 async function examEssentialsHandler() {
     Swal.fire({
         icon: 'info',
@@ -3570,14 +3580,14 @@ async function examEssentialsHandler() {
     });
 }
 
-// Helper to start print after safely closing the selector modal.
-// Uses a short delay to ensure SweetAlert has time to remove DOM nodes
-// before we open a new loading modal inside the print function.
+
+
+
 function startEssentialsPrint(kind) {
-    // Mark that we want to reopen the essentials menu after the print dialog closes
+
     try { window._reopenEssentialsMenu = true; } catch (e) { window._reopenEssentialsMenu = true; }
-    try { Swal.close(); } catch (e) { /* ignore */ }
-    // small delay to allow SweetAlert teardown (animations/DOM) to complete
+    try { Swal.close(); } catch (e) { }
+
     setTimeout(() => {
         try {
             if (kind === 'secretary') printEssentialsSecretary();
@@ -3590,7 +3600,7 @@ function startEssentialsPrint(kind) {
     }, 100);
 }
 
-// Print function for Secretary Essentials (A4)
+
 async function printEssentialsSecretary() {
     try {
         Swal.fire({
@@ -3745,7 +3755,7 @@ async function printEssentialsSecretary() {
         const usedCourses = new Set();
 
         let hadPrevTypeCourses = false;
-        let courseIndex = 0; // global running index for displayed course rows
+        let courseIndex = 0;
         for (const exType of examOrder.concat([''])) {
             // find courses that have students with this exam type
             const coursesForType = courses.filter(c => {
@@ -3758,16 +3768,16 @@ async function printEssentialsSecretary() {
             // Instead of injecting an empty DIV (which can cause a blank page), apply the
             // page-break-before style to the header element itself for the first کتبی group.
             const sectionClass = 'exam-type-section';
-            // exam type wrapper keeps header and tables aligned
+
             docHtml += `<div class="${sectionClass}">`;
             docHtml += `<div class="course-type-group"><div class="etypeBar"><div class="label">${esc(exType || 'سایر')}</div></div></div>`;
 
             for (const course of coursesForType) {
-                // start per-course container so we can force page-breaks for کتبی courses
-                // wrap the whole course block and try to avoid splitting it across pages
+
+
                 docHtml += `<div class="course" style="page-break-inside: avoid; break-inside: avoid; -webkit-column-break-inside: avoid; -webkit-page-break-inside: avoid;"><div class="course-inner">`;
                 usedCourses.add(course.course_code);
-                // students for this course and exam type
+
                 const stu = students.filter(s => s.course_code === course.course_code && (s.exam_type || '') === exType);
                 const total = stu.length;
                 // Course header: row index | code | name  and count on the left as "NN نفر"
@@ -3825,15 +3835,15 @@ async function printEssentialsSecretary() {
                     });
                 }
                 docHtml += `</tbody></table>`;
-                // close per-course container
+
                 docHtml += `</div></div>`;
                 hadPrevTypeCourses = true;
             }
 
-            docHtml += `</div>`; // end exam-type-section
+            docHtml += `</div>`;
         }
 
-        // If there are courses not caught by examOrder (no exam_type students), include them at the end
+
         const remainingCourses = courses.filter(c => !usedCourses.has(c.course_code));
         if (remainingCourses.length) {
             docHtml += `<div class="course"><div class="course-head">سایر دروس:</div>`;
@@ -3865,10 +3875,10 @@ async function printEssentialsSecretary() {
         doc.open();
         doc.write(docHtml);
         doc.close();
-        // close loading before opening print dialog
+
         try { Swal.close(); } catch (e) { }
 
-        // Remove any completely-empty trailing .page the generator might have produced
+
         try {
             const idoc = iframe.contentDocument || iframe.contentWindow.document;
             const pages = idoc.querySelectorAll('.page');
@@ -3879,10 +3889,10 @@ async function printEssentialsSecretary() {
                 }
             }
         } catch (e) {
-            // ignore
+
         }
 
-        // Print and robust cleanup: close any spinner even if user cancels print
+
         const cw = iframe.contentWindow;
         let cleaned = false;
         const cleanup = () => {
@@ -3897,10 +3907,10 @@ async function printEssentialsSecretary() {
         try {
             if (cw) {
                 cw.onafterprint = cleanup;
-                // Safari/Firefox fallback: when print dialog closes, focus returns to window
+
                 window.addEventListener('focus', onFocusOnce, true);
                 try { safePrintIframe(iframe, cw); } catch (e) { console.error('Print invoke error:', e); }
-                // Absolute fallback in case neither event fires
+
                 setTimeout(cleanup, 5000);
             } else {
                 setTimeout(cleanup, 300);
@@ -3911,16 +3921,16 @@ async function printEssentialsSecretary() {
         }
 
     } catch (err) {
-        // log full error for debugging
+
         try { console.error('Error building printable report (detailed):', err && err.stack ? err.stack : err); } catch (e) { console.error('Error logging failed', e); }
-        // show detailed error to the user to help debugging (trim long stacks)
+
         const msg = (err && err.message) ? String(err.message) : 'خطا در آماده‌سازی گزارش چاپ';
         const stack = (err && err.stack) ? String(err.stack).split('\n').slice(0, 6).join('\n') : '';
         Swal.fire({ icon: 'error', title: 'خطا در آماده‌سازی گزارش چاپ', html: `<div style="text-align:right;direction:ltr;white-space:pre-wrap;">${esc(msg)}<br><small style='color:#666;margin-top:8px;display:block;'>${esc(stack)}</small></div>`, confirmButtonText: 'باشه', customClass: { popup: 'swal2-rtl swal2-glass', confirmButton: 'btn btn-primary' } });
     }
 }
 
-// Print function for Reproduction Essentials (A4)
+
 async function printEssentialsReproduction() {
     try {
         Swal.fire({
@@ -4171,10 +4181,10 @@ async function printEssentialsReproduction() {
         doc.write(docHtml);
         doc.close();
 
-        // Close loading before opening print dialog
+
         try { Swal.close(); } catch (e) { }
 
-        // Remove any completely-empty trailing .page if present
+
         try {
             const idoc = iframe.contentDocument || iframe.contentWindow.document;
             const pages = idoc.querySelectorAll('.page');
@@ -4186,7 +4196,7 @@ async function printEssentialsReproduction() {
             }
         } catch (e) { }
 
-        // Print and robust cleanup similar to secretary
+
         const cw = iframe.contentWindow;
         let cleaned = false;
         const cleanup = () => {
@@ -4218,7 +4228,7 @@ async function printEssentialsReproduction() {
     }
 }
 
-// Print function for Descriptive Labels (A5)
+
 async function printEssentialsDescriptive() {
     try {
         Swal.fire({
@@ -4264,10 +4274,10 @@ async function printEssentialsDescriptive() {
         doc.write(docHtml);
         doc.close();
 
-        // Close loading before print dialog
+
         try { Swal.close(); } catch (e) { }
 
-        // Robust print + cleanup
+
         const cw = iframe.contentWindow;
         let cleaned = false;
         const cleanup = () => {
@@ -4299,7 +4309,7 @@ async function printEssentialsDescriptive() {
     }
 }
 
-// Print function for Test Labels (A5)
+
 async function printEssentialsTest() {
     try {
         Swal.fire({
@@ -4345,10 +4355,10 @@ async function printEssentialsTest() {
         doc.write(docHtml);
         doc.close();
 
-        // Close loading before print dialog
+
         try { Swal.close(); } catch (e) { }
 
-        // Robust print + cleanup
+
         const cw = iframe.contentWindow;
         let cleaned = false;
         const cleanup = () => {

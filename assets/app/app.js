@@ -1,17 +1,17 @@
 document.addEventListener('DOMContentLoaded', () => {
     const VERSION = window.APP_VERSION;
 
-    // CSRF Token Helper
+    
     function getCsrfToken() {
         const metaTag = document.querySelector('meta[name="csrf-token"]');
         return metaTag ? metaTag.getAttribute('content') : null;
     }
 
-    // Enhanced fetch with CSRF protection
+    
     async function secureFetch(url, options = {}) {
         const csrfToken = getCsrfToken();
 
-        // اضافه کردن CSRF token به header برای درخواست‌های POST/PUT/DELETE/PATCH
+        
         if (options.method && ['POST', 'PUT', 'DELETE', 'PATCH'].includes(options.method.toUpperCase())) {
             options.headers = options.headers || {};
             if (csrfToken) {
@@ -22,13 +22,13 @@ document.addEventListener('DOMContentLoaded', () => {
         return fetch(url, options);
     }
 
-    // Listen for service worker update messages and show SweetAlert
+    
     if (navigator.serviceWorker) {
         navigator.serviceWorker.addEventListener('message', event => {
             if (event.data?.type === 'sw-update') {
                 const { changes } = event.data || {};
                 const items = (changes || []).slice(0, 5);
-                // Show a confirmation popup. Reload only when the user clicks OK.
+                
                 Swal.fire({
                     icon: 'info',
                     title: 'نسخه جدید آماده است',
@@ -64,7 +64,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     let refreshTimer = null;
     let clockTimer = null;
-    // Server-based clock sync for seconds display
+    
     let baseServerMs = Date.now();
     let basePerf = (typeof performance !== 'undefined' && performance.now) ? performance.now() : Date.now();
     let secondTimer = null;
@@ -94,7 +94,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     async function guardedFetch(resource, options) {
-        // ترکیب secureFetch (CSRF) با license guard checking
+        
         const response = await secureFetch(resource, options);
         await handleLicenseGuardResponse(response);
         return response;
@@ -117,24 +117,24 @@ document.addEventListener('DOMContentLoaded', () => {
             return config;
         } catch (error) {
             console.warn('Failed to load config:', error);
-            // Fallback to cached config
+            
             const cached = localStorage.getItem('appConfig');
-            // Note: default now contains SaadCode instead of Order
+            
             return cached ? JSON.parse(cached) : { University: '', SaadCode: '', IsInit: 'NO' };
         }
     }
 
-    // Load config on start
+    
     let appConfig = null;
     loadConfig().then(config => {
         appConfig = config;
-        // Update footer text with University
+        
         const footerText = document.getElementById('footerText');
         if (footerText) {
             footerText.textContent = config.University ? `نسار - ${config.University}` : 'نسار';
         }
 
-        // Check IsInit
+        
         if (config.IsInit !== 'YES') {
             showInitModal(config);
         }
@@ -177,7 +177,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     Swal.showValidationMessage('هر دو فیلد باید پر شوند');
                     return false;
                 }
-                // Normalize Persian/Arabic digits to ASCII
+                
                 const digitMap = { '۰': '0', '۱': '1', '۲': '2', '۳': '3', '۴': '4', '۵': '5', '۶': '6', '۷': '7', '۸': '8', '۹': '9', '٠': '0', '١': '1', '٢': '2', '٣': '3', '٤': '4', '٥': '5', '٦': '6', '٧': '7', '٨': '8', '٩': '9' };
                 let normalized = '';
                 for (let ch of saadRaw) {
@@ -197,7 +197,7 @@ document.addEventListener('DOMContentLoaded', () => {
         });
 
         if (formValues) {
-            // Show loading message
+            
             Swal.fire({
                 title: 'در حال ارسال...',
                 text: 'لطفاً صبر کنید',
@@ -219,7 +219,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 });
                 const result = await response.json();
 
-                Swal.close(); // Close the loading alert
+                Swal.close(); 
 
                 if (result.success) {
                     Swal.fire({
@@ -231,7 +231,7 @@ document.addEventListener('DOMContentLoaded', () => {
                             popup: 'swal2-rtl swal2-glass'
                         }
                     });
-                    // Reload config
+                    
                     const newConfig = await loadConfig();
                     appConfig = newConfig;
                     const footerText = document.getElementById('footerText');
@@ -239,7 +239,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         footerText.textContent = newConfig.University ? `نسار - ${newConfig.University}` : 'نسار';
                     }
                 } else {
-                    // Check if this is the "already registered" error
+                    
                     if (result.alreadyRegistered) {
                         Swal.fire({
                             icon: 'error',
@@ -250,7 +250,7 @@ document.addEventListener('DOMContentLoaded', () => {
                                 popup: 'swal2-rtl swal2-glass'
                             }
                         }).then(() => {
-                            // Show the modal again
+                            
                             loadConfig()
                                 .then(config => showInitModal(config))
                                 .catch(() => showInitModal(currentConfig || {}));
@@ -260,7 +260,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     }
                 }
             } catch (error) {
-                Swal.close(); // Close the loading alert
+                Swal.close(); 
                 Swal.fire({
                     icon: 'error',
                     title: 'خطا',
@@ -278,9 +278,9 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    // Handle user type change
+    
     function handleUserTypeChange() {
-        // Clear input fields
+        
         studentIdInput.value = '';
         nationalIdInput.value = '';
 
@@ -291,21 +291,21 @@ document.addEventListener('DOMContentLoaded', () => {
             studentIdInput.placeholder = 'مثال: 403254321';
             nationalIdInput.placeholder = 'مثال: 3781985569';
             nationalIdInput.type = 'tel';
-            // Save selection
+            
             localStorage.setItem('userType', 'student');
         } else if (staffTypeRadio && staffTypeRadio.checked) {
-            // Staff mode
+            
             firstFieldLabel.textContent = 'نام کاربری';
             secondFieldLabel.textContent = 'رمز عبور';
             studentIdInput.placeholder = '';
             nationalIdInput.placeholder = '';
             nationalIdInput.type = 'password';
-            // Save selection
+            
             localStorage.setItem('userType', 'staff');
         }
     }
 
-    // Modify input types based on user type selection
+    
     studentTypeRadio.addEventListener('change', () => {
         studentIdInput.type = 'tel';
         studentIdInput.inputMode = 'numeric';
@@ -320,13 +320,13 @@ document.addEventListener('DOMContentLoaded', () => {
         nationalIdInput.inputMode = 'text';
     });
 
-    // Add event listeners for radio buttons
+    
     studentTypeRadio.addEventListener('change', handleUserTypeChange);
     if (staffTypeRadio) {
         staffTypeRadio.addEventListener('change', handleUserTypeChange);
     }
 
-    // Restore saved user type selection
+    
     const savedUserType = localStorage.getItem('userType');
     if (savedUserType === 'staff' && staffTypeRadio) {
         staffTypeRadio.checked = true;
@@ -334,9 +334,9 @@ document.addEventListener('DOMContentLoaded', () => {
         studentTypeRadio.checked = true;
     }
 
-    // Initialize with saved state
+    
     handleUserTypeChange();
-    // Ensure the correct input types are set on page load
+    
     if (studentTypeRadio.checked) {
         studentIdInput.type = 'tel';
         studentIdInput.inputMode = 'numeric';
@@ -348,19 +348,19 @@ document.addEventListener('DOMContentLoaded', () => {
         nationalIdInput.type = 'password';
         nationalIdInput.inputMode = 'text';
     }
-    // Initial server clock sync and then start per-second ticker (no extra server requests)
+    
     updateServerClock().then(() => {
-        try { startSecondTicker(); } catch (e) { /* ignore */ }
+        try { startSecondTicker(); } catch (e) {  }
     });
     if (footerClock && footerSpacer) footerSpacer.textContent = footerClock.textContent;
     startClockRefresh();
 
-    // Copyright footer click event
+    
     const copyrightFooter = document.getElementById('copyrightFooter');
     if (copyrightFooter) {
         copyrightFooter.addEventListener('click', async () => {
             let countdownInterval;
-            // Ensure config is loaded
+            
             if (!appConfig) {
                 appConfig = await loadConfig();
             }
@@ -405,27 +405,27 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // --- Add to Home Screen (A2HS) prompts ---
+    
     let deferredPrompt = null;
     let shownInstallHint = false;
 
-    // Detect if already installed (standalone display mode)
+    
     const isStandalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true;
 
     window.addEventListener('beforeinstallprompt', (e) => {
-        // Chrome/Android fires this when eligible
-        // We must call preventDefault to show our custom prompt later
+        
+        
         e.preventDefault();
         deferredPrompt = e;
         if (!isStandalone) {
-            // Show our custom install prompt
+            
             showInstallToast();
         }
     });
 
     window.addEventListener('appinstalled', () => {
         deferredPrompt = null;
-        // Inform user installed successfully
+        
         Swal.fire({
             icon: 'success',
             title: 'نصب شد',
@@ -440,7 +440,7 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     function showInstallToast() {
-        // Only once per session
+        
         if (shownInstallHint) return; shownInstallHint = true;
 
         const isIOS = /iphone|ipad|ipod/i.test(window.navigator.userAgent);
@@ -466,12 +466,12 @@ document.addEventListener('DOMContentLoaded', () => {
                     const choice = await deferredPrompt.userChoice;
                     deferredPrompt = null;
                     if (choice.outcome === 'accepted') {
-                        // user accepted; nothing else needed
+                        
                     }
                 }
             });
         } else if (isIOS && !isStandalone) {
-            // iOS Safari doesn't support beforeinstallprompt; show manual steps
+            
             Swal.fire({
                 title: 'افزودن به صفحه اصلی (iOS)',
                 html: `
@@ -492,15 +492,15 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    // Offer install hint shortly after load if eligible
+    
     setTimeout(() => { if (!isStandalone) showInstallToast(); }, 1500);
 
-    // Encryption helpers
-    const ENCRYPTION_KEY = 'PNU_EXAM_SEAT_2025_SECRET_KEY'; // In production, this should be more secure
+    
+    const ENCRYPTION_KEY = 'PNU_EXAM_SEAT_2025_SECRET_KEY'; 
 
     function encryptData(data) {
         try {
-            // Use simple Base64 encoding for compatibility
+            
             const jsonString = JSON.stringify(data);
             const encoded = btoa(unescape(encodeURIComponent(jsonString)));
             return encoded;
@@ -521,7 +521,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     async function fetchExamPayload(studentId, nationalId) {
-        // بررسی لایسنس قبل از ارسال درخواست
+        
         const licenseCheck = await checkLicense();
         if (!licenseCheck.valid) {
             showLicenseExpiredAlert(licenseCheck.message);
@@ -557,7 +557,7 @@ document.addEventListener('DOMContentLoaded', () => {
         return payload;
     }
 
-    // بررسی لایسنس با فرکانس زمان‌بندی‌شده
+    
     async function checkLicense() {
         const GRACE_PERIOD_MS = 24 * 60 * 60 * 1000;
         const TRIAL_CACHE_MS = 15 * 60 * 1000;
@@ -597,7 +597,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
             }
 
-            // دریافت توکن لایسنس
+            
             const tokenResponse = await guardedFetch('API/getLicenseToken.php', { cache: 'no-store' });
             if (!tokenResponse.ok) {
                 console.warn('[License] ⚠ Could not fetch license token');
@@ -717,7 +717,7 @@ document.addEventListener('DOMContentLoaded', () => {
         };
     }
 
-    // آپدیت وضعیت لایسنس
+    
     async function updateLicenseStatus(status) {
         try {
             await guardedFetch('API/updateLicenseStatus.php', {
@@ -732,7 +732,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    // به‌روزرسانی تاریخ آخرین بررسی لایسنس در سرور
+    
     async function updateLicenseLastChecked() {
         try {
             const response = await guardedFetch('API/updateLicenseLastChecked.php', {
@@ -799,14 +799,14 @@ document.addEventListener('DOMContentLoaded', () => {
             if (!payload || !payload.date || !payload.time) {
                 throw new Error('Invalid payload structure');
             }
-            // payload.date expected like YYYY/MM/DD and payload.time like HH:MM:SS
+            
             const formattedDate = toPersianDigits(payload.date);
             const formattedTime = toPersianDigits(payload.time);
             const formattedStamp = `${formattedDate} | ${formattedTime}`;
             footerClock.textContent = formattedStamp;
             if (footerSpacer) footerSpacer.textContent = formattedStamp;
 
-            // Sync base time for per-second updates
+            
             try {
                 const timeParts = String(payload.time).split(':').map(s => parseInt(toEnglishDigits(s), 10));
                 const parts = String(payload.date).split('/').map(p => parseInt(p, 10));
@@ -814,14 +814,14 @@ document.addEventListener('DOMContentLoaded', () => {
                 const m = timeParts[1] || 0;
                 const s = timeParts[2] || 0;
                 if (parts.length === 3 && !Number.isNaN(h) && !Number.isNaN(m)) {
-                    // Create a Date object in local tz using server-provided values
+                    
                     const [y, mm, d] = parts;
                     const serverDate = new Date(y, mm - 1, d, h, m, s, 0);
                     baseServerMs = serverDate.getTime();
                     basePerf = (typeof performance !== 'undefined' && performance.now) ? performance.now() : Date.now();
                 }
             } catch (e) {
-                // ignore parsing errors; leave previous baseServerMs
+                
             }
         } catch (error) {
             console.warn('Clock update failed:', error);
@@ -844,10 +844,10 @@ document.addEventListener('DOMContentLoaded', () => {
             if (footerClock) footerClock.textContent = formatWithSeconds(nowMs);
             if (footerSpacer) footerSpacer.textContent = footerClock.textContent;
         };
-        // run immediately and then every 1000ms
+        
         tick();
         secondTimer = setInterval(() => {
-            if (document.hidden) return; // avoid background updates
+            if (document.hidden) return; 
             tick();
         }, 1000);
     }
@@ -863,7 +863,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (document.hidden) {
             stopSecondTicker();
         } else {
-            // resync from server on visibility resume to avoid drift
+            
             updateServerClock().then(() => startSecondTicker());
         }
     });
@@ -888,7 +888,7 @@ document.addEventListener('DOMContentLoaded', () => {
         scheduleNextTick();
     }
 
-    // Session helpers
+    
     function setCookie(name, value, days) {
         const d = new Date();
         d.setTime(d.getTime() + days * 24 * 60 * 60 * 1000);
@@ -994,7 +994,7 @@ document.addEventListener('DOMContentLoaded', () => {
         let studentId, nationalId;
 
         if (mode === 'student') {
-            // Sanitize to digits-only for student mode
+            
             studentId = toEnglishDigits(studentIdInput.value).replace(/[^0-9]/g, '').trim();
             nationalId = toEnglishDigits(nationalIdInput.value).replace(/[^0-9]/g, '').trim();
         } else {
@@ -1009,14 +1009,14 @@ document.addEventListener('DOMContentLoaded', () => {
                 return;
             }
         } else if (mode === 'staff') {
-            // Staff (Admin) authentication
+            
             if (!studentId || !nationalId) {
                 showAlert('warning', 'خطا!', 'وارد کردن نام کاربری و رمز عبور الزامی است.');
                 return;
             }
 
             try {
-                // Get LicenseToken from server
+                
                 const configResponse = await guardedFetch('API/getConfig.php', { cache: 'no-store' });
                 const config = await configResponse.json();
 
@@ -1028,10 +1028,10 @@ document.addEventListener('DOMContentLoaded', () => {
                 const licenseToken = config.LicenseToken;
                 const saadCode = config.SaadCode;
 
-                // Expected username: admin + SaadCode
+                
                 const expectedUsername = 'admin' + saadCode;
 
-                // Expected password: reversed LicenseToken
+                
                 const expectedPassword = licenseToken.split('').reverse().join('');
 
                 // Validate credentials
@@ -1089,7 +1089,7 @@ document.addEventListener('DOMContentLoaded', () => {
                                 if (!saveResult.success) {
                                     throw new Error(saveResult.error || 'Failed to save configuration');
                                 }
-                                // Refresh local config variable so following code sees the new values
+                                
                                 appConfig = await loadConfig();
                             } catch (error) {
                                 console.error('Error saving admin/signature info:', error);
@@ -1099,19 +1099,19 @@ document.addEventListener('DOMContentLoaded', () => {
                         }
                     }
 
-                    // Success: Set admin session and redirect
+                    
                     const adminSession = {
                         type: 'admin',
                         username: expectedUsername,
                         loginTime: new Date().toISOString()
                     };
                     try {
-                        setCookie('adminSession', encodeURIComponent(JSON.stringify(adminSession)), 1); // 1 day
+                        setCookie('adminSession', encodeURIComponent(JSON.stringify(adminSession)), 1); 
                     } catch (e) {
                         console.warn('Failed to set admin cookie', e);
                     }
 
-                    // Redirect to dashboard
+                    
                     window.location.href = 'dashboard/';
                     return;
                 } else {
@@ -1144,7 +1144,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 return;
             }
 
-            // Save session (30 days)
+            
             const first = payload[0] || null;
             const fullName = first ? `${first.first_name || ''} ${first.last_name || ''}`.trim() : '';
             lastFullName = fullName;
@@ -1166,7 +1166,7 @@ document.addEventListener('DOMContentLoaded', () => {
         } catch (error) {
             console.error('Fetch error:', error);
             if (error && error.isLicenseError) {
-                // خطای لایسنس قبلاً نمایش داده شده، هیچ کاری نکن
+                
             } else if (error && error.isUserError) {
                 showAlert('warning', 'ورود ناموفق', 'رمز عبور و شماره دانشجویی صحیح نیست یا اطلاعاتی برای این شماره وجود ندارد.');
             } else {
@@ -1177,9 +1177,9 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-    // remove obsolete closeResults handler (results panel removed)
+    
 
-    // Auto login via cookie
+    
     (async function autoLoginFromCookie() {
         const raw = getCookie('userSession');
         if (!raw) {
@@ -1239,7 +1239,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 eraseCookie('userSession');
             }
             if (e?.isLicenseError) {
-                // خطای لایسنس قبلاً نمایش داده شده
+                
             } else if (!e?.isUserError) {
                 showAlert('error', 'خطا در اتصال!', 'مشکلی در ارتباط با سرور رخ داده است. لطفاً بعداً تلاش کنید.');
             }

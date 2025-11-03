@@ -1,5 +1,5 @@
-// Bump cache to force refresh of updated assets (app.js, style.css, index.php)
-// Increment this when you want clients to fetch the new assets.
+
+
 const CACHE_NAME = 'exam-seat-v3.3.0';
 const VERSION = '۳.۳.۰';
 const urlsToCache = [
@@ -24,7 +24,7 @@ const urlsToCache = [
 ];
 
 self.addEventListener('install', event => {
-  // Activate updated SW immediately
+  
   self.skipWaiting();
   event.waitUntil(
     caches.open(CACHE_NAME).then(async cache => {
@@ -82,14 +82,14 @@ self.addEventListener('activate', event => {
       )
     ).then(() => {
       self.clients.claim();
-      // Notify all clients about SW update
+      
       self.clients.matchAll().then(clients => {
         clients.forEach(client => {
           client.postMessage({
             type: 'sw-update',
             version: CACHE_NAME,
             tagVersion: `نسخه ${VERSION}`,
-            // release headline requested by product owner
+            
             changes: [
               'هماهنگ‌سازی چیدمان و حاشیه گزارش‌های منشی و ملزومات تکثیر'
             ]
