@@ -84,8 +84,8 @@ async function printSessionReport() {
         if (parts.length !== 2) {
             return Swal.fire({ icon: 'error', title: 'خطا', text: 'فرمت تاریخ و ساعت نامعتبر است', confirmButtonText: 'باشه', customClass: { popup: 'swal2-rtl swal2-glass', confirmButton: 'btn btn-primary' } });
         }
-        const examTime = parts[0];
-        const examDate = parts[1];
+        const examTime = toEnglishDigits(parts[0]);
+        const examDate = toEnglishDigits(parts[1]).replace(/-/g, '/');
 
         const resp = await guardedFetch(`../API/getNextExamReport.php?exam_date=${encodeURIComponent(examDate)}&exam_time=${encodeURIComponent(examTime)}`, { cache: 'no-store' });
         const data = await resp.json();
@@ -329,6 +329,17 @@ function toPersianDigits(num) {
     return String(num).replace(/[0-9]/g, d => '۰۱۲۳۴۵۶۷۸۹'[d]);
 }
 
+function toEnglishDigits(value) {
+    const persian = '۰۱۲۳۴۵۶۷۸۹';
+    const arabic = '٠١٢٣٤٥٦٧٨٩';
+    return String(value).replace(/[۰-۹٠-٩]/g, d => {
+        let idx = persian.indexOf(d);
+        if (idx >= 0) return String(idx);
+        idx = arabic.indexOf(d);
+        return idx >= 0 ? String(idx) : d;
+    });
+}
+
 // Return Bootstrap badge class for exam type labels across the dashboard
 function getExamBadgeClass(type) {
     if (!type) return 'bg-secondary';
@@ -566,6 +577,163 @@ try {
     console.warn('Edit roles handler attach failed', e);
 }
 
+// Info & statistics modal populated from quickInsights payload
+try {
+    const infoBtn = document.getElementById('infoStatsBtn');
+    if (infoBtn) {
+        infoBtn.addEventListener('click', async () => {
+            const escapeAttr = (value) => String(value ?? '').replace(/["'&<>]/g, ch => ({ '"': '&quot;', "'": '&#39;', '&': '&amp;', '<': '&lt;', '>': '&gt;' }[ch]));
+            const insightDefinitions = [
+                { key: 'busiestSession', label: 'شلوغ‌ترین جلسه آزمون', category: 'session', variant: 'insight-busy' },
+                { key: 'quietestSession', label: 'خلوت‌ترین جلسه آزمون', category: 'session', variant: 'insight-quiet' },
+                { key: 'maxWritten', label: 'بیشترین تعداد کتبی', category: 'session', variant: 'insight-written' },
+                { key: 'minWritten', label: 'کمترین تعداد کتبی', category: 'session', variant: 'insight-written' },
+                { key: 'maxElectronic', label: 'بیشترین تعداد الکترونیکی', category: 'session', variant: 'insight-electronic' },
+                { key: 'minElectronic', label: 'کمترین تعداد الکترونیکی', category: 'session', variant: 'insight-electronic' },
+                { key: 'maxCourseFrequency', label: 'بیشترین فراوانی درس', category: 'course', variant: 'insight-course' },
+                { key: 'minCourseFrequency', label: 'کمترین فراوانی درس', category: 'course', variant: 'insight-course' },
+                { key: 'maxDescriptiveHybrid', label: 'بیشترین تشریحی و تستی تشریحی', category: 'course', variant: 'insight-descriptive' },
+                { key: 'minDescriptiveHybrid', label: 'کمترین تشریحی و تستی تشریحی', category: 'course', variant: 'insight-descriptive' },
+                { key: 'maxTestCourse', label: 'بیشترین تستی', category: 'course', variant: 'insight-test' },
+                { key: 'minTestCourse', label: 'کمترین تستی', category: 'course', variant: 'insight-test' }
+            ];
+
+            try {
+                const response = await guardedFetch('../API/getStatistics.php', { cache: 'no-store' });
+                const stats = await response.json();
+
+                if (stats.error) {
+                    await Swal.fire({
+                        icon: 'error',
+                        title: 'خطا',
+                        text: stats.error,
+                        confirmButtonText: 'باشه',
+                        customClass: { popup: 'swal2-rtl swal2-glass', confirmButton: 'btn btn-primary' }
+                    });
+                    return;
+                }
+
+                const insights = stats.quickInsights || {};
+                const cards = [];
+
+                insightDefinitions.forEach(def => {
+                    const entry = insights[def.key];
+                    if (!entry) return;
+
+                    const count = Number(entry.student_count ?? entry.count ?? 0);
+                    if (!Number.isFinite(count) || count < 0) return;
+
+                    const unitText = def.category === 'session' || def.category === 'course' ? 'نفر' : '';
+                    const displayCount = unitText ? `${toPersianDigits(count)} ${unitText}` : toPersianDigits(count);
+
+                    const rawTime = entry.exam_time || '';
+                    const rawDate = entry.exam_date || '';
+                    const line2Parts = [];
+                    if (rawTime) line2Parts.push(rawTime);
+                    if (rawDate) line2Parts.push(rawDate);
+                    const displayLine2 = line2Parts.length ? toPersianDigits(line2Parts.join(' | ')) : 'بدون تاریخ';
+                    const displayCourseCode = entry.course_code ? toPersianDigits(entry.course_code) : '';
+                    const displayLabelText = (def.category === 'course' && displayCourseCode)
+                        ? `${def.label} - ${displayCourseCode}`
+                        : def.label;
+
+                    const classes = ['session-mini-card', 'insight-card', def.variant].filter(Boolean).join(' ');
+                    const attributes = [
+                        `data-insight-type="${escapeAttr(def.category)}"`,
+                        `data-label="${escapeAttr(def.label)}"`,
+                        `data-count="${escapeAttr(count)}"`,
+                        `data-display-line2="${escapeAttr(displayLine2)}"`
+                    ];
+
+                    if (rawDate) attributes.push(`data-exam-date="${escapeAttr(rawDate)}"`);
+                    if (rawTime) attributes.push(`data-exam-time="${escapeAttr(rawTime)}"`);
+                    if (entry.course_code) attributes.push(`data-course-code="${escapeAttr(entry.course_code)}"`);
+                    if (entry.course_name) attributes.push(`data-course-name="${escapeAttr(entry.course_name)}"`);
+                    if (entry.course_type) attributes.push(`data-course-type="${escapeAttr(entry.course_type)}"`);
+
+                    cards.push(`
+                        <div class="${classes}" ${attributes.join(' ')}>
+                            <div class="line1">${escapeAttr(displayCount)}</div>
+                            <div class="line2">${escapeAttr(displayLine2)}</div>
+                            <div class="line3">${escapeAttr(displayLabelText)}</div>
+                        </div>
+                    `);
+                });
+
+                if (!cards.length) {
+                    await Swal.fire({
+                        icon: 'info',
+                        title: 'اطلاعات',
+                        text: 'داده‌ای برای نمایش وجود ندارد',
+                        confirmButtonText: 'باشه',
+                        customClass: { popup: 'swal2-rtl swal2-glass', confirmButton: 'btn btn-primary' }
+                    });
+                    return;
+                }
+
+                const cardsHtml = `<div class="session-mini-grid insight-grid">${cards.join('')}</div>`;
+
+                await Swal.fire({
+                    title: 'اطلاعات و آمار',
+                    html: cardsHtml,
+                    width: '110rem',
+                    showConfirmButton: false,
+                    showCloseButton: true,
+                    customClass: { popup: 'swal2-rtl swal2-glass' },
+                    didOpen: () => {
+                        const container = Swal.getHtmlContainer();
+                        if (!container) return;
+                        const cardNodes = container.querySelectorAll('.session-mini-card.insight-card');
+                        cardNodes.forEach(cardEl => {
+                            const type = cardEl.getAttribute('data-insight-type');
+                            const label = cardEl.getAttribute('data-label') || '';
+                            const displayLine2 = cardEl.getAttribute('data-display-line2') || '';
+                            const examDate = cardEl.getAttribute('data-exam-date');
+                            const examTime = cardEl.getAttribute('data-exam-time');
+                            const courseCode = cardEl.getAttribute('data-course-code');
+                            const courseName = cardEl.getAttribute('data-course-name');
+
+                            if (courseName) {
+                                const tooltip = courseCode ? `درس ${courseName} (کد ${courseCode})` : `درس ${courseName}`;
+                                cardEl.setAttribute('title', tooltip);
+                            } else if (courseCode) {
+                                cardEl.setAttribute('title', `کد درس ${courseCode}`);
+                            }
+
+                            cardEl.addEventListener('click', () => {
+                                Swal.close();
+                                if (type === 'session' && examDate && examTime) {
+                                    setTimeout(() => {
+                                        applyNextExamOverride(examDate, examTime, { customTitle: `${label} (${displayLine2})` });
+                                        showNextExamReport();
+                                    }, 150);
+                                } else if (type === 'course' && courseCode) {
+                                    setTimeout(() => {
+                                        loadCourseReportByCode(courseCode, { showErrors: true });
+                                    }, 150);
+                                }
+                            }, { once: true });
+                        });
+                    }
+                });
+            } catch (err) {
+                console.error('Failed to load insights:', err);
+                if (!err?.isLicenseError) {
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'خطا',
+                        text: 'خطا در بارگیری آمار',
+                        confirmButtonText: 'باشه',
+                        customClass: { popup: 'swal2-rtl swal2-glass', confirmButton: 'btn btn-primary' }
+                    });
+                }
+            }
+        });
+    }
+} catch (e) {
+    console.warn('Failed to init info stats button', e);
+}
+
 // Load dashboard data
 async function loadDashboardData() {
     try {
@@ -694,14 +862,12 @@ async function showRemainingSessions() {
                     card.addEventListener('click', () => {
                         const t = card.getAttribute('data-exam-time');
                         const d = card.getAttribute('data-exam-date');
-                        // Set a custom title so showNextExamReport will render with a specific label
-                        window.customExamReportTitle = `آزمون تاریخ ${d} ساعت ${t}`;
-                        // Set the nextExamDateTime label so showNextExamReport can parse it
-                        const nextEl = document.getElementById('nextExamDateTime');
-                        if (nextEl) nextEl.textContent = `${t} | ${d}`;
                         Swal.close();
                         // Small delay to ensure modal closed
-                        setTimeout(() => showNextExamReport(), 120);
+                        setTimeout(() => {
+                            applyNextExamOverride(d, t, { customTitle: `آزمون تاریخ ${d} ساعت ${t}` });
+                            showNextExamReport();
+                        }, 120);
                     });
                 });
             }
@@ -2018,6 +2184,134 @@ async function showStudentReport() {
     }
 }
 
+async function loadCourseReportByCode(courseCode, options = {}) {
+    const { showErrors = true } = options;
+    if (!courseCode) return false;
+    try {
+        const response = await guardedFetch(`../API/getCourseReport.php?course_code=${encodeURIComponent(courseCode)}`, { cache: 'no-store' });
+        const data = await response.json();
+
+        if (data.error) {
+            if (showErrors) {
+                await Swal.fire({
+                    icon: 'error',
+                    title: 'خطا',
+                    text: data.error,
+                    confirmButtonText: 'باشه',
+                    customClass: {
+                        popup: 'swal2-rtl swal2-glass',
+                        confirmButton: 'btn btn-primary'
+                    }
+                });
+            }
+            return false;
+        }
+
+        const course = data.course;
+        const students = data.students;
+
+        let html = `
+            <div class="mb-4">
+                <h5 class="text-primary mb-3">مشخصات درس</h5>
+                <div class="table-responsive">
+                    <table class="table table-bordered">
+                        <tr>
+                            <th style="width: 30%;">کد درس</th>
+                            <td>${course.course_code}</td>
+                        </tr>
+                        <tr>
+                            <th>نام درس</th>
+                            <td>${course.course_name}</td>
+                        </tr>
+                        <tr>
+                            <th>تاریخ آزمون</th>
+                            <td>${course.exam_date}</td>
+                        </tr>
+                        <tr>
+                            <th>ساعت آزمون</th>
+                            <td>${course.exam_time}</td>
+                        </tr>
+                        <tr>
+                            <th>نوع درس</th>
+                            <td><span class="badge bg-${course.course_type === 'کتبی' ? 'success' : 'info'}">${course.course_type}</span></td>
+                        </tr>
+                        <tr>
+                            <th>تعداد دانشجویان</th>
+                            <td><span class="text-secondary">${students.length}</span> نفر</td>
+                        </tr>
+                    </table>
+                </div>
+            </div>
+        `;
+
+        if (students && students.length > 0) {
+            html += `
+            <div>
+                <h5 class="text-primary mb-3">لیست دانشجویان</h5>
+                <div class="table-responsive">
+                    <table class="table table-striped table-hover">
+                        <thead class="table-light">
+                            <tr>
+                                <th>ردیف</th>
+                                <th>شماره دانشجویی</th>
+                                <th>نام خانوادگی</th>
+                                <th>نام</th>
+                                <th>مقطع</th>
+                                <th>شماره صندلی</th>
+                                <th>کلاس</th>
+                                <th>نوع آزمون</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+        `;
+
+            students.forEach((student, index) => {
+                html += `
+                    <tr>
+                        <td>${index + 1}</td>
+                        <td>${student.student_id}</td>
+                        <td><span class="text-secondary">${student.last_name}</span></td>
+                        <td>${student.first_name}</td>
+                        <td>${student.degree}</td>
+                        <td><span class="text-secondary">${student.seat_number}</span></td>
+                        <td>${student.class_name}</td>
+                            <td><span class="badge ${getExamBadgeClass(student.exam_type)}">${student.exam_type}</span></td>
+                    </tr>
+                `;
+            });
+
+            html += `
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        `;
+        } else {
+            html += '<p class="text-muted text-center mt-3">هیچ دانشجویی در این درس ثبت‌نام نکرده است.</p>';
+        }
+
+        document.getElementById('reportContent').innerHTML = html;
+        document.getElementById('reportCard').style.display = 'block';
+        setTimeout(scrollReportCardIntoView, 100);
+        return true;
+    } catch (error) {
+        console.error('Error:', error);
+        if (!error?.isLicenseError && showErrors) {
+            Swal.fire({
+                icon: 'error',
+                title: 'خطا',
+                text: 'خطا در دریافت اطلاعات',
+                confirmButtonText: 'باشه',
+                customClass: {
+                    popup: 'swal2-rtl swal2-glass',
+                    confirmButton: 'btn btn-primary'
+                }
+            });
+        }
+        return false;
+    }
+}
+
 async function showCourseReport() {
     const { value: courseCode } = await Swal.fire({
         title: 'جستجوی درس',
@@ -2042,16 +2336,72 @@ async function showCourseReport() {
     });
 
     if (courseCode) {
-        try {
-            // حذف Swal.fire بارگذاری
-            const response = await guardedFetch(`../API/getCourseReport.php?course_code=${encodeURIComponent(courseCode)}`, { cache: 'no-store' });
-            const data = await response.json();
+        await loadCourseReportByCode(courseCode, { showErrors: true });
+    }
+}
 
-            if (data.error) {
+function applyNextExamOverride(examDate, examTime, options = {}) {
+    if (!examDate || !examTime) return;
+    const nextEl = document.getElementById('nextExamDateTime');
+    if (!nextEl) return;
+
+    const normalizedDate = toEnglishDigits(String(examDate)).replace(/-/g, '/');
+    const normalizedTime = toEnglishDigits(String(examTime));
+
+    if (window._overrideExamContext && window._overrideExamContext.active) {
+        // Update existing override with new values but keep original label reference
+        window._overrideExamContext.exam_date = normalizedDate;
+        window._overrideExamContext.exam_time = normalizedTime;
+        window._overrideExamContext.customTitle = options.customTitle || null;
+        window._overrideExamContext.display_text = `${normalizedTime} | ${normalizedDate}`;
+    } else {
+        window._overrideExamContext = {
+            exam_date: normalizedDate,
+            exam_time: normalizedTime,
+            previous_text: nextEl.textContent,
+            customTitle: options.customTitle || null,
+            active: true,
+            display_text: `${normalizedTime} | ${normalizedDate}`
+        };
+    }
+
+    nextEl.textContent = window._overrideExamContext.display_text;
+    if (window._overrideExamContext.customTitle) {
+        window.customExamReportTitle = window._overrideExamContext.customTitle;
+    }
+}
+
+async function showNextExamReport() {
+    const nextEl = document.getElementById('nextExamDateTime');
+    const override = window._overrideExamContext && window._overrideExamContext.active ? window._overrideExamContext : null;
+    const originalLabel = override ? (override.previous_text ?? (nextEl ? nextEl.textContent : '')) : null;
+
+    try {
+        let examTime = '';
+        let examDate = '';
+        if (override) {
+            examTime = override.exam_time;
+            examDate = override.exam_date;
+        } else {
+            if (!nextEl) {
                 await Swal.fire({
                     icon: 'error',
                     title: 'خطا',
-                    text: data.error,
+                    text: 'زمان آزمون در دسترس نیست',
+                    confirmButtonText: 'باشه',
+                    customClass: { popup: 'swal2-rtl swal2-glass', confirmButton: 'btn btn-primary' }
+                });
+                return;
+            }
+            // Get exam date and time from the label
+            const nextExamDateTimeText = nextEl.textContent;
+
+            // Check if there's no exam
+            if (nextExamDateTimeText === 'بارگذاری...' || nextExamDateTimeText === 'آزمونی یافت نشد') {
+                await Swal.fire({
+                    icon: 'info',
+                    title: 'اطلاعات',
+                    text: 'آزمون بعدی یافت نشد',
                     confirmButtonText: 'باشه',
                     customClass: {
                         popup: 'swal2-rtl swal2-glass',
@@ -2061,150 +2411,25 @@ async function showCourseReport() {
                 return;
             }
 
-            // Display course info and students
-            const course = data.course;
-            const students = data.students;
-
-            let html = `
-				<div class="mb-4">
-					<h5 class="text-primary mb-3">مشخصات درس</h5>
-					<div class="table-responsive">
-						<table class="table table-bordered">
-							<tr>
-								<th style="width: 30%;">کد درس</th>
-								<td>${course.course_code}</td>
-							</tr>
-							<tr>
-								<th>نام درس</th>
-								<td>${course.course_name}</td>
-							</tr>
-							<tr>
-								<th>تاریخ آزمون</th>
-								<td>${course.exam_date}</td>
-							</tr>
-							<tr>
-								<th>ساعت آزمون</th>
-								<td>${course.exam_time}</td>
-							</tr>
-							<tr>
-								<th>نوع درس</th>
-								<td><span class="badge bg-${course.course_type === 'کتبی' ? 'success' : 'info'}">${course.course_type}</span></td>
-							</tr>
-							<tr>
-								<th>تعداد دانشجویان</th>
-								<td><span class="text-secondary">${students.length}</span> نفر</td>
-							</tr>
-						</table>
-					</div>
-				</div>
-			`;
-
-            if (students && students.length > 0) {
-                html += `
-					<div>
-						<h5 class="text-primary mb-3">لیست دانشجویان</h5>
-						<div class="table-responsive">
-							<table class="table table-striped table-hover">
-								<thead class="table-light">
-									<tr>
-										<th>ردیف</th>
-										<th>شماره دانشجویی</th>
-										<th>نام خانوادگی</th>
-										<th>نام</th>
-										<th>مقطع</th>
-										<th>شماره صندلی</th>
-										<th>کلاس</th>
-										<th>نوع آزمون</th>
-									</tr>
-								</thead>
-								<tbody>
-			`;
-
-                students.forEach((student, index) => {
-                    html += `
-						<tr>
-							<td>${index + 1}</td>
-							<td>${student.student_id}</td>
-							<td><span class="text-secondary">${student.last_name}</span></td>
-							<td>${student.first_name}</td>
-							<td>${student.degree}</td>
-							<td><span class="text-secondary">${student.seat_number}</span></td>
-							<td>${student.class_name}</td>
-                            <td><span class="badge ${getExamBadgeClass(student.exam_type)}">${student.exam_type}</span></td>
-						</tr>
-					`;
-                });
-
-                html += `
-							</tbody>
-						</table>
-					</div>
-				</div>
-			`;
-            } else {
-                html += '<p class="text-muted text-center mt-3">هیچ دانشجویی در این درس ثبت‌نام نکرده است.</p>';
-            }
-
-            document.getElementById('reportContent').innerHTML = html;
-            document.getElementById('reportCard').style.display = 'block';
-            setTimeout(scrollReportCardIntoView, 100);
-
-        } catch (error) {
-            console.error('Error:', error);
-            if (!error?.isLicenseError) {
-                Swal.fire({
+            // Parse the format: "HH:MM | YYYY/MM/DD"
+            const parts = nextExamDateTimeText.split('|').map(s => s.trim());
+            if (parts.length !== 2) {
+                await Swal.fire({
                     icon: 'error',
                     title: 'خطا',
-                    text: 'خطا در دریافت اطلاعات',
+                    text: 'فرمت تاریخ و ساعت نامعتبر است',
                     confirmButtonText: 'باشه',
                     customClass: {
                         popup: 'swal2-rtl swal2-glass',
                         confirmButton: 'btn btn-primary'
                     }
                 });
+                return;
             }
+
+            examTime = toEnglishDigits(parts[0]);
+            examDate = toEnglishDigits(parts[1]).replace(/-/g, '/');
         }
-    }
-}
-
-async function showNextExamReport() {
-    try {
-        // Get exam date and time from the label
-        const nextExamDateTimeText = document.getElementById('nextExamDateTime').textContent;
-
-        // Check if there's no exam
-        if (nextExamDateTimeText === 'بارگذاری...' || nextExamDateTimeText === 'آزمونی یافت نشد') {
-            await Swal.fire({
-                icon: 'info',
-                title: 'اطلاعات',
-                text: 'آزمون بعدی یافت نشد',
-                confirmButtonText: 'باشه',
-                customClass: {
-                    popup: 'swal2-rtl swal2-glass',
-                    confirmButton: 'btn btn-primary'
-                }
-            });
-            return;
-        }
-
-        // Parse the format: "HH:MM | YYYY/MM/DD"
-        const parts = nextExamDateTimeText.split('|').map(s => s.trim());
-        if (parts.length !== 2) {
-            await Swal.fire({
-                icon: 'error',
-                title: 'خطا',
-                text: 'فرمت تاریخ و ساعت نامعتبر است',
-                confirmButtonText: 'باشه',
-                customClass: {
-                    popup: 'swal2-rtl swal2-glass',
-                    confirmButton: 'btn btn-primary'
-                }
-            });
-            return;
-        }
-
-        const examTime = parts[0];
-        const examDate = parts[1];
 
         // حذف Swal.fire بارگذاری
         const response = await guardedFetch(`../API/getNextExamReport.php?exam_date=${encodeURIComponent(examDate)}&exam_time=${encodeURIComponent(examTime)}`, { cache: 'no-store' });
@@ -2425,6 +2650,13 @@ async function showNextExamReport() {
                     confirmButton: 'btn btn-primary'
                 }
             });
+        }
+    } finally {
+        if (override && override.active) {
+            if (nextEl && originalLabel !== null && typeof originalLabel !== 'undefined') {
+                nextEl.textContent = originalLabel;
+            }
+            window._overrideExamContext = null;
         }
     }
 }
@@ -3561,7 +3793,7 @@ async function printEssentialsReproduction() {
         // 2) Written section: full detail like secretary
         const writtenCourses = courses.filter(c => students.some(st => st.course_code === c.course_code && (st.exam_type || '') === 'کتبی'));
         if (writtenCourses.length) {
-            docHtml += `<div style="page-break-inside: avoid; break-inside: avoid; -webkit-column-break-inside: avoid; -webkit-page-break-inside: avoid;">`;
+            docHtml += `<div>`;
             docHtml += `<div class="etypeBar" style="margin-top:8px;"><div class="label">کتبی</div></div>`;
             let courseIndex = 0;
             writtenCourses.forEach(course => {

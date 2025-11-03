@@ -56,6 +56,9 @@ if ($licenseStatus['valid'] !== true) {
                         <button id="editRolesBtn" class="btn btn-icon p-0" type="button" title="ویرایش نقش‌ها" style="background:transparent;border:none;margin-inline-end:8px;padding:0;">
                             <img src="/dashboard/config.png" alt="ویرایش نقش‌ها" class="rotating-icon" style="width:40px;height:40px;object-fit:contain;display:block;">
                         </button>
+                        <button id="infoStatsBtn" class="btn btn-icon p-0" type="button" title="اطلاعات و آمار" style="background:transparent;border:none;margin-inline-end:8px;padding:0;">
+                            <img src="/dashboard/statices.png" alt="اطلاعات و آمار" style="width:40px;height:40px;object-fit:contain;display:block;">
+                        </button>
                         <button class="btn btn-logout" id="logoutBtn" type="button" title="خروج" style="background:transparent;border:none;margin-inline-start:0;padding:0;">
                             <img src="/dashboard/logout.png" alt="خروج" style="width:40px;height:40px;object-fit:contain;display:block;transform:rotate(180deg);">
                         </button>

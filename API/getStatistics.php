@@ -33,11 +33,26 @@ try {
     
     $allExams = $stmt->fetchAll();
     $futureExams = [];
+    $busiestSession = null;
+    $quietestSession = null;
     
     foreach ($allExams as $exam) {
         // Parse Jalali date (format: YYYY/MM/DD)
         $dateParts = explode('/', $exam['exam_date']);
         $timeParts = explode(':', $exam['exam_time']);
+
+        $count = (int) ($exam['student_count'] ?? 0);
+        $sessionInfo = [
+            'exam_date' => $exam['exam_date'],
+            'exam_time' => $exam['exam_time'],
+            'student_count' => $count
+        ];
+        if ($busiestSession === null || $count > $busiestSession['student_count']) {
+            $busiestSession = $sessionInfo;
+        }
+        if ($quietestSession === null || $count < $quietestSession['student_count']) {
+            $quietestSession = $sessionInfo;
+        }
         
         if (count($dateParts) === 3 && count($timeParts) === 2) {
             // Convert Jalali to Gregorian timestamp
@@ -158,6 +173,97 @@ try {
         }
     }
 
+    // Course frequency extremes (overall)
+    $courseFrequencyStmt = $pdo->query("SELECT 
+            c.course_code,
+            c.course_name,
+            c.exam_date,
+            c.exam_time,
+            c.course_type,
+            COUNT(*) as student_count
+        FROM courses c
+        INNER JOIN exam_seats es ON c.course_code = es.course_code
+        GROUP BY c.course_code, c.course_name, c.exam_date, c.exam_time, c.course_type");
+    $courseFrequencyRows = $courseFrequencyStmt->fetchAll();
+
+    $maxCourse = null;
+    $minCourse = null;
+    $maxDescriptive = null;
+    $minDescriptive = null;
+    $maxTest = null;
+    $minTest = null;
+
+    $descriptiveTypes = ['تشریحی', 'تستی و تشریحی'];
+
+    foreach ($courseFrequencyRows as $row) {
+        $row['student_count'] = (int) $row['student_count'];
+        if ($maxCourse === null || $row['student_count'] > $maxCourse['student_count']) {
+            $maxCourse = $row;
+        }
+        if ($minCourse === null || $row['student_count'] < $minCourse['student_count']) {
+            $minCourse = $row;
+        }
+
+        $ctype = trim($row['course_type']);
+        if (in_array($ctype, $descriptiveTypes, true)) {
+            if ($maxDescriptive === null || $row['student_count'] > $maxDescriptive['student_count']) {
+                $maxDescriptive = $row;
+            }
+            if ($minDescriptive === null || $row['student_count'] < $minDescriptive['student_count']) {
+                $minDescriptive = $row;
+            }
+        }
+
+        if ($ctype === 'تستی') {
+            if ($maxTest === null || $row['student_count'] > $maxTest['student_count']) {
+                $maxTest = $row;
+            }
+            if ($minTest === null || $row['student_count'] < $minTest['student_count']) {
+                $minTest = $row;
+            }
+        }
+    }
+
+    // Exam-type extremes per session (کتبی/الکترونیکی)
+    $maxWritten = null;
+    $minWritten = null;
+    $maxElectronic = null;
+    $minElectronic = null;
+
+    foreach ($typeCounts as $d => $times) {
+        foreach ($times as $t => $types) {
+            $written = 0;
+            $electronic = 0;
+            foreach ($types as $label => $value) {
+                if ($label === 'الکترونیکی' || mb_stripos($label, 'الکت') !== false) {
+                    $electronic += (int) $value;
+                } else {
+                    $written += (int) $value;
+                }
+            }
+
+            if ($written > 0) {
+                $entry = ['exam_date' => $d, 'exam_time' => $t, 'student_count' => $written];
+                if ($maxWritten === null || $written > $maxWritten['student_count']) {
+                    $maxWritten = $entry;
+                }
+                if ($minWritten === null || $written < $minWritten['student_count']) {
+                    $minWritten = $entry;
+                }
+            }
+
+            if ($electronic > 0) {
+                $entry = ['exam_date' => $d, 'exam_time' => $t, 'student_count' => $electronic];
+                if ($maxElectronic === null || $electronic > $maxElectronic['student_count']) {
+                    $maxElectronic = $entry;
+                }
+                if ($minElectronic === null || $electronic < $minElectronic['student_count']) {
+                    $minElectronic = $entry;
+                }
+            }
+        }
+    }
+
     echo json_encode([
         'totalStudents' => $totalStudents,
         'totalCourses' => $totalCourses,
@@ -166,7 +272,21 @@ try {
         'remainingSessions' => $remainingSessions,
         'futureExams' => $futureExamsOutput,
         'futureExamTypeTotals' => $futureExamTypeTotals,
-        'futureCourseTypeTotals' => $futureCourseTypeTotals
+        'futureCourseTypeTotals' => $futureCourseTypeTotals,
+        'quickInsights' => [
+            'busiestSession' => $busiestSession,
+            'quietestSession' => $quietestSession,
+            'maxCourseFrequency' => $maxCourse,
+            'minCourseFrequency' => $minCourse,
+            'maxDescriptiveHybrid' => $maxDescriptive,
+            'minDescriptiveHybrid' => $minDescriptive,
+            'maxTestCourse' => $maxTest,
+            'minTestCourse' => $minTest,
+            'maxWritten' => $maxWritten,
+            'minWritten' => $minWritten,
+            'maxElectronic' => $maxElectronic,
+            'minElectronic' => $minElectronic
+        ]
     ], JSON_UNESCAPED_UNICODE);
 } catch (Exception $e) {
     error_log('Statistics error: ' . $e->getMessage());
