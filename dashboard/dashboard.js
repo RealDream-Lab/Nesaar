@@ -485,7 +485,7 @@ document.getElementById('logoutBtn').addEventListener('click', async () => {
         confirmButtonText: 'بله، خروج',
         cancelButtonText: 'لغو',
         reverseButtons: true,
-        customClass: { popup: 'swal2-rtl swal2-glass', confirmButton: 'btn btn-danger', cancelButton: 'btn btn-secondary' }
+    customClass: { popup: 'swal2-rtl swal2-glass', confirmButton: 'btn btn-danger', cancelButton: 'btn btn-cancel' }
     });
 
     if (result.isConfirmed) {
@@ -510,7 +510,7 @@ try {
                 confirmButtonText: 'بله، ادامه',
                 cancelButtonText: 'لغو',
                 reverseButtons: true,
-                customClass: { popup: 'swal2-rtl swal2-glass', confirmButton: 'btn btn-danger', cancelButton: 'btn btn-secondary' }
+                customClass: { popup: 'swal2-rtl swal2-glass', confirmButton: 'btn btn-danger', cancelButton: 'btn btn-cancel' }
             });
             if (!first.isConfirmed) return;
 
@@ -559,7 +559,8 @@ try {
                 confirmButtonText: 'ذخیره',
                 cancelButtonText: 'انصراف',
                 focusConfirm: false,
-                customClass: { popup: 'swal2-rtl swal2-glass' },
+                // Ensure buttons match the modal's styling
+                customClass: { popup: 'swal2-rtl swal2-glass', confirmButton: 'btn btn-primary', cancelButton: 'btn btn-cancel' },
                 preConfirm: () => {
                     const admin = document.getElementById('er_admin')?.value || '';
                     const boss = document.getElementById('er_boss')?.value || '';
@@ -583,7 +584,7 @@ try {
                 confirmButtonText: 'بله، ذخیره کن',
                 cancelButtonText: 'لغو',
                 reverseButtons: true,
-                customClass: { popup: 'swal2-rtl swal2-glass', confirmButton: 'btn btn-primary', cancelButton: 'btn btn-secondary' }
+                customClass: { popup: 'swal2-rtl swal2-glass', confirmButton: 'btn btn-primary', cancelButton: 'btn btn-cancel' }
             });
             if (!second.isConfirmed) return;
 
@@ -892,7 +893,7 @@ try {
             await Swal.fire({
                 icon: 'info',
                 title: 'ماژول مراقبین',
-                text: 'این بخش برای مدیریت مراقبین آزمون در دست توسعه است.',
+                text: 'این بخش برای مدیریت و استقرار مراقبین آزمون در دست توسعه است.',
                 confirmButtonText: 'باشه',
                 customClass: { popup: 'swal2-rtl swal2-glass', confirmButton: 'btn btn-primary' }
             });
@@ -1540,7 +1541,7 @@ async function showUploadModal(examType) {
         customClass: {
             popup: 'swal2-rtl swal2-glass',
             confirmButton: 'btn btn-primary',
-            cancelButton: 'btn btn-secondary'
+            cancelButton: 'btn btn-cancel'
         },
         preConfirm: () => {
             const fileInput = document.getElementById('databaseFile');
@@ -2096,7 +2097,7 @@ async function showStudentReport() {
         customClass: {
             popup: 'swal2-rtl swal2-glass',
             confirmButton: 'btn btn-primary',
-            cancelButton: 'btn btn-secondary'
+            cancelButton: 'btn btn-cancel'
         },
         preConfirm: () => {
             const input = document.getElementById('studentIdInput');
@@ -2367,7 +2368,7 @@ async function showCourseReport() {
         customClass: {
             popup: 'swal2-rtl swal2-glass',
             confirmButton: 'btn btn-primary',
-            cancelButton: 'btn btn-secondary'
+            cancelButton: 'btn btn-cancel'
         },
         preConfirm: () => {
             const input = document.getElementById('courseCodeInput');

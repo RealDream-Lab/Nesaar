@@ -458,7 +458,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 customClass: {
                     popup: 'swal2-rtl swal2-glass',
                     confirmButton: 'btn btn-primary mx-2',
-                    cancelButton: 'btn btn-light mx-2'
+                    cancelButton: 'btn btn-cancel mx-2'
                 }
             }).then(async (result) => {
                 if (result.isConfirmed && deferredPrompt) {
@@ -1379,7 +1379,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     customClass: {
                         popup: 'swal2-rtl swal2-glass',
                         confirmButton: 'btn btn-danger mx-2',
-                        cancelButton: 'btn btn-glass-cancel mx-2'
+                        cancelButton: 'btn btn-cancel mx-2'
                     }
                 });
 
