@@ -608,6 +608,8 @@ try {
                     if (values.AdminNickName) {
                         try { document.getElementById('adminUsername').textContent = values.AdminNickName; } catch (e) { }
                     }
+                    // Update global config for immediate effect
+                    window.appConfig.GroupByCourse = values.GroupByCourse;
                     await Swal.fire({ icon: 'success', title: 'ذخیره شد', text: 'اطلاعات با موفقیت ذخیره شد', confirmButtonText: 'باشه', customClass: { popup: 'swal2-rtl swal2-glass', confirmButton: 'btn btn-primary' } });
                 } else {
                     throw new Error((saveJson && saveJson.error) ? saveJson.error : 'خطا در ذخیره تنظیمات');
