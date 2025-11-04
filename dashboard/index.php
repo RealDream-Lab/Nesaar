@@ -108,7 +108,14 @@ if ($licenseStatus['valid'] !== true) {
             <!-- Buttons are placed under the main reports chart below so they together span the full width -->
             <!-- The IDs are preserved for compatibility with any JS hooks (customCardOne/Two/Three) -->
 
-            <!-- Database Update (moved to bottom) -->
+            <!-- Latest Request Report -->
+            <div class="dashboard-card no-hover" id="reportCard" style="display: none;">
+                <h4 class="mb-3">آخرین گزارش درخواستی</h4>
+                <div id="reportContent"></div>
+                <div class="text-center mt-3">
+                    <button class="btn btn-danger" onclick="clearReport()">پاک کردن گزارش</button>
+                </div>
+            </div>
 
             <!-- Reports Chart Card (empty title by design) -->
             <div class="dashboard-card no-hover" id="reportsChartCard">
@@ -120,14 +127,7 @@ if ($licenseStatus['valid'] !== true) {
 
             </div>
 
-            <!-- Latest Request Report -->
-            <div class="dashboard-card no-hover" id="reportCard" style="display: none;">
-                <h4 class="mb-3">آخرین گزارش درخواستی</h4>
-                <div id="reportContent"></div>
-                <div class="text-center mt-3">
-                    <button class="btn btn-danger" onclick="clearReport()">پاک کردن گزارش</button>
-                </div>
-            </div>
+
 
             <!-- Database Update (moved here to bottom-most section) -->
             <div class="dashboard-card no-hover">
