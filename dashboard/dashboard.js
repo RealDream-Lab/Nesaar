@@ -3066,12 +3066,12 @@ async function printSeatNumbersReport() {
 
         const entries = students.map(normalize);
 
-        // Sort by course_name if GroupByCourse is YES, then by last name then first name
+        // Sort by course_code if GroupByCourse is YES, then by last name then first name
         const groupByCourse = window.appConfig?.GroupByCourse === 'YES';
         entries.sort((a, b) => {
             if (groupByCourse) {
-                const courseA = (a.course_name || '').trim();
-                const courseB = (b.course_name || '').trim();
+                const courseA = (a.course_code || '').trim();
+                const courseB = (b.course_code || '').trim();
                 if (courseA !== courseB) return courseA.localeCompare(courseB, 'fa') || courseA.localeCompare(courseB);
             }
             const lnA = (a.last_name || '').trim();

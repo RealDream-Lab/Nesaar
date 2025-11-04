@@ -1,7 +1,7 @@
 
 
-const CACHE_NAME = 'exam-seat-v3.3.3';
-const VERSION = '۳.۳.۳';
+const CACHE_NAME = 'exam-seat-v3.3.4';
+const VERSION = '۳.۳.۴';
 const urlsToCache = [
   '/',
   '/index.php',
@@ -92,7 +92,8 @@ self.addEventListener('activate', event => {
 
             changes: [
               'بهبود عملکرد',
-              'بهینه سازی گزارشات'
+              'بهینه سازی گزارشات',
+              'اضافه شدن گروه بندی در گزارش شماره'
             ]
           });
         });
