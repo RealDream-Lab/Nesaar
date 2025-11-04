@@ -3058,6 +3058,7 @@ async function printSeatNumbersReport() {
             first_name: s.first_name || s.firstname || s.name || '',
             last_name: s.last_name || s.lastname || s.lastName || '',
             course_name: s.course_name || s.courseName || s.course || '',
+            course_code: s.course_code || s.courseCode || '',
             seat_number: (typeof s.seat_number !== 'undefined') ? String(s.seat_number) : '',
             // optional location fields returned by API: building and class/room name
             building: s.building || s.building_name || s.location || '',
@@ -3065,6 +3066,17 @@ async function printSeatNumbersReport() {
         });
 
         const entries = students.map(normalize);
+
+        // Ensure config is loaded for sorting
+        if (!window.appConfig) {
+            try {
+                const configResponse = await guardedFetch('../API/getConfig.php', { cache: 'no-store' });
+                const config = await configResponse.json();
+                window.appConfig = config;
+            } catch (e) {
+                console.warn('Could not load config for sorting', e);
+            }
+        }
 
         // Sort by course_code if GroupByCourse is YES, then by last name then first name
         const groupByCourse = window.appConfig?.GroupByCourse === 'YES';
