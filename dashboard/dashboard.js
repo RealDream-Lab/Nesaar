@@ -504,7 +504,7 @@ try {
             // First confirmation (warn about changing session-report info)
             const first = await Swal.fire({
                 title: 'تأیید تغییر اطلاعات صورتجلسه',
-                text: 'این عمل باعث تغییر اطلاعات صورتجلسه‌های آزمون خواهد شد. آیا مطمئن هستید که می‌خواهید ادامه دهید؟',
+                text: 'این عمل باعث تغییر اطلاعات صورتجلسه‌ها و گزارشات آزمون خواهد شد. آیا مطمئن هستید که می‌خواهید ادامه دهید؟',
                 icon: 'warning',
                 showCancelButton: true,
                 confirmButtonText: 'بله، ادامه',
@@ -554,13 +554,12 @@ try {
                         <div style="margin-top:10px; display:flex; align-items:center; gap:8px;">
                             <input id="er_groupByCourse" type="checkbox" ${groupByCourseChecked ? 'checked' : ''} style="width:1.15rem;height:1.15rem;">
                             <label for="er_groupByCourse" style="margin:0;cursor:pointer;">گروه‌بندی گزارش‌ها براساس درس</label>
-                            <span style="font-size:0.85rem;color:#6c757d;">(YES/NO)</span>
                         </div>
                     </div>
                 </div>`;
 
             const modalResult = await Swal.fire({
-                title: 'ویرایش نقش‌ها',
+                title: 'ویرایش نقش‌ها و تنظیمات',
                 html: formHtml,
                 showCancelButton: true,
                 confirmButtonText: 'ذخیره',
@@ -922,6 +921,9 @@ async function loadDashboardData() {
         if (config.AdminNickName) {
             document.getElementById('adminUsername').textContent = config.AdminNickName;
         }
+
+        // Store config globally for use in reports
+        window.appConfig = config;
 
 
         const statsResponse = await guardedFetch('../API/getStatistics.php', { cache: 'no-store' });
@@ -3062,8 +3064,14 @@ async function printSeatNumbersReport() {
 
         const entries = students.map(normalize);
 
-        // Sort by last name then first name (Persian-aware locale where possible)
+        // Sort by course_name if GroupByCourse is YES, then by last name then first name
+        const groupByCourse = window.appConfig?.GroupByCourse === 'YES';
         entries.sort((a, b) => {
+            if (groupByCourse) {
+                const courseA = (a.course_name || '').trim();
+                const courseB = (b.course_name || '').trim();
+                if (courseA !== courseB) return courseA.localeCompare(courseB, 'fa') || courseA.localeCompare(courseB);
+            }
             const lnA = (a.last_name || '').trim();
             const lnB = (b.last_name || '').trim();
             if (lnA !== lnB) return lnA.localeCompare(lnB, 'fa') || lnA.localeCompare(lnB);
