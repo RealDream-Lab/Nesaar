@@ -12,13 +12,28 @@ if (!$input || !is_array($input)) {
 }
 
 // Allow only specific config keys to be written via this endpoint
-$allowed = ['AdminNickName', 'BossNickName', 'HeadOfEDU', 'Chairman'];
+// Note: GroupByCourse is a YES/NO toggle used for report grouping preferences
+$allowed = ['AdminNickName', 'BossNickName', 'HeadOfEDU', 'Chairman', 'GroupByCourse'];
 
 $toSave = [];
 foreach ($allowed as $k) {
-    if (isset($input[$k])) {
-        $val = trim($input[$k]);
-        if ($val !== '') $toSave[$k] = $val;
+    if (!array_key_exists($k, $input)) continue; // skip keys not provided
+
+    if ($k === 'GroupByCourse') {
+        // Normalize any value to strict YES/NO (default NO)
+        $raw = is_string($input[$k]) ? $input[$k] : '';
+        $val = strtoupper(trim($raw));
+        if ($val !== 'YES' && $val !== 'NO') {
+            $val = 'NO';
+        }
+        $toSave[$k] = $val; // always save toggle even if NO
+        continue;
+    }
+
+    // Other text fields: ignore empty strings
+    $val = trim((string)$input[$k]);
+    if ($val !== '') {
+        $toSave[$k] = $val;
     }
 }
 
