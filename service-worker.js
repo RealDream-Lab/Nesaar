@@ -1,7 +1,7 @@
 
 
-const CACHE_NAME = 'exam-seat-v3.3.4';
-const VERSION = '۳.۳.۴';
+const CACHE_NAME = 'exam-seat-v3.3.5';
+const VERSION = '۳.۳.۵';
 const urlsToCache = [
   '/',
   '/index.php',

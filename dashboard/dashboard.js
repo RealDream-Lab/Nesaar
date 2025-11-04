@@ -3060,7 +3060,6 @@ async function printSeatNumbersReport() {
             course_name: s.course_name || s.courseName || s.course || '',
             course_code: s.course_code || s.courseCode || '',
             seat_number: (typeof s.seat_number !== 'undefined') ? String(s.seat_number) : '',
-            student_id: s.student_id || s.studentId || '',
             // optional location fields returned by API: building and class/room name
             building: s.building || s.building_name || s.location || '',
             class_name: s.class_name || s.room || s.class || ''
@@ -3176,9 +3175,8 @@ async function printSeatNumbersReport() {
                         docHtml += `<tr>`;
                         // Rowno
                         docHtml += `<td>${esc(globalIndex + 1)}</td>`;
-                        // Display as "LastName FirstName ...XXX"
-                        const studentIdSuffix = row.student_id ? ' ...' + toPersianDigits(row.student_id.slice(-3)) : '';
-                        const fullName = esc((row.last_name || '') + ' ' + (row.first_name || '') + studentIdSuffix);
+                        // Display as "LastName FirstName"
+                        const fullName = esc((row.last_name || '') + ' ' + (row.first_name || ''));
                         const courseName = esc(row.course_name || '');
                         docHtml += `<td title="${fullName}">${fullName}</td>`;
                         docHtml += `<td title="${courseName}">${courseName}</td>`;
@@ -3196,8 +3194,7 @@ async function printSeatNumbersReport() {
                     const globalIndex = start + idx;
                     docHtml += `<tr>`;
                     docHtml += `<td>${esc(globalIndex + 1)}</td>`;
-                    const studentIdSuffix2 = row.student_id ? ' ...' + toPersianDigits(row.student_id.slice(-3)) : '';
-                    const fullName2 = esc((row.last_name || '') + ' ' + (row.first_name || '') + studentIdSuffix2);
+                    const fullName2 = esc((row.last_name || '') + ' ' + (row.first_name || ''));
                     const courseName2 = esc(row.course_name || '');
                     docHtml += `<td title="${fullName2}">${fullName2}</td>`;
                     docHtml += `<td title="${courseName2}">${courseName2}</td>`;
@@ -3368,8 +3365,7 @@ async function printSeatNumbersReport() {
                 h += `<div class="col"><table><thead><tr><th style="width:6%">ردیف</th><th style="width:28%">نام و نام خانوادگی</th><th style="width:54%">نام درس</th><th style="width:12%">صندلی</th></tr></thead><tbody>`;
                 colArr.forEach((r, idx) => {
                     const globalIndex = (ci === 0 ? idx : half + idx);
-                    const studentIdSuffix = r.student_id ? ' ...' + toPersianDigits(r.student_id.slice(-3)) : '';
-                    const fullName = (r.last_name || '') + ' ' + (r.first_name || '') + studentIdSuffix;
+                    const fullName = (r.last_name || '') + ' ' + (r.first_name || '');
                     const courseName = r.course_name || '';
                     h += `<tr><td>${globalIndex + 1}</td><td title="${fullName}">${fullName}</td><td title="${courseName}">${courseName}</td><td class="seat-col">${r.seat_number || ''}</td></tr>`;
                 });
@@ -3454,10 +3450,7 @@ async function printSeatNumbersReport() {
                     const startIdx = p * fallbackPerPage;
                     const slice = entries.slice(startIdx, startIdx + fallbackPerPage);
                     fallbackHtml += `<div class="page"><table><thead><tr><th>ردیف</th><th>نام</th><th>درس</th><th class="seat-col">صندلی</th></tr></thead><tbody>`;
-                    slice.forEach((r, i) => { 
-                        const studentIdSuffix = r.student_id ? ' ...' + toPersianDigits(r.student_id.slice(-3)) : '';
-                        fallbackHtml += `<tr><td>${startIdx + i + 1}</td><td>${esc((r.last_name || '') + ' ' + (r.first_name || '') + studentIdSuffix)}</td><td>${esc(r.course_name || '')}</td><td class="seat-col">${esc(r.seat_number || '')}</td></tr>`;
-                    });
+                    slice.forEach((r, i) => { fallbackHtml += `<tr><td>${startIdx + i + 1}</td><td>${esc((r.last_name || '') + ' ' + (r.first_name || ''))}</td><td>${esc(r.course_name || '')}</td><td class="seat-col">${esc(r.seat_number || '')}</td></tr>`; });
                     fallbackHtml += `</tbody></table></div>`;
                 }
                 fallbackHtml += `</body></html>`;
