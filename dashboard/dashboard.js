@@ -244,21 +244,24 @@ async function printSessionReport() {
             // table header
             let t = '<table class="courses"><thead><tr>' +
                 '<th style="width:4%">ردیف</th>' +
+                '<th style="width:12%">نوع درس</th>' +
                 '<th style="width:8%">کد درس</th>' +
-                '<th style="width:60%">نام درس</th>' +
-                '<th style="width:13%">تعداد</th>' +
-                '<th style="width:15%">حاضر / غایب</th>' +
+                '<th style="width:54%">نام درس</th>' +
+                '<th style="width:10%">تعداد</th>' +
+                '<th style="width:12%">حاضر / غایب</th>' +
                 '</tr></thead><tbody>';
             slice.forEach((c, idx) => {
                 const code = esc(c.course_code || '');
                 const name = esc(c.course_name || '');
+                const typeofCRS = esc(c.course_type || '');
                 const count = Number(c.student_count || c.count || 0) || 0;
                 // Placeholder text for manual filling: حاضرین ____ نفر / غایبین ____ نفر
                 const statsPlaceholder = ' ___  /  ___ ';
                 t += `<tr>` +
                     `<td class="center">${toPersianDigits(startIndex + idx + 1)}</td>` +
+                    `<td class="center">${typeofCRS}</td>` +
                     `<td class="center">${code}</td>` +
-                    `<td class="name">${name}</td>` +
+                    `<td class="name" style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 150px;">${name}</td>` +
                     `<td class="center">${toPersianDigits(count)}</td>` +
                     `<td class="center">${statsPlaceholder}</td>` +
                     `</tr>`;
