@@ -527,6 +527,7 @@ try {
             const bossVal = cfg.BossNickName || '';
             const headVal = cfg.HeadOfEDU || '';
             const chairVal = cfg.Chairman || '';
+            const groupByCourseChecked = String(cfg.GroupByCourse || '').toUpperCase() === 'YES';
 
             // local escape helper (avoid relying on functions defined elsewhere)
             const escapeHtml = (text) => { const div = document.createElement('div'); div.textContent = text || ''; return div.innerHTML; };
@@ -549,6 +550,12 @@ try {
 
                         <label style="display:block;font-size:0.92rem;margin-top:6px;color:inherit;">نام و نام خانوادگی مسئول جلسه</label>
                         <input id="er_chair" class="swal2-input" placeholder="مسئول جلسه" style="margin-bottom:6px;border:1px solid rgba(255,255,255,0.08);background:transparent;color:inherit;box-shadow:none;" value="${escapeHtml(chairVal)}">
+
+                        <div style="margin-top:10px; display:flex; align-items:center; gap:8px;">
+                            <input id="er_groupByCourse" type="checkbox" ${groupByCourseChecked ? 'checked' : ''} style="width:1.15rem;height:1.15rem;">
+                            <label for="er_groupByCourse" style="margin:0;cursor:pointer;">گروه‌بندی گزارش‌ها براساس درس</label>
+                            <span style="font-size:0.85rem;color:#6c757d;">(YES/NO)</span>
+                        </div>
                     </div>
                 </div>`;
 
@@ -566,8 +573,9 @@ try {
                     const boss = document.getElementById('er_boss')?.value || '';
                     const head = document.getElementById('er_head')?.value || '';
                     const chair = document.getElementById('er_chair')?.value || '';
+                    const groupByCourse = (document.getElementById('er_groupByCourse')?.checked) ? 'YES' : 'NO';
                     // return values to then handle save confirmation
-                    return { AdminNickName: admin.trim(), BossNickName: boss.trim(), HeadOfEDU: head.trim(), Chairman: chair.trim() };
+                    return { AdminNickName: admin.trim(), BossNickName: boss.trim(), HeadOfEDU: head.trim(), Chairman: chair.trim(), GroupByCourse: groupByCourse };
                 }
             });
 
@@ -892,8 +900,8 @@ try {
         proctorBtn.addEventListener('click', async () => {
             await Swal.fire({
                 icon: 'info',
-                title: 'ماژول مراقبین',
-                text: 'این بخش برای مدیریت و استقرار مراقبین آزمون در دست توسعه است.',
+                title: 'ماژول عوامل اجرائی',
+                text: 'این بخش برای مدیریت و استقرار عوامل اجرائی آزمون در دست توسعه است.',
                 confirmButtonText: 'باشه',
                 customClass: { popup: 'swal2-rtl swal2-glass', confirmButton: 'btn btn-primary' }
             });
