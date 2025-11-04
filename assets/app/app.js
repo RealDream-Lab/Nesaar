@@ -1,17 +1,17 @@
 document.addEventListener('DOMContentLoaded', () => {
     const VERSION = window.APP_VERSION;
 
-    
+
     function getCsrfToken() {
         const metaTag = document.querySelector('meta[name="csrf-token"]');
         return metaTag ? metaTag.getAttribute('content') : null;
     }
 
-    
+
     async function secureFetch(url, options = {}) {
         const csrfToken = getCsrfToken();
 
-        
+
         if (options.method && ['POST', 'PUT', 'DELETE', 'PATCH'].includes(options.method.toUpperCase())) {
             options.headers = options.headers || {};
             if (csrfToken) {
@@ -22,13 +22,13 @@ document.addEventListener('DOMContentLoaded', () => {
         return fetch(url, options);
     }
 
-    
+
     if (navigator.serviceWorker) {
         navigator.serviceWorker.addEventListener('message', event => {
             if (event.data?.type === 'sw-update') {
                 const { changes } = event.data || {};
                 const items = (changes || []).slice(0, 5);
-                
+
                 Swal.fire({
                     icon: 'info',
                     title: 'نسخه جدید آماده است',
@@ -64,7 +64,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     let refreshTimer = null;
     let clockTimer = null;
-    
+
     let baseServerMs = Date.now();
     let basePerf = (typeof performance !== 'undefined' && performance.now) ? performance.now() : Date.now();
     let secondTimer = null;
@@ -94,7 +94,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     async function guardedFetch(resource, options) {
-        
+
         const response = await secureFetch(resource, options);
         await handleLicenseGuardResponse(response);
         return response;
@@ -117,24 +117,24 @@ document.addEventListener('DOMContentLoaded', () => {
             return config;
         } catch (error) {
             console.warn('Failed to load config:', error);
-            
+
             const cached = localStorage.getItem('appConfig');
-            
+
             return cached ? JSON.parse(cached) : { University: '', SaadCode: '', IsInit: 'NO' };
         }
     }
 
-    
+
     let appConfig = null;
     loadConfig().then(config => {
         appConfig = config;
-        
+
         const footerText = document.getElementById('footerText');
         if (footerText) {
             footerText.textContent = config.University ? `نسار - ${config.University}` : 'نسار';
         }
 
-        
+
         if (config.IsInit !== 'YES') {
             showInitModal(config);
         }
@@ -177,7 +177,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     Swal.showValidationMessage('هر دو فیلد باید پر شوند');
                     return false;
                 }
-                
+
                 const digitMap = { '۰': '0', '۱': '1', '۲': '2', '۳': '3', '۴': '4', '۵': '5', '۶': '6', '۷': '7', '۸': '8', '۹': '9', '٠': '0', '١': '1', '٢': '2', '٣': '3', '٤': '4', '٥': '5', '٦': '6', '٧': '7', '٨': '8', '٩': '9' };
                 let normalized = '';
                 for (let ch of saadRaw) {
@@ -197,7 +197,7 @@ document.addEventListener('DOMContentLoaded', () => {
         });
 
         if (formValues) {
-            
+
             Swal.fire({
                 title: 'در حال ارسال...',
                 text: 'لطفاً صبر کنید',
@@ -219,7 +219,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 });
                 const result = await response.json();
 
-                Swal.close(); 
+                Swal.close();
 
                 if (result.success) {
                     Swal.fire({
@@ -231,7 +231,7 @@ document.addEventListener('DOMContentLoaded', () => {
                             popup: 'swal2-rtl swal2-glass'
                         }
                     });
-                    
+
                     const newConfig = await loadConfig();
                     appConfig = newConfig;
                     const footerText = document.getElementById('footerText');
@@ -239,7 +239,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         footerText.textContent = newConfig.University ? `نسار - ${newConfig.University}` : 'نسار';
                     }
                 } else {
-                    
+
                     if (result.alreadyRegistered) {
                         Swal.fire({
                             icon: 'error',
@@ -250,7 +250,7 @@ document.addEventListener('DOMContentLoaded', () => {
                                 popup: 'swal2-rtl swal2-glass'
                             }
                         }).then(() => {
-                            
+
                             loadConfig()
                                 .then(config => showInitModal(config))
                                 .catch(() => showInitModal(currentConfig || {}));
@@ -260,7 +260,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     }
                 }
             } catch (error) {
-                Swal.close(); 
+                Swal.close();
                 Swal.fire({
                     icon: 'error',
                     title: 'خطا',
@@ -278,9 +278,9 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    
+
     function handleUserTypeChange() {
-        
+
         studentIdInput.value = '';
         nationalIdInput.value = '';
 
@@ -291,21 +291,21 @@ document.addEventListener('DOMContentLoaded', () => {
             studentIdInput.placeholder = 'مثال: 403254321';
             nationalIdInput.placeholder = 'مثال: 3781985569';
             nationalIdInput.type = 'tel';
-            
+
             localStorage.setItem('userType', 'student');
         } else if (staffTypeRadio && staffTypeRadio.checked) {
-            
+
             firstFieldLabel.textContent = 'نام کاربری';
             secondFieldLabel.textContent = 'رمز عبور';
             studentIdInput.placeholder = '';
             nationalIdInput.placeholder = '';
             nationalIdInput.type = 'password';
-            
+
             localStorage.setItem('userType', 'staff');
         }
     }
 
-    
+
     studentTypeRadio.addEventListener('change', () => {
         studentIdInput.type = 'tel';
         studentIdInput.inputMode = 'numeric';
@@ -320,13 +320,13 @@ document.addEventListener('DOMContentLoaded', () => {
         nationalIdInput.inputMode = 'text';
     });
 
-    
+
     studentTypeRadio.addEventListener('change', handleUserTypeChange);
     if (staffTypeRadio) {
         staffTypeRadio.addEventListener('change', handleUserTypeChange);
     }
 
-    
+
     const savedUserType = localStorage.getItem('userType');
     if (savedUserType === 'staff' && staffTypeRadio) {
         staffTypeRadio.checked = true;
@@ -334,9 +334,9 @@ document.addEventListener('DOMContentLoaded', () => {
         studentTypeRadio.checked = true;
     }
 
-    
+
     handleUserTypeChange();
-    
+
     if (studentTypeRadio.checked) {
         studentIdInput.type = 'tel';
         studentIdInput.inputMode = 'numeric';
@@ -348,19 +348,19 @@ document.addEventListener('DOMContentLoaded', () => {
         nationalIdInput.type = 'password';
         nationalIdInput.inputMode = 'text';
     }
-    
+
     updateServerClock().then(() => {
-        try { startSecondTicker(); } catch (e) {  }
+        try { startSecondTicker(); } catch (e) { }
     });
     if (footerClock && footerSpacer) footerSpacer.textContent = footerClock.textContent;
     startClockRefresh();
 
-    
+
     const copyrightFooter = document.getElementById('copyrightFooter');
     if (copyrightFooter) {
         copyrightFooter.addEventListener('click', async () => {
             let countdownInterval;
-            
+
             if (!appConfig) {
                 appConfig = await loadConfig();
             }
@@ -405,27 +405,27 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    
+
     let deferredPrompt = null;
     let shownInstallHint = false;
 
-    
+
     const isStandalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true;
 
     window.addEventListener('beforeinstallprompt', (e) => {
-        
-        
+
+
         e.preventDefault();
         deferredPrompt = e;
         if (!isStandalone) {
-            
+
             showInstallToast();
         }
     });
 
     window.addEventListener('appinstalled', () => {
         deferredPrompt = null;
-        
+
         Swal.fire({
             icon: 'success',
             title: 'نصب شد',
@@ -440,7 +440,7 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     function showInstallToast() {
-        
+
         if (shownInstallHint) return; shownInstallHint = true;
 
         const isIOS = /iphone|ipad|ipod/i.test(window.navigator.userAgent);
@@ -466,12 +466,12 @@ document.addEventListener('DOMContentLoaded', () => {
                     const choice = await deferredPrompt.userChoice;
                     deferredPrompt = null;
                     if (choice.outcome === 'accepted') {
-                        
+
                     }
                 }
             });
         } else if (isIOS && !isStandalone) {
-            
+
             Swal.fire({
                 title: 'افزودن به صفحه اصلی (iOS)',
                 html: `
@@ -492,15 +492,15 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    
+
     setTimeout(() => { if (!isStandalone) showInstallToast(); }, 1500);
 
-    
-    const ENCRYPTION_KEY = 'PNU_EXAM_SEAT_2025_SECRET_KEY'; 
+
+    const ENCRYPTION_KEY = 'PNU_EXAM_SEAT_2025_SECRET_KEY';
 
     function encryptData(data) {
         try {
-            
+
             const jsonString = JSON.stringify(data);
             const encoded = btoa(unescape(encodeURIComponent(jsonString)));
             return encoded;
@@ -521,7 +521,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     async function fetchExamPayload(studentId, nationalId) {
-        
+
         const licenseCheck = await checkLicense();
         if (!licenseCheck.valid) {
             showLicenseExpiredAlert(licenseCheck.message);
@@ -557,7 +557,7 @@ document.addEventListener('DOMContentLoaded', () => {
         return payload;
     }
 
-    
+
     async function checkLicense() {
         const GRACE_PERIOD_MS = 24 * 60 * 60 * 1000;
         const TRIAL_CACHE_MS = 15 * 60 * 1000;
@@ -597,7 +597,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
             }
 
-            
+
             const tokenResponse = await guardedFetch('API/getLicenseToken.php', { cache: 'no-store' });
             if (!tokenResponse.ok) {
                 console.warn('[License] ⚠ Could not fetch license token');
@@ -717,7 +717,7 @@ document.addEventListener('DOMContentLoaded', () => {
         };
     }
 
-    
+
     async function updateLicenseStatus(status) {
         try {
             await guardedFetch('API/updateLicenseStatus.php', {
@@ -732,7 +732,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    
+
     async function updateLicenseLastChecked() {
         try {
             const response = await guardedFetch('API/updateLicenseLastChecked.php', {
@@ -799,14 +799,14 @@ document.addEventListener('DOMContentLoaded', () => {
             if (!payload || !payload.date || !payload.time) {
                 throw new Error('Invalid payload structure');
             }
-            
+
             const formattedDate = toPersianDigits(payload.date);
             const formattedTime = toPersianDigits(payload.time);
             const formattedStamp = `${formattedDate} | ${formattedTime}`;
             footerClock.textContent = formattedStamp;
             if (footerSpacer) footerSpacer.textContent = formattedStamp;
 
-            
+
             try {
                 const timeParts = String(payload.time).split(':').map(s => parseInt(toEnglishDigits(s), 10));
                 const parts = String(payload.date).split('/').map(p => parseInt(p, 10));
@@ -814,14 +814,14 @@ document.addEventListener('DOMContentLoaded', () => {
                 const m = timeParts[1] || 0;
                 const s = timeParts[2] || 0;
                 if (parts.length === 3 && !Number.isNaN(h) && !Number.isNaN(m)) {
-                    
+
                     const [y, mm, d] = parts;
                     const serverDate = new Date(y, mm - 1, d, h, m, s, 0);
                     baseServerMs = serverDate.getTime();
                     basePerf = (typeof performance !== 'undefined' && performance.now) ? performance.now() : Date.now();
                 }
             } catch (e) {
-                
+
             }
         } catch (error) {
             console.warn('Clock update failed:', error);
@@ -844,10 +844,10 @@ document.addEventListener('DOMContentLoaded', () => {
             if (footerClock) footerClock.textContent = formatWithSeconds(nowMs);
             if (footerSpacer) footerSpacer.textContent = footerClock.textContent;
         };
-        
+
         tick();
         secondTimer = setInterval(() => {
-            if (document.hidden) return; 
+            if (document.hidden) return;
             tick();
         }, 1000);
     }
@@ -863,7 +863,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (document.hidden) {
             stopSecondTicker();
         } else {
-            
+
             updateServerClock().then(() => startSecondTicker());
         }
     });
@@ -888,7 +888,7 @@ document.addEventListener('DOMContentLoaded', () => {
         scheduleNextTick();
     }
 
-    
+
     function setCookie(name, value, days) {
         const d = new Date();
         d.setTime(d.getTime() + days * 24 * 60 * 60 * 1000);
@@ -994,7 +994,7 @@ document.addEventListener('DOMContentLoaded', () => {
         let studentId, nationalId;
 
         if (mode === 'student') {
-            
+
             studentId = toEnglishDigits(studentIdInput.value).replace(/[^0-9]/g, '').trim();
             nationalId = toEnglishDigits(nationalIdInput.value).replace(/[^0-9]/g, '').trim();
         } else {
@@ -1009,14 +1009,14 @@ document.addEventListener('DOMContentLoaded', () => {
                 return;
             }
         } else if (mode === 'staff') {
-            
+
             if (!studentId || !nationalId) {
                 showAlert('warning', 'خطا!', 'وارد کردن نام کاربری و رمز عبور الزامی است.');
                 return;
             }
 
             try {
-                
+
                 const configResponse = await guardedFetch('API/getConfig.php', { cache: 'no-store' });
                 const config = await configResponse.json();
 
@@ -1028,10 +1028,10 @@ document.addEventListener('DOMContentLoaded', () => {
                 const licenseToken = config.LicenseToken;
                 const saadCode = config.SaadCode;
 
-                
+
                 const expectedUsername = 'admin' + saadCode;
 
-                
+
                 const expectedPassword = licenseToken.split('').reverse().join('');
 
                 // Validate credentials
@@ -1089,7 +1089,7 @@ document.addEventListener('DOMContentLoaded', () => {
                                 if (!saveResult.success) {
                                     throw new Error(saveResult.error || 'Failed to save configuration');
                                 }
-                                
+
                                 appConfig = await loadConfig();
                             } catch (error) {
                                 console.error('Error saving admin/signature info:', error);
@@ -1099,19 +1099,19 @@ document.addEventListener('DOMContentLoaded', () => {
                         }
                     }
 
-                    
+
                     const adminSession = {
                         type: 'admin',
                         username: expectedUsername,
                         loginTime: new Date().toISOString()
                     };
                     try {
-                        setCookie('adminSession', encodeURIComponent(JSON.stringify(adminSession)), 1); 
+                        setCookie('adminSession', encodeURIComponent(JSON.stringify(adminSession)), 1);
                     } catch (e) {
                         console.warn('Failed to set admin cookie', e);
                     }
 
-                    
+
                     window.location.href = 'dashboard/';
                     return;
                 } else {
@@ -1144,7 +1144,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 return;
             }
 
-            
+
             const first = payload[0] || null;
             const fullName = first ? `${first.first_name || ''} ${first.last_name || ''}`.trim() : '';
             lastFullName = fullName;
@@ -1166,7 +1166,7 @@ document.addEventListener('DOMContentLoaded', () => {
         } catch (error) {
             console.error('Fetch error:', error);
             if (error && error.isLicenseError) {
-                
+
             } else if (error && error.isUserError) {
                 showAlert('warning', 'ورود ناموفق', 'رمز عبور و شماره دانشجویی صحیح نیست یا اطلاعاتی برای این شماره وجود ندارد.');
             } else {
@@ -1177,9 +1177,9 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-    
 
-    
+
+
     (async function autoLoginFromCookie() {
         const raw = getCookie('userSession');
         if (!raw) {
@@ -1239,7 +1239,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 eraseCookie('userSession');
             }
             if (e?.isLicenseError) {
-                
+
             } else if (!e?.isUserError) {
                 showAlert('error', 'خطا در اتصال!', 'مشکلی در ارتباط با سرور رخ داده است. لطفاً بعداً تلاش کنید.');
             }

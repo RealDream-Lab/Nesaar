@@ -596,14 +596,14 @@ body::after {
   background: linear-gradient(135deg, rgba(125, 196, 255, 0.95), rgba(55, 132, 235, 0.85));
 }
 
-/* Vibrant cancel button style to match glass theme */
+/* Vibrant cancel button style (turquoise) matching glass theme */
 .btn.btn-cancel {
-  border: 1px solid rgba(255, 138, 101, 0.55);
+  border: 1px solid rgba(38, 198, 218, 0.60); /* #26c6da */
   border-radius: 0.95rem;
-  background: linear-gradient(135deg, rgba(255, 138, 101, 0.18), rgba(255, 138, 101, 0.10));
-  color: #ff7043; /* coral text */
-  box-shadow: 0 14px 30px rgba(255, 138, 101, 0.22);
-  padding: 0.85rem 1rem;
+  background: linear-gradient(135deg, rgba(38, 198, 218, 0.18), rgba(38, 198, 218, 0.10));
+  color: #00bcd4; /* turquoise text */
+  box-shadow: 0 14px 30px rgba(0, 188, 212, 0.22);
+  padding: 0.9rem 1.35rem; /* slightly wider */
   font-weight: 700;
   transition: transform 0.18s ease, box-shadow 0.18s ease, background 0.18s ease, color 0.18s ease;
 }
@@ -611,8 +611,8 @@ body::after {
 .btn.btn-cancel:hover,
 .btn.btn-cancel:focus {
   transform: translateY(-2px);
-  box-shadow: 0 22px 44px rgba(255, 138, 101, 0.32);
-  background: linear-gradient(135deg, rgba(255, 138, 101, 0.28), rgba(255, 138, 101, 0.16));
+  box-shadow: 0 22px 44px rgba(0, 188, 212, 0.32);
+  background: linear-gradient(135deg, rgba(38, 198, 218, 0.30), rgba(38, 198, 218, 0.18));
   color: #ffffff;
 }
 

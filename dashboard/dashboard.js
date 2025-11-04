@@ -485,7 +485,7 @@ document.getElementById('logoutBtn').addEventListener('click', async () => {
         confirmButtonText: 'بله، خروج',
         cancelButtonText: 'لغو',
         reverseButtons: true,
-    customClass: { popup: 'swal2-rtl swal2-glass', confirmButton: 'btn btn-danger', cancelButton: 'btn btn-cancel' }
+        customClass: { popup: 'swal2-rtl swal2-glass', confirmButton: 'btn btn-danger', cancelButton: 'btn btn-cancel' }
     });
 
     if (result.isConfirmed) {
