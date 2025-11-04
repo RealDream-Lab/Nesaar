@@ -53,15 +53,18 @@ if ($licenseStatus['valid'] !== true) {
                         </div>
                     </div>
                     <div class="d-flex align-items-center">
+                        <button id="dashboardHomeBtn" class="btn btn-icon p-0" type="button" title="بازگشت به داشبورد" style="background:transparent;border:none;margin-inline-end:8px;padding:0;" onclick="window.location.href='index.php';">
+                            <img src="/dashboard/home.png" alt="بازگشت به داشبورد" style="width:40px;height:40px;object-fit:contain;display:block;">
+                        </button>
                         <button id="editRolesBtn" class="btn btn-icon p-0" type="button" title="ویرایش نقش‌ها" style="background:transparent;border:none;margin-inline-end:8px;padding:0;">
                             <img src="/dashboard/config.png" alt="ویرایش نقش‌ها" class="rotating-icon" style="width:40px;height:40px;object-fit:contain;display:block;">
                         </button>
                         <button id="infoStatsBtn" class="btn btn-icon p-0" type="button" title="اطلاعات و آمار" style="background:transparent;border:none;margin-inline-end:8px;padding:0;">
                             <img src="/dashboard/statices.png" alt="اطلاعات و آمار" style="width:40px;height:40px;object-fit:contain;display:block;">
-                        </button>
+                        </button><!-- 
                         <button id="proctorBtn" class="btn btn-icon p-0" type="button" title="ماژول مراقبین" style="background:transparent;border:none;margin-inline-end:8px;padding:0;">
                             <img src="/dashboard/proctor.png" alt="ماژول مراقبین" style="width:40px;height:40px;object-fit:contain;display:block;">
-                        </button>
+                        </button>-->
                         <button class="btn btn-logout" id="logoutBtn" type="button" title="خروج" style="background:transparent;border:none;margin-inline-start:0;padding:0;">
                             <img src="/dashboard/logout.png" alt="خروج" style="width:40px;height:40px;object-fit:contain;display:block;transform:rotate(180deg);">
                         </button>
@@ -131,16 +134,26 @@ if ($licenseStatus['valid'] !== true) {
 
             <!-- Database Update (moved here to bottom-most section) -->
             <div class="dashboard-card no-hover">
-                <h4 class="mb-3">به‌روزرسانی دیتابیس</h4>
+                <h4 class="mb-3">ابزار</h4>
                 <div class="row g-3">
-                    <div class="col-md-6">
+                    <div class="col-md-3">
                         <button class="btn btn-upload w-100" id="uploadWrittenBtn">
-                            آزمون‌های کتبی
+                            به‌روزرسانی آزمون‌های کتبی
                         </button>
                     </div>
-                    <div class="col-md-6">
+                    <div class="col-md-3">
                         <button class="btn btn-upload w-100" id="uploadElectronicBtn">
-                            آزمون‌های الکترونیکی
+                            به‌روزرسانی آزمون‌های الکترونیکی
+                        </button>
+                    </div>
+                    <div class="col-md-3">
+                        <button class="btn btn-upload w-100" id="updateDBBtn">
+                            به‌روزرسانی پایگاه داده
+                        </button>
+                    </div>
+                    <div class="col-md-3">
+                        <button class="btn btn-upload w-100" id="proctorBtn">
+                            عوامل برگزاری آزمون
                         </button>
                     </div>
                 </div>
