@@ -955,13 +955,116 @@ try {
             });
             if (!res.isConfirmed) return;
 
-            await Swal.fire({
-                icon: 'info',
-                title: 'در نسخه دمو در دسترس نیست',
-                text: 'این قسمت در نسخه دمو برای حفظ اطلاعات آزمایشی در دسترس نیست.',
-                confirmButtonText: 'باشه',
-                customClass: { popup: 'swal2-rtl swal2-glass', confirmButton: 'btn btn-primary' }
+            // Show update progress modal
+            Swal.fire({
+                title: 'در حال به‌روزرسانی',
+                html: `
+                    <div style="text-align: center; padding: 1rem;">
+                        <div id="updateProgressDisplay" style="font-size: 3rem; font-weight: bold; color: white; margin-bottom: 1rem;">1%</div>
+                        <p id="updateProgressText" style="color: white; font-size: 1.1rem;">در حال بررسی جداول موقت...</p>
+                    </div>
+                `,
+                allowOutsideClick: false,
+                allowEscapeKey: false,
+                showConfirmButton: false,
+                customClass: { popup: 'swal2-rtl swal2-glass' }
             });
+
+            // Animate and poll server progress
+            let updProgress = 1;
+            let updServerProgress = false;
+            const updDisp = document.getElementById('updateProgressDisplay');
+            const updText = document.getElementById('updateProgressText');
+
+            const updAnim = setInterval(() => {
+                if (updServerProgress) return;
+                updProgress += Math.random() * 3 + 0.5;
+                if (updProgress > 95) updProgress = 95;
+                if (updDisp) updDisp.textContent = updProgress >= 10 ? Math.round(updProgress) + '%' : 'شروع...';
+                if (updText) {
+                    if (updProgress < 30) updText.textContent = 'در حال بررسی جداول موقت...';
+                    else if (updProgress < 60) updText.textContent = 'در حال پاکسازی و آماده‌سازی...';
+                    else updText.textContent = 'در حال درج اطلاعات...';
+                }
+            }, 300);
+
+            const pollUpdate = async () => {
+                try {
+                    const resp = await guardedFetch(`../API/getProcessProgress.php?filename=${encodeURIComponent('update')}`);
+                    if (!resp.ok) return;
+                    const payload = await resp.json();
+                    if (!payload) return;
+                    if (typeof payload.processedRows === 'number' && typeof payload.totalRows === 'number' && payload.totalRows > 0) {
+                        updServerProgress = true;
+                        const percent = Math.min(99, Math.round((payload.processedRows / payload.totalRows) * 100));
+                        if (updDisp) updDisp.textContent = percent + '%';
+                        if (updText) updText.textContent = payload.message || 'در حال به‌روزرسانی...';
+                    } else if (payload.stage === 'error') {
+                        updServerProgress = true;
+                        if (updDisp) updDisp.textContent = '0%';
+                        if (updText) updText.textContent = payload.message || 'خطا در به‌روزرسانی';
+                    }
+                } catch (e) { /* ignore */ }
+            };
+            const updPoll = setInterval(pollUpdate, 500);
+
+            try {
+                const response = await guardedFetch('../API/updateDatabase.php', { method: 'POST' });
+                clearInterval(updAnim);
+                clearInterval(updPoll);
+
+                if (!response.ok) {
+                    Swal.close();
+                    if (response.status === 403) {
+                        let message = 'دسترسی به این عملیات ممکن نیست.';
+                        try {
+                            const payload = await response.json();
+                            if (payload && payload.message) message = payload.message;
+                        } catch (err) { /* ignore */ }
+                        showLicenseForbidden(message);
+                        return;
+                    }
+                    let errMsg = 'خطا در به‌روزرسانی پایگاه داده';
+                    try { const payload = await response.json(); if (payload && payload.error) errMsg = payload.error; } catch (e) { }
+                    throw new Error(errMsg);
+                }
+
+                const result = await response.json();
+                if (result && result.success) {
+                    if (updDisp) updDisp.textContent = '100%';
+                    if (updText) updText.textContent = 'به‌روزرسانی کامل شد!';
+                    setTimeout(async () => {
+                        Swal.close();
+                        const c = result.inserted?.courses ?? 0;
+                        const s = result.inserted?.students ?? 0;
+                        const es = result.inserted?.exam_seats ?? 0;
+                        await Swal.fire({
+                            icon: 'success',
+                            title: 'موفق',
+                            html: `به‌روزرسانی با موفقیت انجام شد<br>دروس: <b>${c}</b> | دانشجویان: <b>${s}</b> | صندلی‌ها: <b>${es}</b>`,
+                            confirmButtonText: 'باشه',
+                            customClass: { popup: 'swal2-rtl swal2-glass', confirmButton: 'btn btn-primary' }
+                        });
+                        // Refresh dashboard stats
+                        try { await loadDashboardData(); } catch (e) { /* ignore */ }
+                    }, 500);
+                } else {
+                    Swal.close();
+                    throw new Error(result?.error || 'خطای نامشخص');
+                }
+            } catch (error) {
+                try { clearInterval(updAnim); } catch (e) { }
+                try { clearInterval(updPoll); } catch (e) { }
+                Swal.close();
+                if (error?.isLicenseError) return; // already handled
+                await Swal.fire({
+                    icon: 'error',
+                    title: 'خطا',
+                    text: error?.message || 'خطا در به‌روزرسانی پایگاه داده',
+                    confirmButtonText: 'باشه',
+                    customClass: { popup: 'swal2-rtl swal2-glass', confirmButton: 'btn btn-primary' }
+                });
+            }
         });
     }
 } catch (e) {
@@ -3201,6 +3304,7 @@ async function printSeatNumbersReport() {
             .col-wrap::before { content: ''; position: absolute; left: 50%; top: 0; bottom: 0; width: 0.6px; background: #bdbdbd; transform: translateX(-0.3px); }
             .col { padding-right: 6px; }
             .small-muted { color: #666; font-size: 8pt; }
+            .page-range { text-align: center; color: #666; font-size: 9pt; margin-top: 4px; }
             /* Avoid an extra blank page at the end caused by page-break-after on .page */
             .page:last-child { page-break-after: auto; }
             @media print {
@@ -3224,13 +3328,11 @@ async function printSeatNumbersReport() {
                 const right = pageSlice.slice(half);
                 docHtml += `<div class="col-wrap">`;
                 [left, right].forEach((colArr, colIndex) => {
-                    docHtml += `<div class="col"><table><thead><tr><th style="width:6%">ردیف</th><th style="width:28%">نام و نام خانوادگی</th><th style="width:54%">نام درس</th><th class="seat-col" style="width:12%">صندلی</th></tr></thead><tbody>`;
+                    docHtml += `<div class="col"><table><thead><tr><th style="width:31%">نام و نام خانوادگی</th><th style="width:57%">نام درس</th><th class="seat-col" style="width:12%">صندلی</th></tr></thead><tbody>`;
                     colArr.forEach((row, idx) => {
                         // compute global index relative to the page slice
                         const globalIndex = start + (colIndex === 0 ? idx : half + idx);
                         docHtml += `<tr>`;
-                        // Rowno
-                        docHtml += `<td>${esc(globalIndex + 1)}</td>`;
                         // Display as "LastName FirstName"
                         const fullName = esc((row.last_name || '') + ' ' + (row.first_name || ''));
                         const courseName = esc(row.course_name || '');
@@ -3245,11 +3347,10 @@ async function printSeatNumbersReport() {
             } else {
                 const start = p * perPage;
                 const slice = entries.slice(start, start + perPage);
-                docHtml += `<div><table><thead><tr><th style="width:6%">ردیف</th><th style="width:28%">نام و نام خانوادگی</th><th style="width:54%">نام درس</th><th class="seat-col" style="width:12%">صندلی</th></tr></thead><tbody>`;
+                docHtml += `<div><table><thead><tr><th style="width:31%">نام و نام خانوادگی</th><th style="width:57%">نام درس</th><th class="seat-col" style="width:12%">صندلی</th></tr></thead><tbody>`;
                 slice.forEach((row, idx) => {
                     const globalIndex = start + idx;
                     docHtml += `<tr>`;
-                    docHtml += `<td>${esc(globalIndex + 1)}</td>`;
                     const fullName2 = esc((row.last_name || '') + ' ' + (row.first_name || ''));
                     const courseName2 = esc(row.course_name || '');
                     docHtml += `<td title="${fullName2}">${fullName2}</td>`;
@@ -3259,6 +3360,13 @@ async function printSeatNumbersReport() {
                 });
                 docHtml += `</tbody></table></div>`;
             }
+
+            // Footer range for page indices
+            const pageStart = (p * perPage) + 1;
+            const pageEnd = Math.min((p + 1) * perPage, entries.length);
+            const prStart = typeof toPersianDigits === 'function' ? toPersianDigits(pageStart) : String(pageStart);
+            const prEnd = typeof toPersianDigits === 'function' ? toPersianDigits(pageEnd) : String(pageEnd);
+            docHtml += `<div class="page-range">از شماره ${prStart} تا ${prEnd}</div>`;
 
             docHtml += `</div>`; // .page
         }
@@ -3410,6 +3518,7 @@ async function printSeatNumbersReport() {
                 .seat-col { text-align: center; }
                 .col-wrap { display:flex; gap:6px; position:relative; }
                 .col { width:50%; }
+                .page-range { text-align: center; color: #666; font-size: ${Math.max(8, fontPt)}pt; margin-top: 4px; }
             </style></head><body>`;
             h += `<div class="page">`;
 
@@ -3418,15 +3527,21 @@ async function printSeatNumbersReport() {
             const right = firstPageEntries.slice(half);
             h += `<div class="col-wrap">`;
             [left, right].forEach((colArr, ci) => {
-                h += `<div class="col"><table><thead><tr><th style="width:6%">ردیف</th><th style="width:28%">نام و نام خانوادگی</th><th style="width:54%">نام درس</th><th style="width:12%">صندلی</th></tr></thead><tbody>`;
+                h += `<div class="col"><table><thead><tr><th style="width:31%">نام و نام خانوادگی</th><th style="width:57%">نام درس</th><th style="width:12%">صندلی</th></tr></thead><tbody>`;
                 colArr.forEach((r, idx) => {
-                    const globalIndex = (ci === 0 ? idx : half + idx);
                     const fullName = (r.last_name || '') + ' ' + (r.first_name || '');
                     const courseName = r.course_name || '';
-                    h += `<tr><td>${globalIndex + 1}</td><td title="${fullName}">${fullName}</td><td title="${courseName}">${courseName}</td><td class="seat-col">${r.seat_number || ''}</td></tr>`;
+                    h += `<tr><td title="${fullName}">${fullName}</td><td title="${courseName}">${courseName}</td><td class="seat-col">${r.seat_number || ''}</td></tr>`;
                 });
                 h += `</tbody></table></div>`;
             });
+            // Footer range for preview page indices
+            const pStart = 1;
+            const pEnd = firstPageEntries.length;
+            const pStartFa = typeof toPersianDigits === 'function' ? toPersianDigits(pStart) : String(pStart);
+            const pEndFa = typeof toPersianDigits === 'function' ? toPersianDigits(pEnd) : String(pEnd);
+            h += `<div class="page-range">از شماره ${pStartFa} تا ${pEndFa}</div>`;
+
             h += `</div></div></body></html>`;
             return h;
         }
