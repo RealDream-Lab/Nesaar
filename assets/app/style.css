@@ -1061,7 +1061,7 @@ body.login-active #loginRow {
 
 /* Fade up animation for report card */
 .fade-in-up {
-  animation: fadeInUp 0.5s ease-out forwards;
+  animation: fadeInUp 1s ease-out forwards;
   opacity: 0;
   transform: translateY(20px);
 }
