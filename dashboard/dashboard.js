@@ -915,6 +915,59 @@ try {
     console.warn('Failed to init proctor button', e);
 }
 
+// Update Database button: show temp table counts, warn and block in demo
+try {
+    const updateBtn = document.getElementById('updateDBBtn');
+    if (updateBtn) {
+        updateBtn.addEventListener('click', async () => {
+            // Fetch current temp tables counts (e-exams / k-exams)
+            let eCount = null, kCount = null;
+            try {
+                const resp = await guardedFetch('../API/getTempTablesCount.php', { cache: 'no-store' });
+                if (resp && resp.ok) {
+                    const data = await resp.json();
+                    eCount = Number(data.e_exams ?? 0);
+                    kCount = Number(data.k_exams ?? 0);
+                }
+            } catch (err) {
+                // ignore, keep nulls
+            }
+
+            const toPd = (v) => (typeof toPersianDigits === 'function') ? toPersianDigits(v) : String(v);
+            const eTxt = (eCount === null) ? 'نامشخص' : toPd(eCount);
+            const kTxt = (kCount === null) ? 'نامشخص' : toPd(kCount);
+
+            const warningHtml = `
+                <div style="text-align:justify;line-height:2">
+                با انجام این عملیات، تمامی داده‌های فعلی پایگاه داده حذف می‌شود و <b>${eTxt}</b> رکورد از آزمون‌های الکترونیکی و <b>${kTxt}</b> رکورد از آزمون‌های کتبی برای جایگزینی داده‌های حذف‌شده استفاده خواهد شد. دقت کنید که این عمل غیر قابل بازگشت است.<br>آیا اطمینان دارید که برای این تغییر آماده هستید ؟
+                </div>
+            `;
+
+            const res = await Swal.fire({
+                icon: 'warning',
+                title: 'تأیید به‌روزرسانی پایگاه داده',
+                html: warningHtml,
+                showCancelButton: true,
+                confirmButtonText: 'بله، موافقم',
+                cancelButtonText: 'لغو',
+                reverseButtons: true,
+                customClass: { popup: 'swal2-rtl swal2-glass', confirmButton: 'btn btn-danger', cancelButton: 'btn btn-cancel' }
+            });
+            if (!res.isConfirmed) return;
+
+            await Swal.fire({
+                icon: 'info',
+                title: 'در نسخه دمو در دسترس نیست',
+                text: 'این قسمت در نسخه دمو برای حفظ اطلاعات آزمایشی در دسترس نیست.',
+                confirmButtonText: 'باشه',
+                customClass: { popup: 'swal2-rtl swal2-glass', confirmButton: 'btn btn-primary' }
+            });
+        });
+    }
+} catch (e) {
+    console.warn('Failed to init updateDBBtn handler', e);
+}
+
 
 async function loadDashboardData() {
     try {
