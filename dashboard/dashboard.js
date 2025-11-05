@@ -2379,7 +2379,9 @@ async function showStudentReport() {
             }
 
             document.getElementById('reportContent').innerHTML = html;
-            document.getElementById('reportCard').style.display = 'block';
+            const reportCard = document.getElementById('reportCard');
+            reportCard.style.display = 'block';
+            reportCard.classList.add('fade-in-up');
             setTimeout(scrollReportCardIntoView, 100);
 
         } catch (error) {
@@ -2507,7 +2509,9 @@ async function loadCourseReportByCode(courseCode, options = {}) {
         }
 
         document.getElementById('reportContent').innerHTML = html;
-        document.getElementById('reportCard').style.display = 'block';
+        const reportCard = document.getElementById('reportCard');
+        reportCard.style.display = 'block';
+        reportCard.classList.add('fade-in-up');
         setTimeout(scrollReportCardIntoView, 100);
         return true;
     } catch (error) {
@@ -2851,7 +2855,9 @@ async function showNextExamReport() {
         }
 
         document.getElementById('reportContent').innerHTML = html;
-        document.getElementById('reportCard').style.display = 'block';
+        const reportCard = document.getElementById('reportCard');
+        reportCard.style.display = 'block';
+        reportCard.classList.add('fade-in-up');
         setTimeout(scrollReportCardIntoView, 100);
         // Render mini pies for this report
         try { renderMiniPiesFromReport(data); } catch (e) { console.error('Could not render mini pies:', e); }
