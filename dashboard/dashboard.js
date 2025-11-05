@@ -3686,7 +3686,8 @@ async function printEssentialsSecretary() {
             @page { size: A4 portrait; margin: 6mm; }
             html, body { margin: 0; padding: 0; }
             body { font-family: Vazir, Tahoma, Arial, sans-serif; color: #111; font-size: 11pt; }
-            .page { width: 210mm; min-height: 297mm; box-sizing: border-box; padding: 6mm 8mm 8mm 8mm; overflow: visible; }
+            /* Remove fixed min-height to avoid forcing an extra blank page when content fits on one page */
+            .page { width: 210mm; box-sizing: border-box; padding: 6mm 8mm 8mm 8mm; overflow: visible; }
             .header { background: transparent; color: #000; padding: 2px 4px 4px 4px; text-align: center; margin-bottom:4px; }
             .header .title { font-size: 16pt; font-weight:900; margin-top:0; }
             .header .meta { font-size: 12pt; margin-top:4px; color:#000; font-weight:700; }
