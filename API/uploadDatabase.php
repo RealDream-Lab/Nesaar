@@ -4,6 +4,21 @@ if (session_status() === PHP_SESSION_NONE) {
     session_start();
 }
 
+// Prevent PHP from emitting HTML error pages that break JSON consumers.
+ini_set('display_errors', '0');
+ini_set('log_errors', '1');
+ini_set('error_log', __DIR__ . '/../database/api_errors.log');
+set_error_handler(function($errno, $errstr, $errfile, $errline) {
+    throw new ErrorException($errstr, 0, $errno, $errfile, $errline);
+});
+set_exception_handler(function($e) {
+    http_response_code(500);
+    error_log((string)$e);
+    header('Content-Type: application/json; charset=utf-8');
+    echo json_encode(['error' => 'Internal server error', 'detail' => $e->getMessage()], JSON_UNESCAPED_UNICODE);
+    exit;
+});
+
 require_once __DIR__ . '/../includes/license_guard.php';
 require_once __DIR__ . '/../includes/csrf_protection.php';
 

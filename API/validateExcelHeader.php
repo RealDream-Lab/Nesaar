@@ -1,4 +1,19 @@
 <?php
+// Ensure errors don't get emitted as HTML (which would break JSON consumers)
+ini_set('display_errors', '0');
+ini_set('log_errors', '1');
+ini_set('error_log', __DIR__ . '/../database/api_errors.log');
+set_error_handler(function($errno, $errstr, $errfile, $errline) {
+    // Convert PHP warnings/notices to exceptions so they are handled uniformly
+    throw new ErrorException($errstr, 0, $errno, $errfile, $errline);
+});
+set_exception_handler(function($e) {
+    http_response_code(500);
+    error_log((string)$e);
+    header('Content-Type: application/json; charset=utf-8');
+    echo json_encode(['error' => 'Internal server error', 'detail' => $e->getMessage()], JSON_UNESCAPED_UNICODE);
+    exit;
+});
 header('Content-Type: application/json; charset=utf-8');
 
 require_once __DIR__ . '/../vendor/autoload.php';
