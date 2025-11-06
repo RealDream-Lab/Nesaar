@@ -94,6 +94,17 @@ try {
     }
 
     // Begin transaction for atomicity (use DELETE instead of TRUNCATE to avoid implicit commit)
+    // Ensure `locations` table exists before starting transaction (CREATE TABLE is DDL and may cause implicit commit)
+    $createLocations = "CREATE TABLE IF NOT EXISTS `locations` (
+        `id` INT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
+        `building` VARCHAR(255) DEFAULT '' COLLATE utf8mb4_unicode_ci,
+        `class_name` VARCHAR(255) DEFAULT '' COLLATE utf8mb4_unicode_ci,
+        `location_label` VARCHAR(511) DEFAULT '' COLLATE utf8mb4_unicode_ci,
+        `required_proctors` INT UNSIGNED NOT NULL DEFAULT 0,
+        UNIQUE KEY `ux_locations_building_class` (`building`,`class_name`)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci";
+    $pdo->exec($createLocations);
+
     $pdo->beginTransaction();
 
     // Stage 2: delete existing
@@ -101,6 +112,8 @@ try {
     $pdo->exec('DELETE FROM exam_seats');
     $pdo->exec('DELETE FROM courses');
     $pdo->exec('DELETE FROM students');
+    // Clear previous locations as requested (keep table schema)
+    $pdo->exec('DELETE FROM locations');
 
     // Common derived table
     $derived = "( {$unionSql} ) AS t";
@@ -164,6 +177,18 @@ try {
     $pdo->exec($sqlSeats);
     $insertedSeats = $pdo->query('SELECT COUNT(*) AS c FROM exam_seats')->fetch()['c'] ?? 0;
 
+    // Stage: extract unique locations (building / class) and populate `locations` table
+    write_progress('locations', 'در حال گردآوری و درج مکان‌ها...', 92);
+    $sqlLocations = "INSERT INTO locations (building, class_name, location_label)
+        SELECT DISTINCT
+            COALESCE(TRIM(u.`ساختمان`), '') AS building,
+            COALESCE(TRIM(u.`کلاس`), '') AS class_name,
+            TRIM(CONCAT(COALESCE(TRIM(u.`ساختمان`), ''), ' / ', COALESCE(TRIM(u.`کلاس`), ''))) AS location_label
+        FROM {$unionAlias}
+        WHERE (u.`ساختمان` IS NOT NULL AND TRIM(u.`ساختمان`) <> '') OR (u.`کلاس` IS NOT NULL AND TRIM(u.`کلاس`) <> '')";
+    $pdo->exec($sqlLocations);
+    $insertedLocations = $pdo->query('SELECT COUNT(*) AS c FROM locations')->fetch()['c'] ?? 0;
+
     // Commit
     $pdo->commit();
 
@@ -180,7 +205,8 @@ try {
         'inserted' => [
             'courses' => (int)$insertedCourses,
             'students' => (int)$insertedStudents,
-            'exam_seats' => (int)$insertedSeats
+            'exam_seats' => (int)$insertedSeats,
+            'locations' => (int)($insertedLocations ?? 0)
         ]
     ], JSON_UNESCAPED_UNICODE);
 } catch (Throwable $e) {
