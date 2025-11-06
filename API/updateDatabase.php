@@ -99,7 +99,6 @@ try {
         `id` INT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
         `building` VARCHAR(255) DEFAULT '' COLLATE utf8mb4_unicode_ci,
         `class_name` VARCHAR(255) DEFAULT '' COLLATE utf8mb4_unicode_ci,
-        `location_label` VARCHAR(511) DEFAULT '' COLLATE utf8mb4_unicode_ci,
         `required_proctors` INT UNSIGNED NOT NULL DEFAULT 0,
         UNIQUE KEY `ux_locations_building_class` (`building`,`class_name`)
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci";
@@ -179,11 +178,13 @@ try {
 
     // Stage: extract unique locations (building / class) and populate `locations` table
     write_progress('locations', 'در حال گردآوری و درج مکان‌ها...', 92);
-    $sqlLocations = "INSERT INTO locations (building, class_name, location_label)
+    // Insert distinct building/class pairs. We deliberately do NOT store a combined "location_label" field
+    // as requested — keep building and class_name separate. required_proctors is left at default 0.
+    $sqlLocations = "INSERT INTO locations (building, class_name, required_proctors)
         SELECT DISTINCT
             COALESCE(TRIM(u.`ساختمان`), '') AS building,
             COALESCE(TRIM(u.`کلاس`), '') AS class_name,
-            TRIM(CONCAT(COALESCE(TRIM(u.`ساختمان`), ''), ' / ', COALESCE(TRIM(u.`کلاس`), ''))) AS location_label
+            0 AS required_proctors
         FROM {$unionAlias}
         WHERE (u.`ساختمان` IS NOT NULL AND TRIM(u.`ساختمان`) <> '') OR (u.`کلاس` IS NOT NULL AND TRIM(u.`کلاس`) <> '')";
     $pdo->exec($sqlLocations);
