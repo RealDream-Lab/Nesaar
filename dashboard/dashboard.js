@@ -4427,19 +4427,23 @@ async function printEssentialsDescriptive() {
         report = report || { exam_date: ctxDate || '', exam_time: ctxTime || '', courses: [], students: window.allStudents || [] };
 
         const courses = Array.isArray(report.courses) ? report.courses.slice() : [];
-        // Prefer only descriptive courses if present; otherwise, include all
-        // Allowed: تشریحی و تستی تشریحی (cover common dash/space variants)
-        const isDescriptiveType = (t) => {
-            let s = String(t || '').trim();
-            // normalize spaces around dashes and collapse internal spaces
-            s = s.replace(/\s*[-–—]\s*/g, '-').replace(/\s+/g, ' ');
-            return s === 'تشریحی' || s === 'تستی تشریحی' || s === 'تستی-تشریحی' || s === 'تشریحی-تستی' || s === 'تشریحی تستی' || s === 'تشریحی-تستی';
-        };
-        let selectedCourses = courses.filter(c => isDescriptiveType(c.course_type));
-        if (!selectedCourses.length) selectedCourses = courses.slice();
+        // Only exclude pure "تستی" courses; include everything else (تشریحی و ترکیبی بماند)
+        const normalizeType = (t) => String(t || '').trim().replace(/\s*[-–—]\s*/g, '-').replace(/\s+/g, ' ');
+        const isPureTest = (t) => normalizeType(t) === 'تستی';
+        const selectedCourses = courses.filter(c => !isPureTest(c.course_type));
         if (!selectedCourses.length) {
-            try { Swal.close(); } catch (e) { }
-            return Swal.fire({ icon: 'info', title: 'اطلاعات', text: 'هیچ درسی برای چاپ برچسب پاکت یافت نشد', confirmButtonText: 'باشه', customClass: { popup: 'swal2-rtl swal2-glass', confirmButton: 'btn btn-primary' } });
+            try { closeSwalLoadingHard(); } catch (e) { }
+            return Swal.fire({
+                icon: 'info',
+                title: 'اطلاعات',
+                text: 'هیچ درسی برای چاپ برچسب پاکت یافت نشد',
+                showConfirmButton: true,
+                confirmButtonText: 'باشه',
+                allowOutsideClick: true,
+                allowEscapeKey: true,
+                didOpen: () => { try { Swal.hideLoading(); } catch (e) { } },
+                customClass: { popup: 'swal2-rtl swal2-glass', confirmButton: 'btn btn-primary' }
+            });
         }
 
         const dateFa = toPersianDigits(report.exam_date || ctxDate || '');
