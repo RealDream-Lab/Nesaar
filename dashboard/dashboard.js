@@ -2750,33 +2750,8 @@ async function showNextExamReport() {
                         .details-compact td.icon-cell { width: 56px; }
                         .details-compact img.icon { width: 44px; height: 44px; display:block; margin: 0 auto; object-fit: contain; pointer-events: none; }
                     </style>
-                    <table class="details-compact" style="margin-bottom:0; table-layout:fixed;">
-                        <tr>
-                            <td style="width:18%;">
-                                <div style="font-weight:900; font-size:2.8rem; line-height:1;">${toPersianDigits(data.exam_date)}</div>
-                            </td>
-                            <td style="width:8%;">
-                                <div style="font-weight:900; font-size:2.8rem; line-height:1;">${toPersianDigits(data.exam_time)}</div>
-                            </td>
-                            <td style="width:15%;">
-                                <div style="display:flex; flex-direction:column; align-items:center; line-height:1.05;">
-                                    <div style="font-weight:900; font-size:2rem;">${toPersianDigits(courses.length)}</div>
-                                    <div style="font-size:3rem; color:#667;">درس</div>
-                                </div>
-                            </td>
-                            <td style="width:15%;">
-                                <div style="display:flex; flex-direction:column; align-items:center; line-height:1.05;">
-                                    <div style="font-weight:900; font-size:2rem;">${toPersianDigits(students.length)}</div>
-                                    <div style="font-size:3rem; color:#667;">نفر</div>
-                                </div>
-                            </td>
-                            <td class="icon-cell" style="width:10%;">
-                                <button id="examEssentialsBtn" class="btn btn-link p-0" type="button" title="ملزومات آزمون" onclick="try{ examEssentialsHandler(); }catch(e){ console.error(e); }">
-                                    <img class="icon" src="/assets/app/Essentials.png" alt="ملزومات آزمون">
-                                </button>
-                            </td>
-                        </tr>
-                    </table>
+
+
                 </div>
         `;
 
@@ -2837,6 +2812,9 @@ async function showNextExamReport() {
                                 <div class="text-center">
                                     <canvas id="miniPieCourseType" class="mini-pie" aria-label="نمایش نوع درس" role="img" title="نمایش نوع درس"></canvas>
                                 </div>
+                                                                                    <button id="examEssentialsBtn" class="btn btn-link p-0" type="button" title="ملزومات آزمون" onclick="try{ examEssentialsHandler(); }catch(e){ console.error(e); }">
+                                    <img class="icon" src="/assets/app/Essentials.png" alt="ملزومات آزمون">
+                                </button>
                             </div>
                         </div>
                     </li>
