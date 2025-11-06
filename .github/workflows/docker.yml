@@ -4,13 +4,17 @@ on:
   push:
     tags:
       - 'v*'   # فقط وقتی تگ جدید (مثل v1.0.0) ساخته بشه
+  release:
+    types: [published]
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+  packages: write
 
 jobs:
   build:
     runs-on: ubuntu-latest
-    permissions:
-      contents: read
-      packages: write
 
     steps:
       - name: Checkout repository
@@ -19,7 +23,21 @@ jobs:
       - name: Set lowercase owner
         run: echo "OWNER=${GITHUB_REPOSITORY_OWNER,,}" >> $GITHUB_ENV
 
-      - name: Login to GitHub Container Registry
+      - name: Show ref info (debug)
+        run: |
+          echo "ref=$GITHUB_REF"
+          echo "ref_name=${{ github.ref_name }}"
+
+      - name: Login to GHCR with GITHUB_TOKEN
+        if: ${{ secrets.CR_PAT == '' }}
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Login to GHCR with CR_PAT
+        if: ${{ secrets.CR_PAT != '' }}
         uses: docker/login-action@v3
         with:
           registry: ghcr.io
