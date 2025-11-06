@@ -1038,10 +1038,12 @@ try {
                         const c = result.inserted?.courses ?? 0;
                         const s = result.inserted?.students ?? 0;
                         const es = result.inserted?.exam_seats ?? 0;
+                        const l = result.inserted?.locations ?? 0;
                         await Swal.fire({
                             icon: 'success',
                             title: 'موفق',
-                            html: `به‌روزرسانی با موفقیت انجام شد<br>دروس: <b>${c}</b> | دانشجویان: <b>${s}</b> | صندلی‌ها: <b>${es}</b>`,
+                            width: '60rem',
+                            html: `به‌روزرسانی با موفقیت انجام شد<br>دروس: <b>${c}</b> | دانشجویان: <b>${s}</b> | صندلی‌ها: <b>${es}</b> | مکان‌ها: <b>${l}</b>`,
                             confirmButtonText: 'باشه',
                             customClass: { popup: 'swal2-rtl swal2-glass', confirmButton: 'btn btn-primary' }
                         });
