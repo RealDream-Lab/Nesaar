@@ -4400,21 +4400,106 @@ async function printEssentialsDescriptive() {
         const fontHref = (window.location && window.location.origin ? window.location.origin : '') + '/assets/fonts/vazir/vazir.css';
         const university = (document.getElementById('footerText')?.textContent || '').trim().replace(/^نسار\s*-\s*/, '') || 'برچسب پاکت‌های تشریحی';
 
+        // Ensure we have current exam report in context
+        const context = window._lastExamContext || null;
+        const normalizeDate = (value) => toEnglishDigits(String(value || '')).replace(/-/g, '/');
+        const normalizeTime = (value) => toEnglishDigits(String(value || ''));
+
+        async function getReportForContext(examDate, examTime) {
+            const response = await guardedFetch(`../API/getNextExamReport.php?exam_date=${encodeURIComponent(examDate)}&exam_time=${encodeURIComponent(examTime)}`, { cache: 'no-store' });
+            const data = await response.json();
+            if (data && !data.error) {
+                window.currentExamReport = data;
+                window.allStudents = data.students || [];
+                setLastExamContext(data.exam_date, data.exam_time);
+                return data;
+            }
+            if (data && data.error) throw new Error(data.error);
+            throw new Error('گزارش جلسه در دسترس نیست');
+        }
+
+        let report = window.currentExamReport || null;
+        const ctxDate = context && context.exam_date ? normalizeDate(context.exam_date) : null;
+        const ctxTime = context && context.exam_time ? normalizeTime(context.exam_time) : null;
+        if ((!report || !report.exam_date || !report.exam_time) && ctxDate && ctxTime) {
+            try { report = await getReportForContext(ctxDate, ctxTime); } catch (e) { /* ignore, show error later */ }
+        }
+        report = report || { exam_date: ctxDate || '', exam_time: ctxTime || '', courses: [], students: window.allStudents || [] };
+
+        const courses = Array.isArray(report.courses) ? report.courses.slice() : [];
+        // Prefer only descriptive courses if present; otherwise, include all
+        let selectedCourses = courses.filter(c => String(c.course_type || '').trim() === 'تشریحی');
+        if (!selectedCourses.length) selectedCourses = courses.slice();
+        if (!selectedCourses.length) {
+            try { Swal.close(); } catch (e) {}
+            return Swal.fire({ icon: 'info', title: 'اطلاعات', text: 'هیچ درسی برای چاپ برچسب پاکت یافت نشد', confirmButtonText: 'باشه', customClass: { popup: 'swal2-rtl swal2-glass', confirmButton: 'btn btn-primary' } });
+        }
+
+        const dateFa = toPersianDigits(report.exam_date || ctxDate || '');
+        const timeFa = toPersianDigits(report.exam_time || ctxTime || '');
+
         let docHtml = `<!doctype html><html lang="fa" dir="rtl"><head><meta charset="utf-8"><title>برچسب پاکت‌های تشریحی</title><link rel="stylesheet" href="${fontHref}">`;
         docHtml += `<style>
-            @page { size: A5 landscape; margin: 4mm; }
+            @page { size: A5 landscape; margin: 6mm; }
             html, body { margin: 0; padding: 0; }
-            body { font-family: Vazir, Tahoma, Arial, sans-serif; color: #111; font-size: 10pt; }
-            .page { width: 210mm; height: 148mm; box-sizing: border-box; padding: 8mm; }
-            @media print {
-                .no-print { display: none !important; }
-            }
+            body { font-family: Vazir, Tahoma, Arial, sans-serif; color: #111; }
+            .page { width: 210mm; height: 148mm; box-sizing: border-box; padding: 8mm; display:flex; flex-direction:column; justify-content:space-between; }
+            .header { text-align:center; font-size: 12pt; font-weight: 700; margin-bottom: 2mm; }
+            .title { text-align:center; font-size: 14pt; font-weight: 800; margin-bottom: 4mm; }
+            .main { font-size: 18pt; line-height: 1.9; text-align: justify; }
+            .strong { font-weight: 900; }
+            .count-blank { display:inline-block; min-width: 35mm; border-bottom: 2px solid #000; margin: 0 4mm; position:relative; top: -2px; }
+            .em { font-weight: 900; }
+            .footer { margin-top: 4mm; }
+            .signatures { width:100%; border-collapse: collapse; table-layout: fixed; }
+            .signatures td { border:1px solid #111; padding: 6mm; vertical-align: top; font-size: 11pt; height: 28mm; }
+            .sign-title { font-weight: 700; margin-bottom: 6mm; display:block; text-align:center; }
+            .sign-line { display:block; border-top: 1px dashed #444; height: 0; margin-top: 8mm; }
         </style></head><body>`;
-        docHtml += `<div class="page">`;
-        docHtml += `<div style="text-align:center;font-size:16pt;font-weight:700;margin-bottom:15mm;">${university}</div>`;
-        docHtml += `<div style="text-align:center;font-size:14pt;font-weight:600;margin-bottom:8mm;">برچسب پاکت‌های تشریحی</div>`;
-        docHtml += `<div style="text-align:center;color:#666;margin-top:30mm;">محتوای گزارش به زودی اضافه خواهد شد</div>`;
-        docHtml += `</div></body></html>`;
+
+        selectedCourses.forEach((course, idx) => {
+            const cName = toPersianDigits(String(course.course_name || ''));
+            const cCode = toPersianDigits(String(course.course_code || ''));
+            const cType = toPersianDigits(String(course.course_type || 'کتبی'));
+
+            docHtml += `<div class="page">`;
+            docHtml += `<div class="title">برچسب پاکت‌های تشریحی</div>`;
+            docHtml += `<div class="main">
+                <div style="margin-bottom: 6mm; font-weight:800;">استاد ارجمند؛</div>
+                <div>
+                    بدین وسیله تعداد <span class="count-blank"></span> برگه تشریحی مربوط به درس <span class="strong">${cName}</span> با کد <span class="strong">${cCode}</span>
+                    که آزمون آن در تاریخ <span class="strong">${dateFa}</span> و ساعت <span class="strong">${timeFa}</span>
+                    به صورت <span class="strong">${cType}</span> برگزار گردیده، تحویل حضور استاد محترم می‌گردد.
+                </div>
+                <div style="margin-top: 6mm;">
+                    <span class="strong">تأکید می‌شود:</span><br/>
+                    بر اساس ضوابط آموزشی، استاد محترم موظف است مطابق با نمونه سوالات ضمیمه و کلید سؤالات موجود در سامانه گلستان، حداکثر ظرف ۵ روز پس از تاریخ تحویل، نسبت به تصحیح کامل اوراق و ثبت نمرات نهایی در سامانه گلستان اقدام نماید.
+                </div>
+            </div>`;
+
+            docHtml += `<div class="footer">
+                <table class="signatures">
+                    <tr>
+                        <td>
+                            <span class="sign-title">تحویل‌دهنده</span>
+                            <div>نام و نام خانوادگی: __________________________</div>
+                            <div class="sign-line"></div>
+                            <div style="margin-top:3mm;">امضاء</div>
+                        </td>
+                        <td>
+                            <span class="sign-title">تحویل‌گیرنده (استاد)</span>
+                            <div>نام و نام خانوادگی: __________________________</div>
+                            <div class="sign-line"></div>
+                            <div style="margin-top:3mm;">امضاء</div>
+                        </td>
+                    </tr>
+                </table>
+            </div>`;
+
+            docHtml += `</div>`; // .page
+        });
+
+        docHtml += `</body></html>`;
 
         const iframe = document.createElement('iframe');
         iframe.style.position = 'fixed';
@@ -4431,9 +4516,7 @@ async function printEssentialsDescriptive() {
         doc.write(docHtml);
         doc.close();
 
-
         try { Swal.close(); } catch (e) { }
-
 
         const cw = iframe.contentWindow;
         let cleaned = false;
