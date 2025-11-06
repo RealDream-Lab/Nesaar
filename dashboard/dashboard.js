@@ -326,10 +326,30 @@ async function printSessionReport() {
             idoc.close();
             // close loading modal before opening print dialog
             try { Swal.close(); } catch (e) { }
-            setTimeout(() => {
-                try { safePrintIframe(iframe, iframe.contentWindow); } catch (e) { console.error('Print error:', e); }
-                setTimeout(() => { try { document.body.removeChild(iframe); } catch (e) { } }, 500);
-            }, 400);
+            const cw = iframe.contentWindow;
+            let cleaned = false;
+            const cleanup = () => {
+                if (cleaned) return;
+                cleaned = true;
+                try { closeSwalLoadingHard(); } catch (e) { }
+                try { document.body.removeChild(iframe); } catch (e) { }
+                try { window.removeEventListener('focus', onFocusOnce, true); } catch (e) { }
+                try { reopenEssentialsMenuIfRequested(); } catch (e) { }
+            };
+            const onFocusOnce = () => { setTimeout(cleanup, 150); };
+            try {
+                if (cw) {
+                    cw.onafterprint = cleanup;
+                    window.addEventListener('focus', onFocusOnce, true);
+                    try { safePrintIframe(iframe, cw); } catch (e) { console.error('Print error:', e); }
+                    setTimeout(cleanup, 5000);
+                } else {
+                    setTimeout(cleanup, 300);
+                }
+            } catch (e) {
+                console.error('Print error:', e);
+                setTimeout(cleanup, 300);
+            }
         } catch (e) {
             try { document.body.removeChild(iframe); } catch (er) { }
             try { Swal.close(); } catch (er) { }
@@ -485,7 +505,7 @@ document.getElementById('logoutBtn').addEventListener('click', async () => {
         text: 'آیا مطمئن هستید که می‌خواهید از داشبورد خارج شوید؟',
         icon: 'warning',
         showCancelButton: true,
-        confirmButtonText: 'بله، خروج',
+        confirmButtonText: 'بله',
         cancelButtonText: 'لغو',
         reverseButtons: true,
         customClass: { popup: 'swal2-rtl swal2-glass', confirmButton: 'btn btn-danger', cancelButton: 'btn btn-cancel' }
@@ -1274,7 +1294,7 @@ if (copyrightFooter) {
         <div style="line-height:1.9;font-size:1.05rem;text-align:justify;">
         داشبورد نِسار (نسخه ${VERSION}) یک اپلیکیشن تحت‌وب پیشرفته و مدرن است که با استفاده از خروجی‌های نرم‌افزار ساد، به همکاران دانشگاه پیام نور امکان می‌دهد برنامه‌ریزی و مدیریت آزمون‌ها، از جمله زمان‌بندی، تخصیص صندلی و ملزومات اجرایی را به‌صورت یکپارچه و متمرکز انجام داده و در عین حفظ ساختار رسمی در برگزاری، به صرفه‌جویی در زمان و منابع مورد نیاز برای آزمون کمک کند.
             <br>
-      این برنامه به سفارش <span style="color: lime; font-weight: bold;">${escapeHtml(university)}</span> و توسط <a href="https://t.me/RealDream" target="_blank" style="color: gold; font-weight: bold; text-decoration: none; border: none; outline: none;">مهدی حسنی</a> توسعه یافته است
+      این برنامه به سفارش <span style="color: lime; font-weight: bold;">${escapeHtml(university)}</span> و توسط <a href="https://t.me/RealDream" target="_blank" style="color: gold; font-weight: bold; text-decoration: none; border: none; outline: none;">مهدی حسنی</a> توسعه یافته است.
     </div>
     <div class="swal2-countdown">
       <span class="swal2-countdown-value">${toPersianDigits(30)}</span>
@@ -3617,11 +3637,30 @@ async function printSeatNumbersReport() {
                     fullDoc.close();
 
                     try { Swal.close(); } catch (e) { }
-                    setTimeout(() => {
-                        try { safePrintIframe(iframe, iframe.contentWindow); } catch (e) { console.error('Print error:', e); }
-
-                        setTimeout(() => { try { document.body.removeChild(iframe); } catch (e) { } }, 500);
-                    }, 300);
+                    const cw = iframe.contentWindow;
+                    let cleaned = false;
+                    const cleanup = () => {
+                        if (cleaned) return;
+                        cleaned = true;
+                        try { closeSwalLoadingHard(); } catch (e) { }
+                        try { document.body.removeChild(iframe); } catch (e) { }
+                        try { window.removeEventListener('focus', onFocusOnce, true); } catch (e) { }
+                        try { reopenEssentialsMenuIfRequested(); } catch (e) { }
+                    };
+                    const onFocusOnce = () => { setTimeout(cleanup, 150); };
+                    try {
+                        if (cw) {
+                            cw.onafterprint = cleanup;
+                            window.addEventListener('focus', onFocusOnce, true);
+                            try { safePrintIframe(iframe, cw); } catch (e) { console.error('Print invoke error:', e); }
+                            setTimeout(cleanup, 5000);
+                        } else {
+                            setTimeout(cleanup, 300);
+                        }
+                    } catch (e) {
+                        console.error('Print error:', e);
+                        setTimeout(cleanup, 300);
+                    }
                 } catch (e) {
                     document.body.removeChild(iframe);
                     try { Swal.close(); } catch (er) { }
@@ -3669,6 +3708,14 @@ async function examEssentialsHandler() {
         title: 'ملزومات جلسه آزمون',
         html: `
             <div style="display:flex;flex-direction:column;gap:12px;margin-top:1rem;">
+                <!-- Quick print shortcuts that reuse existing handlers -->
+                <button id="essentialsPrintSessionBtn" class="btn btn-primary w-100" style="padding:12px;font-size:1rem;font-weight:600;" onclick="try{ window._reopenEssentialsMenu=true; Swal.close(); setTimeout(()=>{ printSessionReport(); }, 80); }catch(e){ console.error(e); }">
+                    صورتجلسه آزمون
+                </button>
+                <button id="essentialsPrintSeatBtn" class="btn btn-primary w-100" style="padding:12px;font-size:1rem;font-weight:600;" onclick="try{ window._reopenEssentialsMenu=true; Swal.close(); setTimeout(()=>{ printSeatNumbersReport(); }, 80); }catch(e){ console.error(e); }">
+                     شماره‌ صندلی‌آزمون
+                </button>
+
                 <button id="essentialsSecretaryBtn" class="btn btn-primary w-100" style="padding:12px;font-size:1rem;font-weight:600;" onclick="try{ startEssentialsPrint('secretary'); }catch(e){ console.error(e); }">
                     ملزومات منشی جلسه
                 </button>
