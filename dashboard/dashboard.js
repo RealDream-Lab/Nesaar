@@ -2732,11 +2732,18 @@ async function showNextExamReport() {
         const courses = data.courses;
         const students = data.students;
 
-        // Store students and full report globally for other actions (printing, essentials)
+    // Store students and full report globally for other actions (printing, essentials)
         window.allStudents = students;
         // keep the full report response so printing helpers can reuse it
         window.currentExamReport = data;
         setLastExamContext(data.exam_date, data.exam_time);
+
+    // Build a compact inline info string that always shows 4 items: date | time | courses | students
+    const dateDisplayInline = data.exam_date ? toPersianDigits(data.exam_date) : 'بدون تاریخ';
+    const timeDisplayInline = data.exam_time ? toPersianDigits(data.exam_time) : 'بدون ساعت';
+    const courseCountInline = Array.isArray(courses) ? courses.length : 0;
+    const studentCountInline = Array.isArray(students) ? students.length : 0;
+    const inlineInfo = `${dateDisplayInline} | ${timeDisplayInline} | ${toPersianDigits(courseCountInline)} درس | ${toPersianDigits(studentCountInline)} نفر`;
 
         const headerTitle = window.customExamReportTitle || 'جزئیات جلسه آزمون';
         // Compact single-row details bar with 5 cells: date | time | courses | students | essentials icon
@@ -2801,7 +2808,7 @@ async function showNextExamReport() {
             html += `
                     <li class="list-group-item">
                         <div id="miniPieSection" class="d-flex flex-column gap-2">
-                            <h6 class="mb-2">آمار سریع جلسه (پیش‌نمایش)</h6>
+                            <h6 class="mb-2">آمار سریع جلسه <span class="text-muted">(${inlineInfo})</span></h6>
                             <div class="d-flex flex-row justify-content-center align-items-center gap-3">
                                 <div class="text-center">
                                     <canvas id="miniPieCourse" class="mini-pie" aria-label="نمایش فراوانی دروس" role="img" title="نمایش فراوانی دروس"></canvas>
@@ -2812,7 +2819,7 @@ async function showNextExamReport() {
                                 <div class="text-center">
                                     <canvas id="miniPieCourseType" class="mini-pie" aria-label="نمایش نوع درس" role="img" title="نمایش نوع درس"></canvas>
                                 </div>
-                                                                                    <button id="examEssentialsBtn" class="btn btn-link p-0" type="button" title="ملزومات آزمون" onclick="try{ examEssentialsHandler(); }catch(e){ console.error(e); }">
+                                <button id="examEssentialsBtn" class="btn btn-link p-0" type="button" title="ملزومات آزمون" onclick="try{ examEssentialsHandler(); }catch(e){ console.error(e); }">
                                     <img class="icon" src="/assets/app/Essentials.png" alt="ملزومات آزمون">
                                 </button>
                             </div>
