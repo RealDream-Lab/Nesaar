@@ -31,10 +31,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
                 Swal.fire({
                     icon: 'info',
-                    title: 'نسخه جدید آماده است',
-                    html: `<div style="text-align:right;">${items.map(c => `• ${c}`).join('<br>')}</div>`,
+                    title: 'نسخه جدید منتشر شد',
+                    html: `<div style="text-align:right;">نسخهٔ جدیدی منتشر شده است. برای اعمال تغییرات صفحه را بازنشانی کنید:<br><br>${items.map(c => `• ${c}`).join('<br>')}</div>`,
                     showConfirmButton: true,
-                    confirmButtonText: 'باشه، اجرای مجدد',
+                    confirmButtonText: 'بارگذاری مجدد',
                     showCancelButton: false,
                     allowOutsideClick: true,
                     customClass: { popup: 'swal2-rtl swal2-glass', confirmButton: 'btn btn-primary' }
