@@ -20,6 +20,11 @@ RUN echo "upload_max_filesize = 128M" > /usr/local/etc/php/conf.d/uploads.ini \
 # Copy application source
 COPY . /var/www/html
 
+# Ensure Composer dependencies are installed (including OpenSpout)
+WORKDIR /var/www/html
+# Install OpenSpout compatible with PHP 8.2 (composer will resolve appropriate version)
+RUN composer require openspout/openspout --no-interaction --prefer-dist || true
+
 # Ensure correct permissions for Apache
 RUN chown -R www-data:www-data /var/www/html
 
