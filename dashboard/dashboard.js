@@ -1707,6 +1707,7 @@ async function showUploadModal(examType) {
 			</div>
 		`,
         showCancelButton: true,
+        width: '60rem',
         confirmButtonText: 'آپلود فایل',
         cancelButtonText: 'انصراف',
         customClass: {
@@ -1817,10 +1818,14 @@ async function uploadDatabaseFile(file, examType, examTypeName) {
         title: 'در حال آپلود',
         html: `
 			<div style="text-align: center; padding: 1rem;">
-				<div style="background: #e0e0e0; border-radius: 10px; overflow: hidden; height: 35px; margin-bottom: 1rem;">
-					<div id="uploadProgressBar" style="background: linear-gradient(90deg, #1a6fa6, #127ead); height: 100%; width: 0%; transition: width 0.3s; display: flex; align-items: center; justify-content: center; color: white; font-weight: bold; font-size: 1.1rem;"></div>
-				</div>
-				<p id="uploadProgressText" style="color: #1a6fa6; font-size: 1.1rem;">در حال آپلود فایل...</p>
+                <style>
+                /* Make progress digits monospaced/tabular for consistent width */
+                .tabular-digits { font-variant-numeric: tabular-nums; font-family: Vazir, 'DejaVu Sans Mono', monospace; letter-spacing: 0.01em; }
+                .upload-progress-wrap { background: #e0e0e0; border-radius: 10px; overflow: hidden; height: 36px; margin-bottom: 0.85rem; }
+                .upload-progress-bar { background: linear-gradient(90deg, #1a6fa6, #127ead); height: 100%; width: 0%; transition: width 0.25s; display: flex; align-items: center; justify-content: center; color: white; font-weight: bold; font-size: 1.05rem; }
+                </style>
+                <div class="upload-progress-wrap"><div id="uploadProgressBar" class="upload-progress-bar tabular-digits">۰٪</div></div>
+                <p id="uploadProgressText" style="color: white; font-size: 1.05rem; margin:0;">در حال آپلود فایل...</p>
 			</div>
 		`,
         allowOutsideClick: false,
@@ -1845,13 +1850,15 @@ async function uploadDatabaseFile(file, examType, examTypeName) {
                 const progressBar = document.getElementById('uploadProgressBar');
                 const progressText = document.getElementById('uploadProgressText');
 
+                const pers = (typeof toPersianDigits === 'function') ? toPersianDigits(percentComplete) : String(percentComplete);
+
                 if (progressBar) {
                     progressBar.style.width = percentComplete + '%';
-                    progressBar.textContent = percentComplete + '%';
+                    progressBar.textContent = pers + '٪';
                 }
 
                 if (progressText) {
-                    progressText.textContent = `در حال آپلود... ${percentComplete}%`;
+                    progressText.textContent = `در حال آپلود ${pers}٪`;
                 }
             }
         });
@@ -1962,7 +1969,7 @@ async function processUploadedExcel(examType, examTypeName, filename) {
         title: 'در حال پردازش',
         html: `
             <div style="text-align: center; padding: 1rem;">
-                <div id="processProgressDisplay" style="font-size: 3rem; font-weight: bold; color: white; margin-bottom: 1rem;">1%</div>
+                <div id="processProgressDisplay" class="tabular-digits" style="font-size: 3rem; font-weight: bold; color: white; margin-bottom: 1rem;">۰٪</div>
                 <p id="processProgressText" style="color: white; font-size: 1.1rem;">در حال خواندن فایل اکسل...</p>
             </div>
         `,
@@ -2014,7 +2021,9 @@ async function processUploadedExcel(examType, examTypeName, filename) {
         progress += Math.random() * 3 + 0.5; // Slower increase
         if (progress > 95) progress = 95; // Stay longer at high % until server finishes
         if (progressDisplay) {
-            progressDisplay.textContent = progress >= 10 ? Math.round(progress) + '%' : 'شروع...';
+            const pers = (typeof toPersianDigits === 'function') ? toPersianDigits(Math.round(progress)) : String(Math.round(progress));
+            progressDisplay.textContent = pers + '٪';
+            progressDisplay.classList.add('tabular-digits');
         }
         if (progressText) {
             if (progress < 30) {
@@ -2038,12 +2047,13 @@ async function processUploadedExcel(examType, examTypeName, filename) {
             if (payload.totalRows && payload.totalRows > 0) {
                 serverProgressAvailable = true;
                 const percent = Math.min(99, Math.round((payload.processedRows / payload.totalRows) * 100));
-                if (progressDisplay) progressDisplay.textContent = percent + '%';
+                const pers = (typeof toPersianDigits === 'function') ? toPersianDigits(percent) : String(percent);
+                if (progressDisplay) progressDisplay.textContent = pers + '٪';
                 if (progressText) progressText.textContent = payload.message || 'در حال پردازش...';
             } else if (payload.stage === 'error') {
                 // show server-side validation error
                 serverProgressAvailable = true;
-                if (progressDisplay) progressDisplay.textContent = '0%';
+                if (progressDisplay) progressDisplay.textContent = (typeof toPersianDigits === 'function' ? toPersianDigits(0) : '0') + '٪';
                 if (progressText) progressText.textContent = payload.message || 'خطا در پردازش';
             }
         } catch (e) {
