@@ -3676,9 +3676,11 @@ async function examEssentialsHandler() {
                 <button id="essentialsDescriptiveBtn" class="btn btn-primary w-100" style="padding:12px;font-size:1rem;font-weight:600;" onclick="try{ startEssentialsPrint('descriptive'); }catch(e){ console.error(e); }">
                     برچسب پاکت‌های تشریحی
                 </button>
+                <!-- 
                 <button id="essentialsTestBtn" class="btn btn-primary w-100" style="padding:12px;font-size:1rem;font-weight:600;" onclick="try{ startEssentialsPrint('test'); }catch(e){ console.error(e); }">
                     برچسب پاکت‌های تستی
-                </button>
+                </button> 
+                -->
             </div>
         `,
         showConfirmButton: false,

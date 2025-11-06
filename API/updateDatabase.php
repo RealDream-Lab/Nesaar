@@ -195,10 +195,40 @@ try {
 
     // Stage 6: done
     write_progress('done', 'به‌روزرسانی کامل شد', 100);
-
     // Clean progress file (leave it a moment so UI can reach 100%)
     // We'll not delete immediately; the client may remove it or we can leave it for a bit.
     // @unlink($progressFile);
+
+    // Post-success cleanup: remove uploaded Excel files and drop temporary tables so no leftover data remains.
+    try {
+        // Remove uploaded files created by uploadDatabase.php (E.* and K.* with common extensions)
+        $uploadDir = __DIR__ . '/../database/';
+        $types = ['E', 'K'];
+        $exts = ['xlsx', 'xls'];
+        foreach ($types as $t) {
+            foreach ($exts as $ext) {
+                $f = $uploadDir . $t . '.' . $ext;
+                if (file_exists($f)) {
+                    @unlink($f);
+                }
+            }
+        }
+
+        // Drop temp tables if they exist
+        try {
+            $pdo->exec('DROP TABLE IF EXISTS `e-exams`');
+        } catch (Throwable $e) {
+            // ignore drop errors
+        }
+        try {
+            $pdo->exec('DROP TABLE IF EXISTS `k-exams`');
+        } catch (Throwable $e) {
+            // ignore drop errors
+        }
+    } catch (Throwable $e) {
+        // Log but don't fail the response; cleanup is best-effort
+        error_log('Post-update cleanup failed: ' . $e->getMessage());
+    }
 
     echo json_encode([
         'success' => true,
