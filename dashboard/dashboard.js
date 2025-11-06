@@ -2716,44 +2716,42 @@ async function showNextExamReport() {
         setLastExamContext(data.exam_date, data.exam_time);
 
         const headerTitle = window.customExamReportTitle || 'جزئیات جلسه آزمون';
-        // Build a 3-column details table: the last column is a rowspan cell that
-        // aggregates the key info and hosts action buttons (print seat numbers / session report)
+        // Compact single-row details bar with 5 cells: date | time | courses | students | essentials icon
         let html = `
             <div class="mb-4">
                 <h5 class="text-primary mb-3">${headerTitle}</h5>
                 <div class="table-responsive">
-                    <table class="table table-bordered">
+                    <style>
+                        .details-compact { width:100%; border-collapse:separate; border-spacing:0; direction: rtl; }
+                        .details-compact td { padding: 6px 10px; vertical-align: middle; text-align: center; border: 1px solid #e3e6ea; height: 56px; color: #495057; white-space: nowrap; }
+                        .details-compact td.icon-cell { width: 56px; }
+                        .details-compact img.icon { width: 44px; height: 44px; display:block; margin: 0 auto; object-fit: contain; pointer-events: none; }
+                    </style>
+                    <table class="details-compact" style="margin-bottom:0; table-layout:fixed;">
                         <tr>
-                            <th style="width: 28%;">تاریخ آزمون</th>
-                            <td style="width: 36%;">${data.exam_date}</td>
-                            <td rowspan="4" style="width: 36%; vertical-align: middle; text-align: center;">
-                                <div style="display:flex;flex-direction:column;align-items:center;gap:8px;padding:8px;">
-                                    <!-- Session report icon moved here -->
-                                    <div style="display:flex;gap:10px;align-items:center;justify-content:center;">
-                                        <button id="printSeatNumbersBtn" class="btn btn-outline-primary btn-sm p-0" type="button" title="چاپ شماره صندلی" onclick="try{ printSeatNumbersReport(); }catch(e){ console.error(e); }" style="display:inline-block;">
-                                            <img src="/assets/app/seat.png" alt="شماره صندلی" style="width:140px;height:140px;object-fit:contain;display:block;pointer-events:none;">
-                                        </button>
-                                        <button id="printSessionReportBtn" class="btn btn-outline-primary btn-sm p-0" type="button" title="چاپ صورتجلسه" onclick="try{ printSessionReport(); }catch(e){ console.error(e); }" style="display:inline-block;">
-                                            <img src="/assets/app/report.png" alt="صورتجلسه" style="width:140px;height:140px;object-fit:contain;display:block;pointer-events:none;">
-                                        </button>
-                                        <button id="examEssentialsBtn" class="btn btn-outline-primary btn-sm p-0" type="button" title="ملزومات آزمون" onclick="try{ examEssentialsHandler(); }catch(e){ console.error(e); }" style="display:inline-block;">
-                                            <img src="/assets/app/Essentials.png" alt="ملزومات آزمون" style="width:140px;height:140px;object-fit:contain;display:block;pointer-events:none;">
-                                        </button>
-                                    </div>
+                            <td style="width:18%;">
+                                <div style="font-weight:900; font-size:2.8rem; line-height:1;">${toPersianDigits(data.exam_date)}</div>
+                            </td>
+                            <td style="width:8%;">
+                                <div style="font-weight:900; font-size:2.8rem; line-height:1;">${toPersianDigits(data.exam_time)}</div>
+                            </td>
+                            <td style="width:15%;">
+                                <div style="display:flex; flex-direction:column; align-items:center; line-height:1.05;">
+                                    <div style="font-weight:900; font-size:2rem;">${toPersianDigits(courses.length)}</div>
+                                    <div style="font-size:3rem; color:#667;">درس</div>
                                 </div>
                             </td>
-                        </tr>
-                        <tr>
-                            <th>ساعت آزمون</th>
-                            <td>${data.exam_time}</td>
-                        </tr>
-                        <tr>
-                            <th>تعداد دروس</th>
-                            <td><span class="text-secondary">${courses.length}</span> درس</td>
-                        </tr>
-                        <tr>
-                            <th>تعداد دانشجویان</th>
-                            <td><span class="text-secondary">${students.length}</span> نفر</td>
+                            <td style="width:15%;">
+                                <div style="display:flex; flex-direction:column; align-items:center; line-height:1.05;">
+                                    <div style="font-weight:900; font-size:2rem;">${toPersianDigits(students.length)}</div>
+                                    <div style="font-size:3rem; color:#667;">نفر</div>
+                                </div>
+                            </td>
+                            <td class="icon-cell" style="width:10%;">
+                                <button id="examEssentialsBtn" class="btn btn-link p-0" type="button" title="ملزومات آزمون" onclick="try{ examEssentialsHandler(); }catch(e){ console.error(e); }">
+                                    <img class="icon" src="/assets/app/Essentials.png" alt="ملزومات آزمون">
+                                </button>
+                            </td>
                         </tr>
                     </table>
                 </div>
