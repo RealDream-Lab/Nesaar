@@ -4,6 +4,22 @@ on:
   push:
     tags:
       - 'v*'   # فقط وقتی تگ جدید (مثل v1.0.0) ساخته بشه
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Image tag to use (default: manual-<short_sha>)'
+        required: false
+        type: string
+      push_latest:
+        description: 'Also tag and push as latest'
+        required: false
+        default: true
+        type: boolean
+      push:
+        description: 'Push image to registry (disable to only build)'
+        required: false
+        default: true
+        type: boolean
 
 jobs:
   build:
@@ -19,6 +35,34 @@ jobs:
       - name: Set lowercase owner
         run: echo "OWNER=${GITHUB_REPOSITORY_OWNER,,}" >> $GITHUB_ENV
 
+      - name: Compute tags and options
+        id: vars
+        run: |
+          OWNER="$OWNER"
+          IMAGE="ghcr.io/${OWNER}/pnuseat"
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            TAG="${{ inputs.tag }}"
+            if [ -z "$TAG" ]; then
+              SHORT_SHA=$(echo "${GITHUB_SHA}" | cut -c1-7)
+              TAG="manual-${SHORT_SHA}"
+            fi
+            PUSH_LATEST="${{ inputs.push_latest }}"
+            DO_PUSH="${{ inputs.push }}"
+          else
+            TAG="${GITHUB_REF_NAME}"
+            PUSH_LATEST="true"
+            DO_PUSH="true"
+          fi
+
+          echo "image_tag=$TAG" >> $GITHUB_OUTPUT
+
+          TAGS="$IMAGE:$TAG"
+          if [ "$PUSH_LATEST" = "true" ]; then
+            TAGS="$TAGS,$IMAGE:latest"
+          fi
+          echo "tags=$TAGS" >> $GITHUB_OUTPUT
+          echo "do_push=$DO_PUSH" >> $GITHUB_OUTPUT
+
       - name: Login to GitHub Container Registry
         uses: docker/login-action@v3
         with:
@@ -30,7 +74,5 @@ jobs:
         uses: docker/build-push-action@v6
         with:
           context: .
-          push: true
-          tags: |
-            ghcr.io/${{ env.OWNER }}/pnuseat:${{ github.ref_name }}
-            ghcr.io/${{ env.OWNER }}/pnuseat:latest
+          push: ${{ github.event_name == 'push' || steps.vars.outputs.do_push == 'true' }}
+          tags: ${{ steps.vars.outputs.tags }}
