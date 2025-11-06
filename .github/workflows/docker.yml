@@ -32,5 +32,5 @@ jobs:
           context: .
           push: true
           tags: |
-            ghcr.io/${{ env.OWNER }}/pnuseat:latest
             ghcr.io/${{ env.OWNER }}/pnuseat:${{ github.ref_name }}
+            ghcr.io/${{ env.OWNER }}/pnuseat:latest
