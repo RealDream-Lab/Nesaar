@@ -1118,6 +1118,7 @@ async function loadDashboardData() {
             document.getElementById('nextExamStudents').textContent = stats.nextExamStudents || 0;
             document.getElementById('nextExamDateTime').textContent = stats.nextExamDateTime || 'آزمونی یافت نشد';
 
+            // Disable/enable Remaining Sessions card based on value
             if (typeof stats.remainingSessions !== 'undefined') {
                 const el = document.getElementById('remainingSessions');
                 const card = el ? el.closest('.dashboard-card') : null;
@@ -1139,6 +1140,28 @@ async function loadDashboardData() {
                     }
                 }
             }
+
+            // Disable/enable Next Exam card when no upcoming exam
+            try {
+                const nextLabelEl = document.getElementById('nextExamDateTime');
+                const nextCard = nextLabelEl ? nextLabelEl.closest('.dashboard-card') : null;
+                const noExam = !stats.nextExamStudents || stats.nextExamStudents === 0 || !stats.nextExamDateTime || String(stats.nextExamDateTime).trim() === '' || String(nextLabelEl?.textContent || '').trim() === 'آزمونی یافت نشد';
+                if (nextCard) {
+                    if (noExam) {
+                        nextCard.classList.add('stat-card-disabled');
+                        nextCard.style.cursor = 'default';
+                        // neutralize click
+                        try { nextCard.onclick = null; } catch (e) { }
+                        nextCard.style.pointerEvents = 'none';
+                    } else {
+                        nextCard.classList.remove('stat-card-disabled');
+                        nextCard.style.cursor = 'pointer';
+                        nextCard.style.pointerEvents = '';
+                        // restore click handler in case it was removed
+                        try { nextCard.onclick = showNextExamReport; } catch (e) { }
+                    }
+                }
+            } catch (e) { /* ignore */ }
 
         }
 
