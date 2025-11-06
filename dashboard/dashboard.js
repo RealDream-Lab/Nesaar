@@ -4481,12 +4481,12 @@ async function printEssentialsDescriptive() {
                     <div style="margin-bottom: 6mm; font-weight:800;">استاد ارجمند؛</div>
                     <div>
                         بدین وسیله تعداد <span class="count-blank"></span> برگه تشریحی مربوط به درس <span class="strong">${cName}</span> با کد <span class="strong">${cCode}</span>
-                        که آزمون آن در تاریخ <span class="strong">${dateFa}</span> و ساعت <span class="strong">${timeFa}</span>
+                        که آزمون آن در تاریخ <span class="strong">${dateFa}</span> ساعت <span class="strong">${timeFa}</span>
                         به صورت <span class="strong">${cType}</span> برگزار گردیده، تحویل حضور استاد محترم می‌گردد.
                     </div>
                     <div style="margin-top: 5mm;">
                         <span class="strong">تأکید می‌شود:</span><br/>
-                        بر اساس ضوابط آموزشی، استاد محترم موظف است مطابق با نمونه سوالات ضمیمه و کلید سؤالات موجود در سامانه گلستان، حداکثر ظرف ۵ روز پس از تاریخ تحویل، نسبت به تصحیح کامل اوراق و ثبت نمرات نهایی در سامانه گلستان اقدام نماید.
+                        بر اساس ضوابط آموزشی، استاد محترم موظف است مطابق با نمونه سوالات ضمیمه و کلید سؤالات موجود در سامانه گلستان، حداکثر ظرف ۵ روز پس از تاریخ تحویل، نسبت به تصحیح کامل اوراق و ثبت نمرات نهایی در سامانه گلستان اقدام نموده و پاکت حاوی پاسخنامه‌ها را شمارش شده به دانشگاه بازگرداند.
                     </div>
                 </div>
                 <div class="footer">
