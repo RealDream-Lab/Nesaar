@@ -4428,79 +4428,87 @@ async function printEssentialsDescriptive() {
 
         const courses = Array.isArray(report.courses) ? report.courses.slice() : [];
         // Prefer only descriptive courses if present; otherwise, include all
-        let selectedCourses = courses.filter(c => String(c.course_type || '').trim() === 'تشریحی');
+        // Allowed: تشریحی و تستی تشریحی (cover common dash/space variants)
+        const isDescriptiveType = (t) => {
+            let s = String(t || '').trim();
+            // normalize spaces around dashes and collapse internal spaces
+            s = s.replace(/\s*[-–—]\s*/g, '-').replace(/\s+/g, ' ');
+            return s === 'تشریحی' || s === 'تستی تشریحی' || s === 'تستی-تشریحی' || s === 'تشریحی-تستی' || s === 'تشریحی تستی' || s === 'تشریحی-تستی';
+        };
+        let selectedCourses = courses.filter(c => isDescriptiveType(c.course_type));
         if (!selectedCourses.length) selectedCourses = courses.slice();
         if (!selectedCourses.length) {
-            try { Swal.close(); } catch (e) {}
+            try { Swal.close(); } catch (e) { }
             return Swal.fire({ icon: 'info', title: 'اطلاعات', text: 'هیچ درسی برای چاپ برچسب پاکت یافت نشد', confirmButtonText: 'باشه', customClass: { popup: 'swal2-rtl swal2-glass', confirmButton: 'btn btn-primary' } });
         }
 
         const dateFa = toPersianDigits(report.exam_date || ctxDate || '');
         const timeFa = toPersianDigits(report.exam_time || ctxTime || '');
-
-        let docHtml = `<!doctype html><html lang="fa" dir="rtl"><head><meta charset="utf-8"><title>برچسب پاکت‌های تشریحی</title><link rel="stylesheet" href="${fontHref}">`;
-        docHtml += `<style>
-            @page { size: A5 landscape; margin: 6mm; }
+        // Common CSS for the printable descriptive label
+        const commonHead = `<!doctype html><html lang="fa" dir="rtl"><head><meta charset="utf-8"><title>برچسب پاکت‌های تشریحی</title><link rel="stylesheet" href="${fontHref}">`;
+        const commonStyle = `<style>
+            @page { size: A5 landscape; margin: 8mm 8mm 8mm 5mm; }
             html, body { margin: 0; padding: 0; }
             body { font-family: Vazir, Tahoma, Arial, sans-serif; color: #111; }
-            .page { width: 210mm; height: 148mm; box-sizing: border-box; padding: 8mm; display:flex; flex-direction:column; justify-content:space-between; }
-            .header { text-align:center; font-size: 12pt; font-weight: 700; margin-bottom: 2mm; }
-            .title { text-align:center; font-size: 14pt; font-weight: 800; margin-bottom: 4mm; }
-            .main { font-size: 18pt; line-height: 1.9; text-align: justify; }
+            .page { box-sizing: border-box; padding: 1mm 10mm 0mm 18mm; display:flex; flex-direction:column; justify-content:flex-start; gap: 4mm; overflow: hidden; page-break-inside: avoid; break-inside: avoid; }
+            .page + .page { page-break-before: always; break-before: page; }
+            .main { font-size: 13.2pt; line-height: 1.65; text-align: justify; text-justify: inter-word; flex: 0 0 auto; }
             .strong { font-weight: 900; }
-            .count-blank { display:inline-block; min-width: 35mm; border-bottom: 2px solid #000; margin: 0 4mm; position:relative; top: -2px; }
-            .em { font-weight: 900; }
-            .footer { margin-top: 4mm; }
+            .count-blank { display:inline-block; min-width: 10mm; border-bottom: 2px solid #000; margin: 0 3mm; position:relative; top: -1px; }
+            .footer { margin-top: 2mm; }
             .signatures { width:100%; border-collapse: collapse; table-layout: fixed; }
-            .signatures td { border:1px solid #111; padding: 6mm; vertical-align: top; font-size: 11pt; height: 28mm; }
-            .sign-title { font-weight: 700; margin-bottom: 6mm; display:block; text-align:center; }
-            .sign-line { display:block; border-top: 1px dashed #444; height: 0; margin-top: 8mm; }
-        </style></head><body>`;
+            .signatures td { border:1px solid #111; padding: 5mm; vertical-align: top; font-size: 10pt; height: 26mm; }
+            .sign-title { font-weight: 700; margin-bottom: 6mm; display:block; text-align:center; font-size: 11pt; }
+            .sign-line { display:block; border-top: 1px dashed #444; height: 0; margin-top: 6mm; }
+            @media print { .page { page-break-inside: avoid; } .page + .page { page-break-before: always; } }
+        </style></head>`;
 
-        selectedCourses.forEach((course, idx) => {
+        const buildSinglePageBody = (cName, cCode, cType) => `
+            <div class="page">
+                <div class="main">
+                    <div style="margin-bottom: 6mm; font-weight:800;">استاد ارجمند؛</div>
+                    <div>
+                        بدین وسیله تعداد <span class="count-blank"></span> برگه تشریحی مربوط به درس <span class="strong">${cName}</span> با کد <span class="strong">${cCode}</span>
+                        که آزمون آن در تاریخ <span class="strong">${dateFa}</span> و ساعت <span class="strong">${timeFa}</span>
+                        به صورت <span class="strong">${cType}</span> برگزار گردیده، تحویل حضور استاد محترم می‌گردد.
+                    </div>
+                    <div style="margin-top: 5mm;">
+                        <span class="strong">تأکید می‌شود:</span><br/>
+                        بر اساس ضوابط آموزشی، استاد محترم موظف است مطابق با نمونه سوالات ضمیمه و کلید سؤالات موجود در سامانه گلستان، حداکثر ظرف ۵ روز پس از تاریخ تحویل، نسبت به تصحیح کامل اوراق و ثبت نمرات نهایی در سامانه گلستان اقدام نماید.
+                    </div>
+                </div>
+                <div class="footer">
+                    <table class="signatures">
+                        <tr>
+                            <td>
+                                <span class="sign-title">تحویل‌دهنده</span>
+                                <div>نام و نام خانوادگی: __________________________</div>
+                                <div class="sign-line"></div>
+                                <div style="margin-top:3mm;text-align:center;font-weight:700;">امضاء</div>
+                            </td>
+                            <td>
+                                <span class="sign-title">تحویل‌گیرنده (استاد)</span>
+                                <div>نام و نام خانوادگی: __________________________</div>
+                                <div class="sign-line"></div>
+                                <div style="margin-top:3mm;text-align:center;font-weight:700;">امضاء</div>
+                            </td>
+                        </tr>
+                    </table>
+                </div>
+            </div>`;
+
+        // Build pages with fixed font sizes (no dynamic fitting)
+        const pages = [];
+        for (const course of selectedCourses) {
             const cName = toPersianDigits(String(course.course_name || ''));
             const cCode = toPersianDigits(String(course.course_code || ''));
             const cType = toPersianDigits(String(course.course_type || 'کتبی'));
+            pages.push(buildSinglePageBody(cName, cCode, cType));
+        }
 
-            docHtml += `<div class="page">`;
-            docHtml += `<div class="title">برچسب پاکت‌های تشریحی</div>`;
-            docHtml += `<div class="main">
-                <div style="margin-bottom: 6mm; font-weight:800;">استاد ارجمند؛</div>
-                <div>
-                    بدین وسیله تعداد <span class="count-blank"></span> برگه تشریحی مربوط به درس <span class="strong">${cName}</span> با کد <span class="strong">${cCode}</span>
-                    که آزمون آن در تاریخ <span class="strong">${dateFa}</span> و ساعت <span class="strong">${timeFa}</span>
-                    به صورت <span class="strong">${cType}</span> برگزار گردیده، تحویل حضور استاد محترم می‌گردد.
-                </div>
-                <div style="margin-top: 6mm;">
-                    <span class="strong">تأکید می‌شود:</span><br/>
-                    بر اساس ضوابط آموزشی، استاد محترم موظف است مطابق با نمونه سوالات ضمیمه و کلید سؤالات موجود در سامانه گلستان، حداکثر ظرف ۵ روز پس از تاریخ تحویل، نسبت به تصحیح کامل اوراق و ثبت نمرات نهایی در سامانه گلستان اقدام نماید.
-                </div>
-            </div>`;
-
-            docHtml += `<div class="footer">
-                <table class="signatures">
-                    <tr>
-                        <td>
-                            <span class="sign-title">تحویل‌دهنده</span>
-                            <div>نام و نام خانوادگی: __________________________</div>
-                            <div class="sign-line"></div>
-                            <div style="margin-top:3mm;">امضاء</div>
-                        </td>
-                        <td>
-                            <span class="sign-title">تحویل‌گیرنده (استاد)</span>
-                            <div>نام و نام خانوادگی: __________________________</div>
-                            <div class="sign-line"></div>
-                            <div style="margin-top:3mm;">امضاء</div>
-                        </td>
-                    </tr>
-                </table>
-            </div>`;
-
-            docHtml += `</div>`; // .page
-        });
-
-        docHtml += `</body></html>`;
-
+        // Now write final combined document (single style + many pages)
+        const finalHtml = commonHead + commonStyle + `<body>` + pages.join('') + `</body></html>`;
+        // Create a hidden iframe to render and print
         const iframe = document.createElement('iframe');
         iframe.style.position = 'fixed';
         iframe.style.left = '-10000px';
@@ -4510,11 +4518,12 @@ async function printEssentialsDescriptive() {
         iframe.style.border = '0';
         iframe.style.visibility = 'hidden';
         document.body.appendChild(iframe);
-
-        const doc = iframe.contentDocument || iframe.contentWindow.document;
-        doc.open();
-        doc.write(docHtml);
-        doc.close();
+        try {
+            const doc = iframe.contentDocument || iframe.contentWindow.document;
+            doc.open();
+            doc.write(finalHtml);
+            doc.close();
+        } catch (e) { }
 
         try { Swal.close(); } catch (e) { }
 

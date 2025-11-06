@@ -1,7 +1,7 @@
 
 
-const CACHE_NAME = 'exam-seat-v0.1.0';
-const VERSION = '0.1.0';
+const CACHE_NAME = 'exam-seat-v0.1.1';
+const VERSION = '0.1.1';
 const urlsToCache = [
   '/',
   '/index.php',
@@ -90,7 +90,9 @@ self.addEventListener('activate', event => {
             version: CACHE_NAME,
             tagVersion: `نسخه ${VERSION}`,
             changes: [
-              'پیاده سازی فرایند به روز رسانی بانک اطلاعاتی',
+              'بهبود چاپ برچسب‌های پاکت تشریحی',
+              'حذف صفحات خالی اضافی در چاپ',
+              'بهینه‌سازی فاصله‌گذاری و layout',
             ]
           });
         });
