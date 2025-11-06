@@ -2732,18 +2732,18 @@ async function showNextExamReport() {
         const courses = data.courses;
         const students = data.students;
 
-    // Store students and full report globally for other actions (printing, essentials)
+        // Store students and full report globally for other actions (printing, essentials)
         window.allStudents = students;
         // keep the full report response so printing helpers can reuse it
         window.currentExamReport = data;
         setLastExamContext(data.exam_date, data.exam_time);
 
-    // Build a compact inline info string that always shows 4 items: date | time | courses | students
-    const dateDisplayInline = data.exam_date ? toPersianDigits(data.exam_date) : 'بدون تاریخ';
-    const timeDisplayInline = data.exam_time ? toPersianDigits(data.exam_time) : 'بدون ساعت';
-    const courseCountInline = Array.isArray(courses) ? courses.length : 0;
-    const studentCountInline = Array.isArray(students) ? students.length : 0;
-    const inlineInfo = `${dateDisplayInline} | ${timeDisplayInline} | ${toPersianDigits(courseCountInline)} درس | ${toPersianDigits(studentCountInline)} نفر`;
+        // Build a compact inline info string that always shows 4 items: date | time | courses | students
+        const dateDisplayInline = data.exam_date ? toPersianDigits(data.exam_date) : 'بدون تاریخ';
+        const timeDisplayInline = data.exam_time ? toPersianDigits(data.exam_time) : 'بدون ساعت';
+        const courseCountInline = Array.isArray(courses) ? courses.length : 0;
+        const studentCountInline = Array.isArray(students) ? students.length : 0;
+        const inlineInfo = `${dateDisplayInline} | ${timeDisplayInline} | ${toPersianDigits(courseCountInline)} درس | ${toPersianDigits(studentCountInline)} نفر`;
 
         const headerTitle = window.customExamReportTitle || 'جزئیات جلسه آزمون';
         // Compact single-row details bar with 5 cells: date | time | courses | students | essentials icon
