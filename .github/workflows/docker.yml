@@ -76,3 +76,87 @@ jobs:
           context: .
           push: ${{ github.event_name == 'push' || steps.vars.outputs.do_push == 'true' }}
           tags: ${{ steps.vars.outputs.tags }}
+
+      - name: Prune previous GHCR package versions (keep only current tag)
+        # This step attempts to delete older package versions from GHCR so only the
+        # currently-built tag remains. Deleting package versions requires a token
+        # with package deletion rights (a PAT stored in `secrets.CR_PAT`). We try
+        # to fall back to the runtime GitHub Token, but note the GITHUB_TOKEN may
+        # not have permission to delete package versions in all orgs.
+        if: steps.vars.outputs.do_push == 'true' || github.event_name == 'push'
+        uses: actions/github-script@v6
+        env:
+          OWNER: ${{ env.OWNER }}
+          IMAGE_TAG: ${{ steps.vars.outputs.image_tag }}
+          PACKAGE_NAME: pnuseat
+        with:
+          # Prefer a CR_PAT (personal access token) stored in secrets.CR_PAT.
+          # Fallback to the workflow token if CR_PAT isn't provided.
+          github-token: ${{ secrets.CR_PAT || github.token }}
+          script: |
+            const owner = process.env.OWNER;
+            const packageName = process.env.PACKAGE_NAME;
+            const currentTag = process.env.IMAGE_TAG;
+            const packageType = 'container';
+
+            if (!currentTag) {
+              core.info('No current tag available from steps.vars.outputs.image_tag — skipping prune.');
+              return;
+            }
+
+            async function listVersions() {
+              // Try org-owned package first, fallback to user-owned package
+              try {
+                const res = await github.rest.packages.listPackageVersionsForPackageOwnedByOrg({
+                  org: owner,
+                  package_type: packageType,
+                  package_name: packageName,
+                  per_page: 100
+                });
+                return { res, type: 'org' };
+              } catch (errOrg) {
+                // fallback to user
+                const res = await github.rest.packages.listPackageVersionsForPackageOwnedByUser({
+                  username: owner,
+                  package_type: packageType,
+                  package_name: packageName,
+                  per_page: 100
+                });
+                return { res, type: 'user' };
+              }
+            }
+
+            const listResult = await listVersions();
+            const versions = (listResult.res && listResult.res.data) || [];
+            core.info(`Found ${versions.length} package versions for ${packageName} (owner=${owner}).`);
+
+            for (const v of versions) {
+              const tags = (v.metadata && v.metadata.container && v.metadata.container.tags) || [];
+              // If this version has the currently built tag, keep it.
+              if (tags.includes(currentTag)) {
+                core.info(`Keeping version ${v.id} with tags: ${tags.join(',')}`);
+                continue;
+              }
+
+              // Attempt deletion. Try org endpoint first, then user endpoint.
+              try {
+                if (listResult.type === 'org') {
+                  await github.rest.packages.deletePackageVersionForOrg({
+                    org: owner,
+                    package_type: packageType,
+                    package_name: packageName,
+                    package_version_id: v.id
+                  });
+                } else {
+                  await github.rest.packages.deletePackageVersionForUser({
+                    username: owner,
+                    package_type: packageType,
+                    package_name: packageName,
+                    package_version_id: v.id
+                  });
+                }
+                core.info(`Deleted package version ${v.id} (tags: ${tags.join(',')}).`);
+              } catch (errDelete) {
+                core.warning(`Failed to delete package version ${v.id}: ${errDelete.message || errDelete}`);
+              }
+            }
