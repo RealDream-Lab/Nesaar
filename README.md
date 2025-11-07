@@ -24,7 +24,7 @@
 - **[LICENSE_CHECK_DOCUMENTATION.md](docs/LICENSE_CHECK_DOCUMENTATION.md)** - مستندات سیستم لایسنس
 - **[SECURITY_IMPROVEMENTS.md](SECURITY_IMPROVEMENTS.md)** - گزارش کامل بهبودهای امنیتی
 
-## نسخه فعلی: ۰.۳.۵
+## نسخه فعلی: ۰.۳.۶
 
 ### تغییرات نسخه ۰.۳.۰
 
