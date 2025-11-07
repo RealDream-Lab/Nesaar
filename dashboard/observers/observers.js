@@ -622,25 +622,12 @@
 
         // Build HTML summary (show max/min/total and a small table of top/bottom sessions)
         let html = `<div style="text-align: right; direction: rtl;">
-            <div style="margin-bottom:0.8rem;font-weight:700">خلاصهٔ نیاز مراقبین:</div>
             <div>بیشترین تعداد مراقب مورد نیاز در یک جلسه: <strong>${fmt(max)}</strong></div>
             <div>کمترین تعداد مراقب مورد نیاز در یک جلسه: <strong>${fmt(min)}</strong></div>
-            <div>کل نفر-مراقب مورد نیاز در تمام جلسات: <strong>${fmt(total)}</strong></div>
-            <hr style="margin:0.6rem 0">`;
+            <div>کل مراقبی مورد نیاز در تمام جلسات: <strong>${fmt(total)}</strong></div>`;
 
-        // Show up to 4 example sessions (largest and smallest)
-        const sorted = perSessionTotals.slice().sort((a, b) => b.proctors - a.proctors);
-        const top = sorted.slice(0, 2);
-        const bottom = perSessionTotals.slice().sort((a, b) => a.proctors - b.proctors).slice(0, 2);
 
-        if (top.length) {
-            html += `<div style="margin-top:0.6rem;font-weight:600">نمونه جلسات با نیاز بالا:</div>`;
-            top.forEach(s => html += `<div>${s.exam_time} | ${s.exam_date} — ${fmt(s.proctors)} مراقب${s.missingLocations?` (مکان‌های بدون تنظیم: ${toPersianDigits(s.missingLocations)})`:''}</div>`);
-        }
-        if (bottom.length) {
-            html += `<div style="margin-top:0.6rem;font-weight:600">نمونه جلسات با نیاز پایین:</div>`;
-            bottom.forEach(s => html += `<div>${s.exam_time} | ${s.exam_date} — ${fmt(s.proctors)} مراقب${s.missingLocations?` (مکان‌های بدون تنظیم: ${toPersianDigits(s.missingLocations)})`:''}</div>`);
-        }
+
 
         html += `</div>`;
 
