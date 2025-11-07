@@ -104,8 +104,8 @@ jobs:
               return;
             }
 
-            async function listVersions() {
-              // Try org-owned package first, fallback to user-owned package
+            // First try the org-owned listing (if repository is under an org).
+            async function tryListOrg() {
               try {
                 const res = await github.rest.packages.listPackageVersionsForPackageOwnedByOrg({
                   org: owner,
@@ -114,41 +114,60 @@ jobs:
                   per_page: 100
                 });
                 return { res, type: 'org' };
-              } catch (errOrg) {
-                // fallback to user
-                const res = await github.rest.packages.listPackageVersionsForPackageOwnedByUser({
+              } catch (err) {
+                core.info('listPackageVersionsForPackageOwnedByOrg failed: ' + (err.message || err));
+                return null;
+              }
+            }
+
+            // Fallback for user-owned packages: use a raw REST request to avoid
+            // depending on an Octokit convenience method that may not exist in
+            // the runtime version used by actions/github-script.
+            async function tryListUser() {
+              try {
+                const res = await github.request('GET /users/{username}/packages/{package_type}/{package_name}/versions', {
                   username: owner,
                   package_type: packageType,
                   package_name: packageName,
                   per_page: 100
                 });
                 return { res, type: 'user' };
+              } catch (err) {
+                core.info('User package listing failed: ' + (err.message || err));
+                return null;
               }
             }
 
-            const listResult = await listVersions();
-            const versions = (listResult.res && listResult.res.data) || [];
+            let listResult = await tryListOrg();
+            if (!listResult) {
+              listResult = await tryListUser();
+            }
+
+            if (!listResult || !listResult.res) {
+              core.info('No package versions found or listing failed — skipping prune.');
+              return;
+            }
+
+            const versions = listResult.res.data || [];
             core.info(`Found ${versions.length} package versions for ${packageName} (owner=${owner}).`);
 
             for (const v of versions) {
               const tags = (v.metadata && v.metadata.container && v.metadata.container.tags) || [];
-              // If this version has the currently built tag, keep it.
               if (tags.includes(currentTag)) {
                 core.info(`Keeping version ${v.id} with tags: ${tags.join(',')}`);
                 continue;
               }
 
-              // Attempt deletion. Try org endpoint first, then user endpoint.
               try {
                 if (listResult.type === 'org') {
-                  await github.rest.packages.deletePackageVersionForOrg({
+                  await github.request('DELETE /orgs/{org}/packages/{package_type}/{package_name}/versions/{package_version_id}', {
                     org: owner,
                     package_type: packageType,
                     package_name: packageName,
                     package_version_id: v.id
                   });
                 } else {
-                  await github.rest.packages.deletePackageVersionForUser({
+                  await github.request('DELETE /users/{username}/packages/{package_type}/{package_name}/versions/{package_version_id}', {
                     username: owner,
                     package_type: packageType,
                     package_name: packageName,
