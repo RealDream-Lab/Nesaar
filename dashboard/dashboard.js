@@ -2228,7 +2228,30 @@ async function filterStudentsByCourse(courseCode) {
             `;
         });
 
-        document.querySelector('#studentsTableBody').innerHTML = tbodyHtml;
+        const tbody = document.querySelector('#studentsTableBody');
+        if (tbody) tbody.innerHTML = tbodyHtml;
+
+        // Remove the initial info prompt (only show it until the first time names are loaded)
+        const info = document.getElementById('studentsTableInfo');
+        if (info) try { info.remove(); } catch (e) { info.style.display = 'none'; }
+
+        // Reveal the students table wrapper if hidden
+        const wrap = document.getElementById('studentsTableWrap');
+        if (wrap && wrap.classList.contains('d-none')) wrap.classList.remove('d-none');
+
+        // Scroll the top of the students table into view (account for header height)
+        try {
+            if (wrap) {
+                const header = document.querySelector('.dashboard-header');
+                const headerHeight = header ? Math.ceil(header.getBoundingClientRect().height) : 0;
+                const rect = wrap.getBoundingClientRect();
+                const docTop = window.pageYOffset || document.documentElement.scrollTop || 0;
+                const targetTop = Math.max(0, rect.top + docTop - headerHeight - 8);
+                window.scrollTo({ top: targetTop, behavior: 'smooth' });
+            } else {
+                try { scrollReportCardIntoView(); } catch (e) { /* ignore */ }
+            }
+        } catch (e) { /* ignore scroll errors */ }
 
     } catch (error) {
         console.error('Error:', error);
@@ -2269,7 +2292,30 @@ function showAllStudents() {
         `;
     });
 
-    document.querySelector('#studentsTableBody').innerHTML = tbodyHtml;
+    const tbody = document.querySelector('#studentsTableBody');
+    if (tbody) tbody.innerHTML = tbodyHtml;
+
+    // Remove the initial info prompt (only show it until the first time names are loaded)
+    const info = document.getElementById('studentsTableInfo');
+    if (info) try { info.remove(); } catch (e) { info.style.display = 'none'; }
+
+    // Reveal the students table wrapper if hidden
+    const wrap = document.getElementById('studentsTableWrap');
+    if (wrap && wrap.classList.contains('d-none')) wrap.classList.remove('d-none');
+
+    // Scroll the top of the students table into view (account for header height)
+    try {
+        if (wrap) {
+            const header = document.querySelector('.dashboard-header');
+            const headerHeight = header ? Math.ceil(header.getBoundingClientRect().height) : 0;
+            const rect = wrap.getBoundingClientRect();
+            const docTop = window.pageYOffset || document.documentElement.scrollTop || 0;
+            const targetTop = Math.max(0, rect.top + docTop - headerHeight - 8);
+            window.scrollTo({ top: targetTop, behavior: 'smooth' });
+        } else {
+            try { scrollReportCardIntoView(); } catch (e) { /* ignore */ }
+        }
+    } catch (e) { /* ignore scroll errors */ }
 }
 
 // Add event listeners to upload buttons
@@ -2844,53 +2890,34 @@ async function showNextExamReport() {
 
         html += `</div>`;
 
-        if (students && students.length > 0) {
-            html += `
-				<div>
-					<h5 class="text-primary mb-3">لیست دانشجویان</h5>
-					<div class="table-responsive">
-						<table class="table table-striped table-hover">
-							<thead class="table-light">
-								<tr>
-									<th>ردیف</th>
-									<th>شماره دانشجویی</th>
-									<th>نام خانوادگی</th>
-									<th>نام</th>
-									<th>کد درس</th>
-									<th>نام درس</th>
-									<th>شماره صندلی</th>
-									<th>کلاس</th>
-									<th>نوع آزمون</th>
-								</tr>
-							</thead>
-							<tbody id="studentsTableBody">
-			`;
-
-            students.forEach((student, index) => {
-                html += `
-					<tr>
-						<td>${index + 1}</td>
-						<td>${student.student_id}</td>
-						<td><span class="text-secondary">${student.last_name}</span></td>
-						<td>${student.first_name}</td>
-						<td>${student.course_code}</td>
-						<td>${student.course_name}</td>
-						<td><span class="text-secondary">${student.seat_number}</span></td>
-						<td>${student.class_name}</td>
-                        <td><span class="badge ${getExamBadgeClass(student.exam_type)}">${student.exam_type}</span></td>
-					</tr>
-				`;
-            });
-
-            html += `
-							</tbody>
-						</table>
-					</div>
-				</div>
-			`;
-        } else {
-            html += '<p class="text-muted text-center mt-3">هیچ دانشجویی در این آزمون ثبت‌نام نکرده است.</p>';
-        }
+        // By default we don't render the full student list to avoid heavy initial payloads.
+        // Users should select a course (or click "همه دروس") to load the names.
+        html += `
+            <div>
+                <h5 class="text-primary mb-3">لیست دانشجویان</h5>
+                <div id="studentsTableInfo" class="alert alert-info text-center" role="alert" style="margin-bottom:1rem;">
+                    برای مشاهدهٔ اسامی لطفاً یک درس را از لیست دروس انتخاب کنید یا روی «همه دروس» کلیک کنید.
+                </div>
+                <div class="table-responsive d-none" id="studentsTableWrap">
+                    <table class="table table-striped table-hover">
+                        <thead class="table-light">
+                            <tr>
+                                <th>ردیف</th>
+                                <th>شماره دانشجویی</th>
+                                <th>نام خانوادگی</th>
+                                <th>نام</th>
+                                <th>کد درس</th>
+                                <th>نام درس</th>
+                                <th>شماره صندلی</th>
+                                <th>کلاس</th>
+                                <th>نوع آزمون</th>
+                            </tr>
+                        </thead>
+                        <tbody id="studentsTableBody"></tbody>
+                    </table>
+                </div>
+            </div>
+        `;
 
         document.getElementById('reportContent').innerHTML = html;
         const reportCard = document.getElementById('reportCard');
