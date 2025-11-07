@@ -59,6 +59,37 @@ if ($licenseStatus['valid'] !== true) {
             </div>
 
             <div class="observers-main">
+                <!-- کارت آمار جلسات و مراقبین -->
+                <div class="dashboard-card module-card no-hover" id="sessionStatsCard">
+                    <h4>آمار جلسات و مراقبین</h4>
+                    <div id="sessionStatsContent" style="margin-top:0.6rem; position:relative;">
+                        <!-- legend for time slots will be injected here -->
+                        <div id="sessionTimeLegend" style="display:flex;gap:0.6rem;flex-wrap:wrap;margin-bottom:0.6rem;align-items:center;
+                            font-size:0.92rem;color:var(--text-muted);"></div>
+                        <div id="sessionChartWrapper" style="position:relative;">
+                            <canvas id="sessionStatsChart" style="width:100%;height:520px;display:block;" aria-label="نمودار نیاز مراقبین" role="img"></canvas>
+                            <!-- spinner overlay (hidden by default) -->
+                            <div id="sessionChartSpinner" style="display:none;position:absolute;inset:0;align-items:center;justify-content:center;background:rgba(255,255,255,0.0);">
+                                <div style="width:56px;height:56px;border-radius:50%;display:flex;align-items:center;justify-content:center;">
+                                    <svg width="44" height="44" viewBox="0 0 44 44" xmlns="http://www.w3.org/2000/svg">
+                                        <defs>
+                                            <linearGradient id="g" x1="0%" x2="100%" y1="0%" y2="100%">
+                                                <stop offset="0%" stop-color="#1a6fa6" />
+                                                <stop offset="100%" stop-color="#ffc107" />
+                                            </linearGradient>
+                                        </defs>
+                                        <g fill="none" fill-rule="evenodd" stroke="url(#g)" stroke-width="4">
+                                            <path d="M22 2 A20 20 0 0 1 42 22" stroke-linecap="round">
+                                                <animateTransform attributeName="transform" type="rotate" from="0 22 22" to="360 22 22" dur="1s" repeatCount="indefinite" />
+                                            </path>
+                                        </g>
+                                    </svg>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                </div>
                 <!-- کارت مکان‌ها -->
                 <div class="dashboard-card module-card no-hover" id="locationsCard" style="display:none;">
                     <h4>مکان‌های معرفی‌شده برگزاری آزمون</h4>

@@ -147,6 +147,38 @@ try {
         ];
     }
 
+    // Build allExams array (past + future) with per-type breakdown and timestamp
+    $allExamsOutput = [];
+    foreach ($allExams as $exam) {
+        $d = $exam['exam_date'];
+        $t = $exam['exam_time'];
+        $dateParts = explode('/', $d);
+        $timeParts = explode(':', $t);
+        $timestamp = null;
+        if (count($dateParts) === 3 && count($timeParts) === 2) {
+            list($jY, $jM, $jD) = $dateParts;
+            list($gY, $gM, $gD) = jalali_to_gregorian($jY, $jM, $jD);
+            $timestamp = mktime((int)$timeParts[0], (int)$timeParts[1], 0, $gM, $gD, $gY);
+        }
+
+        $etypeCounts = [ 'الکترونیکی' => 0, 'کتبی' => 0 ];
+        if (isset($typeCounts[$d][$t])) {
+            foreach ($typeCounts[$d][$t] as $k => $v) {
+                if ($k === 'الکترونیکی' || mb_stripos($k, 'الکت') !== false) $etypeCounts['الکترونیکی'] += (int)$v;
+                elseif ($k === 'کتبی' || mb_stripos($k, 'کتب') !== false) $etypeCounts['کتبی'] += (int)$v;
+                else $etypeCounts['کتبی'] += (int)$v;
+            }
+        }
+
+        $allExamsOutput[] = [
+            'exam_date' => $d,
+            'exam_time' => $t,
+            'student_count' => (int)($exam['student_count'] ?? 0),
+            'timestamp' => $timestamp,
+            'exam_type_counts' => $etypeCounts
+        ];
+    }
+
     // Count remaining future sessions
     $remainingSessions = count($futureExamsOutput);
     // Aggregate exam-type totals across all future exams
@@ -273,6 +305,7 @@ try {
         'nextExamDateTime' => $nextExamDateTime,
         'remainingSessions' => $remainingSessions,
         'futureExams' => $futureExamsOutput,
+        'allExams' => $allExamsOutput,
         'futureExamTypeTotals' => $futureExamTypeTotals,
         'futureCourseTypeTotals' => $futureCourseTypeTotals,
         'quickInsights' => [

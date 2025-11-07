@@ -18,6 +18,26 @@
         return String(num).replace(/\d/g, d => persianDigits[d]);
     }
 
+    // Simple HTML escaper usable across this module
+    function escapeHtml(text) {
+        const d = document.createElement('div');
+        d.textContent = text || '';
+        return d.innerHTML;
+    }
+
+    // Chart instance for session stats (kept across renders)
+    let sessionStatsChart = null;
+    // Spinner safety timeout id to avoid it remaining visible indefinitely
+    let sessionStatsSpinnerTimeout = null;
+
+    // Prefer Vazir font for charts (Chart.js is included before this script)
+    try {
+        if (typeof Chart !== 'undefined' && Chart.defaults && Chart.defaults.font) {
+            Chart.defaults.font.family = "'Vazir', Tahoma, Arial, sans-serif";
+            Chart.defaults.font.size = 12;
+        }
+    } catch (e) { /* ignore if Chart not available yet */ }
+
     function getCookie(name) {
         const value = `; ${document.cookie}`;
         const parts = value.split(`; ${name}=`);
@@ -26,7 +46,24 @@
     }
 
     async function checkAuthAndRedirect() {
-        try {
+        // show spinner overlay while we fetch and render (useful for large datasets)
+        const spinner = document.getElementById('sessionChartSpinner');
+        if (spinner) {
+            // clear any existing safety timeout
+            try { if (sessionStatsSpinnerTimeout) { clearTimeout(sessionStatsSpinnerTimeout); sessionStatsSpinnerTimeout = null; } } catch (e) {}
+            spinner.style.display = 'flex';
+            // safety: hide spinner after 8s if something goes wrong
+            sessionStatsSpinnerTimeout = setTimeout(() => {
+                try {
+                    if (spinner && spinner.style.display !== 'none') {
+                        spinner.style.display = 'none';
+                        console.warn('sessionStatsChart spinner hidden by safety timeout');
+                    }
+                } catch (e) { /* ignore */ }
+                sessionStatsSpinnerTimeout = null;
+            }, 8000);
+        }
+    try {
             const adminSession = getCookie('adminSession');
             if (!adminSession) {
                 window.location.href = '/';
@@ -248,7 +285,6 @@
                     // update global save button state
                     updateGlobalSaveButton();
                 }
-
                 input.addEventListener('input', normalizeAndValidate);
                 input.addEventListener('paste', () => { setTimeout(normalizeAndValidate, 0); });
 
@@ -447,7 +483,7 @@
                 }
 
                 // Show a loading modal and perform batch save sequentially
-                Swal.fire({ title: 'در حال ذخیره‌ی گروهی...', allowOutsideClick: false, didOpen: () => { Swal.showLoading(); }, customClass: { popup: 'swal2-rtl swal2-glass' } });
+                //Swal.fire({ title: 'در حال ذخیره‌ی گروهی...', allowOutsideClick: false, didOpen: () => { Swal.showLoading(); }, customClass: { popup: 'swal2-rtl swal2-glass' } });
 
                 const csrf = getCsrfToken();
                 let failed = 0;
@@ -473,16 +509,29 @@
                 try { await checkZerosAndUpdateSaveAll(); } catch (e) { /* ignore */ }
 
                 if (failed === 0) {
-                    await Swal.fire({ toast: true, position: 'top-end', icon: 'success', title: 'ذخیره‌ی گروهی با موفقیت انجام شد', showConfirmButton: false, timer: 5000, timerProgressBar: true, customClass: { popup: 'swal2-rtl' } });
+                    // Show a non-toast loading modal only when SaveAll is invoked and we're about to compute the proctor summary
+                    Swal.fire({
+                        title: 'ذخیره‌ی گروهی با موفقیت انجام شد',
+                        html: '<div style="margin-top:0.4rem;font-weight:600">در حال محاسبه مراقبین مورد نیاز</div>',
+                        icon: 'success',
+                        showConfirmButton: false,
+                        allowOutsideClick: false,
+                        didOpen: () => { Swal.showLoading(); },
+                        customClass: { popup: 'swal2-rtl swal2-glass' }
+                    });
 
-                    // Compute and show proctor summary after successful batch save
+                    // Compute and show proctor summary after successful batch save (the summary function will close the loading modal)
                     try {
                         await computeAndShowProctorSummary();
                     } catch (e) {
                         // ignore summary errors but notify user
                         console.warn('Proctor summary failed', e);
+                        Swal.close();
                         await Swal.fire({ toast: true, position: 'top-end', icon: 'warning', title: 'محاسبهٔ خلاصهٔ مراقبین ناموفق بود', showConfirmButton: false, timer: 5000, timerProgressBar: true, customClass: { popup: 'swal2-rtl' } });
                     }
+
+                    // refresh session stats card so it reflects updated required_proctors
+                    try { await renderSessionStatsCard(); } catch (e) { console.warn('refresh stats failed', e); }
 
                     // hide the locations card after a successful batch save
                     try {
@@ -552,6 +601,13 @@
         }
     });
 
+        
+
+    // Kick off initial rendering of the session stats card on page load
+    (async () => {
+        try { await renderSessionStatsCard(); } catch (e) { console.warn('Initial session stats load failed', e); }
+    })();
+
     // Compute per-session proctor needs and show a summary modal
     async function computeAndShowProctorSummary() {
         // Fetch locations (required_proctors per building/class)
@@ -572,7 +628,7 @@
         const futureExams = Array.isArray(stats.futureExams) ? stats.futureExams : [];
 
         if (!futureExams.length) {
-            await Swal.fire({ title: 'خلاصهٔ نیاز مراقبین', html: '<div style="text-align: right; direction: rtl">جلسهٔ آتی پیدا نشد.</div>', icon: 'info', confirmButtonText: 'باشه', customClass: { popup: 'swal2-rtl swal2-glass' } });
+            await Swal.fire({ title: 'خلاصهٔ آمار مراقبین مورد نیاز', html: '<div style="text-align: right; direction: rtl">جلسهٔ آتی پیدا نشد.</div>', icon: 'info', confirmButtonText: 'باشه', customClass: { popup: 'swal2-rtl swal2-glass' } });
             return;
         }
 
@@ -608,7 +664,7 @@
         }
 
         if (!perSessionTotals.length) {
-            await Swal.fire({ title: 'خلاصهٔ نیاز مراقبین', html: '<div style="text-align: right; direction: rtl">نتیجه‌ای برای جلسات پیدا نشد یا خطا در دریافت جزئیات جلسات وجود دارد.</div>', icon: 'error', confirmButtonText: 'باشه', customClass: { popup: 'swal2-rtl swal2-glass' } });
+            await Swal.fire({ title: 'خلاصهٔ آمار مراقبین مورد نیاز', html: '<div style="text-align: right; direction: rtl">نتیجه‌ای برای جلسات پیدا نشد یا خطا در دریافت جزئیات جلسات وجود دارد.</div>', icon: 'error', confirmButtonText: 'باشه', customClass: { popup: 'swal2-rtl swal2-glass' } });
             return;
         }
 
@@ -617,20 +673,386 @@
         const min = Math.min(...proctorsArr);
         const total = proctorsArr.reduce((a, b) => a + b, 0);
 
-        // Format numbers into Persian digits for display
-        const fmt = (n) => toPersianDigits(n);
+    // Format numbers into Persian digits for display
+    const fmt = (n) => toPersianDigits(n);
 
-        // Build HTML summary (show max/min/total and a small table of top/bottom sessions)
-        let html = `<div style="text-align: right; direction: rtl;">
-            <div>بیشترین تعداد مراقب مورد نیاز در یک جلسه: <strong>${fmt(max)}</strong></div>
-            <div>کمترین تعداد مراقب مورد نیاز در یک جلسه: <strong>${fmt(min)}</strong></div>
-            <div>کل مراقبی مورد نیاز در تمام جلسات: <strong>${fmt(total)}</strong></div>`;
+    // Highlight numeric values only (yellow text), preserve spacing and background
+    const yellow = '#FFC107';
+    const spanTotal = `<span style="color:${yellow};">${fmt(total)}</span>`;
+    const spanMax = `<span style="color:${yellow};">${fmt(max)}</span>`;
+    const spanMin = `<span style="color:${yellow};">${fmt(min)}</span>`;
+
+    // Build the Persian sentence and keep it as HTML so numbers can be colored
+    const html = `<div style="text-align: justify; direction: rtl; font-size:1.02rem">برای پوشش تمام جلسات به مجموع ${spanTotal} مراقب نیاز است. در پُرجمعیت‌ترین جلسه ${spanMax} نفر و در خلوت‌ترین تنها ${spanMin} نفر کافی‌اند.</div>`;
+
+    // Close any loading modal and display the final summary modal using the project's standard Swal classes
+    try { Swal.close(); } catch (e) { /* ignore */ }
+    await Swal.fire({ icon: 'info', title: 'خلاصهٔ نیاز مراقبین', html, confirmButtonText: 'باشه', customClass: { popup: 'swal2-rtl swal2-glass', confirmButton: 'btn btn-primary' } });
+    }
+
+    // Render session stats card (fills #sessionStatsContent) — chart-only (no summary text)
+    async function renderSessionStatsCard() {
+        const card = document.getElementById('sessionStatsCard');
+        const container = document.getElementById('sessionStatsContent');
+        if (!card || !container) return;
+
+        // spinner element used to show loading overlay while fetching/rendering
+        const spinner = document.getElementById('sessionChartSpinner');
+        if (spinner) {
+            try { if (sessionStatsSpinnerTimeout) { clearTimeout(sessionStatsSpinnerTimeout); sessionStatsSpinnerTimeout = null; } } catch (e) {}
+            spinner.style.display = 'flex';
+            // safety: hide spinner after 8s if something goes wrong while fetching many sessions
+            sessionStatsSpinnerTimeout = setTimeout(() => {
+                try {
+                    if (spinner && spinner.style.display !== 'none') {
+                        spinner.style.display = 'none';
+                        console.warn('sessionStatsChart spinner hidden by safety timeout');
+                    }
+                } catch (e) { /* ignore */ }
+                sessionStatsSpinnerTimeout = null;
+            }, 8000);
+        }
+
+        try {
+            // fetch locations and build map
+            const locResp = await fetch('/API/getLocations.php', { cache: 'no-store' });
+            if (!locResp.ok) throw new Error('failed to fetch locations');
+            const locJson = await locResp.json();
+            const locations = Array.isArray(locJson.locations) ? locJson.locations : [];
+            const locMap = new Map();
+            locations.forEach(l => {
+                const key = `${(l.building||'').trim()}||${(l.class_name||'').trim()}`;
+                locMap.set(key, Number(l.required_proctors || 0));
+            });
+
+            // fetch sessions (prefer all sessions if API provides it)
+            const statsResp = await fetch('/API/getStatistics.php', { cache: 'no-store' });
+            if (!statsResp.ok) throw new Error('failed to fetch statistics');
+            const stats = await statsResp.json();
+            const sessions = Array.isArray(stats.allExams) ? stats.allExams : (Array.isArray(stats.futureExams) ? stats.futureExams : []);
+
+            if (!sessions.length) {
+                // nothing to show — keep canvas empty
+                // ensure chart is destroyed if exists
+                if (sessionStatsChart) { try { sessionStatsChart.destroy(); } catch(e){} sessionStatsChart = null; }
+                if (spinner) { try { spinner.style.display = 'none'; } catch (e) {} }
+                if (sessionStatsSpinnerTimeout) { clearTimeout(sessionStatsSpinnerTimeout); sessionStatsSpinnerTimeout = null; }
+                return;
+            }
+
+            const perSessionTotals = [];
+            // batch fetch session reports with limited concurrency
+            const concurrency = 4;
+            for (let i = 0; i < sessions.length; i += concurrency) {
+                const batch = sessions.slice(i, i + concurrency);
+                const promises = batch.map(async (fe) => {
+                    const d = fe.exam_date;
+                    const t = fe.exam_time;
+                    try {
+                        const repResp = await fetch(`/API/getNextExamReport.php?exam_date=${encodeURIComponent(d)}&exam_time=${encodeURIComponent(t)}`, { cache: 'no-store' });
+                        if (!repResp.ok) {
+                            // If server returns non-OK, return a placeholder so session stays in the list
+                            return { exam_date: d, exam_time: t, proctors: 0, missingLocations: 0, student_count: Number(fe.student_count || 0), student_ids: [] };
+                        }
+                        const rep = await repResp.json();
+                        const students = Array.isArray(rep.students) ? rep.students : [];
+                        // collect student ids for de-duplication across time-slots on same date
+                        const studentIds = students.map(s => s.student_id).filter(Boolean);
+                        const usedKeys = new Set();
+                        students.forEach(s => {
+                            const key = `${(s.building||'').trim()}||${(s.class_name||'').trim()}`;
+                            usedKeys.add(key);
+                        });
+                        let sessionSum = 0;
+                        let missingLocations = 0;
+                        usedKeys.forEach(key => {
+                            if (locMap.has(key)) sessionSum += Number(locMap.get(key)) || 0;
+                            else missingLocations++;
+                        });
+                        return { exam_date: d, exam_time: t, proctors: sessionSum, missingLocations, student_count: Number(fe.student_count || students.length || 0), student_ids: studentIds };
+                    } catch (e) {
+                        console.warn('Failed to fetch session', d, t, e);
+                        // Return placeholder on error so we keep session alignment
+                        return { exam_date: d, exam_time: t, proctors: 0, missingLocations: 0, student_count: Number(fe.student_count || 0), student_ids: [] };
+                    }
+                });
+                const results = await Promise.all(promises);
+                results.forEach(r => { if (r) perSessionTotals.push(r); });
+            }
+
+            if (!perSessionTotals.length) {
+                // nothing to render — keep chart empty
+                if (sessionStatsChart) { try { sessionStatsChart.destroy(); } catch(e){} sessionStatsChart = null; }
+                if (spinner) { try { spinner.style.display = 'none'; } catch (e) {} }
+                if (sessionStatsSpinnerTimeout) { clearTimeout(sessionStatsSpinnerTimeout); sessionStatsSpinnerTimeout = null; }
+                return;
+            }
+
+            // Aggregate perSessionTotals into per-day stacked values (one label per date).
+            const fmt = (n) => toPersianDigits(n);
+
+            // unique dates (preserve order)
+            const dates = [];
+            const dateIndex = new Map();
+            perSessionTotals.forEach(p => {
+                const d = p.exam_date || '';
+                if (!dateIndex.has(d)) {
+                    dateIndex.set(d, dates.length);
+                    dates.push(d);
+                }
+            });
+
+            console.debug('renderSessionStatsCard: aggregated dates count:', dates.length);
 
 
+            // unique time slots across sessions (preserve order)
+            const times = Array.from(new Set(perSessionTotals.map(p => p.exam_time)));
 
+            console.debug('renderSessionStatsCard: time slots found:', times);
 
-        html += `</div>`;
+            // build per-date per-time sums and per-date unique student sets
+            const perTimePerDate = {};
+            times.forEach(t => { perTimePerDate[t] = new Array(dates.length).fill(0); });
+            const studentsPerDate = new Array(dates.length).fill(0);
+            const studentIdSets = new Array(dates.length).fill(null).map(() => new Set());
 
-        await Swal.fire({ title: 'خلاصهٔ نیاز مراقبین', html, icon: 'info', confirmButtonText: 'فهمیدم', customClass: { popup: 'swal2-rtl swal2-glass' } });
+            perSessionTotals.forEach(p => {
+                const d = p.exam_date || '';
+                const t = p.exam_time || '';
+                const di = dateIndex.get(d);
+                // accumulate proctors
+                if (typeof perTimePerDate[t] !== 'undefined') {
+                    perTimePerDate[t][di] += Number(p.proctors || 0);
+                }
+                // accumulate student ids (if available) or fallback to student_count (will sum later)
+                if (Array.isArray(p.student_ids) && p.student_ids.length) {
+                    p.student_ids.forEach(id => { if (id) studentIdSets[di].add(String(id)); });
+                } else if (Number(p.student_count || 0) > 0) {
+                    // If no IDs, add a placeholder count in a separate accumulator; we'll sum counts per date
+                    // Use a special set to track numeric counts by adding synthetic ids to avoid double-counting across sessions.
+                    // Simpler: keep a numeric accumulator if IDs unavailable
+                    studentIdSets[di].add('__count__' + (Math.random().toString(36).slice(2,8)) + '|' + Number(p.student_count || 0));
+                }
+            });
+
+            // debug: sizes
+            try {
+                console.debug('renderSessionStatsCard: dates:', dates);
+                console.debug('renderSessionStatsCard: times:', times);
+                times.forEach(t => {
+                    console.debug('renderSessionStatsCard: perTimePerDate[' + t + '].length=', perTimePerDate[t].length, 'values=', perTimePerDate[t]);
+                });
+                console.debug('renderSessionStatsCard: studentsPerDate=', studentsPerDate);
+            } catch (e) { /* ignore debug failures */ }
+
+            // finalize studentsPerDate: when sets contain synthetic entries, sum their numeric parts; otherwise use set size
+            for (let i = 0; i < dates.length; i++) {
+                let sum = 0;
+                let synthetic = 0;
+                studentIdSets[i].forEach(val => {
+                    if (typeof val === 'string' && val.startsWith('__count__')) {
+                        synthetic += Number(val.split('|')[1] || 0);
+                    } else {
+                        sum += 1;
+                    }
+                });
+                studentsPerDate[i] = sum + synthetic;
+            }
+
+            // labels are the dates (show fully)
+            const labels = dates.map(d => escapeHtml(d));
+
+            // Color assignment: if exactly 3 time-slots, make two blue shades and one warm color
+            const blue1 = 'rgba(26,111,166,0.95)';
+            const blue2 = 'rgba(18,140,205,0.95)';
+            const warm = 'rgba(255,193,7,0.95)';
+            const red = 'rgba(233,30,99,0.95)';
+            const fallbackPalette = [blue1, blue2, 'rgba(0,170,136,0.95)', warm, 'rgba(233,30,99,0.95)', 'rgba(156,39,176,0.95)'];
+
+            const green = 'rgba(76,175,80,0.95)';
+            const colorMap = new Map();
+            if (times.length === 3) {
+                // default: two blues and one warm
+                const defaults = [blue1, blue2, warm];
+                times.forEach((t, i) => {
+                    // if the time is 11 (starts with '11'), assign green regardless
+                    if (String(t).trim().startsWith('11')) {
+                        colorMap.set(t, green);
+                    } else {
+                        colorMap.set(t, defaults[i % defaults.length]);
+                    }
+                });
+            } else {
+                times.forEach((t, i) => {
+                    if (String(t).trim().startsWith('11')) colorMap.set(t, green);
+                    else colorMap.set(t, fallbackPalette[i % fallbackPalette.length]);
+                });
+            }
+            // Build per-time color arrays (one color per dataset/time-slot)
+            const perTimeColor = {};
+            times.forEach((t, i) => { perTimeColor[t] = colorMap.get(t) || fallbackPalette[i % fallbackPalette.length]; });
+
+            // Hide the legend element (we don't need a separate color legend when the chart is self-explanatory)
+            const legendEl = document.getElementById('sessionTimeLegend');
+            if (legendEl) {
+                legendEl.innerHTML = '';
+                legendEl.style.display = 'none';
+            }
+
+            // Ensure canvas exists (index.php includes a canvas with this id, but be defensive)
+            let canvas = document.getElementById('sessionStatsChart');
+            if (!canvas) {
+                const wrap = document.createElement('div');
+                wrap.style.marginTop = '0.6rem';
+                wrap.style.height = '520px';
+                canvas = document.createElement('canvas');
+                canvas.id = 'sessionStatsChart';
+                canvas.style.width = '100%';
+                canvas.style.height = '520px';
+                wrap.appendChild(canvas);
+                container.appendChild(wrap);
+            }
+
+            // Create or update Chart.js instance
+            const ctx = canvas.getContext('2d');
+            if (sessionStatsChart) {
+                try {
+                    // Build stacked datasets per time-slot (one entry per date)
+                    const newDatasets = [];
+                    times.forEach(t => {
+                        newDatasets.push({
+                            label: t,
+                            data: perTimePerDate[t] || new Array(labels.length).fill(0),
+                            backgroundColor: perTimeColor[t],
+                            borderRadius: 6,
+                            barThickness: 22,
+                            maxBarThickness: 44,
+                            barPercentage: 0.9,
+                            categoryPercentage: 0.85,
+                            stack: 'proctors',
+                            yAxisID: 'y'
+                        });
+                    });
+                    newDatasets.push({
+                        label: 'دانشجویان',
+                        data: studentsPerDate,
+                        type: 'line',
+                        borderColor: 'rgba(233,30,99,0.95)',
+                        backgroundColor: 'rgba(233,30,99,0.12)',
+                        fill: true,
+                        tension: 0.25,
+                        pointRadius: 3,
+                        yAxisID: 'y1'
+                    });
+
+                    sessionStatsChart.data.labels = labels;
+                    sessionStatsChart.data.datasets = newDatasets;
+                    // ensure bars at the edges are not clipped
+                    try { sessionStatsChart.options.scales.x.offset = true; } catch (err) { /* ignore */ }
+                    // tooltip formatting
+                    sessionStatsChart.options.plugins.tooltip = sessionStatsChart.options.plugins.tooltip || {};
+                    sessionStatsChart.options.plugins.tooltip.filter = function(tooltipItem) {
+                        const ds = tooltipItem.chart.data.datasets[tooltipItem.datasetIndex];
+                        const v = ds.data[tooltipItem.dataIndex];
+                        if ((ds.type === 'bar' || ds.yAxisID === 'y') && Number(v) === 0) return false;
+                        return true;
+                    };
+                    sessionStatsChart.options.plugins.tooltip.callbacks = sessionStatsChart.options.plugins.tooltip.callbacks || {};
+                    sessionStatsChart.options.plugins.tooltip.callbacks.label = function(ctx) {
+                        const ds = ctx.dataset || ctx.chart.data.datasets[ctx.datasetIndex];
+                        const v = ds.data[ctx.dataIndex];
+                        const label = ds.label || '';
+                        return label + ': ' + toPersianDigits(Number(v || 0));
+                    };
+                    sessionStatsChart.update();
+                } catch (e) {
+                    try { sessionStatsChart.destroy(); } catch (ignored) {}
+                    sessionStatsChart = null;
+                }
+            }
+
+            if (!sessionStatsChart) {
+                // Build stacked datasets per time-slot (one entry per date)
+                const datasets = [];
+                times.forEach(t => {
+                    datasets.push({
+                        label: t,
+                        data: perTimePerDate[t] || new Array(labels.length).fill(0),
+                        backgroundColor: perTimeColor[t],
+                        borderRadius: 6,
+                        barThickness: 22,
+                        maxBarThickness: 44,
+                        barPercentage: 0.9,
+                        categoryPercentage: 0.85,
+                        stack: 'proctors',
+                        yAxisID: 'y'
+                    });
+                });
+                datasets.push({
+                    label: 'دانشجویان',
+                    data: studentsPerDate,
+                    type: 'line',
+                    borderColor: 'rgba(233,30,99,0.95)',
+                    backgroundColor: 'rgba(233,30,99,0.12)',
+                    fill: true,
+                    tension: 0.25,
+                    pointRadius: 3,
+                    yAxisID: 'y1'
+                });
+
+                // eslint-disable-next-line no-undef
+                sessionStatsChart = new Chart(ctx, {
+                    type: 'bar',
+                    data: {
+                        labels: labels,
+                        datasets: datasets
+                    },
+                    options: {
+                        plugins: { 
+                            legend: { display: true, labels: { boxWidth:12 } },
+                            tooltip: {
+                                // filter out bar entries with zero value
+                                filter: function(tooltipItem) {
+                                    const ds = tooltipItem.chart.data.datasets[tooltipItem.datasetIndex];
+                                    const v = ds.data[tooltipItem.dataIndex];
+                                    if ((ds.type === 'bar' || ds.yAxisID === 'y') && Number(v) === 0) return false;
+                                    return true;
+                                },
+                                callbacks: {
+                                    label: function(ctx) {
+                                        const ds = ctx.dataset || ctx.chart.data.datasets[ctx.datasetIndex];
+                                        const v = ds.data[ctx.dataIndex];
+                                        const label = ds.label || '';
+                                        return label + ': ' + toPersianDigits(Number(v || 0));
+                                    }
+                                }
+                            }
+                        },
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        interaction: { mode: 'index', intersect: false },
+                        scales: {
+                            x: { offset: true, ticks: { maxRotation: 0, minRotation: 0, autoSkip: false, callback: function(value, index) { return value; } }, grid: { display: false } },
+                            y: { beginAtZero: true, position: 'left', grid: { color: 'rgba(0,0,0,0.04)' } },
+                            y1: { beginAtZero: true, position: 'right', grid: { display: false } }
+                        }
+                    }
+                });
+            }
+            // hide spinner after rendering
+            if (spinner) { try { spinner.style.display = 'none'; } catch(e) {} }
+            if (sessionStatsSpinnerTimeout) { clearTimeout(sessionStatsSpinnerTimeout); sessionStatsSpinnerTimeout = null; }
+        } catch (e) {
+            // Log full error stack to console to help debugging
+            try { console.error('renderSessionStatsCard failed', e && e.stack ? e.stack : e); } catch (err) { /* ignore */ }
+            // Show a small inline hint so the user doesn't see a completely blank area
+            try {
+                if (container) container.innerHTML = '<div style="padding:1rem;color:var(--text-muted);direction:rtl;text-align:right">خطا در بارگذاری نمودار — لطفاً کنسول مرورگر را برای جزئیات بررسی کنید.</div>';
+            } catch (err) { /* ignore */ }
+            if (sessionStatsChart) { try { sessionStatsChart.destroy(); } catch(e){} sessionStatsChart = null; }
+            if (spinner) spinner.style.display = 'none';
+            if (sessionStatsSpinnerTimeout) { clearTimeout(sessionStatsSpinnerTimeout); sessionStatsSpinnerTimeout = null; }
+            return;
+        }
     }
 })();
