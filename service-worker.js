@@ -1,7 +1,7 @@
 
 
-const CACHE_NAME = 'exam-seat-v0.3.0';
-const VERSION = '0.3.0';
+const CACHE_NAME = 'exam-seat-v0.3.5';
+const VERSION = '0.3.5';
 const urlsToCache = [
   '/',
   '/index.php',
@@ -90,7 +90,8 @@ self.addEventListener('activate', event => {
             version: CACHE_NAME,
             tagVersion: `نسخه ${VERSION}`,
             changes: [
-              'افزایش نسخه به 0.3.0 و به‌روزرسانی کش PWA',
+              'افزایش نسخه به 0.3.5 و به‌روزرسانی کش PWA',
+              'افزودن ماژول مراقبین: ویرایش تعداد مراقبین برای هر مکان و ذخیرهٔ گروهی امن',
               'نمایش placeholder جمع‌وجور در کارت نمودار زمانی که داده‌ای برای نمایش نیست',
               'قابلیت بارگذاری مجدد نمودار از داخل کارت (دکمه بارگذاری مجدد)',
               'بهبود رفتار کارت گزارش‌ها: جایگزینی حذف کارت با placeholder جمع‌وجور',

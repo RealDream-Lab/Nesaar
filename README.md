@@ -24,8 +24,7 @@
 - **[LICENSE_CHECK_DOCUMENTATION.md](docs/LICENSE_CHECK_DOCUMENTATION.md)** - مستندات سیستم لایسنس
 - **[SECURITY_IMPROVEMENTS.md](SECURITY_IMPROVEMENTS.md)** - گزارش کامل بهبودهای امنیتی
 
-
-## نسخه فعلی: ۰.۳.۰
+## نسخه فعلی: ۰.۳.۵
 
 ### تغییرات نسخه ۰.۳.۰
 
@@ -75,10 +74,13 @@ sudo systemctl enable docker
 #### مراحل راه‌اندازی
 
 **گزینه سریع**: اجرای اسکریپت خودکار:
+
 ```bash
 curl -fsSL https://raw.githubusercontent.com/RealDream-Lab/PnuSeat/master/setup.sh | bash
 ```
+
 یا دانلود و اجرای دستی:
+
 ```bash
 wget https://raw.githubusercontent.com/RealDream-Lab/PnuSeat/master/setup.sh
 chmod +x setup.sh
@@ -86,13 +88,15 @@ chmod +x setup.sh
 ```
 
 **راه‌اندازی دستی**:
-   ```bash
-   git clone https://github.com/RealDream-Lab/PnuSeat.git
-   cd PnuSeat
-   ```
+
+```bash
+git clone https://github.com/RealDream-Lab/PnuSeat.git
+cd PnuSeat
+```
 
 2. **تنظیم متغیرهای محیطی**:
    فایل `.env` را ایجاد کنید و مقادیر دلخواه خود را قرار دهید (برای امنیت، رمزهای قوی انتخاب کنید):
+
    ```bash
    cat > .env << EOF
    # نام دیتابیس (اختیاری، پیش‌فرض: PnuExamsSeatNumber)
@@ -120,16 +124,18 @@ chmod +x setup.sh
 
 3. **استفاده از ایمیج آماده از GitHub Container Registry (توصیه شده)**:
    به جای build کردن، می‌توانید مستقیماً از ایمیج آماده استفاده کنید:
+
    ```bash
    # دریافت آخرین نسخه
    docker pull ghcr.io/RealDream-Lab/pnuseat:latest
-   
+
    # یا دریافت نسخه خاص (مثلاً v1.7.0)
    docker pull ghcr.io/RealDream-Lab/pnuseat:v1.7.0
    ```
 
 4. **ساخت ایمیج (اختیاری، فقط برای توسعه‌دهندگان)**:
    اگر می‌خواهید خودتان ایمیج را بسازید:
+
    ```bash
    git clone https://github.com/RealDream-Lab/PnuSeat.git
    cd PnuSeat
@@ -137,6 +143,7 @@ chmod +x setup.sh
    ```
 
 5. **ساخت و اجرای کانتینرها**:
+
    ```bash
    docker-compose up --build
    ```
@@ -179,6 +186,7 @@ composer install
 این دستور تمام وابستگی‌های مورد نیاز از جمله OpenSpout را نصب می‌کند.
 
 #### وابستگی‌های PHP مورد نیاز
+
 - php-mbstring
 - php-xml
 - php-zip
@@ -186,6 +194,7 @@ composer install
 - php-json
 
 #### بسته‌های PHP اضافه‌شده:
+
 - openspout/openspout
 
 ### ۲. دریافت و استقرار کد
@@ -312,4 +321,3 @@ sudo systemctl reload apache2
 **نسار** – مرکز سنجش و آزمون دانشگاه پیام نور
 
 </div>
-
