@@ -917,18 +917,14 @@ try {
     console.warn('Failed to init info stats button', e);
 }
 
-// Proctor module button
+// Proctor module button: navigate to the dedicated observers module folder
 try {
     const proctorBtn = document.getElementById('proctorBtn');
     if (proctorBtn) {
-        proctorBtn.addEventListener('click', async () => {
-            await Swal.fire({
-                icon: 'info',
-                title: 'ماژول عوامل اجرائی',
-                text: 'این بخش برای مدیریت و استقرار عوامل اجرائی آزمون در دست توسعه است.',
-                confirmButtonText: 'باشه',
-                customClass: { popup: 'swal2-rtl swal2-glass', confirmButton: 'btn btn-primary' }
-            });
+        proctorBtn.addEventListener('click', (e) => {
+            // Navigate to the new module folder under /dashboard/observers/
+            // Use absolute path to avoid relative path mistakes from different pages.
+            window.location.href = '/dashboard/observers/';
         });
     }
 } catch (e) {
