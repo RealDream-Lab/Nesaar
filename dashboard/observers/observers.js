@@ -13,6 +13,11 @@
         });
     }
 
+    function toPersianDigits(num) {
+        const persianDigits = ['۰','۱','۲','۳','۴','۵','۶','۷','۸','۹'];
+        return String(num).replace(/\d/g, d => persianDigits[d]);
+    }
+
     function getCookie(name) {
         const value = `; ${document.cookie}`;
         const parts = value.split(`; ${name}=`);
@@ -469,6 +474,16 @@
 
                 if (failed === 0) {
                     await Swal.fire({ toast: true, position: 'top-end', icon: 'success', title: 'ذخیره‌ی گروهی با موفقیت انجام شد', showConfirmButton: false, timer: 5000, timerProgressBar: true, customClass: { popup: 'swal2-rtl' } });
+
+                    // Compute and show proctor summary after successful batch save
+                    try {
+                        await computeAndShowProctorSummary();
+                    } catch (e) {
+                        // ignore summary errors but notify user
+                        console.warn('Proctor summary failed', e);
+                        await Swal.fire({ toast: true, position: 'top-end', icon: 'warning', title: 'محاسبهٔ خلاصهٔ مراقبین ناموفق بود', showConfirmButton: false, timer: 5000, timerProgressBar: true, customClass: { popup: 'swal2-rtl' } });
+                    }
+
                     // hide the locations card after a successful batch save
                     try {
                         const card = document.getElementById('locationsCard');
@@ -536,4 +551,99 @@
             });
         }
     });
+
+    // Compute per-session proctor needs and show a summary modal
+    async function computeAndShowProctorSummary() {
+        // Fetch locations (required_proctors per building/class)
+        const locResp = await fetch('/API/getLocations.php', { cache: 'no-store' });
+        if (!locResp.ok) throw new Error('failed to fetch locations');
+        const locJson = await locResp.json();
+        const locations = Array.isArray(locJson.locations) ? locJson.locations : [];
+        const locMap = new Map();
+        locations.forEach(l => {
+            const key = `${(l.building||'').trim()}||${(l.class_name||'').trim()}`;
+            locMap.set(key, Number(l.required_proctors || 0));
+        });
+
+        // Fetch statistics to get future sessions
+        const statsResp = await fetch('/API/getStatistics.php', { cache: 'no-store' });
+        if (!statsResp.ok) throw new Error('failed to fetch statistics');
+        const stats = await statsResp.json();
+        const futureExams = Array.isArray(stats.futureExams) ? stats.futureExams : [];
+
+        if (!futureExams.length) {
+            await Swal.fire({ title: 'خلاصهٔ نیاز مراقبین', html: '<div style="text-align: right; direction: rtl">جلسهٔ آتی پیدا نشد.</div>', icon: 'info', confirmButtonText: 'باشه', customClass: { popup: 'swal2-rtl swal2-glass' } });
+            return;
+        }
+
+        const perSessionTotals = [];
+        // Limit concurrency to avoid overwhelming server: process sequentially
+        for (const fe of futureExams) {
+            const d = fe.exam_date;
+            const t = fe.exam_time;
+            try {
+                const repResp = await fetch(`/API/getNextExamReport.php?exam_date=${encodeURIComponent(d)}&exam_time=${encodeURIComponent(t)}`, { cache: 'no-store' });
+                if (!repResp.ok) {
+                    // skip this session on error
+                    continue;
+                }
+                const rep = await repResp.json();
+                const students = Array.isArray(rep.students) ? rep.students : [];
+                const usedKeys = new Set();
+                students.forEach(s => {
+                    const key = `${(s.building||'').trim()}||${(s.class_name||'').trim()}`;
+                    usedKeys.add(key);
+                });
+                let sessionSum = 0;
+                let missingLocations = 0;
+                usedKeys.forEach(key => {
+                    if (locMap.has(key)) sessionSum += Number(locMap.get(key)) || 0;
+                    else missingLocations++;
+                });
+                perSessionTotals.push({ exam_date: d, exam_time: t, proctors: sessionSum, missingLocations });
+            } catch (e) {
+                // skip errors per-session but continue
+                console.warn('Failed to fetch session', d, t, e);
+            }
+        }
+
+        if (!perSessionTotals.length) {
+            await Swal.fire({ title: 'خلاصهٔ نیاز مراقبین', html: '<div style="text-align: right; direction: rtl">نتیجه‌ای برای جلسات پیدا نشد یا خطا در دریافت جزئیات جلسات وجود دارد.</div>', icon: 'error', confirmButtonText: 'باشه', customClass: { popup: 'swal2-rtl swal2-glass' } });
+            return;
+        }
+
+        const proctorsArr = perSessionTotals.map(p => p.proctors);
+        const max = Math.max(...proctorsArr);
+        const min = Math.min(...proctorsArr);
+        const total = proctorsArr.reduce((a, b) => a + b, 0);
+
+        // Format numbers into Persian digits for display
+        const fmt = (n) => toPersianDigits(n);
+
+        // Build HTML summary (show max/min/total and a small table of top/bottom sessions)
+        let html = `<div style="text-align: right; direction: rtl;">
+            <div style="margin-bottom:0.8rem;font-weight:700">خلاصهٔ نیاز مراقبین:</div>
+            <div>بیشترین تعداد مراقب مورد نیاز در یک جلسه: <strong>${fmt(max)}</strong></div>
+            <div>کمترین تعداد مراقب مورد نیاز در یک جلسه: <strong>${fmt(min)}</strong></div>
+            <div>کل نفر-مراقب مورد نیاز در تمام جلسات: <strong>${fmt(total)}</strong></div>
+            <hr style="margin:0.6rem 0">`;
+
+        // Show up to 4 example sessions (largest and smallest)
+        const sorted = perSessionTotals.slice().sort((a, b) => b.proctors - a.proctors);
+        const top = sorted.slice(0, 2);
+        const bottom = perSessionTotals.slice().sort((a, b) => a.proctors - b.proctors).slice(0, 2);
+
+        if (top.length) {
+            html += `<div style="margin-top:0.6rem;font-weight:600">نمونه جلسات با نیاز بالا:</div>`;
+            top.forEach(s => html += `<div>${s.exam_time} | ${s.exam_date} — ${fmt(s.proctors)} مراقب${s.missingLocations?` (مکان‌های بدون تنظیم: ${toPersianDigits(s.missingLocations)})`:''}</div>`);
+        }
+        if (bottom.length) {
+            html += `<div style="margin-top:0.6rem;font-weight:600">نمونه جلسات با نیاز پایین:</div>`;
+            bottom.forEach(s => html += `<div>${s.exam_time} | ${s.exam_date} — ${fmt(s.proctors)} مراقب${s.missingLocations?` (مکان‌های بدون تنظیم: ${toPersianDigits(s.missingLocations)})`:''}</div>`);
+        }
+
+        html += `</div>`;
+
+        await Swal.fire({ title: 'خلاصهٔ نیاز مراقبین', html, icon: 'info', confirmButtonText: 'فهمیدم', customClass: { popup: 'swal2-rtl swal2-glass' } });
+    }
 })();
