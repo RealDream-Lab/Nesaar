@@ -282,6 +282,25 @@ body::after {
   color: #04202a; /* dark text for readability */
   word-break: break-word;
 }
+
+/* Save All button styling in observers module: centered, wider, sax color */
+#locationsCard #saveAllBtn {
+  display: inline-block;
+  margin: 0.8rem auto 0 auto; /* center horizontally within card */
+  width: 180px;
+  padding: 0.6rem 1rem;
+  border-radius: 12px;
+  background: linear-gradient(135deg, #127ead, #1a6fa6);
+  color: #fff;
+  border: none;
+  font-weight: 700;
+  box-shadow: 0 12px 30px rgba(18, 110, 150, 0.15);
+}
+#locationsCard #saveAllBtn:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+  box-shadow: none;
+}
 .rp-controls {
   display: flex;
   align-items: center;

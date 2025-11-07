@@ -68,8 +68,37 @@
     function updateGlobalSaveButton() {
         const saveAllBtn = document.getElementById('saveAllBtn');
         if (!saveAllBtn) return;
-        const anyPending = Array.from(document.querySelectorAll('.rp-save')).some(b => !b.disabled);
-        saveAllBtn.disabled = !anyPending;
+        // SaveAll is controlled by server-side zeros check (see checkZerosAndUpdateSaveAll)
+        // and we keep it disabled in the UI unless the zeros check allows it.
+        // This function keeps previous behavior for row-level pending state (no-op).
+        // Leave actual enabling to checkZerosAndUpdateSaveAll.
+    }
+
+    let currentZerosCount = 0;
+
+    async function getZerosCount() {
+        try {
+            const resp = await fetch('/API/getLocationsZeros.php', { cache: 'no-store' });
+            if (!resp.ok) return null;
+            const j = await resp.json();
+            return Number(j.zeros || 0);
+        } catch (e) {
+            return null;
+        }
+    }
+
+    async function checkZerosAndUpdateSaveAll() {
+        const saveAllBtn = document.getElementById('saveAllBtn');
+        if (!saveAllBtn) return;
+        const zeros = await getZerosCount();
+        if (zeros === null) {
+            // if API failed, be conservative and keep disabled
+            saveAllBtn.disabled = true;
+            return;
+        }
+        currentZerosCount = zeros;
+        // Enable only when there are no zero-valued locations
+        saveAllBtn.disabled = zeros > 0;
     }
 
     document.addEventListener('DOMContentLoaded', function () {
@@ -118,6 +147,8 @@
                 const j = await r.json();
                 const locations = Array.isArray(j.locations) ? j.locations : [];
                 renderLocations(locations);
+                // After rendering, check server-side zeros to update SaveAll button
+                try { await checkZerosAndUpdateSaveAll(); } catch (e) { /* ignore */ }
             } catch (err) {
                 el.innerHTML = '<div style="padding:1rem;text-align:center;color:var(--text-muted);">خطا در بارگیری مکان‌ها</div>';
             }
@@ -257,7 +288,8 @@
                             saveBtn.disabled = true;
                             const warningEl = row.querySelector('.rp-warning'); if (warningEl) warningEl.textContent = '';
                             input.classList.remove('rp-invalid');
-                            updateGlobalSaveButton();
+                            // After a successful save, re-check zeros on server and update global save button
+                            try { await checkZerosAndUpdateSaveAll(); } catch (e) { /* ignore */ }
                             await Swal.fire({
                                 toast: true,
                                 position: 'top-end',
@@ -314,11 +346,69 @@
         // Global "ذخیره" button (under the card) — enabled when any row has pending changes
         const saveAllBtn = document.getElementById('saveAllBtn');
         if (saveAllBtn) {
-            saveAllBtn.addEventListener('click', (e) => {
+            // initial state check via server
+            try { checkZerosAndUpdateSaveAll(); } catch (e) { /* ignore */ }
+
+            saveAllBtn.addEventListener('click', async (e) => {
                 e.preventDefault();
                 if (saveAllBtn.disabled) return;
-                // Feature not wired yet — show info toast
-                Swal.fire({ toast: true, position: 'top-end', icon: 'info', title: 'ذخیره‌ی گروهی هنوز فعال نشده است', showConfirmButton: false, timer: 2200, timerProgressBar: true, customClass: { popup: 'swal2-rtl' } });
+
+                // Re-verify on server to prevent console tampering
+                const zeros = await getZerosCount();
+                if (zeros === null) {
+                    return Swal.fire({ toast: true, position: 'top-end', icon: 'error', title: 'خطا در بررسی وضعیت مکان‌ها', showConfirmButton: false, timer: 2200, timerProgressBar: true, customClass: { popup: 'swal2-rtl' } });
+                }
+                if (zeros > 0) {
+                    saveAllBtn.disabled = true;
+                    return Swal.fire({ toast: true, position: 'top-end', icon: 'error', title: 'برخی مکان‌ها هنوز مقدار ۰ دارند؛ ابتدا آن‌ها را ویرایش و ذخیره کنید', showConfirmButton: false, timer: 3000, timerProgressBar: true, customClass: { popup: 'swal2-rtl' } });
+                }
+
+                // Proceed to perform batch save of any pending row changes (sequential)
+                const rows = Array.from(document.querySelectorAll('.location-row'));
+                const pending = [];
+                rows.forEach(r => {
+                    const inp = r.querySelector('.rp-input');
+                    if (!inp) return;
+                    const orig = Number(inp.dataset.original || 0);
+                    const now = Number(toEnglishDigits((inp.value || '').trim()) || 0);
+                    if (now !== orig) pending.push({ id: Number(r.getAttribute('data-id')), value: now, input: inp });
+                });
+
+                if (!pending.length) {
+                    return Swal.fire({ toast: true, position: 'top-end', icon: 'info', title: 'تغییری برای ذخیره وجود ندارد', showConfirmButton: false, timer: 1800, timerProgressBar: true, customClass: { popup: 'swal2-rtl' } });
+                }
+
+                // Show a loading modal
+                Swal.fire({ title: 'در حال ذخیره‌ی گروهی...', allowOutsideClick: false, didOpen: () => { Swal.showLoading(); }, customClass: { popup: 'swal2-rtl swal2-glass' } });
+
+                const csrf = getCsrfToken();
+                let failed = 0;
+                for (const p of pending) {
+                    try {
+                        const resp = await fetch('/API/saveLocationProctors.php', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json; charset=utf-8', 'X-CSRF-Token': csrf },
+                            body: JSON.stringify({ id: Number(p.id), required_proctors: Number(p.value) })
+                        });
+                        const j = await resp.json();
+                        if (resp.ok && j && j.success) {
+                            p.input.dataset.original = String(p.value);
+                        } else {
+                            failed++;
+                        }
+                    } catch (err) {
+                        failed++;
+                    }
+                }
+
+                Swal.close();
+                try { await checkZerosAndUpdateSaveAll(); } catch (e) { /* ignore */ }
+
+                if (failed === 0) {
+                    await Swal.fire({ toast: true, position: 'top-end', icon: 'success', title: 'ذخیره‌ی گروهی با موفقیت انجام شد', showConfirmButton: false, timer: 1800, timerProgressBar: true, customClass: { popup: 'swal2-rtl' } });
+                } else {
+                    await Swal.fire({ toast: true, position: 'top-end', icon: 'error', title: `خطا در ذخیره ${failed} مورد`, showConfirmButton: false, timer: 3000, timerProgressBar: true, customClass: { popup: 'swal2-rtl' } });
+                }
             });
         }
 
