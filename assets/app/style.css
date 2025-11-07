@@ -343,10 +343,14 @@ body::after {
 
 /* Reports chart card styling */
 .reports-chart-placeholder {
-  padding: 1.5rem;
+  padding: 0.6rem 0.75rem;
   color: var(--text-muted);
   text-align: center;
-  font-size: 1.05rem;
+  font-size: 0.98rem;
+  min-height: 72px; /* compact placeholder height */
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 /* Make the reports chart responsive with a 16:9 aspect box */
