@@ -1530,33 +1530,27 @@ async function renderReportsChart() {
             }];
         }
 
-        // If no data, show placeholder text and destroy any existing chart
+        // If no data, hide the entire card and destroy any existing chart to keep dashboard clean
         if (!labels.length) {
-            canvas.style.display = 'none';
+            try { canvas.style.display = 'none'; } catch (e) { /* ignore */ }
             if (reportsChartInstance) {
                 try { reportsChartInstance.destroy(); } catch (er) { /* ignore */ }
                 reportsChartInstance = null;
             }
-            // destroy small overview pies as there's no data
-            // try { destroySmallOverviewPies(); } catch (e) { /* ignore */ }
-            // ensure placeholder exists
-            let ph = card.querySelector('.reports-chart-placeholder');
-            if (!ph) {
-                ph = document.createElement('div');
-                ph.className = 'reports-chart-placeholder';
-                ph.style.cssText = 'padding:1.5rem;color:var(--text-muted);text-align:center;font-size:1.05rem;';
-                ph.textContent = 'جلسه‌ای برای نمایش وجود ندارد';
-                card.appendChild(ph);
-            } else {
-                ph.style.display = 'block';
-            }
+            // remove any placeholder if present
+            try {
+                const phOld = card.querySelector('.reports-chart-placeholder');
+                if (phOld) phOld.remove();
+            } catch (e) { /* ignore */ }
+            try { card.style.display = 'none'; } catch (e) { /* ignore */ }
             return;
         }
 
-        // Remove any placeholder
-        const existingPh = card.querySelector('.reports-chart-placeholder');
-        if (existingPh) existingPh.remove();
-        canvas.style.display = 'block';
+    // Ensure the card is visible and remove any placeholder
+    try { card.style.display = 'block'; } catch (e) { /* ignore */ }
+    const existingPh = card.querySelector('.reports-chart-placeholder');
+    if (existingPh) existingPh.remove();
+    canvas.style.display = 'block';
 
         // Destroy previous instance if present
         if (reportsChartInstance) {
