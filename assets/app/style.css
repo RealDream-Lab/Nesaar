@@ -309,7 +309,7 @@ body::after {
   display: flex;
   align-items: center;
   justify-content: flex-end;
-  gap: 0.25rem;
+  gap: 0.08rem; /* tighten spacing between input and buttons */
 }
 .rp-input {
   width: 88px;
@@ -350,7 +350,7 @@ body::after {
   background: transparent;
   color: #28a745; /* green glyph color */
   border-radius: 999px;
-  border: 1px solid rgba(40, 167, 69, 0.08); /* subtle greenish border */
+  border: 0px solid rgba(40, 167, 69, 0.08); /* subtle greenish border */
   padding: 0;
 }
 
@@ -361,11 +361,12 @@ body::after {
 
 /* Small round action buttons that match input height */
 .rp-btn {
-  width: 38px;
-  height: 38px;
+  width: 34px;
+  height: 34px;
   padding: 0;
   border-radius: 999px;
-  border: 1px solid rgba(0, 0, 0, 0.08);
+  border: none; /* remove visible frame */
+  background: transparent; /* blend with card */
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -375,13 +376,13 @@ body::after {
 .rp-save {
   background: transparent;
   color: #28a745;
-  border: 1px solid rgba(40, 167, 69, 0.08);
+  border: none; /* no frame */
   border-radius: 999px;
 }
 .rp-cancel {
   background: transparent;
   color: #dc3545; /* red glyph color */
-  border: 1px solid rgba(220, 53, 69, 0.08);
+  border: none; /* no frame */
   border-radius: 999px;
 }
 
