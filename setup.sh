@@ -9,7 +9,7 @@ set -e
 
 INSTALL_DIR="/opt/Nesaar"
 COMPOSE_FILE="docker-compose.yml"
-REPO_URL="https://github.com/MehdiHassaniir/PnuSeat.git"
+REPO_URL="https://github.com/RealDream-Lab/PnuSeat.git"
 
 # Colors for output
 RED='\033[0;31m'

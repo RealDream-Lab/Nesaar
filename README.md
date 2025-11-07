@@ -68,18 +68,18 @@ sudo systemctl enable docker
 
 **گزینه سریع**: اجرای اسکریپت خودکار:
 ```bash
-curl -fsSL https://raw.githubusercontent.com/MehdiHassaniir/PnuSeat/master/setup.sh | bash
+curl -fsSL https://raw.githubusercontent.com/RealDream-Lab/PnuSeat/master/setup.sh | bash
 ```
 یا دانلود و اجرای دستی:
 ```bash
-wget https://raw.githubusercontent.com/MehdiHassaniir/PnuSeat/master/setup.sh
+wget https://raw.githubusercontent.com/RealDream-Lab/PnuSeat/master/setup.sh
 chmod +x setup.sh
 ./setup.sh
 ```
 
 **راه‌اندازی دستی**:
    ```bash
-   git clone https://github.com/MehdiHassaniir/PnuSeat.git
+   git clone https://github.com/RealDream-Lab/PnuSeat.git
    cd PnuSeat
    ```
 
@@ -114,18 +114,18 @@ chmod +x setup.sh
    به جای build کردن، می‌توانید مستقیماً از ایمیج آماده استفاده کنید:
    ```bash
    # دریافت آخرین نسخه
-   docker pull ghcr.io/mehdihassaniir/pnuseat:latest
+   docker pull ghcr.io/RealDream-Lab/pnuseat:latest
    
    # یا دریافت نسخه خاص (مثلاً v1.7.0)
-   docker pull ghcr.io/mehdihassaniir/pnuseat:v1.7.0
+   docker pull ghcr.io/RealDream-Lab/pnuseat:v1.7.0
    ```
 
 4. **ساخت ایمیج (اختیاری، فقط برای توسعه‌دهندگان)**:
    اگر می‌خواهید خودتان ایمیج را بسازید:
    ```bash
-   git clone https://github.com/MehdiHassaniir/PnuSeat.git
+   git clone https://github.com/RealDream-Lab/PnuSeat.git
    cd PnuSeat
-   docker build -t ghcr.io/mehdihassaniir/pnuseat:latest .
+   docker build -t ghcr.io/RealDream-Lab/pnuseat:latest .
    ```
 
 5. **ساخت و اجرای کانتینرها**:
@@ -184,7 +184,7 @@ composer install
 
 ```bash
 cd /var/www/html
-git clone https://github.com/MehdiHassaniir/PnuSeat.git .
+git clone https://github.com/RealDream-Lab/PnuSeat.git .
 sudo chown -R www-data:www-data /var/www/html
 ```
 
