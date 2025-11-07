@@ -372,7 +372,9 @@
                     icon: 'warning',
                     showCancelButton: false,
                     confirmButtonText: 'ادامه، متوجه شدم',
-                    allowOutsideClick: true,
+                    // require explicit confirmation: disable outside click and Escape key
+                    allowOutsideClick: false,
+                    allowEscapeKey: false,
                     customClass: { popup: 'swal2-rtl swal2-glass', confirmButton: 'btn btn-primary' }
                 });
 
