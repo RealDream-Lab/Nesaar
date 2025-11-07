@@ -86,19 +86,19 @@ self.addEventListener('activate', event => {
       self.clients.matchAll().then(clients => {
         clients.forEach(client => {
           client.postMessage({
-                type: 'sw-update',
-                version: CACHE_NAME,
-                tagVersion: `نسخه ${VERSION}`,
-                changes: [
-                  'افزایش نسخه به 0.3.0 و به‌روزرسانی کش PWA',
-                  'نمایش placeholder جمع‌وجور در کارت نمودار زمانی که داده‌ای برای نمایش نیست',
-                  'قابلیت بارگذاری مجدد نمودار از داخل کارت (دکمه بارگذاری مجدد)',
-                  'بهبود رفتار کارت گزارش‌ها: جایگزینی حذف کارت با placeholder جمع‌وجور',
-                  'بارگذاری تنبل (lazy-load) لیست اسامی دانشجویان در گزارش آزمون بعدی',
-                  'افزودن مرحله پاکسازی نسخه‌های قدیمی تصویر در GHCR پس از انتشار (در workflow CI)',
-                  'اصلاح fallback در workflow برای مدیریت REST packages (رفع TypeError در github-script)'
-                ]
-              });
+            type: 'sw-update',
+            version: CACHE_NAME,
+            tagVersion: `نسخه ${VERSION}`,
+            changes: [
+              'افزایش نسخه به 0.3.0 و به‌روزرسانی کش PWA',
+              'نمایش placeholder جمع‌وجور در کارت نمودار زمانی که داده‌ای برای نمایش نیست',
+              'قابلیت بارگذاری مجدد نمودار از داخل کارت (دکمه بارگذاری مجدد)',
+              'بهبود رفتار کارت گزارش‌ها: جایگزینی حذف کارت با placeholder جمع‌وجور',
+              'بارگذاری تنبل (lazy-load) لیست اسامی دانشجویان در گزارش آزمون بعدی',
+              'افزودن مرحله پاکسازی نسخه‌های قدیمی تصویر در GHCR پس از انتشار (در workflow CI)',
+              'اصلاح fallback در workflow برای مدیریت REST packages (رفع TypeError در github-script)'
+            ]
+          });
         });
       });
     })
