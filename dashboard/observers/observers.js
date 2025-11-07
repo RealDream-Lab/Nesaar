@@ -269,7 +269,7 @@
                             icon: 'error',
                             title: 'لطفاً یک مقدار عددی وارد کنید',
                             showConfirmButton: false,
-                            timer: 2500,
+                            timer: 5000,
                             timerProgressBar: true,
                                 customClass: { popup: 'swal2-rtl' }
                         });
@@ -283,7 +283,7 @@
                                 icon: 'error',
                                 title: 'مقدار باید بیشتر یا مساوی ۱ باشد',
                                 showConfirmButton: false,
-                                timer: 3000,
+                                timer: 5000,
                                 timerProgressBar: true,
                                 customClass: { popup: 'swal2-rtl' }
                             });
@@ -313,7 +313,7 @@
                                 icon: 'success',
                                 title: 'ذخیره شد',
                                 showConfirmButton: false,
-                                timer: 1200,
+                                timer: 5000,
                                 timerProgressBar: true,
                                 customClass: { popup: 'swal2-rtl' }
                             });
@@ -412,7 +412,7 @@
                 });
 
                 if (!pending.length) {
-                    return Swal.fire({ toast: true, position: 'top-end', icon: 'info', title: 'تغییری برای ذخیره وجود ندارد', showConfirmButton: false, timer: 1800, timerProgressBar: true, customClass: { popup: 'swal2-rtl' } });
+                    return Swal.fire({ toast: true, position: 'top-end', icon: 'info', title: 'تغییری برای ذخیره وجود ندارد', showConfirmButton: false, timer: 5000, timerProgressBar: true, customClass: { popup: 'swal2-rtl' } });
                 }
 
                 // Fetch current server-side locations to see which rows are still zero on the server
@@ -425,7 +425,7 @@
                     }
                 } catch (e) {
                     // if fetching server state fails, be conservative and block
-                    return Swal.fire({ toast: true, position: 'top-end', icon: 'error', title: 'خطا در بررسی وضعیت مکان‌ها', showConfirmButton: false, timer: 2200, timerProgressBar: true, customClass: { popup: 'swal2-rtl' } });
+                    return Swal.fire({ toast: true, position: 'top-end', icon: 'error', title: 'خطا در بررسی وضعیت مکان‌ها', showConfirmButton: false, timer: 5000, timerProgressBar: true, customClass: { popup: 'swal2-rtl' } });
                 }
 
                 // IDs that are zero on server
@@ -468,14 +468,14 @@
                 try { await checkZerosAndUpdateSaveAll(); } catch (e) { /* ignore */ }
 
                 if (failed === 0) {
-                    await Swal.fire({ toast: true, position: 'top-end', icon: 'success', title: 'ذخیره‌ی گروهی با موفقیت انجام شد', showConfirmButton: false, timer: 1800, timerProgressBar: true, customClass: { popup: 'swal2-rtl' } });
+                    await Swal.fire({ toast: true, position: 'top-end', icon: 'success', title: 'ذخیره‌ی گروهی با موفقیت انجام شد', showConfirmButton: false, timer: 5000, timerProgressBar: true, customClass: { popup: 'swal2-rtl' } });
                     // hide the locations card after a successful batch save
                     try {
                         const card = document.getElementById('locationsCard');
                         if (card) card.style.display = 'none';
                     } catch (e) { /* ignore */ }
                 } else {
-                    await Swal.fire({ toast: true, position: 'top-end', icon: 'error', title: `خطا در ذخیره ${failed} مورد`, showConfirmButton: false, timer: 3000, timerProgressBar: true, customClass: { popup: 'swal2-rtl' } });
+                    await Swal.fire({ toast: true, position: 'top-end', icon: 'error', title: `خطا در ذخیره ${failed} مورد`, showConfirmButton: false, timer: 5000, timerProgressBar: true, customClass: { popup: 'swal2-rtl' } });
                 }
             });
         }
