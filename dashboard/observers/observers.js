@@ -68,10 +68,27 @@
     function updateGlobalSaveButton() {
         const saveAllBtn = document.getElementById('saveAllBtn');
         if (!saveAllBtn) return;
-        // SaveAll is controlled by server-side zeros check (see checkZerosAndUpdateSaveAll)
-        // and we keep it disabled in the UI unless the zeros check allows it.
-        // This function keeps previous behavior for row-level pending state (no-op).
-        // Leave actual enabling to checkZerosAndUpdateSaveAll.
+        // Enable/disable SaveAll based on current input values:
+        // - All `.rp-input` must be numeric and >= 1
+        // - At least one input must have a pending change (value != original)
+        // Note: final server-side check is still performed on SaveAll click (prevents console tampering).
+        const inputs = Array.from(document.querySelectorAll('.rp-input'));
+        if (!inputs.length) { saveAllBtn.disabled = true; return; }
+
+        let allValid = true;
+        let anyPending = false;
+        for (const input of inputs) {
+            const raw = String(input.value || '').trim();
+            const normalized = toEnglishDigits(raw).replace(/[^0-9]/g, '');
+            if (!/^\d+$/.test(normalized)) { allValid = false; break; }
+            const num = Number(normalized || 0);
+            if (num < 1) { allValid = false; break; }
+            const orig = Number(input.dataset.original || 0);
+            if (num !== orig) anyPending = true;
+        }
+
+        // Enable only when all inputs are valid and there's at least one pending change.
+        saveAllBtn.disabled = !(allValid && anyPending);
     }
 
     let currentZerosCount = 0;
@@ -340,6 +357,34 @@
         const backBtn = document.getElementById('backToDashboardBtn');
         if (backBtn) backBtn.addEventListener('click', () => { window.location.href = '/dashboard'; });
 
+        // Show locations card when the locations icon is clicked (button placed near back-to-dashboard)
+        // Show a confirmation first: editing counts will change final reports.
+        const showLocationsBtn = document.getElementById('showLocationsBtn');
+        if (showLocationsBtn) {
+            showLocationsBtn.addEventListener('click', async () => {
+                const card = document.getElementById('locationsCard');
+                if (!card) return;
+
+                // Confirmation modal before revealing the card
+                const result = await Swal.fire({
+                    title: 'توجه',
+                    html: '<div style="text-align:justify;line-height:1.7">با ویرایش تعداد مراقبین در این صفحه، گزارش نهایی مراقبین تغییر خواهد کرد. لطفاً قبل از ادامه از درستی مقادیر اطمینان حاصل کنید.</div>',
+                    icon: 'warning',
+                    showCancelButton: false,
+                    confirmButtonText: 'ادامه، متوجه شدم',
+                    allowOutsideClick: true,
+                    customClass: { popup: 'swal2-rtl swal2-glass', confirmButton: 'btn btn-primary' }
+                });
+
+                if (result.isConfirmed || result.isDismissed) {
+                    // Un-hide the card and load locations after confirmation (or dismiss)
+                    card.style.display = '';
+                    try { await loadLocations(); } catch (e) { /* ignore load errors here */ }
+                    try { card.scrollIntoView({ behavior: 'smooth', block: 'start' }); } catch (e) { /* ignore */ }
+                }
+            });
+        }
+
         const goHome = document.getElementById('goHomeBtn');
         if (goHome) goHome.addEventListener('click', () => { window.location.href = '/dashboard'; });
 
@@ -353,17 +398,7 @@
                 e.preventDefault();
                 if (saveAllBtn.disabled) return;
 
-                // Re-verify on server to prevent console tampering
-                const zeros = await getZerosCount();
-                if (zeros === null) {
-                    return Swal.fire({ toast: true, position: 'top-end', icon: 'error', title: 'خطا در بررسی وضعیت مکان‌ها', showConfirmButton: false, timer: 2200, timerProgressBar: true, customClass: { popup: 'swal2-rtl' } });
-                }
-                if (zeros > 0) {
-                    saveAllBtn.disabled = true;
-                    return Swal.fire({ toast: true, position: 'top-end', icon: 'error', title: 'برخی مکان‌ها هنوز مقدار ۰ دارند؛ ابتدا آن‌ها را ویرایش و ذخیره کنید', showConfirmButton: false, timer: 3000, timerProgressBar: true, customClass: { popup: 'swal2-rtl' } });
-                }
-
-                // Proceed to perform batch save of any pending row changes (sequential)
+                // Gather pending changes from the UI (unsaved edits)
                 const rows = Array.from(document.querySelectorAll('.location-row'));
                 const pending = [];
                 rows.forEach(r => {
@@ -378,7 +413,33 @@
                     return Swal.fire({ toast: true, position: 'top-end', icon: 'info', title: 'تغییری برای ذخیره وجود ندارد', showConfirmButton: false, timer: 1800, timerProgressBar: true, customClass: { popup: 'swal2-rtl' } });
                 }
 
-                // Show a loading modal
+                // Fetch current server-side locations to see which rows are still zero on the server
+                let serverLocations = [];
+                try {
+                    const resp = await fetch('/API/getLocations.php', { cache: 'no-store' });
+                    if (resp && resp.ok) {
+                        const j = await resp.json();
+                        serverLocations = Array.isArray(j.locations) ? j.locations : [];
+                    }
+                } catch (e) {
+                    // if fetching server state fails, be conservative and block
+                    return Swal.fire({ toast: true, position: 'top-end', icon: 'error', title: 'خطا در بررسی وضعیت مکان‌ها', showConfirmButton: false, timer: 2200, timerProgressBar: true, customClass: { popup: 'swal2-rtl' } });
+                }
+
+                // IDs that are zero on server
+                const serverZeroIds = serverLocations.filter(l => Number(l.required_proctors || 0) === 0).map(l => Number(l.id));
+
+                // Pending positive IDs that will be set >0 by this batch
+                const pendingPositiveIds = new Set(pending.filter(p => Number(p.value) > 0).map(p => Number(p.id)));
+
+                // If there exists any server-zero id that is not covered by pendingPositiveIds, block the batch
+                const uncovered = serverZeroIds.some(id => !pendingPositiveIds.has(id));
+                if (uncovered) {
+                    saveAllBtn.disabled = true;
+                    return Swal.fire({ toast: true, position: 'top-end', icon: 'error', title: 'برخی مکان‌ها هنوز مقدار ۰ دارند؛ ابتدا آن‌ها را ویرایش و ذخیره کنید', showConfirmButton: false, timer: 3000, timerProgressBar: true, customClass: { popup: 'swal2-rtl' } });
+                }
+
+                // Show a loading modal and perform batch save sequentially
                 Swal.fire({ title: 'در حال ذخیره‌ی گروهی...', allowOutsideClick: false, didOpen: () => { Swal.showLoading(); }, customClass: { popup: 'swal2-rtl swal2-glass' } });
 
                 const csrf = getCsrfToken();
@@ -406,6 +467,11 @@
 
                 if (failed === 0) {
                     await Swal.fire({ toast: true, position: 'top-end', icon: 'success', title: 'ذخیره‌ی گروهی با موفقیت انجام شد', showConfirmButton: false, timer: 1800, timerProgressBar: true, customClass: { popup: 'swal2-rtl' } });
+                    // hide the locations card after a successful batch save
+                    try {
+                        const card = document.getElementById('locationsCard');
+                        if (card) card.style.display = 'none';
+                    } catch (e) { /* ignore */ }
                 } else {
                     await Swal.fire({ toast: true, position: 'top-end', icon: 'error', title: `خطا در ذخیره ${failed} مورد`, showConfirmButton: false, timer: 3000, timerProgressBar: true, customClass: { popup: 'swal2-rtl' } });
                 }

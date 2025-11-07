@@ -47,6 +47,10 @@ if ($licenseStatus['valid'] !== true) {
                         </div>
                     </div>
                     <div class="d-flex align-items-center">
+                        <!-- Locations quick-open button (hidden: shows locations card when clicked) -->
+                        <button id="showLocationsBtn" class="btn btn-icon p-0" type="button" title="نمایش مکان‌ها" style="background:transparent;border:none;margin-inline-end:8px;padding:0;">
+                            <img src="/dashboard/observers/locations.png" alt="مکان‌ها" style="width:40px;height:40px;object-fit:contain;display:block;">
+                        </button>
                         <button id="backToDashboardBtn" class="btn btn-icon p-0" type="button" title="بازگشت به داشبورد" style="background:transparent;border:none;margin-inline-end:8px;padding:0;">
                             <img src="/dashboard/home.png" alt="بازگشت" style="width:40px;height:40px;object-fit:contain;display:block;">
                         </button>
@@ -56,12 +60,12 @@ if ($licenseStatus['valid'] !== true) {
 
             <div class="observers-main">
                 <!-- کارت مکان‌ها -->
-                <div class="dashboard-card module-card no-hover" id="locationsCard">
+                <div class="dashboard-card module-card no-hover" id="locationsCard" style="display:none;">
                     <h4>مکان‌های معرفی‌شده برگزاری آزمون</h4>
                     <p style="margin-bottom:0.6rem;color:var(--text-muted);">لیست کلاس‌ها و تعداد مراقبین مورد نیاز را در اینجا مشاهده و ویرایش کنید.</p>
                     <div id="locationsList" style="margin-top:0.8rem;"></div>
-                    <div style="margin-top:0.8rem;text-align:left;">
-                        <button id="saveAllBtn" class="btn btn-primary" disabled>ذخیره</button>
+                    <div style="margin-top:0.8rem;text-align:center;">
+                        <button id="saveAllBtn" class="btn btn-success" style="width: 300px;" disabled>ذخیره همه و قفل ویرایش</button>
                     </div>
                 </div>
             </div>
