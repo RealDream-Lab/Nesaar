@@ -25,6 +25,8 @@ body {
 
 html {
   overflow-y: scroll; /* Always show scrollbar to prevent layout shift */
+  /* Reserve space for the vertical scrollbar to avoid layout shift when it's shown/hidden */
+  scrollbar-gutter: stable both-edges;
 }
 
 body {
@@ -37,6 +39,8 @@ body {
   position: relative;
   background: linear-gradient(135deg, #0d1b2a, #1b263b); /* solid background */
   color: var(--text-color);
+  /* Ensure stable scrollbar gutter on the body as well (modern browsers) */
+  scrollbar-gutter: stable;
 }
 
 body::before,
