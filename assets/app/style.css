@@ -324,8 +324,6 @@ body::after {
   appearance: textfield;
   -webkit-appearance: textfield;
   -moz-appearance: textfield; /* hide Firefox spinner */
-  /* keep a small gap between the input and the adjacent action buttons */
-  margin-inline-end: 5px;
 }
 /* Hide number input spinner for WebKit browsers */
 .rp-input::-webkit-outer-spin-button,
@@ -342,8 +340,9 @@ body::after {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  font-weight: 700;
+  font-weight: 900;
   cursor: pointer;
+  padding-right: 20px;
 }
 .rp-save {
   /* Make the checkmark glyph green and remove the colored gradient background.
@@ -372,8 +371,9 @@ body::after {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  font-weight: 700;
+  font-weight: 900;
   cursor: pointer;
+  padding-right: 20px;
 }
 .rp-save {
   background: transparent;
