@@ -384,8 +384,8 @@ body::after {
 }
 
 .small-pie {
-  width: 140px !important;
-  height: 140px !important;
+  width: 142px !important;
+  height: 142px !important;
 }
 
 .small-pie-wrap {
@@ -395,10 +395,16 @@ body::after {
   box-shadow: 0 1px 3px rgba(11,42,68,0.06);
 }
 
+/* Disable heavy glass blur on the mini-pie wrapper so charts render sharply */
+.small-pie-wrap {
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+}
+
 /* Mini pie styles inside report card */
 .mini-pie {
-  width: 140px !important;
-  height: 140px !important;
+  width: 142px !important;
+  height: 142px !important;
   display: block;
   margin: 0 auto;
 }
@@ -410,13 +416,13 @@ body::after {
   background: transparent !important;
   border: none !important;
   padding: 0 !important;
-  width: 140px;
-  height: 140px;
+  width: 138px;
+  height: 138px;
   display: inline-block;
   border-radius: 8px;
   transition: transform 0.15s ease, box-shadow 0.15s ease;
 }
-#examEssentialsBtn { position: relative; top: -3px; }
+#examEssentialsBtn { position: relative; top: -1px; }
 #printSeatNumbersBtn img, #printSessionReportBtn img, #examEssentialsBtn img {
   width: 100%;
   height: 100%;
@@ -432,7 +438,7 @@ body::after {
 }
 /* Small screens: match mini-pie responsive size */
 @media (max-width: 900px) {
-  #printSeatNumbersBtn, #printSessionReportBtn, #examEssentialsBtn { width: 100px; height: 100px; }
+  #printSeatNumbersBtn, #printSessionReportBtn, #examEssentialsBtn { width: 102px; height: 102px; }
 }
 .mini-pie { cursor: pointer; }
 .mini-pie + div { text-align: center; }
@@ -1098,8 +1104,8 @@ body.login-active #loginRow {
     gap: 8px;
   }
   .small-pie, .mini-pie {
-    width: 100px !important;
-    height: 100px !important;
+    width: 102px !important;
+    height: 102px !important;
   }
   .small-pie-wrap {
     display: flex;
