@@ -1558,24 +1558,11 @@ async function renderReportsChart() {
                 const ph = document.createElement('div');
                 ph.className = 'reports-chart-placeholder';
                 ph.innerHTML = `
-                    <div style="display:flex;align-items:center;justify-content:center;gap:10px;min-height:72px;">
+                    <div style="display:flex;align-items:center;justify-content:center;gap:10px;min-height:52px;">
                         <span style="color:var(--text-muted);">نموداری برای نمایش وجود ندارد.</span>
-                        <a href="#" id="reportsChartRefresh" class="btn btn-sm btn-outline-primary">بارگذاری مجدد</a>
                     </div>
                 `;
                 card.appendChild(ph);
-
-                const btn = ph.querySelector('#reportsChartRefresh');
-                if (btn) {
-                    btn.addEventListener('click', (ev) => {
-                        ev.preventDefault();
-                        // remove placeholder and show chart wrapper again before re-render
-                        try { ph.remove(); } catch (e) { if (ph) ph.style.display = 'none'; }
-                        try { const wrapper = card.querySelector('.chart-wrapper'); if (wrapper) wrapper.style.display = 'block'; } catch (e) { /* ignore */ }
-                        // Re-run render which will attempt to fetch and render data
-                        try { renderReportsChart(); } catch (e) { console.error('Error reloading reports chart:', e); }
-                    });
-                }
             } catch (e) { /* ignore */ }
             return;
         }
