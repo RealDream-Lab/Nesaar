@@ -65,7 +65,32 @@
     }
 
     document.addEventListener('DOMContentLoaded', function () {
-        checkAuthAndRedirect();
+        checkAuthAndRedirect().then((ok) => {
+            if (ok) {
+                // after auth, check locations table
+                (async function checkLocations() {
+                    try {
+                        const resp = await fetch('/API/getLocationsCount.php', { cache: 'no-store' });
+                        if (!resp || !resp.ok) return;
+                        const data = await resp.json();
+                        const count = Number(data.locations || 0);
+                        if (count === 0) {
+                            await Swal.fire({
+                                icon: 'warning',
+                                title: 'تعریف مکان‌ها انجام نشده',
+                                html: '<div style="text-align: justify;line-height:1.8">جدول مکان‌ها (ساختمان / کلاس) خالی است. لطفاً پایگاه‌داده را از طریق بخش به‌روزرسانی پایگاه داده به‌روز کنید، همچنین از خروجی نرم‌افزار ساد اطمینان حاصل کنید که ساختمان و نام کلاس برای صندلی‌های اختصاص یافته تعریف شده باشند.</div>',
+                                confirmButtonText: 'باشه',
+                                customClass: { popup: 'swal2-rtl swal2-glass', confirmButton: 'btn btn-primary' }
+                            });
+                            // navigate to dashboard after confirmation
+                            window.location.href = '/dashboard';
+                        }
+                    } catch (e) {
+                        // ignore failures silently
+                    }
+                })();
+            }
+        });
 
         const backBtn = document.getElementById('backToDashboardBtn');
         if (backBtn) backBtn.addEventListener('click', () => { window.location.href = '/dashboard'; });
