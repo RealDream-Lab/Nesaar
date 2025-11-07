@@ -59,7 +59,12 @@ if ($licenseStatus['valid'] !== true) {
             </div>
 
             <div class="observers-main">
-                <!-- مرکزی کارت حذف شد؛ ادامهٔ توسعه و کارت‌ها بعداً اضافه می‌شوند -->
+                <!-- کارت مکان‌ها -->
+                <div class="dashboard-card module-card" id="locationsCard" style="max-width:980px;margin:1.2rem auto;padding:1rem;">
+                    <h4>مکان‌های معرفی‌شده برگزاری آزمون</h4>
+                    <p style="margin-bottom:0.6rem;color:var(--text-muted);">لیست کلاس‌ها و تعداد مراقبین مورد نیاز را در اینجا مشاهده و ویرایش کنید.</p>
+                    <div id="locationsList" style="margin-top:0.8rem;"></div>
+                </div>
             </div>
 
             <!-- Footer (same as dashboard) -->
