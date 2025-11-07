@@ -29,11 +29,7 @@ if ($licenseStatus['valid'] !== true) {
     <link rel="stylesheet" href="/assets/fonts/vazir/vazir.css">
     <link rel="stylesheet" href="/assets/sweetalert2/sweetalert2.min.css">
     <link rel="stylesheet" href="/assets/app/style.css">
-    <style>
-        /* Minimal observers-specific tweaks */
-        .observers-main { padding: 2rem; }
-        .module-card { max-width: 920px; margin: 1.2rem auto; padding: 1rem; }
-    </style>
+        <!-- observers page uses global dashboard styles from /assets/app/style.css -->
 </head>
 
 <body>
@@ -60,10 +56,13 @@ if ($licenseStatus['valid'] !== true) {
 
             <div class="observers-main">
                 <!-- کارت مکان‌ها -->
-                <div class="dashboard-card module-card" id="locationsCard" style="max-width:980px;margin:1.2rem auto;padding:1rem;">
+                <div class="dashboard-card module-card no-hover" id="locationsCard">
                     <h4>مکان‌های معرفی‌شده برگزاری آزمون</h4>
                     <p style="margin-bottom:0.6rem;color:var(--text-muted);">لیست کلاس‌ها و تعداد مراقبین مورد نیاز را در اینجا مشاهده و ویرایش کنید.</p>
                     <div id="locationsList" style="margin-top:0.8rem;"></div>
+                    <div style="margin-top:0.8rem;text-align:left;">
+                        <button id="saveAllBtn" class="btn btn-primary" disabled>ذخیره</button>
+                    </div>
                 </div>
             </div>
 

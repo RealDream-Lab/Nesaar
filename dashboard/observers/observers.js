@@ -64,6 +64,14 @@
         }
     }
 
+    // Global save button handling: enable if any row has an enabled save button
+    function updateGlobalSaveButton() {
+        const saveAllBtn = document.getElementById('saveAllBtn');
+        if (!saveAllBtn) return;
+        const anyPending = Array.from(document.querySelectorAll('.rp-save')).some(b => !b.disabled);
+        saveAllBtn.disabled = !anyPending;
+    }
+
     document.addEventListener('DOMContentLoaded', function () {
         checkAuthAndRedirect().then((ok) => {
             if (ok) {
@@ -123,21 +131,21 @@
                 return;
             }
 
-            const rows = locations.map(loc => {
+                const rows = locations.map(loc => {
                 const id = Number(loc.id || 0);
                 const building = loc.building ? loc.building : '';
                 const cls = loc.class_name ? loc.class_name : '';
                 const rp = Number(loc.required_proctors || 0);
                 const title = (building || cls) ? `${building}${building && cls ? ' / ' : ''}${cls}` : 'نامشخص';
                 return `
-                    <div class="location-row d-flex align-items-center justify-content-between" data-id="${id}" style="padding:0.45rem 0.6rem;border-bottom:1px solid rgba(255,255,255,0.04);">
-                        <div style="flex:1;min-width:200px;">
-                            <div style="font-weight:700;">${escapeHtml(title)}</div>
-                        </div>
-                        <div style="width:200px;display:flex;align-items:center;gap:0.5rem;justify-content:flex-end;">
-                            <input type="number" min="0" step="1" class="form-control form-control-sm rp-input" value="${rp}" style="width:88px;text-align:center;" />
-                            <button class="btn btn-sm btn-success rp-save" title="ذخیره" style="width:34px;padding:0;">✓</button>
-                            <button class="btn btn-sm btn-secondary rp-cancel" title="لغو" style="width:34px;padding:0;">✕</button>
+                    <div class="location-row" data-id="${id}">
+                        <div class="location-title">${escapeHtml(title)}</div>
+                        <div class="rp-controls">
+                            <!-- use text+inputmode so Persian/Arabic digits can be entered; JS normalizes to ASCII digits -->
+                            <input type="text" inputmode="numeric" pattern="\\d*" class="rp-input" value="${rp}" aria-label="تعداد مراقبین" />
+                            <button class="rp-btn rp-save" title="ذخیره">✓</button>
+                            <button class="rp-btn rp-cancel" title="لغو">✕</button>
+                            <div class="rp-warning" aria-live="polite" aria-atomic="true"></div>
                         </div>
                     </div>
                 `;
@@ -153,30 +161,86 @@
                 const cancelBtn = row.querySelector('.rp-cancel');
                 if (!input || !saveBtn || !cancelBtn) return;
 
-                // store original value
+                // store original value (normalized to english digits)
+                input.value = toEnglishDigits(input.value || '0');
                 input.dataset.original = input.value;
 
-                input.addEventListener('input', () => {
-                    const v = input.value.trim();
-                    // require a number
+                // Normalize Persian/Arabic digits on input and paste, validate and toggle save button
+                function normalizeAndValidate() {
+                    const before = input.value || '';
+                    // convert persian/aribic digits to ascii digits
+                    const normalized = toEnglishDigits(before);
+                    // remove any non-digit characters (this prevents letters/symbols)
+                    const cleaned = normalized.replace(/[^0-9]/g, '');
+                    if (cleaned !== before) {
+                        // update the input value while attempting to preserve caret (best-effort)
+                        const pos = input.selectionStart || 0;
+                        input.value = cleaned;
+                        try { input.setSelectionRange(Math.min(pos, input.value.length), Math.min(pos, input.value.length)); } catch (e) { /* ignore */ }
+                    }
+                    const v = (input.value || '').trim();
+                    // require a non-empty number (only digits)
                     const ok = /^\d+$/.test(v);
-                    saveBtn.disabled = !ok || Number(v) === Number(input.dataset.original);
-                });
+                    const numericV = Number(v || 0);
+                    // show inline warning when value < 1
+                    const warningEl = row.querySelector('.rp-warning');
+                    if (!ok || numericV < 1) {
+                        //if (warningEl) warningEl.textContent = 'مقدار باید عددی و بیشتر یا مساوی ۱ باشد';
+                        input.classList.add('rp-invalid');
+                    } else {
+                        if (warningEl) warningEl.textContent = '';
+                        input.classList.remove('rp-invalid');
+                    }
+                    saveBtn.disabled = !ok || numericV < 1 || numericV === Number(input.dataset.original);
+                    // update global save button state
+                    updateGlobalSaveButton();
+                }
+
+                input.addEventListener('input', normalizeAndValidate);
+                input.addEventListener('paste', () => { setTimeout(normalizeAndValidate, 0); });
 
                 cancelBtn.addEventListener('click', (e) => {
                     e.preventDefault();
                     input.value = input.dataset.original || '0';
                     saveBtn.disabled = true;
+                    const warningEl = row.querySelector('.rp-warning'); if (warningEl) warningEl.textContent = '';
+                    input.classList.remove('rp-invalid');
+                    updateGlobalSaveButton();
                 });
 
                 saveBtn.addEventListener('click', async (e) => {
                     e.preventDefault();
-                    const v = input.value.trim();
-                    if (!/^\d+$/.test(v)) {
-                        await Swal.fire({ icon: 'error', title: 'خطا', text: 'لطفاً یک مقدار عددی وارد کنید', confirmButtonText: 'باشه', customClass: { popup: 'swal2-rtl swal2-glass', confirmButton: 'btn btn-primary' } });
+                    const vRaw = input.value.trim();
+                    const v = toEnglishDigits(vRaw);
+                    input.value = v; // ensure the displayed value is normalized before validation
+                        if (!/^\d+$/.test(v)) {
+                        // show validation errors as toast
+                        Swal.fire({
+                            toast: true,
+                            position: 'top-end',
+                            icon: 'error',
+                            title: 'لطفاً یک مقدار عددی وارد کنید',
+                            showConfirmButton: false,
+                            timer: 2500,
+                            timerProgressBar: true,
+                                customClass: { popup: 'swal2-rtl' }
+                        });
                         return;
                     }
                     const num = Number(v);
+                        if (num < 1) {
+                            Swal.fire({
+                                toast: true,
+                                position: 'top-end',
+                                icon: 'error',
+                                title: 'مقدار باید بیشتر یا مساوی ۱ باشد',
+                                showConfirmButton: false,
+                                timer: 3000,
+                                timerProgressBar: true,
+                                customClass: { popup: 'swal2-rtl' }
+                            });
+                            return;
+                        }
                     // Show loading
                     Swal.fire({ title: 'در حال ذخیره...', allowOutsideClick: false, didOpen: () => { Swal.showLoading(); }, customClass: { popup: 'swal2-rtl swal2-glass' } });
                     try {
@@ -191,16 +255,50 @@
                         if (resp.ok && j && j.success) {
                             input.dataset.original = String(num);
                             saveBtn.disabled = true;
-                            await Swal.fire({ icon: 'success', title: 'ذخیره شد', timer: 1200, showConfirmButton: false, customClass: { popup: 'swal2-rtl swal2-glass' } });
+                            const warningEl = row.querySelector('.rp-warning'); if (warningEl) warningEl.textContent = '';
+                            input.classList.remove('rp-invalid');
+                            updateGlobalSaveButton();
+                            await Swal.fire({
+                                toast: true,
+                                position: 'top-end',
+                                icon: 'success',
+                                title: 'ذخیره شد',
+                                showConfirmButton: false,
+                                timer: 1200,
+                                timerProgressBar: true,
+                                customClass: { popup: 'swal2-rtl' }
+                            });
                         } else {
-                            await Swal.fire({ icon: 'error', title: 'خطا', text: (j && j.error) ? j.error : 'خطا در ذخیره‌سازی', confirmButtonText: 'باشه', customClass: { popup: 'swal2-rtl swal2-glass', confirmButton: 'btn btn-primary' } });
+                            await Swal.fire({
+                                toast: true,
+                                position: 'top-end',
+                                icon: 'error',
+                                title: (j && j.error) ? j.error : 'خطا در ذخیره‌سازی',
+                                showConfirmButton: false,
+                                timer: 3000,
+                                timerProgressBar: true,
+                                customClass: { popup: 'swal2-rtl' }
+                            });
                         }
                     } catch (err) {
                         Swal.close();
-                        await Swal.fire({ icon: 'error', title: 'خطا', text: 'خطا در ارتباط با سرور', confirmButtonText: 'باشه', customClass: { popup: 'swal2-rtl swal2-glass', confirmButton: 'btn btn-primary' } });
+                        await Swal.fire({
+                            toast: true,
+                            position: 'top-end',
+                            icon: 'error',
+                            title: 'خطا در ارتباط با سرور',
+                            showConfirmButton: false,
+                            timer: 3000,
+                            timerProgressBar: true,
+                            customClass: { popup: 'swal2-rtl' }
+                        });
                     }
                 });
+                // Run initial validation to set save button state and warnings
+                try { normalizeAndValidate(); } catch (e) { /* ignore */ }
             });
+            // After attaching handlers, ensure global Save button reflects current state
+            updateGlobalSaveButton();
         }
 
         function escapeHtml(text) {
@@ -212,6 +310,17 @@
 
         const goHome = document.getElementById('goHomeBtn');
         if (goHome) goHome.addEventListener('click', () => { window.location.href = '/dashboard'; });
+
+        // Global "ذخیره" button (under the card) — enabled when any row has pending changes
+        const saveAllBtn = document.getElementById('saveAllBtn');
+        if (saveAllBtn) {
+            saveAllBtn.addEventListener('click', (e) => {
+                e.preventDefault();
+                if (saveAllBtn.disabled) return;
+                // Feature not wired yet — show info toast
+                Swal.fire({ toast: true, position: 'top-end', icon: 'info', title: 'ذخیره‌ی گروهی هنوز فعال نشده است', showConfirmButton: false, timer: 2200, timerProgressBar: true, customClass: { popup: 'swal2-rtl' } });
+            });
+        }
 
         // Footer click: show about modal similar to dashboard
         const copyrightFooter = document.getElementById('copyrightFooter');
