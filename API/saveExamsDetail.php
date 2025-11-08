@@ -31,25 +31,30 @@ try {
         `exam_date` VARCHAR(10) DEFAULT NULL,
         `exam_time` VARCHAR(5) DEFAULT NULL,
         `required_proctors` INT DEFAULT 0,
+        `students_count` INT DEFAULT 0,
         `created_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
 
     // Ensure column types are as expected even if table existed previously
     try {
-        $pdo->exec("ALTER TABLE `ExamsDetil` MODIFY COLUMN `exam_date` VARCHAR(10) DEFAULT NULL, MODIFY COLUMN `exam_time` VARCHAR(5) DEFAULT NULL");
+        // Ensure basic column types. Add students_count if missing (ignore errors).
+        $pdo->exec("ALTER TABLE `ExamsDetil` MODIFY COLUMN `exam_date` VARCHAR(10) DEFAULT NULL, MODIFY COLUMN `exam_time` VARCHAR(5) DEFAULT NULL, MODIFY COLUMN `required_proctors` INT DEFAULT 0");
+        // Try to add the students_count column if it doesn't exist yet; ignore errors if it's already present or not supported.
+        try { $pdo->exec("ALTER TABLE `ExamsDetil` ADD COLUMN `students_count` INT DEFAULT 0"); } catch (Throwable $__e) { /* ignore */ }
     } catch (Throwable $e) {
         // ignore alter errors (older MySQL versions or permissions)
     }
 
     // Prepare insert and a delete-to-replace per (date,time)
-    $ins = $pdo->prepare('INSERT INTO `ExamsDetil` (`exam_date`, `exam_time`, `required_proctors`) VALUES (?, ?, ?)');
+    $ins = $pdo->prepare('INSERT INTO `ExamsDetil` (`exam_date`, `exam_time`, `required_proctors`, `students_count`) VALUES (?, ?, ?, ?)');
     $del = $pdo->prepare('DELETE FROM `ExamsDetil` WHERE `exam_date` = ? AND `exam_time` = ?');
 
     $inserted = 0;
     foreach ($sessions as $s) {
         $d = isset($s['exam_date']) ? trim((string)$s['exam_date']) : null;
         $t = isset($s['exam_time']) ? trim((string)$s['exam_time']) : null;
-        $p = isset($s['proctors']) ? (int)$s['proctors'] : 0;
+    $p = isset($s['proctors']) ? (int)$s['proctors'] : 0;
+    $sc = isset($s['students_count']) ? (int)$s['students_count'] : 0;
 
         // Truncate fields to match schema limits (safeguard)
         if ($d !== null) $d = mb_substr($d, 0, 10);
@@ -62,7 +67,7 @@ try {
             // ignore delete errors and continue to insert
         }
 
-        $ok = $ins->execute([$d, $t, $p]);
+    $ok = $ins->execute([$d, $t, $p, $sc]);
         if ($ok) $inserted++;
     }
 

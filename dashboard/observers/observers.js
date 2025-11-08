@@ -1131,7 +1131,7 @@
     // into the ExamsDetil table and report result to the user.
     try {
         const csrf = getCsrfToken();
-        const payload = { sessions: perSessionTotals.map(p => ({ exam_date: p.exam_date, exam_time: p.exam_time, proctors: Number(p.proctors || 0) })) };
+        const payload = { sessions: perSessionTotals.map(p => ({ exam_date: p.exam_date, exam_time: p.exam_time, proctors: Number(p.proctors || 0), students_count: Number(p.student_count || 0) })) };
         const saveResp = await fetch('/API/saveExamsDetail.php', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json; charset=utf-8', 'X-CSRF-Token': csrf },
@@ -1204,54 +1204,26 @@
                             student_ids: []
                         }));
 
-                        // Enrich persisted sessions with student counts and missingLocations
+                        // Enrich persisted sessions with student counts from getStatistics.php
                         try {
-                            // build locations map to compute missingLocations
-                            const locResp = await fetch('/API/getLocations.php', { cache: 'no-store' });
-                            const locJson = (locResp && locResp.ok) ? await locResp.json() : { locations: [] };
-                            const locations = Array.isArray(locJson.locations) ? locJson.locations : [];
-                            const locMap = new Map();
-                            locations.forEach(l => {
-                                const key = `${(l.building||'').trim()}||${(l.class_name||'').trim()}`;
-                                locMap.set(key, Number(l.required_proctors || 0));
-                            });
-
-                            // fetch reports for each persisted session with limited concurrency
-                            const concurrency = 4;
-                            const enriched = [];
-                            for (let i = 0; i < perSessionTotals.length; i += concurrency) {
-                                const batch = perSessionTotals.slice(i, i + concurrency);
-                                const promises = batch.map(async (s) => {
-                                    const d = s.exam_date;
-                                    const t = s.exam_time;
-                                    try {
-                                        const repResp = await fetch(`/API/getNextExamReport.php?exam_date=${encodeURIComponent(d)}&exam_time=${encodeURIComponent(t)}`, { cache: 'no-store' });
-                                        if (!repResp || !repResp.ok) {
-                                            // keep session but no student details
-                                            return Object.assign({}, s);
-                                        }
-                                        const rep = await repResp.json();
-                                        const students = Array.isArray(rep.students) ? rep.students : [];
-                                        const studentIds = students.map(st => st.student_id).filter(Boolean);
-                                        const usedKeys = new Set();
-                                        students.forEach(st => {
-                                            const key = `${(st.building||'').trim()}||${(st.class_name||'').trim()}`;
-                                            usedKeys.add(key);
-                                        });
-                                        let missing = 0;
-                                        usedKeys.forEach(key => { if (!locMap.has(key)) missing++; });
-                                        return Object.assign({}, s, { student_count: studentIds.length, student_ids: studentIds, missingLocations: missing });
-                                    } catch (e) {
-                                        console.warn('Failed to fetch report for persisted session', d, t, e);
-                                        return Object.assign({}, s);
-                                    }
+                            const statsResp = await fetch('/API/getStatistics.php', { cache: 'no-store' });
+                            if (statsResp && statsResp.ok) {
+                                const stats = await statsResp.json();
+                                const allExams = Array.isArray(stats.allExams) ? stats.allExams : [];
+                                // Build a map of exam_date + exam_time to student_count
+                                const statsMap = new Map();
+                                allExams.forEach(ex => {
+                                    const key = `${ex.exam_date || ''}||${ex.exam_time || ''}`;
+                                    statsMap.set(key, Number(ex.student_count || 0));
                                 });
-                                const results = await Promise.all(promises);
-                                results.forEach(r => enriched.push(r));
+                                // Enrich perSessionTotals with student_count from statsMap
+                                perSessionTotals = perSessionTotals.map(p => {
+                                    const key = `${p.exam_date || ''}||${p.exam_time || ''}`;
+                                    return Object.assign({}, p, { student_count: statsMap.get(key) || 0 });
+                                });
                             }
-                            perSessionTotals = enriched;
                         } catch (e) {
-                            console.warn('Failed to enrich persisted ExamsDetil rows with student counts', e);
+                            console.warn('Failed to enrich persisted ExamsDetil rows with student counts from getStatistics', e);
                         }
                     }
                 }

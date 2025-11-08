@@ -9,7 +9,7 @@ require_once __DIR__ . '/db_init.php';
 try {
     license_guard_enforce_api();
 
-    $stmt = $pdo->query('SELECT id, exam_date, exam_time, required_proctors, created_at FROM `ExamsDetil` ORDER BY exam_date ASC, exam_time ASC');
+    $stmt = $pdo->query('SELECT id, exam_date, exam_time, required_proctors, students_count, created_at FROM `ExamsDetil` ORDER BY exam_date ASC, exam_time ASC');
     $rows = $stmt ? $stmt->fetchAll(PDO::FETCH_ASSOC) : [];
 
     echo json_encode(['success' => true, 'exams' => $rows], JSON_UNESCAPED_UNICODE);

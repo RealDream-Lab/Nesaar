@@ -14,6 +14,8 @@ try {
     $input = json_decode(file_get_contents('php://input'), true);
     $id = isset($input['id']) ? (int)$input['id'] : 0;
     $req = isset($input['required_proctors']) ? (int)$input['required_proctors'] : null;
+    // optional numeric students_count to store number of students for the session
+    $students_count = array_key_exists('students_count', $input) ? (int)$input['students_count'] : null;
 
     if ($id <= 0 || $req === null || $req < 0) {
         http_response_code(400);
@@ -30,8 +32,14 @@ try {
         exit;
     }
 
-    $upd = $pdo->prepare('UPDATE `ExamsDetil` SET required_proctors = ? WHERE id = ?');
-    $ok = $upd->execute([$req, $id]);
+    // If students_count is supplied (not null), update both columns; otherwise update only required_proctors
+    if ($students_count !== null && $students_count >= 0) {
+        $upd = $pdo->prepare('UPDATE `ExamsDetil` SET required_proctors = ?, students_count = ? WHERE id = ?');
+        $ok = $upd->execute([$req, $students_count, $id]);
+    } else {
+        $upd = $pdo->prepare('UPDATE `ExamsDetil` SET required_proctors = ? WHERE id = ?');
+        $ok = $upd->execute([$req, $id]);
+    }
     if ($ok) {
         echo json_encode(['success' => true], JSON_UNESCAPED_UNICODE);
     } else {
