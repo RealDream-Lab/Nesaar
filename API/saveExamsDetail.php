@@ -53,10 +53,20 @@ try {
     foreach ($sessions as $s) {
         $d = isset($s['exam_date']) ? trim((string)$s['exam_date']) : null;
         $t = isset($s['exam_time']) ? trim((string)$s['exam_time']) : null;
-    $p = isset($s['proctors']) ? (int)$s['proctors'] : 0;
-    $sc = isset($s['students_count']) ? (int)$s['students_count'] : 0;
+        $p = isset($s['proctors']) ? (int)$s['proctors'] : 0;
 
-        // Truncate fields to match schema limits (safeguard)
+        // Compute students_count from database (total students for this exam date/time)
+        $sc = 0;
+        if ($d !== null && $t !== null) {
+            try {
+                $scStmt = $pdo->prepare("SELECT COUNT(es.student_id) as total_students FROM courses c LEFT JOIN exam_seats es ON c.course_code = es.course_code WHERE c.exam_date = ? AND c.exam_time = ?");
+                $scStmt->execute([$d, $t]);
+                $scRow = $scStmt->fetch(PDO::FETCH_ASSOC);
+                $sc = (int)($scRow['total_students'] ?? 0);
+            } catch (Throwable $e) {
+                // ignore errors, keep 0
+            }
+        }        // Truncate fields to match schema limits (safeguard)
         if ($d !== null) $d = mb_substr($d, 0, 10);
         if ($t !== null) $t = mb_substr($t, 0, 5);
 

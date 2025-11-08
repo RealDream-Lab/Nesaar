@@ -94,6 +94,10 @@ try {
     }
 
     // Begin transaction for atomicity (use DELETE instead of TRUNCATE to avoid implicit commit)
+    // Drop tables if they exist before creating anything (DDL may cause implicit commit)
+    try { $pdo->exec('DROP TABLE IF EXISTS `ExamsDetil`'); } catch (Throwable $e) { /* ignore */ }
+    try { $pdo->exec('DROP TABLE IF EXISTS `locations`'); } catch (Throwable $e) { /* ignore */ }
+
     // Ensure `locations` table exists before starting transaction (CREATE TABLE is DDL and may cause implicit commit)
     $createLocations = "CREATE TABLE IF NOT EXISTS `locations` (
         `id` INT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
@@ -111,8 +115,6 @@ try {
     $pdo->exec('DELETE FROM exam_seats');
     $pdo->exec('DELETE FROM courses');
     $pdo->exec('DELETE FROM students');
-    // Clear previous locations as requested (keep table schema)
-    $pdo->exec('DELETE FROM locations');
 
     // Common derived table
     $derived = "( {$unionSql} ) AS t";
