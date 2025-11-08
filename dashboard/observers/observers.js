@@ -1694,7 +1694,7 @@
                     try {
                         const resp = await fetch('/API/deleteProctor.php', {
                             method: 'POST',
-                            headers: { 'Content-Type': 'application/json' },
+                            headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': getCsrfToken() },
                             body: JSON.stringify({ id: id })
                         });
                         if (resp.ok) {
@@ -1751,7 +1751,7 @@
             try {
                 const resp = await fetch('/API/saveProctor.php', {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
+                    headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': getCsrfToken() },
                     body: JSON.stringify({
                         id: editingId ? Number(editingId) : 0,
                         gender: gender,
