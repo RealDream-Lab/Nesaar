@@ -1512,6 +1512,12 @@
                         const label = ds.label || '';
                         return label + ': ' + toPersianDigits(Number(v || 0));
                     };
+                    // rotate x-axis labels vertically
+                    sessionStatsChart.options.scales.x.ticks = sessionStatsChart.options.scales.x.ticks || {};
+                    sessionStatsChart.options.scales.x.ticks.maxRotation = 90;
+                    sessionStatsChart.options.scales.x.ticks.minRotation = 90;
+                    // ensure x-axis tick callback returns the exam_date label from the labels array
+                    sessionStatsChart.options.scales.x.ticks.callback = function(value, index) { return labels && labels[index] ? labels[index] : value; };
                     sessionStatsChart.update();
                 } catch (e) {
                     try { sessionStatsChart.destroy(); } catch (ignored) {}
@@ -1580,7 +1586,7 @@
                         maintainAspectRatio: false,
                         interaction: { mode: 'index', intersect: false },
                         scales: {
-                            x: { offset: true, ticks: { maxRotation: 0, minRotation: 0, autoSkip: false, callback: function(value, index) { return value; } }, grid: { display: false } },
+                            x: { offset: true, ticks: { maxRotation: 90, minRotation: 90, autoSkip: false, callback: function(value, index) { return labels && labels[index] ? labels[index] : value; } }, grid: { display: false } },
                             y: { beginAtZero: true, position: 'left', grid: { color: 'rgba(0,0,0,0.04)' } },
                             y1: { beginAtZero: true, position: 'right', grid: { display: false } }
                         }
