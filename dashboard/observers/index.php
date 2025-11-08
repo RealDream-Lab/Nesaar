@@ -72,11 +72,11 @@ try {
                         </button>
                         <!-- Exams detail quick-open button-->
                         <button id="showExamsDetailBtn" class="btn btn-icon p-0" type="button" title="جزئیات جلسات" style="background:transparent;border:none;margin-inline-end:8px;padding:0;">
-                            <img src="/dashboard/exams.png" alt="جزئیات" style="width:40px;height:40px;object-fit:contain;display:block;">
+                            <img src="/dashboard/statices.png" alt="جزئیات" style="width:40px;height:40px;object-fit:contain;display:block;">
                         </button>
                         <!-- Proctors quick-open button-->
                         <button id="showProctorsBtn" class="btn btn-icon p-0" type="button" title="مشخصات مراقبین" style="background:transparent;border:none;margin-inline-end:8px;padding:0;">
-                            <img src="/dashboard/proctors.png" alt="مراقبین" style="width:40px;height:40px;object-fit:contain;display:block;">
+                            <img src="/dashboard/statices.png" alt="مراقبین" style="width:40px;height:40px;object-fit:contain;display:block;">
                         </button> 
                         <button id="backToDashboardBtn" class="btn btn-icon p-0" type="button" title="بازگشت به داشبورد" style="background:transparent;border:none;margin-inline-end:8px;padding:0;">
                             <img src="/dashboard/home.png" alt="بازگشت" style="width:40px;height:40px;object-fit:contain;display:block;">
@@ -139,6 +139,7 @@ $showLocationsCard) ? '' : 'display:none;'); ?>">
                 </div>
                 <!-- کارت مشخصات مراقبین -->
                 <div class="dashboard-card module-card no-hover" id="proctorsCard" style="display:none;">
+                    
                     <h4>مشخصات مراقبین</h4>
                     <div style="position:absolute;top:1rem;left:1rem;font-size:0.9rem;" id="proctorsStats"></div>
                     <p style="margin-bottom:0.6rem;color:#04202a;">مشخصات مراقبین را اضافه یا ویرایش کنید.</p>
@@ -153,11 +154,11 @@ $showLocationsCard) ? '' : 'display:none;'); ?>">
                                     <option value="مرد">مرد</option>
                                 </select>
                             </div>
-                            <div class="col-md-3">
+                            <div class="col-md-4">
                                 <label class="form-label">نام</label>
                                 <input type="text" class="form-control" id="proctorFirstName" maxlength="40">
                             </div>
-                            <div class="col-md-3">
+                            <div class="col-md-4">
                                 <label class="form-label">نام خانوادگی</label>
                                 <input type="text" class="form-control" id="proctorLastName" maxlength="40">
                             </div>
@@ -165,9 +166,12 @@ $showLocationsCard) ? '' : 'display:none;'); ?>">
                                 <label class="form-label">شماره همراه</label>
                                 <input type="text" class="form-control" id="proctorPhone" maxlength="11" inputmode="numeric">
                             </div>
-                            <div class="col-md-2 d-flex align-items-end">
-                                <button id="saveProctorBtn" class="btn btn-primary me-2">اضافه/ویرایش</button>
-                                <button id="clearProctorBtn" class="btn btn-secondary">پاک کردن</button>
+                        </div>
+                        <!-- Buttons in next line, left aligned -->
+                        <div class="row mt-3">
+                            <div class="col-12 text-start">
+                                <button id="saveProctorBtn" class="btn btn-primary btn-proctor me-3">ذخیره</button>
+                                <button id="clearProctorBtn" class="btn btn-outline-secondary btn-proctor">پاک کردن</button>
                             </div>
                         </div>
                     </div>

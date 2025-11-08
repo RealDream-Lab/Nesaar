@@ -17,6 +17,19 @@
         const persianDigits = ['۰','۱','۲','۳','۴','۵','۶','۷','۸','۹'];
         return String(num).replace(/\d/g, d => persianDigits[d]);
     }
+
+    function toEnglishDigits(value) {
+        const persian = '۰۱۲۳۴۵۶۷۸۹';
+        const arabic = '٠١٢٣٤٥٦٧٨٩';
+        return value.split('').map(char => {
+            let index = persian.indexOf(char);
+            if (index !== -1) return index.toString();
+            index = arabic.indexOf(char);
+            if (index !== -1) return index.toString();
+            return char;
+        }).join('');
+    }
+
     // Simple HTML escaper usable across this module
     function escapeHtml(text) {
         const d = document.createElement('div');
@@ -1625,6 +1638,12 @@
             return;
         }
 
+        function getGenderTitle(gender) {
+            if (gender === 'مرد') return 'جناب آقای';
+            if (gender === 'زن') return 'سرکار خانم';
+            return '';
+        }
+
         let html = `
             <table class="table" style="direction:rtl;text-align:right;margin:0;">
                 <thead>
@@ -1641,9 +1660,10 @@
         proctors.forEach((p, idx) => {
             const id = Number(p.id || 0);
             const gender = escapeHtml(p.gender || '');
-            const first = escapeHtml(p.first_name || '');
+            const genderTitle = getGenderTitle(p.gender);
+            const first = genderTitle + ' ' + escapeHtml(p.first_name || '');
             const last = escapeHtml(p.last_name || '');
-            const phone = escapeHtml(p.phone || '');
+            const phone = toPersianDigits(escapeHtml(p.phone || ''));
             html += `<tr data-id="${id}" style="cursor:pointer;">
                 <td style="vertical-align:middle;text-align:center;">${idx + 1}</td>
                 <td style="vertical-align:middle">${gender}</td>
@@ -1669,7 +1689,7 @@
                     document.getElementById('proctorGender').value = p.gender || '';
                     document.getElementById('proctorFirstName').value = p.first_name || '';
                     document.getElementById('proctorLastName').value = p.last_name || '';
-                    document.getElementById('proctorPhone').value = p.phone || '';
+                    document.getElementById('proctorPhone').value = toPersianDigits(p.phone || '');
                     // Store editing id
                     document.getElementById('saveProctorBtn').dataset.editingId = id;
                 }
@@ -1740,8 +1760,11 @@
             const gender = document.getElementById('proctorGender').value.trim();
             const first = document.getElementById('proctorFirstName').value.trim();
             const last = document.getElementById('proctorLastName').value.trim();
-            const phone = document.getElementById('proctorPhone').value.trim();
+            let phone = document.getElementById('proctorPhone').value.trim();
             const editingId = saveProctorBtn.dataset.editingId || '';
+
+            // Clean phone: convert to English digits, keep only numbers, limit to 11
+            phone = toEnglishDigits(phone).replace(/[^0-9]/g, '').substring(0, 11);
 
             if (!first || !last || !phone) {
                 Swal.fire('خطا', 'نام، نام خانوادگی و شماره همراه الزامی است', 'error');

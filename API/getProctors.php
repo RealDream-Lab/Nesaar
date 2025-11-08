@@ -8,6 +8,16 @@ require_once __DIR__ . '/db_init.php';
 try {
     license_guard_enforce_api();
 
+    // Ensure table exists
+    $pdo->exec("CREATE TABLE IF NOT EXISTS `Proctors` (
+        `id` INT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
+        `gender` VARCHAR(3) DEFAULT '',
+        `first_name` VARCHAR(40) DEFAULT '',
+        `last_name` VARCHAR(40) DEFAULT '',
+        `phone` VARCHAR(11) DEFAULT '',
+        `created_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
+
     $stmt = $pdo->query('SELECT id, gender, first_name, last_name, phone, created_at FROM `Proctors` ORDER BY id');
     $rows = $stmt ? $stmt->fetchAll(PDO::FETCH_ASSOC) : [];
 
