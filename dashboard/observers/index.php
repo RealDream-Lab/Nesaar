@@ -66,10 +66,14 @@ try {
                         <button id="showLocationsBtn" class="btn btn-icon p-0" type="button" title="نمایش مکان‌ها" style="background:transparent;border:none;margin-inline-end:8px;padding:0;">
                             <img src="/dashboard/observers/locations.png" alt="مکان‌ها" style="width:40px;height:40px;object-fit:contain;display:block;">
                         </button>
-                        <!-- Stats quick-open button: shows the session stats card when clicked -->
+                        <!-- Stats quick-open button: shows the session stats card when clicked 
                         <button id="showStatsBtn" class="btn btn-icon p-0" type="button" title="نمایش نمودار" style="background:transparent;border:none;margin-inline-end:8px;padding:0;">
                             <img src="/dashboard/statices.png" alt="نمودار" style="width:40px;height:40px;object-fit:contain;display:block;">
-                        </button>
+                        </button>-->
+                        <!-- Exams detail quick-open button
+                        <button id="showExamsDetailBtn" class="btn btn-icon p-0" type="button" title="جزئیات جلسات" style="background:transparent;border:none;margin-inline-end:8px;padding:0;">
+                            <img src="/dashboard/exams.png" alt="جزئیات" style="width:40px;height:40px;object-fit:contain;display:block;">
+                        </button> -->
                         <button id="backToDashboardBtn" class="btn btn-icon p-0" type="button" title="بازگشت به داشبورد" style="background:transparent;border:none;margin-inline-end:8px;padding:0;">
                             <img src="/dashboard/home.png" alt="بازگشت" style="width:40px;height:40px;object-fit:contain;display:block;">
                         </button>
@@ -117,6 +121,15 @@ $showLocationsCard) ? '' : 'display:none;'); ?>">
                     <div id="locationsList" style="margin-top:0.8rem;"></div>
                     <div style="margin-top:0.8rem;text-align:center;">
                         <button id="saveAllBtn" class="btn btn-success" style="width: 300px;" disabled>ذخیره همه و قفل ویرایش</button>
+                    </div>
+                </div>
+                <!-- کارت جزئیات مراقبین هر جلسه -->
+                <div class="dashboard-card module-card no-hover" id="examsDetailCard" style="display:none;">
+                    <h4>جزئیات مراقبین هر جلسه</h4>
+                    <p style="margin-bottom:0.6rem;color:#04202a;">لیست تعداد مراقبین مورد نیاز برای هر جلسه را مشاهده و ویرایش کنید. می‌توانید هر سطر را جدا ذخیره کنید یا از دکمهٔ "ذخیره همه" استفاده کنید.</p>
+                    <div id="examsDetailList" style="margin-top:0.8rem;"></div>
+                    <div style="margin-top:0.8rem;text-align:center;">
+                        <button id="saveExamsDetailAllBtn" class="btn btn-success" style="width: 300px;" disabled>ذخیره همه جزئیات</button>
                     </div>
                 </div>
             </div>

@@ -17,7 +17,6 @@
         const persianDigits = ['۰','۱','۲','۳','۴','۵','۶','۷','۸','۹'];
         return String(num).replace(/\d/g, d => persianDigits[d]);
     }
-
     // Simple HTML escaper usable across this module
     function escapeHtml(text) {
         const d = document.createElement('div');
@@ -43,6 +42,16 @@
         const parts = value.split(`; ${name}=`);
         if (parts.length === 2) return parts.pop().split(';').shift();
         return null;
+    }
+
+    // CSRF token helper (module scope) - make available to functions declared
+    // outside the DOMContentLoaded handler (e.g. computeAndShowProctorSummary)
+    function getCsrfToken() {
+        try {
+            return document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
+        } catch (e) {
+            return '';
+        }
     }
 
     async function checkAuthAndRedirect() {
@@ -191,10 +200,7 @@
             }
         });
 
-        // Helpers for locations listing and editing
-        function getCsrfToken() {
-            return document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
-        }
+        // Helpers for locations listing and editing (module-scoped helpers are used)
 
         async function loadLocations() {
             const el = document.getElementById('locationsList');
@@ -391,9 +397,320 @@
             updateGlobalSaveButton();
         }
 
-        function escapeHtml(text) {
-            const d = document.createElement('div'); d.textContent = text || ''; return d.innerHTML;
+        // Load and render ExamsDetil rows (per-session proctors)
+        async function loadExamsDetail() {
+            const container = document.getElementById('examsDetailList');
+            const saveAll = document.getElementById('saveExamsDetailAllBtn');
+            if (!container) return;
+            try {
+                container.innerHTML = '<div style="text-align:center;padding:1rem;color:var(--text-muted)">در حال بارگذاری...</div>';
+                const resp = await fetch('/API/getExamsDetail.php', { cache: 'no-store' });
+                if (!resp.ok) throw new Error('failed');
+                const j = await resp.json();
+                const exams = Array.isArray(j.exams) ? j.exams : [];
+                renderExamsDetail(exams);
+                // Show a guidance modal after the exams-detail table has loaded
+                try {
+                    if (exams && exams.length) {
+                        await Swal.fire({
+                            icon: 'info',
+                            title: 'بررسی ظرفیت‌ها',
+                            html: `
+                                <div style="text-align:justify;direction:rtl;line-height:1.6">
+                                    جدول زیر بر اساس ظرفیت اعلام‌شدهٔ مراقبین تهیه شده است. در صورت نیاز به نیروی کمکی مانند <strong>منشی</strong> یا <strong>رابط</strong> که ممکن است از بین همین مراقبین انتخاب شوند (ابلاغ ثابت و جداگانه ندارند)، لطفاً تعداد افراد کمکی موردنیاز را به مجموع مراقبین هر جلسه اضافه نمایید تا تخصیص نیرو و گزارش‌ها دقیق باشند.
+                                    <br><br>
+                                    نکته: اعداد واردشده باید نشان‌دهندهٔ <em>تعداد نهایی</em> افراد موردنیاز برای اجرا (مراقبین به‌علاوه رابط/منشی در صورت لزوم) باشند، نه فقط تعداد مراقبین پایه.
+                                </div>
+                            `,
+                            confirmButtonText: 'متوجه شدم',
+                            customClass: { popup: 'swal2-rtl swal2-glass', confirmButton: 'btn btn-primary' }
+                        });
+                    }
+                } catch (e) { /* ignore modal errors */ }
+                if (saveAll) saveAll.disabled = true;
+            } catch (e) {
+                console.warn('loadExamsDetail failed', e);
+                container.innerHTML = '<div style="text-align:center;padding:1rem;color:crimson">خطا در بارگذاری جزئیات جلسات</div>';
+                if (saveAll) saveAll.disabled = true;
+            }
         }
+
+        function renderExamsDetail(exams) {
+            const container = document.getElementById('examsDetailList');
+            const saveAll = document.getElementById('saveExamsDetailAllBtn');
+            if (!container) return;
+            if (!exams.length) {
+                container.innerHTML = '<div style="text-align: right; direction: rtl">هیچ داده‌ای برای نمایش وجود ندارد.</div>';
+                if (saveAll) saveAll.disabled = true;
+                return;
+            }
+
+            // Group by date
+            const byDate = new Map();
+            exams.forEach(e => {
+                const d = (e.exam_date || '').trim();
+                if (!byDate.has(d)) byDate.set(d, []);
+                byDate.get(d).push(e);
+            });
+
+            // Sort dates
+            const dates = Array.from(byDate.keys()).sort();
+
+            // Build table header. Determine up to 3 canonical times (columns) from all exams
+            const uniqueTimes = Array.from(new Set(exams.map(e => (e.exam_time || '').trim()).filter(Boolean))).sort();
+            const columnTimes = uniqueTimes.slice(0, 3);
+            const colLabels = ['جلسه اول', 'جلسه دوم', 'جلسه سوم'];
+
+            let html = `
+                <table class="table" style="direction:rtl;text-align:right;margin:0;">
+                    <thead>
+                        <tr>
+                            <th style="width:220px">تاریخ</th>
+            `;
+            for (let ci = 0; ci < 3; ci++) {
+                const time = columnTimes[ci] || '';
+                const suffix = time ? ` (${escapeHtml(time)})` : '';
+                html += `<th style="width:160px">${colLabels[ci]}${suffix}</th>`;
+            }
+            html += `<th style="width:120px">عملیات</th></tr></thead><tbody>`;
+
+            dates.forEach(d => {
+                const list = (byDate.get(d) || []).sort((a, b) => (a.exam_time || '').localeCompare(b.exam_time || ''));
+                // map sessions into columns by time when possible; fall back to next empty slot
+                const slots = [null, null, null];
+                list.forEach(sess => {
+                    const t = (sess.exam_time || '').trim();
+                    let placed = false;
+                    const idx = columnTimes.indexOf(t);
+                    if (idx >= 0 && idx < 3 && !slots[idx]) {
+                        slots[idx] = sess; placed = true;
+                    }
+                    if (!placed) {
+                        for (let k = 0; k < 3; k++) {
+                            if (!slots[k]) { slots[k] = sess; placed = true; break; }
+                        }
+                    }
+                });
+
+                html += `<tr data-date="${escapeHtml(d)}">`;
+                html += `<td style="vertical-align:middle;font-weight:600">${escapeHtml(d)}</td>`;
+
+                for (let s = 0; s < 3; s++) {
+                    const session = slots[s];
+                    if (!session) {
+                        html += `<td style="vertical-align:middle;color:var(--text-muted);">-</td>`;
+                    } else {
+                        const id = Number(session.id || 0);
+                        const rp = Number(session.required_proctors || 0);
+                        html += `
+                            <td style="vertical-align:middle">
+                                <div style="display:flex;align-items:center;gap:0.6rem;">
+                                    <input type="text" inputmode="numeric" pattern="\\d*" class="ep-input rp-input form-control" data-id="${id}" data-time="${escapeHtml(session.exam_time || '')}" value="${toPersianDigits(rp)}" data-original="${rp}" style="max-width:120px;display:inline-block;">
+                                </div>
+                            </td>`;
+                    }
+                }
+
+                // operations: tick (save row) and cross (cancel row)
+                html += `
+                    <td style="vertical-align:middle">
+                        <button class="ep-row-save rp-btn rp-save" title="ذخیره" style="margin-inline-end:6px">✓</button>
+                        <button class="ep-row-cancel rp-btn rp-cancel" title="لغو">✕</button>
+                    </td>`;
+
+                html += `</tr>`;
+            });
+
+            html += `</tbody></table>`;
+            container.innerHTML = html;
+
+            // Attach handlers similar to locations' rp-input behavior
+            const rows = container.querySelectorAll('tbody tr');
+
+            function updateSaveAllState() {
+                if (!saveAll) return;
+                let anyPending = false;
+                let allValid = true;
+                container.querySelectorAll('.ep-input').forEach(inp => {
+                    const orig = Number(inp.dataset.original || 0);
+                    const vStr = toEnglishDigits((inp.value || '').trim()).replace(/[^0-9]/g, '');
+                    const now = Number(vStr || 0);
+                    if (now !== orig) anyPending = true;
+                    if (!/^\d+$/.test(vStr) || now < 1) allValid = false;
+                });
+                saveAll.disabled = !(anyPending && allValid);
+            }
+
+            rows.forEach(row => {
+                const inputs = Array.from(row.querySelectorAll('.ep-input'));
+                const saveBtn = row.querySelector('.ep-row-save');
+                const cancelBtn = row.querySelector('.ep-row-cancel');
+
+                // row-level save state: enable save button only when this row has pending
+                // changes and all pending values are valid (>=1)
+                function updateRowSaveState() {
+                    if (!saveBtn) return;
+                    let anyPending = false;
+                    let allPendingValid = true;
+                    inputs.forEach(inp => {
+                        const orig = Number(inp.dataset.original || 0);
+                        const vStr = toEnglishDigits((inp.value || '').trim()).replace(/[^0-9]/g, '');
+                        const now = Number(vStr || 0);
+                        if (now !== orig) {
+                            anyPending = true;
+                            if (!/^\d+$/.test(vStr) || now < 1) allPendingValid = false;
+                        }
+                    });
+                    saveBtn.disabled = !(anyPending && allPendingValid);
+                }
+
+                inputs.forEach(inp => {
+                    // normalize displayed value to persian digits but keep original stored as english
+                    try { inp.value = toPersianDigits(Number(inp.dataset.original || 0)); } catch (e) {}
+
+                    function normalizeAndValidate() {
+                        const before = inp.value || '';
+                        const normalized = toEnglishDigits(before);
+                        const cleaned = normalized.replace(/[^0-9]/g, '');
+                        if (cleaned !== before) {
+                            const pos = inp.selectionStart || 0;
+                            inp.value = cleaned ? toPersianDigits(Number(cleaned)) : '';
+                            try { inp.setSelectionRange(Math.min(pos, inp.value.length), Math.min(pos, inp.value.length)); } catch (e) {}
+                        }
+                        const vEng = toEnglishDigits(inp.value || '');
+                        const cleanedEng = vEng.replace(/[^0-9]/g, '');
+                        const ok = /^\d+$/.test(cleanedEng);
+                        const numericV = Number(cleanedEng || 0);
+                        // disallow zero or empty values for saving
+                        if (!ok || numericV < 1) {
+                            inp.classList.add('rp-invalid');
+                        } else {
+                            inp.classList.remove('rp-invalid');
+                        }
+                        updateRowSaveState();
+                        updateSaveAllState();
+                    }
+
+                    inp.addEventListener('input', normalizeAndValidate);
+                    inp.addEventListener('paste', () => { setTimeout(normalizeAndValidate, 0); });
+                });
+
+                if (cancelBtn) {
+                    cancelBtn.addEventListener('click', (e) => {
+                        e.preventDefault();
+                        // restore originals for inputs in this row
+                        inputs.forEach(inp => {
+                            inp.value = toPersianDigits(Number(inp.dataset.original || 0));
+                            inp.classList.remove('rp-invalid');
+                        });
+                        try { updateRowSaveState(); } catch (e) {}
+                        updateSaveAllState();
+                    });
+                }
+
+                if (saveBtn) {
+                    saveBtn.addEventListener('click', async (e) => {
+                        e.preventDefault();
+                        // gather pending inputs in this row
+                        const pending = [];
+                        inputs.forEach(inp => {
+                            const orig = Number(inp.dataset.original || 0);
+                            const now = Number(toEnglishDigits((inp.value || '').trim()) || 0);
+                            const id = Number(inp.dataset.id || 0);
+                            if (now !== orig && id > 0) pending.push({ id, value: now, input: inp });
+                        });
+                        if (!pending.length) return Swal.fire({ toast: true, position: 'top-end', icon: 'info', title: 'تغییری برای ذخیره وجود ندارد', showConfirmButton: false, timer: 2000, customClass: { popup: 'swal2-rtl' } });
+
+                        // validate pending values (no zeros allowed)
+                        for (const p of pending) {
+                            if (Number(p.value) < 1) {
+                                saveBtn.disabled = false;
+                                return Swal.fire({ toast: true, position: 'top-end', icon: 'error', title: 'مقادیر باید عدد صحیح و بزرگتر یا مساوی ۱ باشند', showConfirmButton: false, timer: 3500, customClass: { popup: 'swal2-rtl' } });
+                            }
+                        }
+
+                        saveBtn.disabled = true;
+                        const csrf = getCsrfToken();
+                        let failed = 0;
+                        for (const p of pending) {
+                            try {
+                                const resp = await fetch('/API/saveExamsDetailRow.php', {
+                                    method: 'POST',
+                                    headers: { 'Content-Type': 'application/json; charset=utf-8', 'X-CSRF-Token': csrf },
+                                    body: JSON.stringify({ id: p.id, required_proctors: Number(p.value) })
+                                });
+                                const j = await resp.json();
+                                if (resp.ok && j && j.success) {
+                                    p.input.dataset.original = String(p.value);
+                                    p.input.value = toPersianDigits(Number(p.value));
+                                } else {
+                                    failed++;
+                                }
+                            } catch (err) { failed++; }
+                        }
+                        saveBtn.disabled = false;
+                        if (failed === 0) {
+                            updateSaveAllState();
+                            Swal.fire({ toast: true, position: 'top-end', icon: 'success', title: 'ذخیره شد', showConfirmButton: false, timer: 1600, customClass: { popup: 'swal2-rtl' } });
+                        } else {
+                            Swal.fire({ toast: true, position: 'top-end', icon: 'error', title: `خطا در ذخیره ${failed} مورد`, showConfirmButton: false, timer: 3000, customClass: { popup: 'swal2-rtl' } });
+                        }
+                    });
+                }
+                // initialize row save button state
+                try { updateRowSaveState(); } catch (e) {}
+            });
+
+            // Batch save (all rows)
+            if (saveAll) {
+                saveAll.disabled = true;
+                saveAll.addEventListener('click', async (e) => {
+                    e.preventDefault();
+                    if (saveAll.disabled) return;
+                    const pending = [];
+                    container.querySelectorAll('.ep-input').forEach(inp => {
+                        const orig = Number(inp.dataset.original || 0);
+                        const vStr = toEnglishDigits((inp.value || '').trim()).replace(/[^0-9]/g, '');
+                        const now = Number(vStr || 0);
+                        const id = Number(inp.dataset.id || 0);
+                        if (now !== orig && id > 0) pending.push({ id, value: now, input: inp });
+                    });
+                    if (!pending.length) return Swal.fire({ toast: true, position: 'top-end', icon: 'info', title: 'تغییری برای ذخیره وجود ندارد', showConfirmButton: false, timer: 2000, customClass: { popup: 'swal2-rtl' } });
+
+                    // validate pending values (no zeros allowed)
+                    for (const p of pending) {
+                        if (Number(p.value) < 1) {
+                            return Swal.fire({ toast: true, position: 'top-end', icon: 'error', title: 'مقادیر باید بزرگتر یا مساوی ۱ باشند', showConfirmButton: false, timer: 3500, customClass: { popup: 'swal2-rtl' } });
+                        }
+                    }
+
+                    const csrf = getCsrfToken();
+                    let failed = 0;
+                    for (const p of pending) {
+                        try {
+                            const resp = await fetch('/API/saveExamsDetailRow.php', {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json; charset=utf-8', 'X-CSRF-Token': csrf },
+                                body: JSON.stringify({ id: p.id, required_proctors: Number(p.value) })
+                            });
+                            const j = await resp.json();
+                            if (resp.ok && j && j.success) {
+                                p.input.dataset.original = String(p.value);
+                                p.input.value = toPersianDigits(Number(p.value));
+                            } else { failed++; }
+                        } catch (err) { failed++; }
+                    }
+                    if (failed === 0) {
+                        saveAll.disabled = true;
+                        Swal.fire({ toast: true, position: 'top-end', icon: 'success', title: 'تمامی تغییرات ذخیره شد', showConfirmButton: false, timer: 2500, customClass: { popup: 'swal2-rtl' } });
+                    } else {
+                        Swal.fire({ toast: true, position: 'top-end', icon: 'error', title: `خطا در ذخیره ${failed} مورد`, showConfirmButton: false, timer: 3500, customClass: { popup: 'swal2-rtl' } });
+                    }
+                });
+            }
+        }
+
+        // Note: use the module-scoped `escapeHtml` declared near the top of this file
 
         // Card manager: ensures only one module card is visible at a time.
         // Pass a cardId (string) to show that card; pass null to hide all.
@@ -485,6 +802,29 @@
                 try { const target = document.getElementById('sessionStatsCard'); if (target) target.scrollIntoView({ behavior: 'smooth', block: 'start' }); } catch (e) { /* ignore */ }
             });
         }
+        // Header button for exams detail card
+        const showExamsBtn = document.getElementById('showExamsDetailBtn');
+        if (showExamsBtn) {
+            showExamsBtn.addEventListener('click', async (e) => {
+                try { if (e && typeof e.preventDefault === 'function') e.preventDefault(); } catch (err) { /* ignore */ }
+                const card = document.getElementById('examsDetailCard');
+                if (!card) return;
+                showOnlyCard('examsDetailCard');
+                try { await loadExamsDetail(); } catch (err) { console.warn('loadExamsDetail failed', err); }
+            });
+        }
+
+        // When computeAndShowProctorSummary persists ExamsDetil it will emit
+        // the 'examsDetailSaved' event; listen and reveal the exams detail card.
+        document.addEventListener('examsDetailSaved', async () => {
+            try {
+                const card = document.getElementById('examsDetailCard');
+                if (!card) return;
+                showOnlyCard('examsDetailCard');
+                try { await loadExamsDetail(); } catch (err) { console.warn('loadExamsDetail failed after save', err); }
+                try { card.scrollIntoView({ behavior: 'smooth', block: 'start' }); } catch (e) { /* ignore */ }
+            } catch (e) { /* ignore */ }
+        });
 
         // If the server made the locations card visible on initial page load,
         // trigger the same confirmation flow so the user sees the warning and
@@ -607,20 +947,26 @@
                     });
 
                     // Compute and show proctor summary after successful batch save (the summary function will close the loading modal)
+                    let savedFlag = false;
                     try {
-                        await computeAndShowProctorSummary();
+                        savedFlag = await computeAndShowProctorSummary();
                     } catch (e) {
                         // ignore summary errors but notify user
                         console.warn('Proctor summary failed', e);
                         Swal.close();
                         await Swal.fire({ toast: true, position: 'top-end', icon: 'warning', title: 'محاسبهٔ خلاصهٔ مراقبین ناموفق بود', showConfirmButton: false, timer: 5000, timerProgressBar: true, customClass: { popup: 'swal2-rtl' } });
+                        savedFlag = false;
                     }
 
                     // refresh session stats card so it reflects updated required_proctors
                     try { await renderSessionStatsCard(); } catch (e) { console.warn('refresh stats failed', e); }
 
-                    // hide all cards after a successful batch save (keep UI clean)
-                    try { showOnlyCard(null); } catch (e) { /* ignore */ }
+                    // If the per-session details were NOT saved, hide all cards and show stats.
+                    // If they were saved, the compute function already dispatched 'examsDetailSaved'
+                    // and the listener will reveal the exams detail card — so do not override it.
+                    if (!savedFlag) {
+                        try { showOnlyCard(null); } catch (e) { /* ignore */ }
+                    }
                 } else {
                     await Swal.fire({ toast: true, position: 'top-end', icon: 'error', title: `خطا در ذخیره ${failed} مورد`, showConfirmButton: false, timer: 5000, timerProgressBar: true, customClass: { popup: 'swal2-rtl' } });
                 }
@@ -706,16 +1052,25 @@
         const statsResp = await fetch('/API/getStatistics.php', { cache: 'no-store' });
         if (!statsResp.ok) throw new Error('failed to fetch statistics');
         const stats = await statsResp.json();
-        const futureExams = Array.isArray(stats.futureExams) ? stats.futureExams : [];
+        // Prefer a full list when available. Use `allExams` if provided by API,
+        // otherwise concatenate past and future exams so we cover all days.
+        let examsList = [];
+        if (Array.isArray(stats.allExams)) {
+            examsList = stats.allExams;
+        } else {
+            const past = Array.isArray(stats.pastExams) ? stats.pastExams : [];
+            const future = Array.isArray(stats.futureExams) ? stats.futureExams : [];
+            examsList = past.concat(future);
+        }
 
-        if (!futureExams.length) {
-            await Swal.fire({ title: 'خلاصهٔ آمار مراقبین مورد نیاز', html: '<div style="text-align: right; direction: rtl">جلسهٔ آتی پیدا نشد.</div>', icon: 'info', confirmButtonText: 'باشه', customClass: { popup: 'swal2-rtl swal2-glass' } });
+        if (!examsList.length) {
+            await Swal.fire({ title: 'خلاصهٔ آمار مراقبین مورد نیاز', html: '<div style="text-align: right; direction: rtl">جلسه‌ای برای محاسبه پیدا نشد.</div>', icon: 'info', confirmButtonText: 'باشه', customClass: { popup: 'swal2-rtl swal2-glass' } });
             return;
         }
 
         const perSessionTotals = [];
         // Limit concurrency to avoid overwhelming server: process sequentially
-        for (const fe of futureExams) {
+        for (const fe of examsList) {
             const d = fe.exam_date;
             const t = fe.exam_time;
             try {
@@ -749,6 +1104,8 @@
             return;
         }
 
+        // NOTE: persistence of per-session totals moved to after the user sees the
+        // computed summary modal. See below where we POST to /API/saveExamsDetail.php.
         const proctorsArr = perSessionTotals.map(p => p.proctors);
         const max = Math.max(...proctorsArr);
         const min = Math.min(...proctorsArr);
@@ -769,6 +1126,41 @@
     // Close any loading modal and display the final summary modal using the project's standard Swal classes
     try { Swal.close(); } catch (e) { /* ignore */ }
     await Swal.fire({ icon: 'info', title: 'خلاصهٔ نیاز مراقبین', html, confirmButtonText: 'باشه', customClass: { popup: 'swal2-rtl swal2-glass', confirmButton: 'btn btn-primary' } });
+
+    // After the user has seen/dismissed the summary, persist the per-session totals
+    // into the ExamsDetil table and report result to the user.
+    try {
+        const csrf = getCsrfToken();
+        const payload = { sessions: perSessionTotals.map(p => ({ exam_date: p.exam_date, exam_time: p.exam_time, proctors: Number(p.proctors || 0) })) };
+        const saveResp = await fetch('/API/saveExamsDetail.php', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json; charset=utf-8', 'X-CSRF-Token': csrf },
+            body: JSON.stringify(payload)
+        });
+        if (saveResp && saveResp.ok) {
+            try {
+                const sj = await saveResp.json();
+                if (sj && sj.success) {
+                    await Swal.fire({ icon: 'success', title: 'اطلاعات آزمون‌ها ذخیره شد', html: `<div style="direction:rtl;text-align:right">اطلاعات تعداد مراقبین هر جلسه با موفقیت در بانک اطلاعاتی ذخیره شد. (${sj.inserted || 0} رکورد)</div>`, confirmButtonText: 'باشه', customClass: { popup: 'swal2-rtl swal2-glass' } });
+                    // Notify the page that ExamsDetil was updated so the UI can show the details card
+                    try { document.dispatchEvent(new CustomEvent('examsDetailSaved')); } catch (e) { /* ignore */ }
+                    return true;
+                } else {
+                    await Swal.fire({ toast: true, position: 'top-end', icon: 'warning', title: 'ذخیرهٔ جزئیات جلسات در بانک اطلاعاتی ناموفق بود', showConfirmButton: false, timer: 4000, timerProgressBar: true, customClass: { popup: 'swal2-rtl' } });
+                    return false;
+                }
+            } catch (e) {
+                // parsing error
+                await Swal.fire({ toast: true, position: 'top-end', icon: 'warning', title: 'ذخیرهٔ جزئیات جلسات با خطا مواجه شد', showConfirmButton: false, timer: 4000, timerProgressBar: true, customClass: { popup: 'swal2-rtl' } });
+            }
+        } else {
+            await Swal.fire({ toast: true, position: 'top-end', icon: 'warning', title: 'ذخیرهٔ جزئیات جلسات در بانک اطلاعاتی ناموفق بود', showConfirmButton: false, timer: 4000, timerProgressBar: true, customClass: { popup: 'swal2-rtl' } });
+        }
+    } catch (e) {
+        console.warn('Failed to persist ExamsDetil', e);
+        try { await Swal.fire({ toast: true, position: 'top-end', icon: 'warning', title: 'ذخیرهٔ جزئیات جلسات در بانک اطلاعاتی ناموفق بود', showConfirmButton: false, timer: 4000, timerProgressBar: true, customClass: { popup: 'swal2-rtl' } }); } catch (ignored) {}
+        return false;
+    }
     }
 
     // Render session stats card (fills #sessionStatsContent) — chart-only (no summary text)
@@ -795,70 +1187,145 @@
         }
 
         try {
-            // fetch locations and build map
-            const locResp = await fetch('/API/getLocations.php', { cache: 'no-store' });
-            if (!locResp.ok) throw new Error('failed to fetch locations');
-            const locJson = await locResp.json();
-            const locations = Array.isArray(locJson.locations) ? locJson.locations : [];
-            const locMap = new Map();
-            locations.forEach(l => {
-                const key = `${(l.building||'').trim()}||${(l.class_name||'').trim()}`;
-                locMap.set(key, Number(l.required_proctors || 0));
-            });
+            // Prefer persisted per-session proctor data from ExamsDetil when available
+            let perSessionTotals = [];
+            try {
+                const edResp = await fetch('/API/getExamsDetail.php', { cache: 'no-store' });
+                if (edResp && edResp.ok) {
+                    const edj = await edResp.json();
+                    if (Array.isArray(edj.exams) && edj.exams.length) {
+                        // Map table rows into the shape expected by the renderer
+                        perSessionTotals = edj.exams.map(e => ({
+                            exam_date: e.exam_date || '',
+                            exam_time: e.exam_time || '',
+                            proctors: Number(e.required_proctors || 0),
+                            missingLocations: 0,
+                            student_count: 0,
+                            student_ids: []
+                        }));
 
-            // fetch sessions (prefer all sessions if API provides it)
-            const statsResp = await fetch('/API/getStatistics.php', { cache: 'no-store' });
-            if (!statsResp.ok) throw new Error('failed to fetch statistics');
-            const stats = await statsResp.json();
-            const sessions = Array.isArray(stats.allExams) ? stats.allExams : (Array.isArray(stats.futureExams) ? stats.futureExams : []);
+                        // Enrich persisted sessions with student counts and missingLocations
+                        try {
+                            // build locations map to compute missingLocations
+                            const locResp = await fetch('/API/getLocations.php', { cache: 'no-store' });
+                            const locJson = (locResp && locResp.ok) ? await locResp.json() : { locations: [] };
+                            const locations = Array.isArray(locJson.locations) ? locJson.locations : [];
+                            const locMap = new Map();
+                            locations.forEach(l => {
+                                const key = `${(l.building||'').trim()}||${(l.class_name||'').trim()}`;
+                                locMap.set(key, Number(l.required_proctors || 0));
+                            });
 
-            if (!sessions.length) {
-                // nothing to show — keep canvas empty
-                // ensure chart is destroyed if exists
-                if (sessionStatsChart) { try { sessionStatsChart.destroy(); } catch(e){} sessionStatsChart = null; }
-                if (spinner) { try { spinner.style.display = 'none'; } catch (e) {} }
-                if (sessionStatsSpinnerTimeout) { clearTimeout(sessionStatsSpinnerTimeout); sessionStatsSpinnerTimeout = null; }
-                return;
+                            // fetch reports for each persisted session with limited concurrency
+                            const concurrency = 4;
+                            const enriched = [];
+                            for (let i = 0; i < perSessionTotals.length; i += concurrency) {
+                                const batch = perSessionTotals.slice(i, i + concurrency);
+                                const promises = batch.map(async (s) => {
+                                    const d = s.exam_date;
+                                    const t = s.exam_time;
+                                    try {
+                                        const repResp = await fetch(`/API/getNextExamReport.php?exam_date=${encodeURIComponent(d)}&exam_time=${encodeURIComponent(t)}`, { cache: 'no-store' });
+                                        if (!repResp || !repResp.ok) {
+                                            // keep session but no student details
+                                            return Object.assign({}, s);
+                                        }
+                                        const rep = await repResp.json();
+                                        const students = Array.isArray(rep.students) ? rep.students : [];
+                                        const studentIds = students.map(st => st.student_id).filter(Boolean);
+                                        const usedKeys = new Set();
+                                        students.forEach(st => {
+                                            const key = `${(st.building||'').trim()}||${(st.class_name||'').trim()}`;
+                                            usedKeys.add(key);
+                                        });
+                                        let missing = 0;
+                                        usedKeys.forEach(key => { if (!locMap.has(key)) missing++; });
+                                        return Object.assign({}, s, { student_count: studentIds.length, student_ids: studentIds, missingLocations: missing });
+                                    } catch (e) {
+                                        console.warn('Failed to fetch report for persisted session', d, t, e);
+                                        return Object.assign({}, s);
+                                    }
+                                });
+                                const results = await Promise.all(promises);
+                                results.forEach(r => enriched.push(r));
+                            }
+                            perSessionTotals = enriched;
+                        } catch (e) {
+                            console.warn('Failed to enrich persisted ExamsDetil rows with student counts', e);
+                        }
+                    }
+                }
+            } catch (e) {
+                console.warn('Failed to load ExamsDetil, falling back to live computation', e);
             }
 
-            const perSessionTotals = [];
-            // batch fetch session reports with limited concurrency
-            const concurrency = 4;
-            for (let i = 0; i < sessions.length; i += concurrency) {
-                const batch = sessions.slice(i, i + concurrency);
-                const promises = batch.map(async (fe) => {
-                    const d = fe.exam_date;
-                    const t = fe.exam_time;
-                    try {
-                        const repResp = await fetch(`/API/getNextExamReport.php?exam_date=${encodeURIComponent(d)}&exam_time=${encodeURIComponent(t)}`, { cache: 'no-store' });
-                        if (!repResp.ok) {
-                            // If server returns non-OK, return a placeholder so session stays in the list
+            // If no persisted rows, fall back to live computation (existing behavior)
+            if (!perSessionTotals.length) {
+                // fetch locations and build map
+                const locResp = await fetch('/API/getLocations.php', { cache: 'no-store' });
+                if (!locResp.ok) throw new Error('failed to fetch locations');
+                const locJson = await locResp.json();
+                const locations = Array.isArray(locJson.locations) ? locJson.locations : [];
+                const locMap = new Map();
+                locations.forEach(l => {
+                    const key = `${(l.building||'').trim()}||${(l.class_name||'').trim()}`;
+                    locMap.set(key, Number(l.required_proctors || 0));
+                });
+
+                // fetch sessions (prefer all sessions if API provides it)
+                const statsResp = await fetch('/API/getStatistics.php', { cache: 'no-store' });
+                if (!statsResp.ok) throw new Error('failed to fetch statistics');
+                const stats = await statsResp.json();
+                const sessions = Array.isArray(stats.allExams) ? stats.allExams : (Array.isArray(stats.futureExams) ? stats.futureExams : []);
+
+                if (!sessions.length) {
+                    // nothing to show — keep canvas empty
+                    // ensure chart is destroyed if exists
+                    if (sessionStatsChart) { try { sessionStatsChart.destroy(); } catch(e){} sessionStatsChart = null; }
+                    if (spinner) { try { spinner.style.display = 'none'; } catch (e) {} }
+                    if (sessionStatsSpinnerTimeout) { clearTimeout(sessionStatsSpinnerTimeout); sessionStatsSpinnerTimeout = null; }
+                    return;
+                }
+
+                perSessionTotals = [];
+                // batch fetch session reports with limited concurrency
+                const concurrency = 4;
+                for (let i = 0; i < sessions.length; i += concurrency) {
+                    const batch = sessions.slice(i, i + concurrency);
+                    const promises = batch.map(async (fe) => {
+                        const d = fe.exam_date;
+                        const t = fe.exam_time;
+                        try {
+                            const repResp = await fetch(`/API/getNextExamReport.php?exam_date=${encodeURIComponent(d)}&exam_time=${encodeURIComponent(t)}`, { cache: 'no-store' });
+                            if (!repResp.ok) {
+                                // If server returns non-OK, return a placeholder so session stays in the list
+                                return { exam_date: d, exam_time: t, proctors: 0, missingLocations: 0, student_count: Number(fe.student_count || 0), student_ids: [] };
+                            }
+                            const rep = await repResp.json();
+                            const students = Array.isArray(rep.students) ? rep.students : [];
+                            // collect student ids for de-duplication across time-slots on same date
+                            const studentIds = students.map(s => s.student_id).filter(Boolean);
+                            const usedKeys = new Set();
+                            students.forEach(s => {
+                                const key = `${(s.building||'').trim()}||${(s.class_name||'').trim()}`;
+                                usedKeys.add(key);
+                            });
+                            let sessionSum = 0;
+                            let missingLocations = 0;
+                            usedKeys.forEach(key => {
+                                if (locMap.has(key)) sessionSum += Number(locMap.get(key)) || 0;
+                                else missingLocations++;
+                            });
+                            return { exam_date: d, exam_time: t, proctors: sessionSum, missingLocations, student_count: Number(fe.student_count || students.length || 0), student_ids: studentIds };
+                        } catch (e) {
+                            console.warn('Failed to fetch session', d, t, e);
+                            // Return placeholder on error so we keep session alignment
                             return { exam_date: d, exam_time: t, proctors: 0, missingLocations: 0, student_count: Number(fe.student_count || 0), student_ids: [] };
                         }
-                        const rep = await repResp.json();
-                        const students = Array.isArray(rep.students) ? rep.students : [];
-                        // collect student ids for de-duplication across time-slots on same date
-                        const studentIds = students.map(s => s.student_id).filter(Boolean);
-                        const usedKeys = new Set();
-                        students.forEach(s => {
-                            const key = `${(s.building||'').trim()}||${(s.class_name||'').trim()}`;
-                            usedKeys.add(key);
-                        });
-                        let sessionSum = 0;
-                        let missingLocations = 0;
-                        usedKeys.forEach(key => {
-                            if (locMap.has(key)) sessionSum += Number(locMap.get(key)) || 0;
-                            else missingLocations++;
-                        });
-                        return { exam_date: d, exam_time: t, proctors: sessionSum, missingLocations, student_count: Number(fe.student_count || students.length || 0), student_ids: studentIds };
-                    } catch (e) {
-                        console.warn('Failed to fetch session', d, t, e);
-                        // Return placeholder on error so we keep session alignment
-                        return { exam_date: d, exam_time: t, proctors: 0, missingLocations: 0, student_count: Number(fe.student_count || 0), student_ids: [] };
-                    }
-                });
-                const results = await Promise.all(promises);
-                results.forEach(r => { if (r) perSessionTotals.push(r); });
+                    });
+                    const results = await Promise.all(promises);
+                    results.forEach(r => { if (r) perSessionTotals.push(r); });
+                }
             }
 
             if (!perSessionTotals.length) {
