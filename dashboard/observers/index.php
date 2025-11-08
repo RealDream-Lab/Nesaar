@@ -66,14 +66,18 @@ try {
                         <button id="showLocationsBtn" class="btn btn-icon p-0" type="button" title="نمایش مکان‌ها" style="background:transparent;border:none;margin-inline-end:8px;padding:0;">
                             <img src="/dashboard/observers/locations.png" alt="مکان‌ها" style="width:40px;height:40px;object-fit:contain;display:block;">
                         </button>
-                        <!-- Stats quick-open button: shows the session stats card when clicked 
+                        <!-- Stats quick-open button: shows the session stats card when clicked -->
                         <button id="showStatsBtn" class="btn btn-icon p-0" type="button" title="نمایش نمودار" style="background:transparent;border:none;margin-inline-end:8px;padding:0;">
                             <img src="/dashboard/statices.png" alt="نمودار" style="width:40px;height:40px;object-fit:contain;display:block;">
-                        </button>-->
-                        <!-- Exams detail quick-open button
+                        </button>
+                        <!-- Exams detail quick-open button-->
                         <button id="showExamsDetailBtn" class="btn btn-icon p-0" type="button" title="جزئیات جلسات" style="background:transparent;border:none;margin-inline-end:8px;padding:0;">
                             <img src="/dashboard/exams.png" alt="جزئیات" style="width:40px;height:40px;object-fit:contain;display:block;">
-                        </button> -->
+                        </button>
+                        <!-- Proctors quick-open button-->
+                        <button id="showProctorsBtn" class="btn btn-icon p-0" type="button" title="مشخصات مراقبین" style="background:transparent;border:none;margin-inline-end:8px;padding:0;">
+                            <img src="/dashboard/proctors.png" alt="مراقبین" style="width:40px;height:40px;object-fit:contain;display:block;">
+                        </button> 
                         <button id="backToDashboardBtn" class="btn btn-icon p-0" type="button" title="بازگشت به داشبورد" style="background:transparent;border:none;margin-inline-end:8px;padding:0;">
                             <img src="/dashboard/home.png" alt="بازگشت" style="width:40px;height:40px;object-fit:contain;display:block;">
                         </button>
@@ -129,8 +133,46 @@ $showLocationsCard) ? '' : 'display:none;'); ?>">
                     <p style="margin-bottom:0.6rem;color:#04202a;">لیست تعداد مراقبین مورد نیاز برای هر جلسه را مشاهده و ویرایش کنید. می‌توانید هر سطر را جدا ذخیره کنید یا از دکمهٔ "ذخیره همه" استفاده کنید.</p>
                     <div id="examsDetailList" style="margin-top:0.8rem;"></div>
                     <div style="margin-top:0.8rem;text-align:center;">
-                        <button id="saveExamsDetailAllBtn" class="btn btn-success" style="width: 300px;" disabled>ذخیره همه جزئیات</button>
+                        <button id="saveExamsDetailAllBtn" class="btn btn-success" style="width: 200px; margin-inline-end: 10px;" disabled>ذخیره همه، ادامه</button>
+                        <button id="noChangeNeededBtn" class="btn btn-secondary" style="width: 200px;" disabled>تغییر لازم نیست، ادامه</button>
                     </div>
+                </div>
+                <!-- کارت مشخصات مراقبین -->
+                <div class="dashboard-card module-card no-hover" id="proctorsCard" style="display:none;">
+                    <h4>مشخصات مراقبین</h4>
+                    <div style="position:absolute;top:1rem;left:1rem;font-size:0.9rem;" id="proctorsStats"></div>
+                    <p style="margin-bottom:0.6rem;color:#04202a;">مشخصات مراقبین را اضافه یا ویرایش کنید.</p>
+                    <!-- Edit section -->
+                    <div id="proctorEditSection" style="margin-bottom:1rem;padding:1rem;border:1px solid #dee2e6;border-radius:0.5rem;background:#f8f9fa;">
+                        <div class="row g-3">
+                            <div class="col-md-2">
+                                <label class="form-label">جنسیت</label>
+                                <select class="form-select" id="proctorGender">
+                                    <option value="">انتخاب کنید</option>
+                                    <option value="زن">زن</option>
+                                    <option value="مرد">مرد</option>
+                                </select>
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label">نام</label>
+                                <input type="text" class="form-control" id="proctorFirstName" maxlength="40">
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label">نام خانوادگی</label>
+                                <input type="text" class="form-control" id="proctorLastName" maxlength="40">
+                            </div>
+                            <div class="col-md-2">
+                                <label class="form-label">شماره همراه</label>
+                                <input type="text" class="form-control" id="proctorPhone" maxlength="11" inputmode="numeric">
+                            </div>
+                            <div class="col-md-2 d-flex align-items-end">
+                                <button id="saveProctorBtn" class="btn btn-primary me-2">اضافه/ویرایش</button>
+                                <button id="clearProctorBtn" class="btn btn-secondary">پاک کردن</button>
+                            </div>
+                        </div>
+                    </div>
+                    <!-- Table section -->
+                    <div id="proctorsList" style="margin-top:0.8rem;"></div>
                 </div>
             </div>
 

@@ -417,7 +417,7 @@
                             title: 'بررسی ظرفیت‌ها',
                             html: `
                                 <div style="text-align:justify;direction:rtl;line-height:1.6">
-                                    جدول زیر بر اساس ظرفیت اعلام‌شدهٔ مراقبین تهیه شده است. در صورت نیاز به نیروی کمکی مانند <strong>منشی</strong> یا <strong>رابط</strong> که ممکن است از بین همین مراقبین انتخاب شوند (ابلاغ ثابت و جداگانه ندارند)، لطفاً تعداد افراد کمکی موردنیاز را به مجموع مراقبین هر جلسه اضافه نمایید تا تخصیص نیرو و گزارش‌ها دقیق باشند.
+                                    جدول زیر بر اساس ظرفیت اعلام‌شدهٔ مکان‌های برگزاری آزمون تهیه شده است. در صورت نیاز به نیروی کمکی مانند <strong>منشی</strong> یا <strong>رابط</strong> که ممکن است از بین همین مراقبین انتخاب شوند (ابلاغ ثابت و جداگانه ندارند)، لطفاً تعداد افراد کمکی موردنیاز را به مجموع مراقبین هر جلسه اضافه نمایید تا تخصیص نیرو و گزارش‌ها دقیق باشند.
                                     <br><br>
                                     نکته: اعداد واردشده باید نشان‌دهندهٔ <em>تعداد نهایی</em> افراد موردنیاز برای اجرا (مراقبین به‌علاوه رابط/منشی در صورت لزوم) باشند، نه فقط تعداد مراقبین پایه.
                                 </div>
@@ -456,6 +456,8 @@
             // Sort dates
             const dates = Array.from(byDate.keys()).sort();
 
+            let rowNumber = 1;
+
             // Build table header. Determine up to 3 canonical times (columns) from all exams
             const uniqueTimes = Array.from(new Set(exams.map(e => (e.exam_time || '').trim()).filter(Boolean))).sort();
             const columnTimes = uniqueTimes.slice(0, 3);
@@ -465,6 +467,7 @@
                 <table class="table" style="direction:rtl;text-align:right;margin:0;">
                     <thead>
                         <tr>
+                            <th style="width:60px"></th>
                             <th style="width:220px">تاریخ</th>
             `;
             for (let ci = 0; ci < 3; ci++) {
@@ -493,6 +496,7 @@
                 });
 
                 html += `<tr data-date="${escapeHtml(d)}">`;
+                html += `<td style="vertical-align:middle;text-align:center;">${rowNumber++}</td>`;
                 html += `<td style="vertical-align:middle;font-weight:600">${escapeHtml(d)}</td>`;
 
                 for (let s = 0; s < 3; s++) {
@@ -502,10 +506,12 @@
                     } else {
                         const id = Number(session.id || 0);
                         const rp = Number(session.required_proctors || 0);
+                        const sc = Number(session.students_count || 0);
                         html += `
                             <td style="vertical-align:middle">
                                 <div style="display:flex;align-items:center;gap:0.6rem;">
                                     <input type="text" inputmode="numeric" pattern="\\d*" class="ep-input rp-input form-control" data-id="${id}" data-time="${escapeHtml(session.exam_time || '')}" value="${toPersianDigits(rp)}" data-original="${rp}" style="max-width:120px;display:inline-block;">
+                                    <span style="color:#9AA6B2;font-weight:600;font-size:0.9rem;">${toPersianDigits(sc)} نفر</span>
                                 </div>
                             </td>`;
                     }
@@ -811,6 +817,17 @@
                 if (!card) return;
                 showOnlyCard('examsDetailCard');
                 try { await loadExamsDetail(); } catch (err) { console.warn('loadExamsDetail failed', err); }
+            });
+        }
+        // Header button for proctors card
+        const showProctorsBtn = document.getElementById('showProctorsBtn');
+        if (showProctorsBtn) {
+            showProctorsBtn.addEventListener('click', async (e) => {
+                try { if (e && typeof e.preventDefault === 'function') e.preventDefault(); } catch (err) { /* ignore */ }
+                const card = document.getElementById('proctorsCard');
+                if (!card) return;
+                showOnlyCard('proctorsCard');
+                try { await loadProctors(); } catch (err) { console.warn('loadProctors failed', err); }
             });
         }
 
@@ -1581,4 +1598,195 @@
             return;
         }
     }
+
+    // Proctors management
+    async function loadProctors() {
+        const container = document.getElementById('proctorsList');
+        if (!container) return;
+        try {
+            container.innerHTML = '<div style="text-align:center;padding:1rem;color:var(--text-muted)">در حال بارگذاری...</div>';
+            const resp = await fetch('/API/getProctors.php', { cache: 'no-store' });
+            if (!resp.ok) throw new Error('failed');
+            const j = await resp.json();
+            const proctors = Array.isArray(j.proctors) ? j.proctors : [];
+            renderProctors(proctors);
+            updateProctorsStats();
+        } catch (e) {
+            console.warn('loadProctors failed', e);
+            container.innerHTML = '<div style="text-align:center;padding:1rem;color:crimson">خطا در بارگذاری مشخصات مراقبین</div>';
+        }
+    }
+
+    function renderProctors(proctors) {
+        const container = document.getElementById('proctorsList');
+        if (!container) return;
+        if (!proctors.length) {
+            container.innerHTML = '<div style="text-align: right; direction: rtl">هیچ مراقبی ثبت نشده است.</div>';
+            return;
+        }
+
+        let html = `
+            <table class="table" style="direction:rtl;text-align:right;margin:0;">
+                <thead>
+                    <tr>
+                        <th style="width:50px">ردیف</th>
+                        <th>جنسیت</th>
+                        <th>نام</th>
+                        <th>نام خانوادگی</th>
+                        <th>شماره همراه</th>
+                        <th style="width:100px">عملیات</th>
+                    </tr>
+                </thead><tbody>`;
+
+        proctors.forEach((p, idx) => {
+            const id = Number(p.id || 0);
+            const gender = escapeHtml(p.gender || '');
+            const first = escapeHtml(p.first_name || '');
+            const last = escapeHtml(p.last_name || '');
+            const phone = escapeHtml(p.phone || '');
+            html += `<tr data-id="${id}" style="cursor:pointer;">
+                <td style="vertical-align:middle;text-align:center;">${idx + 1}</td>
+                <td style="vertical-align:middle">${gender}</td>
+                <td style="vertical-align:middle">${first}</td>
+                <td style="vertical-align:middle">${last}</td>
+                <td style="vertical-align:middle">${phone}</td>
+                <td style="vertical-align:middle">
+                    <button class="btn btn-sm btn-danger delete-proctor" data-id="${id}">حذف</button>
+                </td>
+            </tr>`;
+        });
+
+        html += `</tbody></table>`;
+        container.innerHTML = html;
+
+        // Attach click to edit
+        container.querySelectorAll('tbody tr').forEach(row => {
+            row.addEventListener('click', (e) => {
+                if (e.target.classList.contains('delete-proctor')) return; // don't edit on delete click
+                const id = row.dataset.id;
+                const p = proctors.find(pr => String(pr.id) === String(id));
+                if (p) {
+                    document.getElementById('proctorGender').value = p.gender || '';
+                    document.getElementById('proctorFirstName').value = p.first_name || '';
+                    document.getElementById('proctorLastName').value = p.last_name || '';
+                    document.getElementById('proctorPhone').value = p.phone || '';
+                    // Store editing id
+                    document.getElementById('saveProctorBtn').dataset.editingId = id;
+                }
+            });
+        });
+
+        // Attach delete
+        container.querySelectorAll('.delete-proctor').forEach(btn => {
+            btn.addEventListener('click', async (e) => {
+                e.stopPropagation();
+                const id = btn.dataset.id;
+                const confirm = await Swal.fire({
+                    title: 'حذف مراقب',
+                    text: 'آیا مطمئن هستید؟',
+                    icon: 'warning',
+                    showCancelButton: true,
+                    confirmButtonText: 'بله، حذف',
+                    cancelButtonText: 'لغو',
+                    customClass: { popup: 'swal2-rtl' }
+                });
+                if (confirm.isConfirmed) {
+                    try {
+                        const resp = await fetch('/API/deleteProctor.php', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ id: id })
+                        });
+                        if (resp.ok) {
+                            await loadProctors();
+                        } else {
+                            Swal.fire('خطا', 'حذف ناموفق', 'error');
+                        }
+                    } catch (err) {
+                        Swal.fire('خطا', 'حذف ناموفق', 'error');
+                    }
+                }
+            });
+        });
+    }
+
+    async function updateProctorsStats() {
+        const statsEl = document.getElementById('proctorsStats');
+        if (!statsEl) return;
+        try {
+            // Get current proctors count
+            const resp = await fetch('/API/getProctors.php', { cache: 'no-store' });
+            const j = await resp.json();
+            const current = Array.isArray(j.proctors) ? j.proctors.length : 0;
+
+            // Get max required from ExamsDetil
+            const edResp = await fetch('/API/getExamsDetail.php', { cache: 'no-store' });
+            const edj = await edResp.json();
+            const exams = Array.isArray(edj.exams) ? edj.exams : [];
+            const maxRequired = exams.length ? Math.max(...exams.map(e => Number(e.required_proctors || 0))) : 0;
+
+            const remaining = maxRequired - current;
+            const color = remaining > 0 ? 'red' : 'green';
+            statsEl.innerHTML = `<span style="color:${color};">مراقبین: ${current} / نیاز: ${maxRequired} (مانده: ${remaining})</span>`;
+        } catch (e) {
+            statsEl.innerHTML = 'آمار ناموفق';
+        }
+    }
+
+    // Attach proctor save and clear
+    const saveProctorBtn = document.getElementById('saveProctorBtn');
+    if (saveProctorBtn) {
+        saveProctorBtn.addEventListener('click', async () => {
+            const gender = document.getElementById('proctorGender').value.trim();
+            const first = document.getElementById('proctorFirstName').value.trim();
+            const last = document.getElementById('proctorLastName').value.trim();
+            const phone = document.getElementById('proctorPhone').value.trim();
+            const editingId = saveProctorBtn.dataset.editingId || '';
+
+            if (!first || !last || !phone) {
+                Swal.fire('خطا', 'نام، نام خانوادگی و شماره همراه الزامی است', 'error');
+                return;
+            }
+
+            try {
+                const resp = await fetch('/API/saveProctor.php', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        id: editingId ? Number(editingId) : 0,
+                        gender: gender,
+                        first_name: first,
+                        last_name: last,
+                        phone: phone
+                    })
+                });
+                if (resp.ok) {
+                    await loadProctors();
+                    // Clear form
+                    document.getElementById('proctorGender').value = '';
+                    document.getElementById('proctorFirstName').value = '';
+                    document.getElementById('proctorLastName').value = '';
+                    document.getElementById('proctorPhone').value = '';
+                    delete saveProctorBtn.dataset.editingId;
+                } else {
+                    const j = await resp.json();
+                    Swal.fire('خطا', j.error || 'ذخیره ناموفق', 'error');
+                }
+            } catch (err) {
+                Swal.fire('خطا', 'ذخیره ناموفق', 'error');
+            }
+        });
+    }
+
+    const clearProctorBtn = document.getElementById('clearProctorBtn');
+    if (clearProctorBtn) {
+        clearProctorBtn.addEventListener('click', () => {
+            document.getElementById('proctorGender').value = '';
+            document.getElementById('proctorFirstName').value = '';
+            document.getElementById('proctorLastName').value = '';
+            document.getElementById('proctorPhone').value = '';
+            delete document.getElementById('saveProctorBtn').dataset.editingId;
+        });
+    }
+
 })();
