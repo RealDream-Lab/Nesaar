@@ -88,6 +88,17 @@ body::after {
   animation-delay: -2s;
   animation-duration: 4s;
   opacity: 0.2;
+
+  /* Smooth reveal animation for module cards (moved from index.php) */
+  .dashboard-card.module-card {
+    opacity: 0;
+    transform: translateY(10px);
+    transition: opacity 360ms ease, transform 360ms ease;
+  }
+  .dashboard-card.module-card.show-card {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 .parallax > use:nth-child(2) {

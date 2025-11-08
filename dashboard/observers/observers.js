@@ -395,38 +395,124 @@
             const d = document.createElement('div'); d.textContent = text || ''; return d.innerHTML;
         }
 
+        // Card manager: ensures only one module card is visible at a time.
+        // Pass a cardId (string) to show that card; pass null to hide all.
+        //خیلی مهم خیلی مهم خیلی مهم برای نمایش فقط یک کارت
+        function showOnlyCard(cardId) {
+            try {
+                const cards = Array.from(document.querySelectorAll('.dashboard-card.module-card'));
+                let anyVisible = false;
+                cards.forEach(c => {
+                    try {
+                        if (!cardId) {
+                            // hide
+                            try { c.classList.remove('show-card'); } catch (e) {}
+                            c.style.display = 'none';
+                        } else if (c.id === cardId) {
+                            // show: set display first, then add animation class
+                            c.style.display = '';
+                            // force reflow then add class to trigger transition
+                            try { void c.offsetHeight; } catch (e) { /* ignore */ }
+                            try { c.classList.add('show-card'); } catch (e) { /* ignore */ }
+                            anyVisible = true;
+                        } else {
+                            // hide other cards
+                            try { c.classList.remove('show-card'); } catch (e) {}
+                            c.style.display = 'none';
+                        }
+                    } catch (e) { /* ignore per-card errors */ }
+                });
+
+                // If after the operation no card is visible, show the stats card so
+                // the page is never left empty. Render it asynchronously.
+                if (!anyVisible) {
+                    try {
+                        const stats = document.getElementById('sessionStatsCard');
+                        if (stats) {
+                            stats.style.display = '';
+                            try { void stats.offsetHeight; } catch (e) {}
+                            try { stats.classList.add('show-card'); } catch (e) {}
+                            try { renderSessionStatsCard().catch(() => {}); } catch (e) { /* ignore */ }
+                        }
+                    } catch (e) { /* ignore */ }
+                }
+            } catch (e) { /* ignore */ }
+        }
+
         const backBtn = document.getElementById('backToDashboardBtn');
         if (backBtn) backBtn.addEventListener('click', () => { window.location.href = '/dashboard'; });
 
-        // Show locations card when the locations icon is clicked (button placed near back-to-dashboard)
-        // Show a confirmation first: editing counts will change final reports.
+        // Reusable flow to reveal the locations card with confirmation, load data and scroll to it.
+        async function revealLocationsFlow(e) {
+            try { if (e && typeof e.preventDefault === 'function') e.preventDefault(); } catch (err) { /* ignore */ }
+            const card = document.getElementById('locationsCard');
+            if (!card) return;
+
+            const result = await Swal.fire({
+                title: 'توجه',
+                html: '<div style="text-align:justify;line-height:1.7">با ویرایش تعداد مراقبین در این صفحه، گزارش نهایی مراقبین تغییر خواهد کرد. لطفاً قبل از ادامه از درستی مقادیر اطمینان حاصل کنید. پس از ذخیره و تائید، این صفحه دیگر نمایش نخواهد یافت و شما برای بازگشت به شرایط قبلی ملزم به به‌روز‌رسانی دیتابیس خواهید شد.</div>',
+                icon: 'warning',
+                showCancelButton: false,
+                confirmButtonText: 'ادامه، متوجه شدم',
+                // require explicit confirmation: disable outside click and Escape key
+                allowOutsideClick: false,
+                allowEscapeKey: false,
+                customClass: { popup: 'swal2-rtl swal2-glass', confirmButton: 'btn btn-primary' }
+            });
+
+            if (result.isConfirmed || result.isDismissed) {
+                // Show only the locations card (this will hide any other module cards)
+                showOnlyCard('locationsCard');
+                try { await loadLocations(); } catch (e) { /* ignore load errors here */ }
+                try { const target = document.getElementById('locationsCard'); if (target) target.scrollIntoView({ behavior: 'smooth', block: 'start' }); } catch (e) { /* ignore */ }
+            }
+        }
+
+        // Attach the flow to the header button (if present)
         const showLocationsBtn = document.getElementById('showLocationsBtn');
-        if (showLocationsBtn) {
-            showLocationsBtn.addEventListener('click', async () => {
-                const card = document.getElementById('locationsCard');
+        if (showLocationsBtn) showLocationsBtn.addEventListener('click', revealLocationsFlow);
+
+        // Wire the stats header button: show the session stats card and render the chart when clicked
+        const showStatsBtn = document.getElementById('showStatsBtn');
+        if (showStatsBtn) {
+            showStatsBtn.addEventListener('click', async (e) => {
+                try { if (e && typeof e.preventDefault === 'function') e.preventDefault(); } catch (err) {}
+                const card = document.getElementById('sessionStatsCard');
                 if (!card) return;
-
-                // Confirmation modal before revealing the card
-                const result = await Swal.fire({
-                    title: 'توجه',
-                    html: '<div style="text-align:justify;line-height:1.7">با ویرایش تعداد مراقبین در این صفحه، گزارش نهایی مراقبین تغییر خواهد کرد. لطفاً قبل از ادامه از درستی مقادیر اطمینان حاصل کنید.</div>',
-                    icon: 'warning',
-                    showCancelButton: false,
-                    confirmButtonText: 'ادامه، متوجه شدم',
-                    // require explicit confirmation: disable outside click and Escape key
-                    allowOutsideClick: false,
-                    allowEscapeKey: false,
-                    customClass: { popup: 'swal2-rtl swal2-glass', confirmButton: 'btn btn-primary' }
-                });
-
-                if (result.isConfirmed || result.isDismissed) {
-                    // Un-hide the card and load locations after confirmation (or dismiss)
-                    card.style.display = '';
-                    try { await loadLocations(); } catch (e) { /* ignore load errors here */ }
-                    try { card.scrollIntoView({ behavior: 'smooth', block: 'start' }); } catch (e) { /* ignore */ }
-                }
+                // Show only the stats card (this will hide any other module cards)
+                showOnlyCard('sessionStatsCard');
+                try { await renderSessionStatsCard(); } catch (err) { console.warn('renderSessionStatsCard failed', err); }
+                try { const target = document.getElementById('sessionStatsCard'); if (target) target.scrollIntoView({ behavior: 'smooth', block: 'start' }); } catch (e) { /* ignore */ }
             });
         }
+
+        // If the server made the locations card visible on initial page load,
+        // trigger the same confirmation flow so the user sees the warning and
+        // the card is loaded after confirmation.
+        try {
+            const card = document.getElementById('locationsCard');
+            if (card && window.getComputedStyle(card).display !== 'none') {
+                // call after a short timeout so the page finish rendering
+                setTimeout(() => { try { revealLocationsFlow(); } catch (e) { /* ignore */ } }, 120);
+            }
+        } catch (e) { /* ignore */ }
+
+        // Ensure the page is never empty: if no module-card is visible, show the stats card by default.
+        try {
+            setTimeout(() => {
+                try {
+                    const cards = Array.from(document.querySelectorAll('.dashboard-card.module-card'));
+                    const anyVisible = cards.some(c => {
+                        try { return window.getComputedStyle(c).display !== 'none'; } catch (e) { return false; }
+                    });
+                    if (!anyVisible) {
+                        // show stats card to avoid an empty page
+                        showOnlyCard('sessionStatsCard');
+                        try { renderSessionStatsCard().catch(() => {}); } catch (e) { /* ignore */ }
+                    }
+                } catch (e) { /* ignore */ }
+            }, 180);
+        } catch (e) { /* ignore */ }
 
         const goHome = document.getElementById('goHomeBtn');
         if (goHome) goHome.addEventListener('click', () => { window.location.href = '/dashboard'; });
@@ -533,11 +619,8 @@
                     // refresh session stats card so it reflects updated required_proctors
                     try { await renderSessionStatsCard(); } catch (e) { console.warn('refresh stats failed', e); }
 
-                    // hide the locations card after a successful batch save
-                    try {
-                        const card = document.getElementById('locationsCard');
-                        if (card) card.style.display = 'none';
-                    } catch (e) { /* ignore */ }
+                    // hide all cards after a successful batch save (keep UI clean)
+                    try { showOnlyCard(null); } catch (e) { /* ignore */ }
                 } else {
                     await Swal.fire({ toast: true, position: 'top-end', icon: 'error', title: `خطا در ذخیره ${failed} مورد`, showConfirmButton: false, timer: 5000, timerProgressBar: true, customClass: { popup: 'swal2-rtl' } });
                 }
@@ -603,10 +686,8 @@
 
         
 
-    // Kick off initial rendering of the session stats card on page load
-    (async () => {
-        try { await renderSessionStatsCard(); } catch (e) { console.warn('Initial session stats load failed', e); }
-    })();
+    // NOTE: Initial automatic rendering of the session stats card was removed.
+    // The card is hidden by default; use the header stats button to reveal and render it.
 
     // Compute per-session proctor needs and show a summary modal
     async function computeAndShowProctorSummary() {

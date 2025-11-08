@@ -16,6 +16,21 @@ if ($licenseStatus['valid'] !== true) {
     exit;
 }
 ?>
+<?php
+// Server-side check: if there are any locations with required_proctors = 0,
+// show the locations card automatically on page load.
+try {
+    require_once __DIR__ . '/../../API/db_init.php';
+    if (isset($pdo)) {
+        $stmt = $pdo->query("SELECT COUNT(*) AS c FROM `locations` WHERE required_proctors = 0");
+        $row = $stmt ? $stmt->fetch(PDO::FETCH_ASSOC) : null;
+        $showLocationsCard = ($row && intval($row['c'] ?? 0) > 0) ? true : false;
+    }
+} catch (Exception $e) {
+    // ignore DB errors here; default to not showing the card
+    $showLocationsCard = false;
+}
+?>
 <!DOCTYPE html>
 <html lang="fa" dir="rtl">
 
@@ -51,6 +66,10 @@ if ($licenseStatus['valid'] !== true) {
                         <button id="showLocationsBtn" class="btn btn-icon p-0" type="button" title="نمایش مکان‌ها" style="background:transparent;border:none;margin-inline-end:8px;padding:0;">
                             <img src="/dashboard/observers/locations.png" alt="مکان‌ها" style="width:40px;height:40px;object-fit:contain;display:block;">
                         </button>
+                        <!-- Stats quick-open button: shows the session stats card when clicked -->
+                        <button id="showStatsBtn" class="btn btn-icon p-0" type="button" title="نمایش نمودار" style="background:transparent;border:none;margin-inline-end:8px;padding:0;">
+                            <img src="/dashboard/statices.png" alt="نمودار" style="width:40px;height:40px;object-fit:contain;display:block;">
+                        </button>
                         <button id="backToDashboardBtn" class="btn btn-icon p-0" type="button" title="بازگشت به داشبورد" style="background:transparent;border:none;margin-inline-end:8px;padding:0;">
                             <img src="/dashboard/home.png" alt="بازگشت" style="width:40px;height:40px;object-fit:contain;display:block;">
                         </button>
@@ -60,7 +79,7 @@ if ($licenseStatus['valid'] !== true) {
 
             <div class="observers-main">
                 <!-- کارت آمار جلسات و مراقبین -->
-                <div class="dashboard-card module-card no-hover" id="sessionStatsCard">
+                <div class="dashboard-card module-card no-hover" id="sessionStatsCard" style="display:none;">
                     <h4>آمار جلسات و مراقبین</h4>
                     <div id="sessionStatsContent" style="margin-top:0.6rem; position:relative;">
                         <!-- legend for time slots will be injected here -->
@@ -91,7 +110,8 @@ if ($licenseStatus['valid'] !== true) {
                     
                 </div>
                 <!-- کارت مکان‌ها -->
-                <div class="dashboard-card module-card no-hover" id="locationsCard" style="display:none;">
+                <div class="dashboard-card module-card no-hover" id="locationsCard" style="<?php echo (!empty(
+$showLocationsCard) ? '' : 'display:none;'); ?>">
                     <h4>مکان‌های معرفی‌شده برگزاری آزمون</h4>
                     <p style="margin-bottom:0.6rem;color:#04202a;">لیست کلاس‌ها و تعداد مراقبین مورد نیاز را در اینجا مشاهده و ویرایش کنید.</p>
                     <div id="locationsList" style="margin-top:0.8rem;"></div>
