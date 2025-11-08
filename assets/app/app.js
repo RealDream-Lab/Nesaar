@@ -32,7 +32,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 Swal.fire({
                     icon: 'info',
                     title: 'نسخه جدید منتشر شد',
-                    html: `<div style="text-align:right;">نسخهٔ جدیدی منتشر شده است. برای اعمال تغییرات صفحه را بازنشانی کنید:<br><br>${items.map(c => `• ${c}`).join('<br>')}</div>`,
+                    html: `<div style="text-align:justify;">نسخهٔ جدیدی منتشر شده است. برای اعمال تغییرات صفحه را بازنشانی کنید:<br><br>${items.map(c => `• ${c}`).join('<br>')}</div>`,
                     showConfirmButton: true,
                     confirmButtonText: 'بارگذاری مجدد',
                     showCancelButton: false,

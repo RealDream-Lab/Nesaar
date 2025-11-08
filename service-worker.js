@@ -1,7 +1,7 @@
 
 
-const CACHE_NAME = 'exam-seat-v0.3.6';
-const VERSION = '0.3.6';
+const CACHE_NAME = 'exam-seat-v0.4.0';
+const VERSION = '0.4.0';
 const urlsToCache = [
   '/',
   '/index.php',
@@ -90,7 +90,7 @@ self.addEventListener('activate', event => {
             version: CACHE_NAME,
             tagVersion: `نسخه ${VERSION}`,
             changes: [
-              'افزایش نسخه به 0.3.6 و به‌روزرسانی کش PWA'
+              'پیاده سازی ماژول عوامل اجرائی'
             ]
           });
         });
