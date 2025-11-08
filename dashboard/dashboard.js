@@ -4496,12 +4496,17 @@ async function printEssentialsDescriptive() {
         const timeFa = toPersianDigits(report.exam_time || ctxTime || '');
         // Common CSS for the printable descriptive label
         const commonHead = `<!doctype html><html lang="fa" dir="rtl"><head><meta charset="utf-8"><title>برچسب پاکت‌های تشریحی</title><link rel="stylesheet" href="${fontHref}">`;
-        const commonStyle = `<style>
-            @page { size: A5 landscape; margin: 8mm 8mm 8mm 5mm; }
-            html, body { margin: 0; padding: 0; }
-            body { font-family: Vazir, Tahoma, Arial, sans-serif; color: #111; }
-            .page { box-sizing: border-box; padding: 1mm 10mm 0mm 18mm; display:flex; flex-direction:column; justify-content:flex-start; gap: 4mm; overflow: hidden; page-break-inside: avoid; break-inside: avoid; }
-            .page + .page { page-break-before: always; break-before: page; }
+          const commonStyle = `<style>
+                /* Keep A5 landscape but remove @page margins so the document fills the page as much as
+                    possible. NOTE: browsers may still add their own header/footer (print dialog setting).
+                    We set a small internal padding on .page to avoid clipping at the edge of some printers. */
+                @page { size: A5 landscape; margin: 0; }
+                html, body { margin: 0; padding: 0; }
+                body { font-family: Vazir, Tahoma, Arial, sans-serif; color: #111; }
+                /* Use a small internal padding to create a safe printable area while letting the
+                    sheet fill the full A5 canvas. */
+                .page { box-sizing: border-box; padding: 4mm 6mm; display:flex; flex-direction:column; justify-content:flex-start; gap: 4mm; overflow: hidden; page-break-inside: avoid; break-inside: avoid; }
+                .page + .page { page-break-before: always; break-before: page; }
             .main { font-size: 13.2pt; line-height: 1.65; text-align: justify; text-justify: inter-word; flex: 0 0 auto; }
             .strong { font-weight: 900; }
             .count-blank { display:inline-block; min-width: 10mm; border-bottom: 2px solid #000; margin: 0 3mm; position:relative; top: -1px; }
