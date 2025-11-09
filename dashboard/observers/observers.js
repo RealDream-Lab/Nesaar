@@ -932,6 +932,23 @@
                 if (!card) return;
                 showOnlyCard('assignmentCard');
                 try { await loadAssignmentSummary(); } catch (err) { console.warn('loadAssignmentSummary failed', err); }
+                // Generate ExamAssignments table when assignment card is shown
+                try {
+                    const genResp = await fetch('/API/generateExamAssignments.php', { method: 'POST', cache: 'no-store' });
+                    if (genResp && genResp.ok) {
+                        const gj = await genResp.json();
+                        if (gj && gj.success) {
+                            const inserted = gj.inserted || 0;
+                            console.log(`ExamAssignments table generated with ${inserted} records`);
+                        } else {
+                            console.warn('generateExamAssignments failed');
+                        }
+                    } else {
+                        console.warn('generateExamAssignments API error');
+                    }
+                } catch (e) {
+                    console.warn('generateExamAssignments failed', e);
+                }
             });
         }
 
