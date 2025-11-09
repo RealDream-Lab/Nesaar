@@ -181,7 +181,77 @@
         // Enable only when there are no zero-valued locations
         saveAllBtn.disabled = zeros > 0;
     }
-    
+
+    // Lightweight assignment summary used as a reliable global helper.
+    // This simple version only reads persisted ExamsDetil and Proctors counts
+    // and fills the assignment card fields. It's deliberately small and
+    // placed before DOMContentLoaded so the header button can call it
+    // without timing issues or hoisting surprises in different browsers.
+    async function loadAssignmentSummary() {
+        const daysEl = document.getElementById('assignmentDays');
+        const sessionsEl = document.getElementById('assignmentSessions');
+        const totalEl = document.getElementById('assignmentTotalRequired');
+        const registeredEl = document.getElementById('assignmentRegisteredProctors');
+        const perProctorEl = document.getElementById('assignmentSessionsPerProctor');
+
+        try {
+            if (daysEl) daysEl.textContent = '...';
+            if (sessionsEl) sessionsEl.textContent = '...';
+            if (totalEl) totalEl.textContent = '...';
+            if (registeredEl) registeredEl.textContent = '...';
+            if (perProctorEl) perProctorEl.textContent = '...';
+        } catch (e) {}
+
+        // fetch persisted exams detail (counts and sum)
+        let exams = [];
+        try {
+            const r = await fetch('/API/getExamsDetail.php', { cache: 'no-store' });
+            if (r && r.ok) {
+                const j = await r.json();
+                exams = Array.isArray(j.exams) ? j.exams : [];
+            }
+        } catch (e) { console.warn('getExamsDetail failed', e); }
+
+        // fetch registered proctors count
+        let registered = 0;
+        try {
+            const r = await fetch('/API/getProctors.php', { cache: 'no-store' });
+            if (r && r.ok) {
+                const j = await r.json();
+                const arr = Array.isArray(j.proctors) ? j.proctors : [];
+                registered = arr.length;
+            }
+        } catch (e) { console.warn('getProctors failed', e); }
+
+        // compute summary from persisted ExamsDetil
+        let days = 0, sessions = 0, totalRequired = 0;
+        if (exams && exams.length) {
+            sessions = exams.length;
+            const dates = new Set();
+            exams.forEach(e => { dates.add((e.exam_date||'').trim()); totalRequired += Number(e.required_proctors || 0); });
+            days = dates.size;
+        }
+
+        const toPersian = (n) => { try { return toPersianDigits(n); } catch (e) { return String(n); } };
+
+        if (daysEl) daysEl.textContent = days > 0 ? toPersian(days) : '-';
+        if (sessionsEl) sessionsEl.textContent = sessions > 0 ? toPersian(sessions) : '-';
+        if (totalEl) totalEl.textContent = totalRequired > 0 ? toPersian(totalRequired) : '-';
+        if (registeredEl) registeredEl.textContent = toPersian(registered);
+
+        if (perProctorEl) {
+            if (registered > 0 && totalRequired > 0) perProctorEl.textContent = toPersian(Math.ceil(totalRequired/registered));
+            else perProctorEl.textContent = '-';
+        }
+
+        // enable/disable assignment buttons: require at least one session entry and some proctors
+        const assignDailyBtn = document.getElementById('assignDailyBtn');
+        const assignScatteredBtn = document.getElementById('assignScatteredBtn');
+        if (assignDailyBtn) assignDailyBtn.disabled = !(sessions > 0 && registered > 0);
+        if (assignScatteredBtn) assignScatteredBtn.disabled = !(sessions > 0 && registered > 0);
+        const assignManualBtn = document.getElementById('assignManualBtn');
+        if (assignManualBtn) assignManualBtn.disabled = false;
+    }
 
     document.addEventListener('DOMContentLoaded', function () {
         checkAuthAndRedirect().then((ok) => {
@@ -880,6 +950,85 @@
             noChangeNeededBtn.disabled = true;
         }
 
+        // Assignment buttons: show confirmation dialog before proceeding
+        const assignDailyBtn = document.getElementById('assignDailyBtn');
+        if (assignDailyBtn) {
+            assignDailyBtn.addEventListener('click', async (e) => {
+                try { if (e && typeof e.preventDefault === 'function') e.preventDefault(); } catch (err) { /* ignore */ }
+                const result = await Swal.fire({
+                    title: 'تأیید عملیات',
+                    text: 'این عملیات تمامی چینش‌های قبلی را پاک کرده و چینش جدیدی بر اساس حضور روزانه مراقب انجام خواهد داد. آیا مطمئن هستید که می‌خواهید ادامه دهید؟',
+                    icon: 'warning',
+                    showCancelButton: true,
+                    confirmButtonText: 'بله، ادامه می‌دهم',
+                    cancelButtonText: 'انصراف',
+                    confirmButtonColor: '#3085d6',
+                    cancelButtonColor: '#d33'
+                });
+                if (result.isConfirmed) {
+                    // TODO: Implement daily assignment logic here
+                    await Swal.fire({
+                        title: 'اطلاع',
+                        text: 'کد عملیات چینش خودکار بر اساس حضور روزانه مراقب بعداً پیاده‌سازی خواهد شد.',
+                        icon: 'info',
+                        confirmButtonText: 'باشه'
+                    });
+                }
+            });
+        }
+
+        const assignScatteredBtn = document.getElementById('assignScatteredBtn');
+        if (assignScatteredBtn) {
+            assignScatteredBtn.addEventListener('click', async (e) => {
+                try { if (e && typeof e.preventDefault === 'function') e.preventDefault(); } catch (err) { /* ignore */ }
+                const result = await Swal.fire({
+                    title: 'تأیید عملیات',
+                    text: 'این عملیات تمامی چینش‌های قبلی را پاک کرده و چینش جدیدی به صورت پراکنده انجام خواهد داد. آیا مطمئن هستید که می‌خواهید ادامه دهید؟',
+                    icon: 'warning',
+                    showCancelButton: true,
+                    confirmButtonText: 'بله، ادامه می‌دهم',
+                    cancelButtonText: 'انصراف',
+                    confirmButtonColor: '#3085d6',
+                    cancelButtonColor: '#d33'
+                });
+                if (result.isConfirmed) {
+                    // TODO: Implement scattered assignment logic here
+                    await Swal.fire({
+                        title: 'اطلاع',
+                        text: 'کد عملیات چینش خودکار مراقبین به صورت پراکنده بعداً پیاده‌سازی خواهد شد.',
+                        icon: 'info',
+                        confirmButtonText: 'باشه'
+                    });
+                }
+            });
+        }
+
+        const assignManualBtn = document.getElementById('assignManualBtn');
+        if (assignManualBtn) {
+            assignManualBtn.addEventListener('click', async (e) => {
+                try { if (e && typeof e.preventDefault === 'function') e.preventDefault(); } catch (err) { /* ignore */ }
+                const result = await Swal.fire({
+                    title: 'تأیید عملیات',
+                    text: 'این عملیات تمامی چینش‌های قبلی را پاک کرده و چینش جدیدی به صورت دستی انجام خواهد داد. آیا مطمئن هستید که می‌خواهید ادامه دهید؟',
+                    icon: 'warning',
+                    showCancelButton: true,
+                    confirmButtonText: 'بله، ادامه می‌دهم',
+                    cancelButtonText: 'انصراف',
+                    confirmButtonColor: '#3085d6',
+                    cancelButtonColor: '#d33'
+                });
+                if (result.isConfirmed) {
+                    // TODO: Implement manual assignment logic here
+                    await Swal.fire({
+                        title: 'اطلاع',
+                        text: 'کد عملیات چینش دستی مراقبین بعداً پیاده‌سازی خواهد شد.',
+                        icon: 'info',
+                        confirmButtonText: 'باشه'
+                    });
+                }
+            });
+        }
+
         // When computeAndShowProctorSummary persists ExamsDetil it will emit
         // the 'examsDetailSaved' event; listen and reveal the exams detail card.
         document.addEventListener('examsDetailSaved', async () => {
@@ -1354,54 +1503,22 @@
 
         // wire placeholders for buttons (idempotent)
         try {
-            // Wire buttons to show a confirmation modal. On confirm show a toast
-            // placeholder indicating the actual assignment logic will be implemented later.
-            const confirmText = `
-                <div style="direction:rtl;text-align:right;line-height:1.6">
-                    در صورت ادامهٔ این فرایند، تمامی اطلاعات مربوط به چینش‌های قبلی پاک خواهد شد و مجدداً سازمان‌دهی می‌شود.
-                    آیا مطمئن هستید که می‌خواهید ادامه دهید؟
-                </div>`;
-
-            async function showAssignmentConfirmPlaceholder() {
-                try {
-                    const res = await Swal.fire({
-                        title: 'تأیید چینش مراقبین',
-                        html: confirmText,
-                        icon: 'warning',
-                        showCancelButton: true,
-                        confirmButtonText: 'بله، ادامه می‌دهم',
-                        cancelButtonText: 'انصراف',
-                        customClass: { popup: 'swal2-rtl swal2-glass', confirmButton: 'btn btn-danger', cancelButton: 'btn btn-outline-secondary' },
-                        reverseButtons: true
-                    });
-                    if (res && res.isConfirmed) {
-                        // placeholder toast — actual implementation will be added later
-                        await Swal.fire({
-                            toast: true,
-                            position: 'top-end',
-                            icon: 'info',
-                            title: 'عملیات بعداً پیاده‌سازی خواهد شد. این اعلان تنها نشان‌دهندهٔ رفتار آینده است.',
-                            showConfirmButton: false,
-                            timer: 3200,
-                            timerProgressBar: true,
-                            customClass: { popup: 'swal2-rtl' }
-                        });
-                    }
-                } catch (e) {
-                    console.warn('assignment confirm flow failed', e);
-                }
-            }
-
             if (assignDailyBtn && !assignDailyBtn._wired) {
-                assignDailyBtn.addEventListener('click', async () => { await showAssignmentConfirmPlaceholder(); });
+                assignDailyBtn.addEventListener('click', async () => {
+                    await Swal.fire({ title: 'چینش بر اساس حضور روزانه', html: '<div style="direction:rtl;text-align:right">این دکمه الگوریتم "حضور روزانه" را اجرا خواهد کرد. لطفاً روش دقیق را مشخص کنید تا پیاده‌سازی کنم.</div>', confirmButtonText: 'متوجه شدم', customClass: { popup: 'swal2-rtl swal2-glass', confirmButton: 'btn btn-primary' } });
+                });
                 assignDailyBtn._wired = true;
             }
             if (assignScatteredBtn && !assignScatteredBtn._wired) {
-                assignScatteredBtn.addEventListener('click', async () => { await showAssignmentConfirmPlaceholder(); });
+                assignScatteredBtn.addEventListener('click', async () => {
+                    await Swal.fire({ title: 'چینش پراکنده', html: '<div style="direction:rtl;text-align:right">این دکمه الگوریتم "پراکنده" را اجرا خواهد کرد. لطفاً قوانین را بگویید تا پیاده‌سازی کنم.</div>', confirmButtonText: 'متوجه شدم', customClass: { popup: 'swal2-rtl swal2-glass', confirmButton: 'btn btn-primary' } });
+                });
                 assignScatteredBtn._wired = true;
             }
             if (assignManualBtn && !assignManualBtn._wired) {
-                assignManualBtn.addEventListener('click', async () => { await showAssignmentConfirmPlaceholder(); });
+                assignManualBtn.addEventListener('click', async () => {
+                    await Swal.fire({ title: 'چینش دستی', html: '<div style="direction:rtl;text-align:right">در حالت دستی شما پروفایل‌ها را به‌صورت دلخواه تخصیص می‌دهید. آیا می‌خواهید وارد محیط تخصیص دستی شوم؟</div>', confirmButtonText: 'ادامه', showCancelButton: true, customClass: { popup: 'swal2-rtl swal2-glass', confirmButton: 'btn btn-primary' } });
+                });
                 assignManualBtn._wired = true;
             }
         } catch (e) { /* ignore wiring errors */ }
