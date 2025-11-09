@@ -1712,6 +1712,8 @@
                     document.getElementById('proctorPhone').value = toPersianDigits(p.phone || '');
                     // Store editing id
                     document.getElementById('saveProctorBtn').dataset.editingId = id;
+                    // Ensure save button state reflects current values (including gender)
+                    try { updateProctorSaveState(); } catch (e) {}
                 }
             });
         });
@@ -1728,7 +1730,7 @@
                     showCancelButton: true,
                     confirmButtonText: 'بله، حذف',
                     cancelButtonText: 'لغو',
-                    customClass: { popup: 'swal2-rtl' }
+                    customClass: { popup: 'swal2-rtl swal2-glass' }
                 });
                 if (confirm.isConfirmed) {
                     try {
@@ -1740,10 +1742,10 @@
                         if (resp.ok) {
                             await loadProctors();
                         } else {
-                            Swal.fire('خطا', 'حذف ناموفق', 'error');
+                            Swal.fire({ title: 'خطا', text: 'حذف ناموفق', icon: 'error', customClass: { popup: 'swal2-rtl swal2-glass' } });
                         }
                     } catch (err) {
-                        Swal.fire('خطا', 'حذف ناموفق', 'error');
+                        Swal.fire({ title: 'خطا', text: 'حذف ناموفق', icon: 'error', customClass: { popup: 'swal2-rtl swal2-glass' } });
                     }
                 }
             });
@@ -1841,11 +1843,11 @@
 
             // Final validation before submit
             if (!isPersianName(first) || !isPersianName(last)) {
-                Swal.fire('خطا', 'نام و نام خانوادگی باید با حروف فارسی وارد شوند و خالی نباشند', 'error');
+                Swal.fire({ title: 'خطا', text: 'نام و نام خانوادگی باید با حروف فارسی وارد شوند و خالی نباشند', icon: 'error', customClass: { popup: 'swal2-rtl swal2-glass' } });
                 return;
             }
             if (!/^\d{11}$/.test(phone)) {
-                Swal.fire('خطا', 'شماره همراه باید دقیقا ۱۱ رقم باشد', 'error');
+                Swal.fire({ title: 'خطا', text: 'شماره همراه باید دقیقا ۱۱ رقم باشد', icon: 'error', customClass: { popup: 'swal2-rtl swal2-glass' } });
                 return;
             }
 
@@ -1872,22 +1874,42 @@
                     updateProctorSaveState();
                 } else {
                     const j = await resp.json();
-                    Swal.fire('خطا', j.error || 'ذخیره ناموفق', 'error');
+                    Swal.fire({ title: 'خطا', text: j.error || 'ذخیره ناموفق', icon: 'error', customClass: { popup: 'swal2-rtl swal2-glass' } });
                 }
             } catch (err) {
-                Swal.fire('خطا', 'ذخیره ناموفق', 'error');
+                Swal.fire({ title: 'خطا', text: 'ذخیره ناموفق', icon: 'error', customClass: { popup: 'swal2-rtl swal2-glass' } });
             }
         });
     }
 
+    // ensure gender change updates save button state as well
+    const genderSelect = document.getElementById('proctorGender');
+    if (genderSelect) genderSelect.addEventListener('change', () => { try { updateProctorSaveState(); } catch (e) {} });
+
     const clearProctorBtn = document.getElementById('clearProctorBtn');
     if (clearProctorBtn) {
         clearProctorBtn.addEventListener('click', () => {
-            document.getElementById('proctorGender').value = '';
-            document.getElementById('proctorFirstName').value = '';
-            document.getElementById('proctorLastName').value = '';
-            document.getElementById('proctorPhone').value = '';
-            delete document.getElementById('saveProctorBtn').dataset.editingId;
+            // Clear values
+            try { document.getElementById('proctorGender').value = ''; } catch (e) {}
+            const inputs = [firstInput, lastInput, phoneInput];
+            inputs.forEach(inp => {
+                try {
+                    if (!inp) return;
+                    inp.value = '';
+                    // remove validation states (tick/cross)
+                    inp.classList.remove('is-valid');
+                    inp.classList.remove('is-invalid');
+                } catch (e) {}
+            });
+            // Remove editing id and disable save button
+            try {
+                if (saveProctorBtn) {
+                    delete saveProctorBtn.dataset.editingId;
+                    saveProctorBtn.disabled = true;
+                }
+            } catch (e) {}
+            // Update validation UI
+            try { updateProctorSaveState(); } catch (e) {}
         });
     }
 
