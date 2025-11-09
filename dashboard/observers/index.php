@@ -156,15 +156,18 @@ $showLocationsCard) ? '' : 'display:none;'); ?>">
                             </div>
                             <div class="col-md-4">
                                 <label class="form-label">نام</label>
-                                <input type="text" class="form-control" id="proctorFirstName" maxlength="40">
+                                <input type="text" class="form-control" id="proctorFirstName" maxlength="40" aria-describedby="proctorFirstNameHelp">
+                                <div id="proctorFirstNameHelp" class="invalid-feedback" style="display:none;">فقط حروف انگلیسی مجاز است (حداکثر 40 کاراکتر).</div>
                             </div>
                             <div class="col-md-4">
                                 <label class="form-label">نام خانوادگی</label>
-                                <input type="text" class="form-control" id="proctorLastName" maxlength="40">
+                                <input type="text" class="form-control" id="proctorLastName" maxlength="40" aria-describedby="proctorLastNameHelp">
+                                <div id="proctorLastNameHelp" class="invalid-feedback" style="display:none;">فقط حروف انگلیسی مجاز است (حداکثر 40 کاراکتر).</div>
                             </div>
                             <div class="col-md-2">
                                 <label class="form-label">شماره همراه</label>
-                                <input type="text" class="form-control" id="proctorPhone" maxlength="11" inputmode="numeric">
+                                <input type="text" class="form-control" id="proctorPhone" maxlength="11" inputmode="numeric" aria-describedby="proctorPhoneHelp">
+                                <div id="proctorPhoneHelp" class="invalid-feedback" style="display:none;">شماره باید دقیقاً 11 رقم باشد.</div>
                             </div>
                         </div>
                         <!-- Buttons in next line, left aligned -->

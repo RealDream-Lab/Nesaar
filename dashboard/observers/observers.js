@@ -1775,19 +1775,77 @@
 
     // Attach proctor save and clear
     const saveProctorBtn = document.getElementById('saveProctorBtn');
+    const firstInput = document.getElementById('proctorFirstName');
+    const lastInput = document.getElementById('proctorLastName');
+    const phoneInput = document.getElementById('proctorPhone');
+
+    // Validation helpers
+    function isPersianName(value) {
+        if (!value) return false;
+        // Allow Persian/Arabic letters, spaces and zero-width non-joiner
+        const v = value.trim();
+        return /^[\u0600-\u06FF\u0750-\u077F\uFB50-\uFDFF\uFE70-\uFEFF\s\u200C]+$/.test(v);
+    }
+
+    function isValidPhone(value) {
+        if (!value) return false;
+        const eng = toEnglishDigits(String(value)).replace(/[^0-9]/g, '');
+        return /^\d{11}$/.test(eng);
+    }
+
+    function updateProctorSaveState() {
+        try {
+            const first = firstInput ? firstInput.value.trim() : '';
+            const last = lastInput ? lastInput.value.trim() : '';
+            const phone = phoneInput ? phoneInput.value.trim() : '';
+
+            const firstOk = isPersianName(first) && first.length <= 40;
+            const lastOk = isPersianName(last) && last.length <= 40;
+            const phoneOk = isValidPhone(phone);
+
+            // set bootstrap validation classes
+            if (firstInput) {
+                firstInput.classList.toggle('is-valid', firstOk);
+                firstInput.classList.toggle('is-invalid', !firstOk && first.length > 0);
+            }
+            if (lastInput) {
+                lastInput.classList.toggle('is-valid', lastOk);
+                lastInput.classList.toggle('is-invalid', !lastOk && last.length > 0);
+            }
+            if (phoneInput) {
+                phoneInput.classList.toggle('is-valid', phoneOk);
+                phoneInput.classList.toggle('is-invalid', !phoneOk && phone.length > 0);
+            }
+
+            if (saveProctorBtn) saveProctorBtn.disabled = !(firstOk && lastOk && phoneOk);
+        } catch (e) { /* ignore */ }
+    }
+
+    if (firstInput) firstInput.addEventListener('input', () => { updateProctorSaveState(); });
+    if (lastInput) lastInput.addEventListener('input', () => { updateProctorSaveState(); });
+    if (phoneInput) phoneInput.addEventListener('input', () => { updateProctorSaveState(); });
+
+    // initialize state
+    updateProctorSaveState();
+
     if (saveProctorBtn) {
         saveProctorBtn.addEventListener('click', async () => {
             const gender = document.getElementById('proctorGender').value.trim();
-            const first = document.getElementById('proctorFirstName').value.trim();
-            const last = document.getElementById('proctorLastName').value.trim();
-            let phone = document.getElementById('proctorPhone').value.trim();
+            const first = firstInput ? firstInput.value.trim() : '';
+            const last = lastInput ? lastInput.value.trim() : '';
+            let phone = phoneInput ? phoneInput.value.trim() : '';
             const editingId = saveProctorBtn.dataset.editingId || '';
 
-            // Clean phone: convert to English digits, keep only numbers, limit to 11
+            // Clean phone: convert to English digits, keep only numbers, ensure 11
             phone = toEnglishDigits(phone).replace(/[^0-9]/g, '').substring(0, 11);
 
-            if (!first || !last || !phone) {
-                Swal.fire('خطا', 'نام، نام خانوادگی و شماره همراه الزامی است', 'error');
+            // Final validation before submit
+            if (!isPersianName(first) || !isPersianName(last)) {
+                Swal.fire('خطا', 'نام و نام خانوادگی باید با حروف فارسی وارد شوند و خالی نباشند', 'error');
+                return;
+            }
+            if (!/^\d{11}$/.test(phone)) {
+                Swal.fire('خطا', 'شماره همراه باید دقیقا ۱۱ رقم باشد', 'error');
                 return;
             }
 
@@ -1807,10 +1865,11 @@
                     await loadProctors();
                     // Clear form
                     document.getElementById('proctorGender').value = '';
-                    document.getElementById('proctorFirstName').value = '';
-                    document.getElementById('proctorLastName').value = '';
-                    document.getElementById('proctorPhone').value = '';
+                    if (firstInput) firstInput.value = '';
+                    if (lastInput) lastInput.value = '';
+                    if (phoneInput) phoneInput.value = '';
                     delete saveProctorBtn.dataset.editingId;
+                    updateProctorSaveState();
                 } else {
                     const j = await resp.json();
                     Swal.fire('خطا', j.error || 'ذخیره ناموفق', 'error');
