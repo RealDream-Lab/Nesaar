@@ -1784,6 +1784,7 @@
     const firstInput = document.getElementById('proctorFirstName');
     const lastInput = document.getElementById('proctorLastName');
     const phoneInput = document.getElementById('proctorPhone');
+    const genderSelect = document.getElementById('proctorGender');
 
     // Validation helpers
     function isPersianName(value) {
@@ -1808,6 +1809,8 @@
             const firstOk = isPersianName(first) && first.length <= 40;
             const lastOk = isPersianName(last) && last.length <= 40;
             const phoneOk = isValidPhone(phone);
+            const genderVal = genderSelect ? (genderSelect.value || '').trim() : '';
+            const genderOk = genderVal === 'زن' || genderVal === 'مرد';
 
             // set bootstrap validation classes
             if (firstInput) {
@@ -1823,13 +1826,14 @@
                 phoneInput.classList.toggle('is-invalid', !phoneOk && phone.length > 0);
             }
 
-            if (saveProctorBtn) saveProctorBtn.disabled = !(firstOk && lastOk && phoneOk);
+            if (saveProctorBtn) saveProctorBtn.disabled = !(firstOk && lastOk && phoneOk && genderOk);
         } catch (e) { /* ignore */ }
     }
 
     if (firstInput) firstInput.addEventListener('input', () => { updateProctorSaveState(); });
     if (lastInput) lastInput.addEventListener('input', () => { updateProctorSaveState(); });
     if (phoneInput) phoneInput.addEventListener('input', () => { updateProctorSaveState(); });
+    if (genderSelect) genderSelect.addEventListener('change', () => { updateProctorSaveState(); });
 
     // initialize state
     updateProctorSaveState();
@@ -1852,6 +1856,11 @@
             }
             if (!/^\d{11}$/.test(phone)) {
                 Swal.fire({ title: 'خطا', text: 'شماره همراه باید دقیقا ۱۱ رقم باشد', icon: 'error', customClass: { popup: 'swal2-rtl swal2-glass' } });
+                return;
+            }
+            const genderVal = genderSelect ? (genderSelect.value || '').trim() : '';
+            if (!(genderVal === 'زن' || genderVal === 'مرد')) {
+                Swal.fire({ title: 'خطا', text: 'جنسیت باید انتخاب شود', icon: 'error', customClass: { popup: 'swal2-rtl swal2-glass' } });
                 return;
             }
 
@@ -1887,7 +1896,6 @@
     }
 
     // ensure gender change updates save button state as well
-    const genderSelect = document.getElementById('proctorGender');
     if (genderSelect) genderSelect.addEventListener('change', () => { try { updateProctorSaveState(); } catch (e) {} });
 
     const clearProctorBtn = document.getElementById('clearProctorBtn');
