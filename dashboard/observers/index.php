@@ -78,6 +78,10 @@ try {
                         <button id="showProctorsBtn" class="btn btn-icon p-0" type="button" title="مشخصات مراقبین" style="background:transparent;border:none;margin-inline-end:8px;padding:0;">
                             <img src="/dashboard/statices.png" alt="مراقبین" style="width:40px;height:40px;object-fit:contain;display:block;">
                         </button> 
+                        <!-- Assignment quick-open button -->
+                        <button id="showAssignmentBtn" class="btn btn-icon p-0" type="button" title="چینش مراقبین" style="background:transparent;border:none;margin-inline-end:8px;padding:0;">
+                            <img src="/dashboard/statices.png" alt="چینش" style="width:40px;height:40px;object-fit:contain;display:block;">
+                        </button>
                         <button id="backToDashboardBtn" class="btn btn-icon p-0" type="button" title="بازگشت به داشبورد" style="background:transparent;border:none;margin-inline-end:8px;padding:0;">
                             <img src="/dashboard/home.png" alt="بازگشت" style="width:40px;height:40px;object-fit:contain;display:block;">
                         </button>
@@ -180,6 +184,31 @@ $showLocationsCard) ? '' : 'display:none;'); ?>">
                     </div>
                     <!-- Table section -->
                     <div id="proctorsList" style="margin-top:0.8rem;"></div>
+                </div>
+                <!-- کارت چینش مراقبین -->
+                <div class="dashboard-card module-card no-hover" id="assignmentCard" style="display:none;">
+                    <h4>چینش مراقبین</h4>
+                    <p style="margin-bottom:0.6rem;color:#04202a;">گزارشی خلاصه از نیاز کلی مراقبین و دکمه‌های انتخاب روش چینش را در اینجا ببینید.</p>
+
+                    <!-- Assignment stats: displayed independently, one per line -->
+                    <div id="assignmentStats" style="margin-top:0.6rem;direction:rtl;text-align:right;">
+                        <div style="margin-bottom:0.45rem">تعداد روزهای آزمون: <strong id="assignmentDays">-</strong></div>
+                        <div style="margin-bottom:0.45rem">تعداد جلسات: <strong id="assignmentSessions">-</strong></div>
+                        <div style="margin-bottom:0.45rem">مجموع مراقبین موردنیاز: <strong id="assignmentTotalRequired">-</strong></div>
+                        <div style="margin-bottom:0.45rem">تعداد مراقبین ثبت‌شده: <strong id="assignmentRegisteredProctors">-</strong></div>
+                        <div style="margin-bottom:0.45rem">میانگین جلسات برای هر مراقب: <strong id="assignmentSessionsPerProctor">-</strong></div>
+                    </div>
+                    <div class="row g-2" style="margin-top:0.8rem;">
+                        <div class="col-12 col-md-4">
+                            <button id="assignDailyBtn" class="btn btn-upload w-100">چینش خودکار بر اساس حضور روزانه</button>
+                        </div>
+                        <div class="col-12 col-md-4">
+                            <button id="assignScatteredBtn" class="btn btn-upload w-100">چینش خودکار مراقبین به صورت پراکنده</button>
+                        </div>
+                        <div class="col-12 col-md-4">
+                            <button id="assignManualBtn" class="btn btn-upload w-100">چینش دستی مراقبین</button>
+                        </div>
+                    </div>
                 </div>
             </div>
 

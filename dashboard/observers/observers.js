@@ -182,6 +182,77 @@
         saveAllBtn.disabled = zeros > 0;
     }
 
+    // Lightweight assignment summary used as a reliable global helper.
+    // This simple version only reads persisted ExamsDetil and Proctors counts
+    // and fills the assignment card fields. It's deliberately small and
+    // placed before DOMContentLoaded so the header button can call it
+    // without timing issues or hoisting surprises in different browsers.
+    async function loadAssignmentSummary() {
+        const daysEl = document.getElementById('assignmentDays');
+        const sessionsEl = document.getElementById('assignmentSessions');
+        const totalEl = document.getElementById('assignmentTotalRequired');
+        const registeredEl = document.getElementById('assignmentRegisteredProctors');
+        const perProctorEl = document.getElementById('assignmentSessionsPerProctor');
+
+        try {
+            if (daysEl) daysEl.textContent = '...';
+            if (sessionsEl) sessionsEl.textContent = '...';
+            if (totalEl) totalEl.textContent = '...';
+            if (registeredEl) registeredEl.textContent = '...';
+            if (perProctorEl) perProctorEl.textContent = '...';
+        } catch (e) {}
+
+        // fetch persisted exams detail (counts and sum)
+        let exams = [];
+        try {
+            const r = await fetch('/API/getExamsDetail.php', { cache: 'no-store' });
+            if (r && r.ok) {
+                const j = await r.json();
+                exams = Array.isArray(j.exams) ? j.exams : [];
+            }
+        } catch (e) { console.warn('getExamsDetail failed', e); }
+
+        // fetch registered proctors count
+        let registered = 0;
+        try {
+            const r = await fetch('/API/getProctors.php', { cache: 'no-store' });
+            if (r && r.ok) {
+                const j = await r.json();
+                const arr = Array.isArray(j.proctors) ? j.proctors : [];
+                registered = arr.length;
+            }
+        } catch (e) { console.warn('getProctors failed', e); }
+
+        // compute summary from persisted ExamsDetil
+        let days = 0, sessions = 0, totalRequired = 0;
+        if (exams && exams.length) {
+            sessions = exams.length;
+            const dates = new Set();
+            exams.forEach(e => { dates.add((e.exam_date||'').trim()); totalRequired += Number(e.required_proctors || 0); });
+            days = dates.size;
+        }
+
+        const toPersian = (n) => { try { return toPersianDigits(n); } catch (e) { return String(n); } };
+
+        if (daysEl) daysEl.textContent = days > 0 ? toPersian(days) : '-';
+        if (sessionsEl) sessionsEl.textContent = sessions > 0 ? toPersian(sessions) : '-';
+        if (totalEl) totalEl.textContent = totalRequired > 0 ? toPersian(totalRequired) : '-';
+        if (registeredEl) registeredEl.textContent = toPersian(registered);
+
+        if (perProctorEl) {
+            if (registered > 0 && totalRequired > 0) perProctorEl.textContent = toPersian(Math.ceil(totalRequired/registered));
+            else perProctorEl.textContent = '-';
+        }
+
+        // enable/disable assignment buttons: require at least one session entry and some proctors
+        const assignDailyBtn = document.getElementById('assignDailyBtn');
+        const assignScatteredBtn = document.getElementById('assignScatteredBtn');
+        if (assignDailyBtn) assignDailyBtn.disabled = !(sessions > 0 && registered > 0);
+        if (assignScatteredBtn) assignScatteredBtn.disabled = !(sessions > 0 && registered > 0);
+        const assignManualBtn = document.getElementById('assignManualBtn');
+        if (assignManualBtn) assignManualBtn.disabled = false;
+    }
+
     document.addEventListener('DOMContentLoaded', function () {
         checkAuthAndRedirect().then((ok) => {
             if (ok) {
@@ -852,6 +923,18 @@
             });
         }
 
+        // Header button for assignment card
+        const showAssignmentBtn = document.getElementById('showAssignmentBtn');
+        if (showAssignmentBtn) {
+            showAssignmentBtn.addEventListener('click', async (e) => {
+                try { if (e && typeof e.preventDefault === 'function') e.preventDefault(); } catch (err) { /* ignore */ }
+                const card = document.getElementById('assignmentCard');
+                if (!card) return;
+                showOnlyCard('assignmentCard');
+                try { await loadAssignmentSummary(); } catch (err) { console.warn('loadAssignmentSummary failed', err); }
+            });
+        }
+
         // "تغییر لازم نیست، ادامه" button: reveal Proctors card without saving
         const noChangeNeededBtn = document.getElementById('noChangeNeededBtn');
         if (noChangeNeededBtn) {
@@ -1213,6 +1296,153 @@
         console.warn('Failed to persist ExamsDetil', e);
         try { await Swal.fire({ toast: true, position: 'top-end', icon: 'warning', title: 'ذخیرهٔ جزئیات جلسات در بانک اطلاعاتی ناموفق بود', showConfirmButton: false, timer: 4000, timerProgressBar: true, customClass: { popup: 'swal2-rtl' } }); } catch (ignored) {}
         return false;
+    }
+
+    // Load and render the Assignment summary (top of the assignmentCard)
+    async function loadAssignmentSummary() {
+        const daysEl = document.getElementById('assignmentDays');
+        const sessionsEl = document.getElementById('assignmentSessions');
+        const totalEl = document.getElementById('assignmentTotalRequired');
+        const registeredEl = document.getElementById('assignmentRegisteredProctors');
+        const perProctorEl = document.getElementById('assignmentSessionsPerProctor');
+        const assignDailyBtn = document.getElementById('assignDailyBtn');
+        const assignScatteredBtn = document.getElementById('assignScatteredBtn');
+        const assignManualBtn = document.getElementById('assignManualBtn');
+
+        // set loading placeholders
+        try { if (daysEl) daysEl.textContent = '...'; if (sessionsEl) sessionsEl.textContent = '...'; if (totalEl) totalEl.textContent = '...'; if (registeredEl) registeredEl.textContent = '...'; if (perProctorEl) perProctorEl.textContent = '...'; } catch (e) {}
+
+        // fetch registered proctors
+        let registered = 0;
+        try {
+            const r = await fetch('/API/getProctors.php', { cache: 'no-store' });
+            if (r && r.ok) {
+                const j = await r.json();
+                const arr = Array.isArray(j.proctors) ? j.proctors : [];
+                registered = arr.length;
+            }
+        } catch (e) { console.warn('getProctors failed', e); }
+
+        // fetch persisted exams detail
+        let exams = [];
+        try {
+            const r = await fetch('/API/getExamsDetail.php', { cache: 'no-store' });
+            if (r && r.ok) {
+                const j = await r.json();
+                exams = Array.isArray(j.exams) ? j.exams : [];
+            }
+        } catch (e) { console.warn('getExamsDetail failed', e); }
+
+        // calculate summary
+        let days = 0, sessions = 0, totalRequired = 0;
+        function toPersian(n) { try { return toPersianDigits(n); } catch (e) { return String(n); } }
+
+        if (exams && exams.length) {
+            sessions = exams.length;
+            const dates = new Set();
+            exams.forEach(e => {
+                dates.add((e.exam_date || '').trim());
+                totalRequired += Number(e.required_proctors || 0);
+            });
+            days = dates.size;
+        } else {
+            // Fallback: compute live from locations + statistics when ExamsDetil is empty
+            try {
+                // fetch locations map
+                const locResp = await fetch('/API/getLocations.php', { cache: 'no-store' });
+                const locJson = (locResp && locResp.ok) ? await locResp.json() : { locations: [] };
+                const locations = Array.isArray(locJson.locations) ? locJson.locations : [];
+                const locMap = new Map();
+                locations.forEach(l => {
+                    const key = `${(l.building||'').trim()}||${(l.class_name||'').trim()}`;
+                    locMap.set(key, Number(l.required_proctors || 0));
+                });
+
+                // fetch sessions from statistics
+                const statsResp = await fetch('/API/getStatistics.php', { cache: 'no-store' });
+                const stats = (statsResp && statsResp.ok) ? await statsResp.json() : {};
+                const sessionsList = Array.isArray(stats.allExams) ? stats.allExams : (Array.isArray(stats.futureExams) ? stats.futureExams : []);
+
+                if (sessionsList && sessionsList.length) {
+                    sessions = sessionsList.length;
+                    const datesSet = new Set();
+                    // limited concurrency to 4
+                    const concurrency = 4;
+                    for (let i = 0; i < sessionsList.length; i += concurrency) {
+                        const batch = sessionsList.slice(i, i + concurrency);
+                        const promises = batch.map(async fe => {
+                            const d = fe.exam_date || '';
+                            const t = fe.exam_time || '';
+                            try {
+                                const repResp = await fetch(`/API/getNextExamReport.php?exam_date=${encodeURIComponent(d)}&exam_time=${encodeURIComponent(t)}`, { cache: 'no-store' });
+                                if (!repResp || !repResp.ok) return { date: d, proctors: 0 };
+                                const rep = await repResp.json();
+                                const students = Array.isArray(rep.students) ? rep.students : [];
+                                const usedKeys = new Set();
+                                students.forEach(s => usedKeys.add(`${(s.building||'').trim()}||${(s.class_name||'').trim()}`));
+                                let sessionSum = 0;
+                                usedKeys.forEach(k => { if (locMap.has(k)) sessionSum += Number(locMap.get(k)) || 0; });
+                                return { date: d, proctors: sessionSum };
+                            } catch (e) {
+                                console.warn('assignment summary session fetch failed', e);
+                                return { date: d, proctors: 0 };
+                            }
+                        });
+                        const results = await Promise.all(promises);
+                        results.forEach(r => {
+                            if (r) {
+                                totalRequired += Number(r.proctors || 0);
+                                if (r.date) datesSet.add(r.date);
+                            }
+                        });
+                    }
+                    days = datesSet.size;
+                }
+            } catch (e) {
+                console.warn('Fallback assignment summary failed', e);
+            }
+        }
+
+        // populate UI values
+        if (daysEl) daysEl.textContent = (days > 0) ? toPersian(days) : '-';
+        if (sessionsEl) sessionsEl.textContent = (sessions > 0) ? toPersian(sessions) : '-';
+        if (totalEl) totalEl.textContent = (totalRequired > 0) ? toPersian(totalRequired) : '-';
+        if (registeredEl) registeredEl.textContent = toPersian(registered);
+
+        let per = '-';
+        if (registered > 0 && totalRequired > 0) {
+            per = Math.ceil(totalRequired / registered);
+            per = toPersian(per);
+        }
+        if (perProctorEl) perProctorEl.textContent = per;
+
+        // Enable/disable buttons depending on available data
+        const enableAssignment = (sessions > 0) && (registered > 0);
+        if (assignDailyBtn) assignDailyBtn.disabled = !enableAssignment;
+        if (assignScatteredBtn) assignScatteredBtn.disabled = !enableAssignment;
+        if (assignManualBtn) assignManualBtn.disabled = false; // manual mode always allowed
+
+        // wire placeholders for buttons (idempotent)
+        try {
+            if (assignDailyBtn && !assignDailyBtn._wired) {
+                assignDailyBtn.addEventListener('click', async () => {
+                    await Swal.fire({ title: 'چینش بر اساس حضور روزانه', html: '<div style="direction:rtl;text-align:right">این دکمه الگوریتم "حضور روزانه" را اجرا خواهد کرد. لطفاً روش دقیق را مشخص کنید تا پیاده‌سازی کنم.</div>', confirmButtonText: 'متوجه شدم', customClass: { popup: 'swal2-rtl swal2-glass', confirmButton: 'btn btn-primary' } });
+                });
+                assignDailyBtn._wired = true;
+            }
+            if (assignScatteredBtn && !assignScatteredBtn._wired) {
+                assignScatteredBtn.addEventListener('click', async () => {
+                    await Swal.fire({ title: 'چینش پراکنده', html: '<div style="direction:rtl;text-align:right">این دکمه الگوریتم "پراکنده" را اجرا خواهد کرد. لطفاً قوانین را بگویید تا پیاده‌سازی کنم.</div>', confirmButtonText: 'متوجه شدم', customClass: { popup: 'swal2-rtl swal2-glass', confirmButton: 'btn btn-primary' } });
+                });
+                assignScatteredBtn._wired = true;
+            }
+            if (assignManualBtn && !assignManualBtn._wired) {
+                assignManualBtn.addEventListener('click', async () => {
+                    await Swal.fire({ title: 'چینش دستی', html: '<div style="direction:rtl;text-align:right">در حالت دستی شما پروفایل‌ها را به‌صورت دلخواه تخصیص می‌دهید. آیا می‌خواهید وارد محیط تخصیص دستی شوم؟</div>', confirmButtonText: 'ادامه', showCancelButton: true, customClass: { popup: 'swal2-rtl swal2-glass', confirmButton: 'btn btn-primary' } });
+                });
+                assignManualBtn._wired = true;
+            }
+        } catch (e) { /* ignore wiring errors */ }
     }
     }
 
