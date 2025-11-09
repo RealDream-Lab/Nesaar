@@ -962,9 +962,9 @@
                     showCancelButton: true,
                     confirmButtonText: 'بله، ادامه می‌دهم',
                     cancelButtonText: 'انصراف',
-                    confirmButtonColor: '#3085d6',
-                    cancelButtonColor: '#d33',
-                    customClass: { popup: 'swal2-rtl swal2-glass' }
+            // colors are handled by button classes; set a fixed width to avoid wrapping
+    customClass: { popup: 'swal2-rtl swal2-glass', confirmButton: 'btn btn-danger', cancelButton: 'btn btn-cancel' },
+    width: '520px'
                 });
                 if (result.isConfirmed) {
                     // TODO: Implement daily assignment logic here
@@ -973,7 +973,8 @@
                         text: 'کد عملیات چینش خودکار بر اساس حضور روزانه مراقب بعداً پیاده‌سازی خواهد شد.',
                         icon: 'info',
                         confirmButtonText: 'باشه',
-                        customClass: { popup: 'swal2-rtl swal2-glass' }
+        customClass: { popup: 'swal2-rtl swal2-glass', confirmButton: 'btn btn-primary' },
+        width: '520px'
                     });
                 }
             });
@@ -990,9 +991,9 @@
                     showCancelButton: true,
                     confirmButtonText: 'بله، ادامه می‌دهم',
                     cancelButtonText: 'انصراف',
-                    confirmButtonColor: '#3085d6',
-                    cancelButtonColor: '#d33',
-                    customClass: { popup: 'swal2-rtl swal2-glass' }
+            // colors are handled by button classes; set a fixed width to avoid wrapping
+    customClass: { popup: 'swal2-rtl swal2-glass', confirmButton: 'btn btn-danger', cancelButton: 'btn btn-cancel' },
+    width: '520px'
                 });
                 if (result.isConfirmed) {
                     // TODO: Implement scattered assignment logic here
@@ -1001,7 +1002,8 @@
                         text: 'کد عملیات چینش خودکار مراقبین به صورت پراکنده بعداً پیاده‌سازی خواهد شد.',
                         icon: 'info',
                         confirmButtonText: 'باشه',
-                        customClass: { popup: 'swal2-rtl swal2-glass' }
+        customClass: { popup: 'swal2-rtl swal2-glass', confirmButton: 'btn btn-primary' },
+        width: '520px'
                     });
                 }
             });
@@ -1018,9 +1020,9 @@
                     showCancelButton: true,
                     confirmButtonText: 'بله، ادامه می‌دهم',
                     cancelButtonText: 'انصراف',
-                    confirmButtonColor: '#3085d6',
-                    cancelButtonColor: '#d33',
-                    customClass: { popup: 'swal2-rtl swal2-glass' }
+            // colors are handled by button classes; set a fixed width to avoid wrapping
+    customClass: { popup: 'swal2-rtl swal2-glass', confirmButton: 'btn btn-danger', cancelButton: 'btn btn-cancel' },
+    width: '520px'
                 });
                 if (result.isConfirmed) {
                     // TODO: Implement manual assignment logic here
@@ -1029,7 +1031,8 @@
                         text: 'کد عملیات چینش دستی مراقبین بعداً پیاده‌سازی خواهد شد.',
                         icon: 'info',
                         confirmButtonText: 'باشه',
-                        customClass: { popup: 'swal2-rtl swal2-glass' }
+        customClass: { popup: 'swal2-rtl swal2-glass', confirmButton: 'btn btn-primary' },
+        width: '520px'
                     });
                 }
             });
