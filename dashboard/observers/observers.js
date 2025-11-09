@@ -950,22 +950,81 @@
             noChangeNeededBtn.disabled = true;
         }
 
+        // Finish introduction button: open assignment card when enough proctors
+        const finishProctorsBtn = document.getElementById('finishProctorsBtn');
+        if (finishProctorsBtn) {
+            finishProctorsBtn.addEventListener('click', async (e) => {
+                try { if (e && typeof e.preventDefault === 'function') e.preventDefault(); } catch (err) { /* ignore */ }
+                // double-check counts before opening assignment card
+                try {
+                    const [pResp, eResp] = await Promise.all([
+                        fetch('/API/getProctors.php', { cache: 'no-store' }),
+                        fetch('/API/getExamsDetail.php', { cache: 'no-store' })
+                    ]);
+                    const pJson = (pResp && pResp.ok) ? await pResp.json() : { proctors: [] };
+                    const eJson = (eResp && eResp.ok) ? await eResp.json() : { exams: [] };
+                    const registered = Array.isArray(pJson.proctors) ? pJson.proctors.length : 0;
+                    const exams = Array.isArray(eJson.exams) ? eJson.exams : [];
+                    // Use the same metric as the proctors stats: compare against the
+                    // maximum per-session required_proctors (not the sum). This makes
+                    // the finish button and the warning consistent with the green/red
+                    // status shown in the header stats.
+                    const maxRequired = exams.length ? Math.max(...exams.map(e => Number(e.required_proctors || 0))) : 0;
+                    if (!(registered >= maxRequired && maxRequired > 0)) {
+                        await Swal.fire({
+                            title: 'ملاحظۀ کمبود',
+                            html: '<div style="text-align:justify;line-height:1.6">تعداد مراقبین ثبت‌شده کمتر از حداکثر موردنیاز در یک جلسه است. لطفاً ابتدا مراقبین لازم را معرفی کنید.</div>',
+                            icon: 'warning',
+                            confirmButtonText: 'باشه',
+                            customClass: { popup: 'swal2-rtl swal2-glass', confirmButton: 'btn btn-primary' },
+                            width: '520px'
+                        });
+                        return;
+                    }
+                    // Ask for a final confirmation: proceeding will prevent returning to
+                    // this proctors introduction page without performing a full
+                    // database re-sync/update. Require explicit confirmation.
+                    const confirmProceed = await Swal.fire({
+                        title: 'تأیید نهایی',
+                        html: '<div style="text-align:justify;line-height:1.6">با ادامهٔ عملیات، شما دیگر قادر به بازگشت و ویرایش اطلاعات این صفحه نخواهید بود و در صورت نیاز باید تمامی مراحل به‌روزرسانی را از ابتدا انجام دهید. آیا مطمئن هستید که می‌خواهید ادامه دهید؟</div>',
+                        icon: 'warning',
+                        showCancelButton: true,
+                        confirmButtonText: 'بله، مطمئنم',
+                        cancelButtonText: 'انصراف',
+                        customClass: { popup: 'swal2-rtl swal2-glass', confirmButton: 'btn btn-danger', cancelButton: 'btn btn-cancel' },
+                        width: '520px'
+                    });
+                    if (!confirmProceed.isConfirmed) {
+                        return;
+                    }
+                    // open assignment card after confirmation
+                    showOnlyCard('assignmentCard');
+                    try { await loadAssignmentSummary(); } catch (e) { /* ignore */ }
+                    try { const target = document.getElementById('assignmentCard'); if (target) target.scrollIntoView({ behavior: 'smooth', block: 'start' }); } catch (e) {}
+                } catch (err) {
+                    console.warn('finishProctorsBtn flow failed', err);
+                }
+            });
+        }
+        // initial sync of finish button state
+        try { if (typeof updateFinishProctorsBtn === 'function') updateFinishProctorsBtn(); } catch (e) {}
+
         // Assignment buttons: show confirmation dialog before proceeding
         const assignDailyBtn = document.getElementById('assignDailyBtn');
         if (assignDailyBtn) {
             assignDailyBtn.addEventListener('click', async (e) => {
                 try { if (e && typeof e.preventDefault === 'function') e.preventDefault(); } catch (err) { /* ignore */ }
-                const result = await Swal.fire({
-                    title: 'تأیید عملیات',
-                    text: 'این عملیات تمامی چینش‌های قبلی را پاک کرده و چینش جدیدی بر اساس حضور روزانه مراقب انجام خواهد داد. آیا مطمئن هستید که می‌خواهید ادامه دهید؟',
-                    icon: 'warning',
-                    showCancelButton: true,
-                    confirmButtonText: 'بله، ادامه می‌دهم',
-                    cancelButtonText: 'انصراف',
-            // colors are handled by button classes; set a fixed width to avoid wrapping
+        const result = await Swal.fire({
+            title: 'تأیید عملیات',
+            html: '<div style="text-align:justify;line-height:1.6">این عملیات تمامی چینش‌های قبلی را پاک کرده و چینش جدیدی بر اساس حضور روزانه مراقب انجام خواهد داد. آیا مطمئن هستید که می‌خواهید ادامه دهید؟</div>',
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonText: 'بله، ادامه می‌دهم',
+            cancelButtonText: 'انصراف',
+        // colors are handled by button classes; set a fixed width to avoid wrapping
     customClass: { popup: 'swal2-rtl swal2-glass', confirmButton: 'btn btn-danger', cancelButton: 'btn btn-cancel' },
     width: '520px'
-                });
+        });
                 if (result.isConfirmed) {
                     // TODO: Implement daily assignment logic here
                     await Swal.fire({
@@ -984,17 +1043,17 @@
         if (assignScatteredBtn) {
             assignScatteredBtn.addEventListener('click', async (e) => {
                 try { if (e && typeof e.preventDefault === 'function') e.preventDefault(); } catch (err) { /* ignore */ }
-                const result = await Swal.fire({
-                    title: 'تأیید عملیات',
-                    text: 'این عملیات تمامی چینش‌های قبلی را پاک کرده و چینش جدیدی به صورت پراکنده انجام خواهد داد. آیا مطمئن هستید که می‌خواهید ادامه دهید؟',
-                    icon: 'warning',
-                    showCancelButton: true,
-                    confirmButtonText: 'بله، ادامه می‌دهم',
-                    cancelButtonText: 'انصراف',
-            // colors are handled by button classes; set a fixed width to avoid wrapping
+        const result = await Swal.fire({
+            title: 'تأیید عملیات',
+            html: '<div style="text-align:justify;line-height:1.6">این عملیات تمامی چینش‌های قبلی را پاک کرده و چینش جدیدی به صورت پراکنده انجام خواهد داد. آیا مطمئن هستید که می‌خواهید ادامه دهید؟</div>',
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonText: 'بله، ادامه می‌دهم',
+            cancelButtonText: 'انصراف',
+        // colors are handled by button classes; set a fixed width to avoid wrapping
     customClass: { popup: 'swal2-rtl swal2-glass', confirmButton: 'btn btn-danger', cancelButton: 'btn btn-cancel' },
     width: '520px'
-                });
+        });
                 if (result.isConfirmed) {
                     // TODO: Implement scattered assignment logic here
                     await Swal.fire({
@@ -1013,17 +1072,17 @@
         if (assignManualBtn) {
             assignManualBtn.addEventListener('click', async (e) => {
                 try { if (e && typeof e.preventDefault === 'function') e.preventDefault(); } catch (err) { /* ignore */ }
-                const result = await Swal.fire({
-                    title: 'تأیید عملیات',
-                    text: 'این عملیات تمامی چینش‌های قبلی را پاک کرده و چینش جدیدی به صورت دستی انجام خواهد داد. آیا مطمئن هستید که می‌خواهید ادامه دهید؟',
-                    icon: 'warning',
-                    showCancelButton: true,
-                    confirmButtonText: 'بله، ادامه می‌دهم',
-                    cancelButtonText: 'انصراف',
-            // colors are handled by button classes; set a fixed width to avoid wrapping
+        const result = await Swal.fire({
+            title: 'تأیید عملیات',
+            html: '<div style="text-align:justify;line-height:1.6">این عملیات تمامی چینش‌های قبلی را پاک کرده و چینش جدیدی به صورت دستی انجام خواهد داد. آیا مطمئن هستید که می‌خواهید ادامه دهید؟</div>',
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonText: 'بله، ادامه می‌دهم',
+            cancelButtonText: 'انصراف',
+        // colors are handled by button classes; set a fixed width to avoid wrapping
     customClass: { popup: 'swal2-rtl swal2-glass', confirmButton: 'btn btn-danger', cancelButton: 'btn btn-cancel' },
     width: '520px'
-                });
+        });
                 if (result.isConfirmed) {
                     // TODO: Implement manual assignment logic here
                     await Swal.fire({
@@ -1509,6 +1568,9 @@
         if (assignDailyBtn) assignDailyBtn.disabled = !enableAssignment;
         if (assignScatteredBtn) assignScatteredBtn.disabled = !enableAssignment;
         if (assignManualBtn) assignManualBtn.disabled = false; // manual mode always allowed
+
+    // keep finish button state in sync with latest counts
+    try { if (typeof updateFinishProctorsBtn === 'function') await updateFinishProctorsBtn(); } catch (e) {}
 
         // wire placeholders for buttons (idempotent)
         try {
@@ -2092,8 +2154,34 @@
                 const remaining = maxRequired - current;
                 statsEl.innerHTML = `<span style="color:red;">مراقبین: ${current} از حداقل  ${maxRequired} نفر مراقب لازم (مانده: ${remaining})</span>`;
             }
+            // update finish button enablement when proctors stats change
+            try { if (typeof updateFinishProctorsBtn === 'function') updateFinishProctorsBtn(); } catch (e) {}
         } catch (e) {
             statsEl.innerHTML = 'آمار ناموفق';
+        }
+    }
+
+    // Enable/disable the "اتمام معرفی مراقبین" button based on total required vs registered
+    async function updateFinishProctorsBtn() {
+        const btn = document.getElementById('finishProctorsBtn');
+        if (!btn) return;
+        try {
+            const [pResp, eResp] = await Promise.all([
+                fetch('/API/getProctors.php', { cache: 'no-store' }),
+                fetch('/API/getExamsDetail.php', { cache: 'no-store' })
+            ]);
+            const pJson = pResp && pResp.ok ? await pResp.json() : { proctors: [] };
+            const eJson = eResp && eResp.ok ? await eResp.json() : { exams: [] };
+            const registered = Array.isArray(pJson.proctors) ? pJson.proctors.length : 0;
+            const exams = Array.isArray(eJson.exams) ? eJson.exams : [];
+            // follow the same rule as updateProctorsStats: compare against the maximum
+            // required_proctors among sessions (not the sum). If there are no exams,
+            // maxRequired becomes 0 and the button will be enabled (registered >= 0).
+            const maxRequired = exams.length ? Math.max(...exams.map(e => Number(e.required_proctors || 0))) : 0;
+            // disable if registered proctors are fewer than the max required
+            btn.disabled = !(registered >= maxRequired);
+        } catch (e) {
+            btn.disabled = true;
         }
     }
 

@@ -1,7 +1,7 @@
 
 
-const CACHE_NAME = 'exam-seat-v0.4.0';
-const VERSION = '0.4.0';
+const CACHE_NAME = 'exam-seat-v0.4.1';
+const VERSION = '0.4.1';
 const urlsToCache = [
   '/',
   '/index.php',
@@ -90,7 +90,9 @@ self.addEventListener('activate', event => {
             version: CACHE_NAME,
             tagVersion: `نسخه ${VERSION}`,
             changes: [
-              'پیاده سازی ماژول عوامل اجرائی'
+              'اصلاح منطق دکمهٔ اتمام معرفی مراقبین و مودال تایید نهایی',
+              'هماهنگ‌سازی استایل مودال‌ها و دکمه‌ها (swal2-glass, btn-cancel)',
+              'بهبود همگام‌سازی آمار مراقبین پس از ذخیره‌سازی'
             ]
           });
         });

@@ -184,6 +184,9 @@ $showLocationsCard) ? '' : 'display:none;'); ?>">
                     </div>
                     <!-- Table section -->
                     <div id="proctorsList" style="margin-top:0.8rem;"></div>
+                    <div style="margin-top:0.9rem;text-align:center;">
+                        <button id="finishProctorsBtn" class="btn btn-success" style="width:280px;" disabled>اتمام معرفی مراقبین</button>
+                    </div>
                 </div>
                 <!-- کارت چینش مراقبین -->
                 <div class="dashboard-card module-card no-hover" id="assignmentCard" style="display:none;">
