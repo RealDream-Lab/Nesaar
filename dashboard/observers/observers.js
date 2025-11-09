@@ -1767,9 +1767,13 @@
             const exams = Array.isArray(edj.exams) ? edj.exams : [];
             const maxRequired = exams.length ? Math.max(...exams.map(e => Number(e.required_proctors || 0))) : 0;
 
-            const remaining = maxRequired - current;
-            const color = remaining > 0 ? 'red' : 'green';
-            statsEl.innerHTML = `<span style="color:${color};">مراقبین: ${current} / نیاز: ${maxRequired} (مانده: ${remaining})</span>`;
+            // If current meets or exceeds required, show a simple green summary without 'مانده'
+            if (!maxRequired || current >= maxRequired) {
+                statsEl.innerHTML = `<span style="color:green;">مراقبین ثبت شده: ${current} نفر</span>`;
+            } else {
+                const remaining = maxRequired - current;
+                statsEl.innerHTML = `<span style="color:red;">مراقبین: ${current} از حداقل  ${maxRequired} نفر مراقب لازم (مانده: ${remaining})</span>`;
+            }
         } catch (e) {
             statsEl.innerHTML = 'آمار ناموفق';
         }
