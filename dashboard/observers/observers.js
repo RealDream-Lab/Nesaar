@@ -422,6 +422,8 @@
                 const j = await resp.json();
                 const exams = Array.isArray(j.exams) ? j.exams : [];
                 renderExamsDetail(exams);
+                // enable the "تغییر لازم نیست" button so user can proceed without saving
+                try { const noChangeBtn = document.getElementById('noChangeNeededBtn'); if (noChangeBtn) noChangeBtn.disabled = false; } catch (e) {}
                 // Show a guidance modal after the exams-detail table has loaded
                 try {
                     if (exams && exams.length) {
@@ -722,6 +724,12 @@
                     if (failed === 0) {
                         saveAll.disabled = true;
                         Swal.fire({ toast: true, position: 'top-end', icon: 'success', title: 'تمامی تغییرات ذخیره شد', showConfirmButton: false, timer: 2500, customClass: { popup: 'swal2-rtl' } });
+                        // After successful batch save, reveal the Proctors card as requested
+                        try {
+                            showOnlyCard('proctorsCard');
+                            await loadProctors();
+                            try { const target = document.getElementById('proctorsCard'); if (target) target.scrollIntoView({ behavior: 'smooth', block: 'start' }); } catch (e) {}
+                        } catch (e) { console.warn('Failed to open proctors card after saving exams detail', e); }
                     } else {
                         Swal.fire({ toast: true, position: 'top-end', icon: 'error', title: `خطا در ذخیره ${failed} مورد`, showConfirmButton: false, timer: 3500, customClass: { popup: 'swal2-rtl' } });
                     }
@@ -842,6 +850,21 @@
                 showOnlyCard('proctorsCard');
                 try { await loadProctors(); } catch (err) { console.warn('loadProctors failed', err); }
             });
+        }
+
+        // "تغییر لازم نیست، ادامه" button: reveal Proctors card without saving
+        const noChangeNeededBtn = document.getElementById('noChangeNeededBtn');
+        if (noChangeNeededBtn) {
+            noChangeNeededBtn.addEventListener('click', async (e) => {
+                try { if (e && typeof e.preventDefault === 'function') e.preventDefault(); } catch (err) {}
+                try {
+                    showOnlyCard('proctorsCard');
+                    await loadProctors();
+                    try { const target = document.getElementById('proctorsCard'); if (target) target.scrollIntoView({ behavior: 'smooth', block: 'start' }); } catch (e) {}
+                } catch (e) { console.warn('noChangeNeeded flow failed', e); }
+            });
+            // Start disabled; will be enabled when exams detail is loaded
+            noChangeNeededBtn.disabled = true;
         }
 
         // When computeAndShowProctorSummary persists ExamsDetil it will emit
@@ -1649,7 +1672,6 @@
                 <thead>
                     <tr>
                         <th style="width:50px">ردیف</th>
-                        <th>جنسیت</th>
                         <th>نام</th>
                         <th>نام خانوادگی</th>
                         <th>شماره همراه</th>
@@ -1659,14 +1681,12 @@
 
         proctors.forEach((p, idx) => {
             const id = Number(p.id || 0);
-            const gender = escapeHtml(p.gender || '');
             const genderTitle = getGenderTitle(p.gender);
             const first = genderTitle + ' ' + escapeHtml(p.first_name || '');
             const last = escapeHtml(p.last_name || '');
             const phone = toPersianDigits(escapeHtml(p.phone || ''));
             html += `<tr data-id="${id}" style="cursor:pointer;">
                 <td style="vertical-align:middle;text-align:center;">${idx + 1}</td>
-                <td style="vertical-align:middle">${gender}</td>
                 <td style="vertical-align:middle">${first}</td>
                 <td style="vertical-align:middle">${last}</td>
                 <td style="vertical-align:middle">${phone}</td>
