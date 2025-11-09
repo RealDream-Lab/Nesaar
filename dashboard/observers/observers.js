@@ -1017,6 +1017,24 @@
                     // open assignment card after confirmation
                     showOnlyCard('assignmentCard');
                     try { await loadAssignmentSummary(); } catch (e) { /* ignore */ }
+                    // Ensure the server-side ExamAssignments table is generated when
+                    // the assignment card is opened from the proctors flow as well.
+                    try {
+                        const genResp = await fetch('/API/generateExamAssignments.php', { method: 'POST', cache: 'no-store' });
+                        if (genResp && genResp.ok) {
+                            const gj = await genResp.json();
+                            if (gj && gj.success) {
+                                const inserted = gj.inserted || 0;
+                                try { await Swal.fire({ toast: true, position: 'top-end', icon: 'success', title: `جدول جزئیات مراقبین با ${inserted} رکورد ساخته شد`, showConfirmButton: false, timer: 2200, customClass: { popup: 'swal2-rtl' } }); } catch (e) { /* ignore */ }
+                            } else {
+                                console.warn('generateExamAssignments returned failure');
+                            }
+                        } else {
+                            console.warn('generateExamAssignments API error');
+                        }
+                    } catch (e) {
+                        console.warn('generateExamAssignments failed', e);
+                    }
                     try { const target = document.getElementById('assignmentCard'); if (target) target.scrollIntoView({ behavior: 'smooth', block: 'start' }); } catch (e) {}
                 } catch (err) {
                     console.warn('finishProctorsBtn flow failed', err);
