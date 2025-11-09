@@ -205,10 +205,10 @@ $showLocationsCard) ? '' : 'display:none;'); ?>">
 
                     <div class="row g-2" style="margin-top:0.8rem;">
                         <div class="col-12 col-md-4">
-                            <button id="assignDailyBtn" class="btn btn-upload w-100">چینش خودکار بر اساس حضور روزانه مراقب</button>
+                            <button id="assignScatteredBtn" class="btn btn-upload w-100">چینش خودکار مراقبین به صورت پراکنده</button>
                         </div>
                         <div class="col-12 col-md-4">
-                            <button id="assignScatteredBtn" class="btn btn-upload w-100">چینش خودکار مراقبین به صورت پراکنده</button>
+                            <button id="assignDailyBtn" class="btn btn-upload w-100">چینش خودکار بر اساس حضور روزانه مراقب</button>
                         </div>
                         <div class="col-12 col-md-4">
                             <button id="assignManualBtn" class="btn btn-upload w-100">چینش دستی مراقبین</button>

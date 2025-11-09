@@ -1016,7 +1016,7 @@
                 try { if (e && typeof e.preventDefault === 'function') e.preventDefault(); } catch (err) { /* ignore */ }
         const result = await Swal.fire({
             title: 'تأیید عملیات',
-            html: '<div style="text-align:justify;line-height:1.6">این عملیات تمامی چینش‌های قبلی را پاک کرده و چینش جدیدی بر اساس حضور روزانه مراقب انجام خواهد داد. آیا مطمئن هستید که می‌خواهید ادامه دهید؟</div>',
+            html: '<div style="text-align:justify;line-height:1.6">این عملیات تمامی چینش‌های قبلی را پاک کرده و چینش جدیدی بر اساس حضور روزانه مراقب انجام خواهد داد. این روش زمانی مناسب است که ساختمان‌های برگزاری آزمون از هم دور هستند و مراقبین باید تمام روز را در یک ساختمان مشخص حضور داشته باشند. آیا مطمئن هستید که می‌خواهید ادامه دهید؟</div>',
             icon: 'warning',
             showCancelButton: true,
             confirmButtonText: 'بله، ادامه می‌دهم',
@@ -1045,7 +1045,7 @@
                 try { if (e && typeof e.preventDefault === 'function') e.preventDefault(); } catch (err) { /* ignore */ }
         const result = await Swal.fire({
             title: 'تأیید عملیات',
-            html: '<div style="text-align:justify;line-height:1.6">این عملیات تمامی چینش‌های قبلی را پاک کرده و چینش جدیدی به صورت پراکنده انجام خواهد داد. آیا مطمئن هستید که می‌خواهید ادامه دهید؟</div>',
+            html: '<div style="text-align:justify;line-height:1.6">این عملیات تمامی چینش‌های قبلی را پاک کرده و چینش جدیدی به صورت پراکنده انجام خواهد داد. این روش زمانی مناسب است که ساختمان‌های برگزاری آزمون از هم دور نبوده و مراقبین در کنار کار مراقبت باید به امور دانشجویان نیز رسیدگی نمایند. آیا مطمئن هستید که می‌خواهید ادامه دهید؟</div>',
             icon: 'warning',
             showCancelButton: true,
             confirmButtonText: 'بله، ادامه می‌دهم',
