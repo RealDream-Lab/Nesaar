@@ -794,6 +794,128 @@ body::after {
   gap: 0.75rem;
   margin-top: 0.75rem;
 }
+
+/* Compact proctor restrictions mini-cards (used in observers modal) */
+.proctor-session-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.6rem;
+  justify-content: center;
+  align-items: center;
+  margin: 0.6rem 0 0;
+}
+.proctor-session-card {
+  /* make cards wider and shorter so they fit one line */
+  min-width: 150px;
+  max-width: 220px;
+  padding: 0.35rem 0.7rem;
+  height: 44px;
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 0.6rem;
+  border-radius: 10px;
+  cursor: pointer;
+  color: #04202a;
+  background: linear-gradient(
+    140deg,
+    rgba(233, 239, 250, 0.95),
+    rgba(221, 230, 242, 0.95)
+  );
+  box-shadow: 0 8px 20px rgba(2, 18, 24, 0.06);
+  border: 1px solid rgba(4, 32, 42, 0.04);
+  text-align: center;
+  font-size: 0.88rem;
+  position: relative;
+  transition: transform 0.12s ease, box-shadow 0.12s ease,
+    border-color 0.12s ease, opacity 0.12s ease;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.proctor-session-card .ps-dt {
+  font-weight: 600;
+  font-size: 0.86rem; /* date and time small and on one line */
+  line-height: 1;
+  color: #04202a;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.proctor-session-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 14px 32px rgba(2, 18, 24, 0.08);
+}
+.proctor-session-card.selected {
+  border-color: rgba(111, 66, 193, 0.9);
+  box-shadow: 0 18px 40px rgba(111, 66, 193, 0.09);
+  transform: translateY(-6px);
+}
+.proctor-session-card.selected::after {
+  content: "\2713"; /* check mark */
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: #16a34a; /* green */
+  color: white;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  box-shadow: 0 8px 18px rgba(0, 0, 0, 0.18);
+  font-size: 0.85rem;
+}
+
+@media (max-width: 768px) {
+  .proctor-session-card {
+    min-width: 110px;
+    max-width: 160px;
+    padding: 0.35rem 0.5rem;
+  }
+  .proctor-session-card .ps-date {
+    font-size: 0.9rem;
+  }
+}
+
+/* Glass modal variant for proctor restrictions: wider, glassy, non-scrolling by default */
+.swal2-popup.proctor-restrictions-modal {
+  /* force 90% of viewport width for this modal (override inline width) */
+  width: 90vw !important;
+  max-width: 1100px !important;
+  border-radius: var(--glass-radius-md);
+  padding: 1rem 1.1rem 0.9rem;
+  box-shadow: 0 30px 70px rgba(7, 18, 35, 0.45);
+  background: linear-gradient(140deg, rgba(25, 55, 95, 0.62), rgba(12, 32, 60, 0.45));
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  backdrop-filter: blur(14px);
+  overflow: hidden;
+}
+.swal2-popup.proctor-restrictions-modal .swal2-html-container {
+  max-height: calc(78vh - 140px);
+  overflow: auto;
+  padding: 6px;
+}
+
+/* Make the edit restrictions and delete buttons inline and aligned */
+.edit-restrictions,
+.delete-proctor {
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 0.4rem;
+  padding: 0.45rem 0.65rem !important;
+  font-size: 0.86rem !important;
+  border-radius: 0.55rem !important;
+  vertical-align: middle !important;
+}
+.edit-restrictions { margin-inline-end: 6px !important; }
+.delete-proctor { margin-inline-start: 6px !important; }
+
+/* prevent buttons from wrapping in tight table cells */
+table .btn { white-space: nowrap; }
 .session-mini-card {
   padding: 0.9rem;
   border-radius: 12px;

@@ -2106,7 +2106,8 @@
                 <td style="vertical-align:middle">${last}</td>
                 <td style="vertical-align:middle">${phone}</td>
                 <td style="vertical-align:middle">
-                    <button class="btn btn-sm btn-danger delete-proctor" data-id="${id}">حذف</button>
+                    <button class="btn btn-sm btn-success edit-restrictions" data-id="${id}">ویرایش محدودیت‌ها</button>
+                    <button class="btn btn-sm btn-danger delete-proctor" data-id="${id}" style="margin-inline-start:6px">حذف</button>
                 </td>
             </tr>`;
         });
@@ -2165,6 +2166,21 @@
                 }
             });
         });
+        // Attach edit restrictions
+        container.querySelectorAll('.edit-restrictions').forEach(btn => {
+            btn.addEventListener('click', async (e) => {
+                e.stopPropagation();
+                const id = btn.dataset.id;
+                const p = proctors.find(pr => String(pr.id) === String(id));
+                const name = p ? (`${p.first_name || ''} ${p.last_name || ''}`) : '';
+                try {
+                    await openProctorRestrictionsModal(id, name);
+                } catch (err) {
+                    console.warn('edit restrictions failed', err);
+                    Swal.fire({ title: 'خطا', text: 'نمایش محدودیت‌ها ممکن نیست', icon: 'error', customClass: { popup: 'swal2-rtl swal2-glass' } });
+                }
+            });
+        });
     }
 
     async function updateProctorsStats() {
@@ -2193,6 +2209,128 @@
             try { if (typeof updateFinishProctorsBtn === 'function') updateFinishProctorsBtn(); } catch (e) {}
         } catch (e) {
             statsEl.innerHTML = 'آمار ناموفق';
+        }
+    }
+
+    // Open modal to edit proctor restrictions (sessions where this proctor should NOT be assigned)
+    async function openProctorRestrictionsModal(proctorId, proctorName) {
+        try {
+            // Fetch sessions (prefer allExams)
+            const statsResp = await fetch('/API/getStatistics.php', { cache: 'no-store' });
+            const stats = (statsResp && statsResp.ok) ? await statsResp.json() : {};
+            let sessions = [];
+            if (Array.isArray(stats.allExams) && stats.allExams.length) sessions = stats.allExams;
+            else if (Array.isArray(stats.futureExams) && stats.futureExams.length) sessions = stats.futureExams;
+
+            // Fetch existing restrictions for this proctor
+            let existing = [];
+            try {
+                const r = await fetch('/API/getProctorRestrictions.php?proctor_id=' + encodeURIComponent(proctorId), { cache: 'no-store' });
+                if (r && r.ok) {
+                    const j = await r.json();
+                    existing = Array.isArray(j.restrictions) ? j.restrictions : [];
+                }
+            } catch (e) { /* ignore */ }
+
+            // Build a Set of existing pairs for quick lookup
+            const existingSet = new Set(existing.map(x => `${x.exam_date}||${x.exam_time}`));
+
+            // helper: convert hex to rgba string
+            function hexToRgba(hex, a) {
+                const h = hex.replace('#', '');
+                const r = parseInt(h.substring(0, 2), 16);
+                const g = parseInt(h.substring(2, 4), 16);
+                const b = parseInt(h.substring(4, 6), 16);
+                return `rgba(${r}, ${g}, ${b}, ${a})`;
+            }
+            // small palette (12 colors) — mapped by hour
+            const palette = ['#fce8b2', '#ffd6d6', '#d0e8ff', '#dff7ec', '#f9d9ff', '#fff1b8', '#e6e6ff', '#ffe3e3', '#e6fffa', '#f0f9ff', '#eaffd6', '#fbe7f7'];
+            function colorForTime(tt) {
+                try {
+                    const hh = Number((tt || '').split(':')[0] || 0);
+                    const idx = Number.isFinite(hh) ? (hh % palette.length) : 0;
+                    return palette[idx];
+                } catch (e) { return palette[0]; }
+            }
+
+            // Build HTML grid of compact mini-cards using CSS classes and per-hour color
+            const btns = sessions.map(s => {
+                const d = s.exam_date || '';
+                const t = s.exam_time || '';
+                const key = `${d}||${t}`;
+                const isSel = existingSet.has(key);
+                const baseHex = colorForTime(t);
+                const g1 = hexToRgba(baseHex, 0.96);
+                const g2 = hexToRgba(baseHex, 0.82);
+                return `
+                    <div class="proctor-session-card${isSel ? ' selected' : ''}" data-selected="${isSel ? '1' : '0'}" data-date="${escapeHtml(d)}" data-time="${escapeHtml(t)}" style="background: linear-gradient(140deg, ${g1}, ${g2}); color: #04202a;">
+                        <div class="ps-dt">${escapeHtml(t)} | ${escapeHtml(d)}</div>
+                    </div>`;
+            }).join('');
+
+            const html = `<div class="proctor-session-grid" style="direction:rtl;text-align:center;padding:8px">` + btns + `</div>`;
+
+            const { value: confirmed } = await Swal.fire({
+                title: `ویرایش محدودیت‌ها — ${escapeHtml(proctorName || '')}`,
+                html: html,
+                showCancelButton: true,
+                confirmButtonText: 'اتمام',
+                cancelButtonText: 'لغو',
+                customClass: { popup: 'swal2-rtl swal2-glass proctor-restrictions-modal', confirmButton: 'btn btn-primary', cancelButton: 'btn btn-cancel' },
+                didOpen: () => {
+                    try {
+                        const container = Swal.getHtmlContainer();
+                        if (!container) return;
+                        // Attach click handlers to toggle
+                        container.querySelectorAll('.proctor-session-card').forEach(el => {
+                            el.addEventListener('click', (ev) => {
+                                try {
+                                    const cur = el.getAttribute('data-selected') === '1';
+                                    if (cur) {
+                                        el.setAttribute('data-selected', '0');
+                                        el.classList.remove('selected');
+                                    } else {
+                                        el.setAttribute('data-selected', '1');
+                                        el.classList.add('selected');
+                                    }
+                                } catch (e) { /* ignore */ }
+                            });
+                            // ensure initial selected state reflects attribute
+                            if (el.getAttribute('data-selected') === '1') {
+                                el.classList.add('selected');
+                            }
+                        });
+                    } catch (e) { /* ignore */ }
+                }
+            });
+
+            if (!confirmed) return; // user cancelled
+
+            // On confirm, collect selected sessions
+            const container = Swal.getHtmlContainer();
+            const selectedEls = container ? Array.from(container.querySelectorAll('[data-selected="1"]')) : [];
+            const payloadSessions = selectedEls.map(el => ({ exam_date: el.getAttribute('data-date') || '', exam_time: el.getAttribute('data-time') || '' }));
+
+            // Submit to server
+            try {
+                const resp = await fetch('/API/saveProctorRestrictions.php', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json; charset=utf-8', 'X-CSRF-Token': getCsrfToken() },
+                    body: JSON.stringify({ proctor_id: Number(proctorId), sessions: payloadSessions })
+                });
+                const j = await resp.json();
+                if (resp.ok && j && j.success) {
+                    await Swal.fire({ toast: true, position: 'top-end', icon: 'success', title: 'محدودیت‌ها ذخیره شد', showConfirmButton: false, timer: 2000, customClass: { popup: 'swal2-rtl' } });
+                } else {
+                    await Swal.fire({ title: 'خطا', text: (j && j.error) ? j.error : 'ذخیره ناموفق بود', icon: 'error', customClass: { popup: 'swal2-rtl swal2-glass' } });
+                }
+            } catch (e) {
+                await Swal.fire({ title: 'خطا', text: 'در ارتباط با سرور مشکلی پیش آمد', icon: 'error', customClass: { popup: 'swal2-rtl swal2-glass' } });
+            }
+
+        } catch (e) {
+            console.warn('openProctorRestrictionsModal failed', e);
+            await Swal.fire({ title: 'خطا', text: 'نمایش جلسات ممکن نیست', icon: 'error', customClass: { popup: 'swal2-rtl swal2-glass' } });
         }
     }
 
