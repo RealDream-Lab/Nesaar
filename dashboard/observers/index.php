@@ -189,7 +189,7 @@ $showLocationsCard) ? '' : 'display:none;'); ?>">
                 <div class="dashboard-card module-card no-hover" id="assignmentCard" style="display:none;">
                     <h4>چینش مراقبین</h4>
                     <p style="margin-bottom:0.6rem;color:#04202a;">گزارشی خلاصه از نیاز کلی مراقبین و دکمه‌های انتخاب روش چینش را در اینجا ببینید.</p>
-
+                    <br>
                     <!-- Assignment stats: displayed independently, one per line -->
                     <div id="assignmentStats" style="margin-top:0.6rem;direction:rtl;text-align:right;">
                         <div style="margin-bottom:0.45rem">تعداد روزهای آزمون: <strong id="assignmentDays">-</strong></div>
@@ -198,9 +198,11 @@ $showLocationsCard) ? '' : 'display:none;'); ?>">
                         <div style="margin-bottom:0.45rem">تعداد مراقبین ثبت‌شده: <strong id="assignmentRegisteredProctors">-</strong></div>
                         <div style="margin-bottom:0.45rem">میانگین جلسات برای هر مراقب: <strong id="assignmentSessionsPerProctor">-</strong></div>
                     </div>
+                                        <br>
+
                     <div class="row g-2" style="margin-top:0.8rem;">
                         <div class="col-12 col-md-4">
-                            <button id="assignDailyBtn" class="btn btn-upload w-100">چینش خودکار بر اساس حضور روزانه</button>
+                            <button id="assignDailyBtn" class="btn btn-upload w-100">چینش خودکار بر اساس حضور روزانه مراقب</button>
                         </div>
                         <div class="col-12 col-md-4">
                             <button id="assignScatteredBtn" class="btn btn-upload w-100">چینش خودکار مراقبین به صورت پراکنده</button>

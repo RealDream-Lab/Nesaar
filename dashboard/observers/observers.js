@@ -1424,22 +1424,54 @@
 
         // wire placeholders for buttons (idempotent)
         try {
+            // Wire buttons to show a confirmation modal. On confirm show a toast
+            // placeholder indicating the actual assignment logic will be implemented later.
+            const confirmText = `
+                <div style="direction:rtl;text-align:right;line-height:1.6">
+                    در صورت ادامهٔ این فرایند، تمامی اطلاعات مربوط به چینش‌های قبلی پاک خواهد شد و مجدداً سازمان‌دهی می‌شود.
+                    آیا مطمئن هستید که می‌خواهید ادامه دهید؟
+                </div>`;
+
+            async function showAssignmentConfirmPlaceholder() {
+                try {
+                    const res = await Swal.fire({
+                        title: 'تأیید چینش مراقبین',
+                        html: confirmText,
+                        icon: 'warning',
+                        showCancelButton: true,
+                        confirmButtonText: 'بله، ادامه می‌دهم',
+                        cancelButtonText: 'انصراف',
+                        customClass: { popup: 'swal2-rtl swal2-glass', confirmButton: 'btn btn-danger', cancelButton: 'btn btn-outline-secondary' },
+                        reverseButtons: true
+                    });
+                    if (res && res.isConfirmed) {
+                        // placeholder toast — actual implementation will be added later
+                        await Swal.fire({
+                            toast: true,
+                            position: 'top-end',
+                            icon: 'info',
+                            title: 'عملیات بعداً پیاده‌سازی خواهد شد. این اعلان تنها نشان‌دهندهٔ رفتار آینده است.',
+                            showConfirmButton: false,
+                            timer: 3200,
+                            timerProgressBar: true,
+                            customClass: { popup: 'swal2-rtl' }
+                        });
+                    }
+                } catch (e) {
+                    console.warn('assignment confirm flow failed', e);
+                }
+            }
+
             if (assignDailyBtn && !assignDailyBtn._wired) {
-                assignDailyBtn.addEventListener('click', async () => {
-                    await Swal.fire({ title: 'چینش بر اساس حضور روزانه', html: '<div style="direction:rtl;text-align:right">این دکمه الگوریتم "حضور روزانه" را اجرا خواهد کرد. لطفاً روش دقیق را مشخص کنید تا پیاده‌سازی کنم.</div>', confirmButtonText: 'متوجه شدم', customClass: { popup: 'swal2-rtl swal2-glass', confirmButton: 'btn btn-primary' } });
-                });
+                assignDailyBtn.addEventListener('click', async () => { await showAssignmentConfirmPlaceholder(); });
                 assignDailyBtn._wired = true;
             }
             if (assignScatteredBtn && !assignScatteredBtn._wired) {
-                assignScatteredBtn.addEventListener('click', async () => {
-                    await Swal.fire({ title: 'چینش پراکنده', html: '<div style="direction:rtl;text-align:right">این دکمه الگوریتم "پراکنده" را اجرا خواهد کرد. لطفاً قوانین را بگویید تا پیاده‌سازی کنم.</div>', confirmButtonText: 'متوجه شدم', customClass: { popup: 'swal2-rtl swal2-glass', confirmButton: 'btn btn-primary' } });
-                });
+                assignScatteredBtn.addEventListener('click', async () => { await showAssignmentConfirmPlaceholder(); });
                 assignScatteredBtn._wired = true;
             }
             if (assignManualBtn && !assignManualBtn._wired) {
-                assignManualBtn.addEventListener('click', async () => {
-                    await Swal.fire({ title: 'چینش دستی', html: '<div style="direction:rtl;text-align:right">در حالت دستی شما پروفایل‌ها را به‌صورت دلخواه تخصیص می‌دهید. آیا می‌خواهید وارد محیط تخصیص دستی شوم؟</div>', confirmButtonText: 'ادامه', showCancelButton: true, customClass: { popup: 'swal2-rtl swal2-glass', confirmButton: 'btn btn-primary' } });
-                });
+                assignManualBtn.addEventListener('click', async () => { await showAssignmentConfirmPlaceholder(); });
                 assignManualBtn._wired = true;
             }
         } catch (e) { /* ignore wiring errors */ }
