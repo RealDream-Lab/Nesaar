@@ -181,77 +181,7 @@
         // Enable only when there are no zero-valued locations
         saveAllBtn.disabled = zeros > 0;
     }
-
-    // Lightweight assignment summary used as a reliable global helper.
-    // This simple version only reads persisted ExamsDetil and Proctors counts
-    // and fills the assignment card fields. It's deliberately small and
-    // placed before DOMContentLoaded so the header button can call it
-    // without timing issues or hoisting surprises in different browsers.
-    async function loadAssignmentSummary() {
-        const daysEl = document.getElementById('assignmentDays');
-        const sessionsEl = document.getElementById('assignmentSessions');
-        const totalEl = document.getElementById('assignmentTotalRequired');
-        const registeredEl = document.getElementById('assignmentRegisteredProctors');
-        const perProctorEl = document.getElementById('assignmentSessionsPerProctor');
-
-        try {
-            if (daysEl) daysEl.textContent = '...';
-            if (sessionsEl) sessionsEl.textContent = '...';
-            if (totalEl) totalEl.textContent = '...';
-            if (registeredEl) registeredEl.textContent = '...';
-            if (perProctorEl) perProctorEl.textContent = '...';
-        } catch (e) {}
-
-        // fetch persisted exams detail (counts and sum)
-        let exams = [];
-        try {
-            const r = await fetch('/API/getExamsDetail.php', { cache: 'no-store' });
-            if (r && r.ok) {
-                const j = await r.json();
-                exams = Array.isArray(j.exams) ? j.exams : [];
-            }
-        } catch (e) { console.warn('getExamsDetail failed', e); }
-
-        // fetch registered proctors count
-        let registered = 0;
-        try {
-            const r = await fetch('/API/getProctors.php', { cache: 'no-store' });
-            if (r && r.ok) {
-                const j = await r.json();
-                const arr = Array.isArray(j.proctors) ? j.proctors : [];
-                registered = arr.length;
-            }
-        } catch (e) { console.warn('getProctors failed', e); }
-
-        // compute summary from persisted ExamsDetil
-        let days = 0, sessions = 0, totalRequired = 0;
-        if (exams && exams.length) {
-            sessions = exams.length;
-            const dates = new Set();
-            exams.forEach(e => { dates.add((e.exam_date||'').trim()); totalRequired += Number(e.required_proctors || 0); });
-            days = dates.size;
-        }
-
-        const toPersian = (n) => { try { return toPersianDigits(n); } catch (e) { return String(n); } };
-
-        if (daysEl) daysEl.textContent = days > 0 ? toPersian(days) : '-';
-        if (sessionsEl) sessionsEl.textContent = sessions > 0 ? toPersian(sessions) : '-';
-        if (totalEl) totalEl.textContent = totalRequired > 0 ? toPersian(totalRequired) : '-';
-        if (registeredEl) registeredEl.textContent = toPersian(registered);
-
-        if (perProctorEl) {
-            if (registered > 0 && totalRequired > 0) perProctorEl.textContent = toPersian(Math.ceil(totalRequired/registered));
-            else perProctorEl.textContent = '-';
-        }
-
-        // enable/disable assignment buttons: require at least one session entry and some proctors
-        const assignDailyBtn = document.getElementById('assignDailyBtn');
-        const assignScatteredBtn = document.getElementById('assignScatteredBtn');
-        if (assignDailyBtn) assignDailyBtn.disabled = !(sessions > 0 && registered > 0);
-        if (assignScatteredBtn) assignScatteredBtn.disabled = !(sessions > 0 && registered > 0);
-        const assignManualBtn = document.getElementById('assignManualBtn');
-        if (assignManualBtn) assignManualBtn.disabled = false;
-    }
+    
 
     document.addEventListener('DOMContentLoaded', function () {
         checkAuthAndRedirect().then((ok) => {
