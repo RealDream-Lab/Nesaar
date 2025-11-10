@@ -1,3 +1,25 @@
+# Exclude common unnecessary files from build context
+
+.git
+.github
+node_modules
+backup
+docker/
+.DS_Store
+\*.log
+database/upload_log.txt
+database/excel_log.txt
+
+# Do NOT exclude the original JS files needed for the builder stage
+
+# assets/app/app.js
+
+# dashboard/dashboard.js
+
+# dashboard/observers/observers.js
+
+# service-worker.js
+
 vendor
 node_modules
 .git
