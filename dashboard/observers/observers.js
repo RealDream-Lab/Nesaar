@@ -2243,16 +2243,42 @@
                 const b = parseInt(h.substring(4, 6), 16);
                 return `rgba(${r}, ${g}, ${b}, ${a})`;
             }
-            // small palette (12 colors) — mapped by hour
-            const palette = ['#fce8b2', '#ffd6d6', '#d0e8ff', '#dff7ec', '#f9d9ff', '#fff1b8', '#e6e6ff', '#ffe3e3', '#e6fffa', '#f0f9ff', '#eaffd6', '#fbe7f7'];
+            // Two palettes: cool for morning (<12:00) and warm for afternoon (>=12:00)
+            const paletteCool = ['#d0e8ff', '#e6f7ff', '#e6fffa', '#dff7ec', '#e6e6ff'];
+            const paletteWarm = ['#fff1b8', '#ffd6d6', '#ffe3e3', '#fbe7f7', '#f9d9ff'];
+
+            // Build chronological lists split by morning/afternoon so colors
+            // are assigned by order within their half-day.
+            const allTimes = Array.from(new Set(sessions.map(s => (s.exam_time || '').trim()).filter(Boolean)));
+            allTimes.sort((a, b) => {
+                const pa = (a || '').split(':').map(x => Number(x || 0));
+                const pb = (b || '').split(':').map(x => Number(x || 0));
+                if (pa[0] !== pb[0]) return pa[0] - pb[0];
+                return (pa[1] || 0) - (pb[1] || 0);
+            });
+
+            const morningTimes = allTimes.filter(t => { const hh = Number((t||'').split(':')[0]||0); return hh < 12; });
+            const afternoonTimes = allTimes.filter(t => { const hh = Number((t||'').split(':')[0]||0); return hh >= 12; });
+
+            const morningIndex = new Map(); morningTimes.forEach((t,i) => morningIndex.set(t,i));
+            const afternoonIndex = new Map(); afternoonTimes.forEach((t,i) => afternoonIndex.set(t,i));
+
             function colorForTime(tt) {
                 try {
-                    const hh = Number((tt || '').split(':')[0] || 0);
-                    // Make 11:xx use the same color as 08:xx (8:30) per UI request
-                    if (hh === 11) return palette[8 % palette.length];
-                    const idx = Number.isFinite(hh) ? (hh % palette.length) : 0;
-                    return palette[idx];
-                } catch (e) { return palette[0]; }
+                    const t = (tt || '').trim();
+                    // morning (before 12) -> cool palette
+                    if (morningIndex.has(t)) {
+                        return paletteCool[morningIndex.get(t) % paletteCool.length];
+                    }
+                    // afternoon (12 and after) -> warm palette
+                    if (afternoonIndex.has(t)) {
+                        return paletteWarm[afternoonIndex.get(t) % paletteWarm.length];
+                    }
+                    // Fallback: decide by hour
+                    const hh = Number((t || '').split(':')[0] || 0);
+                    if (hh < 12) return paletteCool[hh % paletteCool.length];
+                    return paletteWarm[hh % paletteWarm.length];
+                } catch (e) { return paletteCool[0]; }
             }
 
             // Build HTML grid of compact mini-cards using CSS classes and per-hour color
