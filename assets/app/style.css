@@ -809,7 +809,7 @@ body::after {
   min-width: 150px;
   max-width: 220px;
   padding: 0.35rem 0.7rem;
-  height: 44px;
+  height: 36px; /* reduced height only */
   display: flex;
   /* center content horizontally and vertically */
   flex-direction: column;
@@ -873,6 +873,7 @@ body::after {
     min-width: 110px;
     max-width: 160px;
     padding: 0.35rem 0.5rem;
+    height: 32px;
   }
   .proctor-session-card .ps-date {
     font-size: 0.9rem;
@@ -881,25 +882,24 @@ body::after {
 
 /* Glass modal variant for proctor restrictions: wider, glassy, non-scrolling by default */
 .swal2-popup.proctor-restrictions-modal {
-  /* make this modal wider on large screens and cap on very large displays */
-  width: 96vw !important;
-  max-width: 1280px !important;
+  /* force 90% of viewport width for this modal (override inline width) */
+  width: 90vw !important;
+  max-width: 1100px !important;
   border-radius: var(--glass-radius-md);
-  padding: 0.9rem 1rem 0.9rem;
+  padding: 1rem 1.1rem 0.9rem;
   box-shadow: 0 30px 70px rgba(7, 18, 35, 0.45);
-  background: linear-gradient(140deg, rgba(25, 55, 95, 0.62), rgba(12, 32, 60, 0.45));
+  background: linear-gradient(
+    140deg,
+    rgba(25, 55, 95, 0.62),
+    rgba(12, 32, 60, 0.45)
+  );
   border: 1px solid rgba(255, 255, 255, 0.14);
   backdrop-filter: blur(14px);
-  /* allow the popup itself to grow vertically but keep internal scroll for content */
-  max-height: 92vh;
   overflow: hidden;
 }
 .swal2-popup.proctor-restrictions-modal .swal2-html-container {
-  /* make inner HTML area scrollable when content is tall */
-  max-height: calc(86vh - 140px);
-  overflow-y: auto;
-  overflow-x: hidden;
-  -webkit-overflow-scrolling: touch; /* smooth scrolling on iOS */
+  max-height: calc(78vh - 140px);
+  overflow: auto;
   padding: 6px;
 }
 
