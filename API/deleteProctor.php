@@ -23,6 +23,24 @@ try {
     $ok = $stmt->execute([$id]);
 
     if ($ok) {
+        // Ensure ProctorRestrictions table exists (safe no-op if already present)
+        $pdo->exec("CREATE TABLE IF NOT EXISTS `ProctorRestrictions` (
+            `id` INT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
+            `proctor_id` INT UNSIGNED NOT NULL,
+            `exam_date` VARCHAR(10) NOT NULL,
+            `exam_time` VARCHAR(5) NOT NULL,
+            `created_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            UNIQUE KEY `ux_proctor_date_time` (`proctor_id`,`exam_date`,`exam_time`)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
+
+        // Delete any restrictions associated with this proctor to keep DB consistent
+        try {
+            $dstmt = $pdo->prepare('DELETE FROM `ProctorRestrictions` WHERE proctor_id = ?');
+            $dstmt->execute([$id]);
+        } catch (Throwable $inner) {
+            // ignore — table may not exist or other non-fatal issue; continue
+        }
+
         echo json_encode(['success' => true], JSON_UNESCAPED_UNICODE);
     } else {
         http_response_code(500);
