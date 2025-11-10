@@ -2248,6 +2248,8 @@
             function colorForTime(tt) {
                 try {
                     const hh = Number((tt || '').split(':')[0] || 0);
+                    // Make 11:xx use the same color as 08:xx (8:30) per UI request
+                    if (hh === 11) return palette[8 % palette.length];
                     const idx = Number.isFinite(hh) ? (hh % palette.length) : 0;
                     return palette[idx];
                 } catch (e) { return palette[0]; }
