@@ -224,11 +224,22 @@
         } catch (e) { console.warn('getProctors failed', e); }
 
         // compute summary from persisted ExamsDetil
-        let days = 0, sessions = 0, totalRequired = 0;
+        let days = 0, sessions = 0, totalRequired = 0, morningTotal = 0, afternoonTotal = 0;
         if (exams && exams.length) {
             sessions = exams.length;
             const dates = new Set();
-            exams.forEach(e => { dates.add((e.exam_date||'').trim()); totalRequired += Number(e.required_proctors || 0); });
+            exams.forEach(e => {
+                dates.add((e.exam_date||'').trim());
+                const req = Number(e.required_proctors || 0);
+                totalRequired += req;
+                const time = (e.exam_time || '').trim();
+                const hour = time ? parseInt(time.split(':')[0], 10) : 0;
+                if (hour >= 12) {
+                    afternoonTotal += req;
+                } else {
+                    morningTotal += req;
+                }
+            });
             days = dates.size;
         }
 
@@ -236,7 +247,16 @@
 
         if (daysEl) daysEl.textContent = days > 0 ? toPersian(days) : '-';
         if (sessionsEl) sessionsEl.textContent = sessions > 0 ? toPersian(sessions) : '-';
-        if (totalEl) totalEl.textContent = totalRequired > 0 ? toPersian(totalRequired) : '-';
+        
+        // Display total with morning/afternoon breakdown (no emoji)
+        if (totalEl) {
+            if (totalRequired > 0) {
+                totalEl.innerHTML = `${toPersian(totalRequired)} (<span style="color:#1e90ff;font-weight:bold;">${toPersian(morningTotal)}</span> <span style="color:#999;">/</span> <span style="color:#dc3545;font-weight:bold;">${toPersian(afternoonTotal)}</span>)`;
+            } else {
+                totalEl.textContent = '-';
+            }
+        }
+        
         if (registeredEl) registeredEl.textContent = toPersian(registered);
 
         if (perProctorEl) {
@@ -251,6 +271,111 @@
         if (assignScatteredBtn) assignScatteredBtn.disabled = !(sessions > 0 && registered > 0);
         const assignManualBtn = document.getElementById('assignManualBtn');
         if (assignManualBtn) assignManualBtn.disabled = false;
+    }
+
+    // Open the scattered-assignment flow: preview -> optional apply.
+    async function openScatteredAssignmentFlow() {
+        // Step A: initial confirmation before running preview
+        const confirm = await Swal.fire({
+            title: 'تأیید عملیات',
+            html: '<div style="text-align:justify;line-height:1.6">این عملیات تمامی چینش‌های قبلی را پاک کرده و چینش جدیدی به صورت پراکنده انجام خواهد داد. این روش زمانی مناسب است که ساختمان‌های برگزاری آزمون از هم دور نبوده و مراقبین در کنار کار مراقبت باید به امور دانشجویان نیز رسیدگی نمایند. ابتدا پیش‌نمایش اجرا می‌شود و سپس می‌توانید آن را نهایی کنید. آیا می‌خواهید پیش‌نمایش را اجرا کنم؟</div>',
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonText: 'پیش‌نمایش',
+            cancelButtonText: 'انصراف',
+            customClass: { popup: 'swal2-rtl swal2-glass', confirmButton: 'btn btn-primary', cancelButton: 'btn btn-cancel' },
+            width: '620px'
+        });
+        if (!confirm.isConfirmed) return;
+
+        // Show loading while requesting preview
+        Swal.fire({ title: 'در حال آماده‌سازی پیش‌نمایش...', allowOutsideClick: false, didOpen: () => { Swal.showLoading(); }, customClass: { popup: 'swal2-rtl swal2-glass' } });
+
+        try {
+            const resp = await fetch('/API/assignScattered.php', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8' },
+                body: new URLSearchParams({ dry_run: 'true' })
+            });
+            const j = await resp.json();
+            Swal.close();
+            if (!resp.ok || !j || !j.success) {
+                await Swal.fire({ icon: 'error', title: 'خطا', text: (j && j.error) ? j.error : 'خطای سرور در تولید پیش‌نمایش' , customClass: { popup: 'swal2-rtl swal2-glass', confirmButton: 'btn btn-primary' } });
+                return;
+            }
+
+            // Build HTML summary for preview
+            const totalSlots = j.total_slots || 0;
+            const unfilled = Array.isArray(j.unfilled_slots) ? j.unfilled_slots : [];
+            const per = Array.isArray(j.per_proctor) ? j.per_proctor : [];
+
+            let html = `<div style="direction:rtl;text-align:right;max-height:420px;overflow:auto">`;
+            html += `<div style="margin-bottom:0.6rem">تعداد کل اسلات‌ها: <strong>${toPersianDigits(totalSlots)}</strong></div>`;
+            html += `<div style="margin-bottom:0.6rem">تعداد مراقب‌ها: <strong>${toPersianDigits(j.num_proctors || 0)}</strong></div>`;
+            html += `<div style="margin-bottom:0.6rem">میانگین: <strong>${toPersianDigits(Math.round(j.mean || 0))}</strong> (ceil=${toPersianDigits(j.ceil_mean || 0)})</div>`;
+
+            html += '<div style="margin-top:0.6rem;font-weight:600">تخصیص به ازای هر مراقب</div>';
+            html += '<table style="width:100%;direction:rtl;margin-top:0.4rem;border-collapse:collapse">';
+            html += '<thead><tr><th style="text-align:right;padding:6px;border-bottom:1px solid #eee">مراقب</th><th style="text-align:center;padding:6px;border-bottom:1px solid #eee">کل</th><th style="text-align:center;padding:6px;border-bottom:1px solid #eee">بعدازظهر</th></tr></thead><tbody>';
+            per.forEach(p => {
+                const name = escapeHtml(p.name || (p.id ? String(p.id) : '-'));
+                const total = toPersianDigits(Number(p.total_assigned || 0));
+                const afn = toPersianDigits(Number(p.afternoon_assigned || 0));
+                html += `<tr><td style="padding:6px;border-bottom:1px solid #fafafa">${name}</td><td style="text-align:center;padding:6px;border-bottom:1px solid #fafafa">${total}</td><td style="text-align:center;padding:6px;border-bottom:1px solid #fafafa">${afn}</td></tr>`;
+            });
+            html += '</tbody></table>';
+
+            if (unfilled.length) {
+                html += `<div style="margin-top:0.8rem;font-weight:600;color:crimson">جلسات خالی: ${toPersianDigits(unfilled.length)}</div>`;
+                html += '<ul style="margin-top:0.4rem;padding-inline-start:1rem;">';
+                unfilled.forEach(u => { html += `<li>${escapeHtml(u.exam_date || '')} | ${escapeHtml(u.exam_time || '')}</li>`; });
+                html += '</ul>';
+            }
+
+            html += '</div>';
+
+            const modal = await Swal.fire({
+                title: 'پیش‌نمایش چینش پراکنده',
+                html: html,
+                showCancelButton: true,
+                confirmButtonText: 'اعمال نهایی',
+                cancelButtonText: 'بستن',
+                customClass: { popup: 'swal2-rtl swal2-glass', confirmButton: 'btn btn-danger', cancelButton: 'btn btn-cancel' },
+                width: '760px'
+            });
+
+            if (!modal.isConfirmed) return;
+
+            // Final confirmation before applying destructive write
+            const finalConfirm = await Swal.fire({ title: 'اعمال نهایی و بازنویسی', html: '<div style="direction:rtl;text-align:justify">با کلیک بر "بله، اعمال کن" جدول تخصیص‌ها بازنویسی خواهد شد. آیا ادامه می‌دهید؟</div>', icon: 'warning', showCancelButton: true, confirmButtonText: 'بله، اعمال کن', cancelButtonText: 'انصراف', customClass: { popup: 'swal2-rtl swal2-glass', confirmButton: 'btn btn-danger' } });
+            if (!finalConfirm.isConfirmed) return;
+
+            // Apply: call API with dry_run=false & apply=true
+            Swal.fire({ title: 'در حال اعمال چینش...', allowOutsideClick: false, didOpen: () => { Swal.showLoading(); }, customClass: { popup: 'swal2-rtl swal2-glass' } });
+            try {
+                const resp2 = await fetch('/API/assignScattered.php', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8' },
+                    body: new URLSearchParams({ dry_run: 'false', apply: 'true' })
+                });
+                const j2 = await resp2.json();
+                Swal.close();
+                if (!resp2.ok || !j2 || !j2.success) {
+                    await Swal.fire({ icon: 'error', title: 'خطا در اعمال', text: (j2 && j2.error) ? j2.error : 'نوشتن در دیتابیس ناموفق بود', customClass: { popup: 'swal2-rtl swal2-glass' } });
+                    return;
+                }
+                // success — refresh assignment summary UI
+                await Swal.fire({ icon: 'success', title: 'اعمال شد', text: j2.unfilled_count ? (`${toPersianDigits(j2.unfilled_count)} جلسه بدون مراقب باقی مانده است.`) : 'تمام جلسات تخصیص داده شدند.', customClass: { popup: 'swal2-rtl swal2-glass' } });
+                try { if (typeof loadAssignmentSummary === 'function') await loadAssignmentSummary(); } catch (e) { /* ignore */ }
+            } catch (e) {
+                Swal.close();
+                await Swal.fire({ icon: 'error', title: 'خطا در ارتباط با سرور', customClass: { popup: 'swal2-rtl swal2-glass' } });
+            }
+
+        } catch (e) {
+            Swal.close();
+            await Swal.fire({ icon: 'error', title: 'خطا', text: 'خطا در ارتباط با سرور هنگام تولید پیش‌نمایش', customClass: { popup: 'swal2-rtl swal2-glass' } });
+        }
     }
 
     document.addEventListener('DOMContentLoaded', function () {
@@ -952,6 +1077,23 @@
             });
         }
 
+        // Header button for reports (placeholder modal)
+        const showReportBtn = document.getElementById('showReportBtn');
+        if (showReportBtn) {
+            showReportBtn.addEventListener('click', async (e) => {
+                try { if (e && typeof e.preventDefault === 'function') e.preventDefault(); } catch (err) {}
+                await Swal.fire({
+                    title: 'گزارش مراقبین',
+                    html: '<div style="text-align:justify;direction:rtl;line-height:1.7">این بخش به زودی گزارش نهایی مراقبین (تخصیص‌ها، جمع‌بندی صبح/بعدازظهر و هشدارهای تداخل/محدودیت) را نمایش خواهد داد.</div>',
+                    imageUrl: '/assets/app/report.png',
+                    imageWidth: 96,
+                    imageHeight: 96,
+                    confirmButtonText: 'باشه',
+                    customClass: { popup: 'swal2-rtl swal2-glass', confirmButton: 'btn btn-primary' }
+                });
+            });
+        }
+
         // "تغییر لازم نیست، ادامه" button: reveal Proctors card without saving
         const noChangeNeededBtn = document.getElementById('noChangeNeededBtn');
         if (noChangeNeededBtn) {
@@ -1078,28 +1220,7 @@
         if (assignScatteredBtn) {
             assignScatteredBtn.addEventListener('click', async (e) => {
                 try { if (e && typeof e.preventDefault === 'function') e.preventDefault(); } catch (err) { /* ignore */ }
-        const result = await Swal.fire({
-            title: 'تأیید عملیات',
-            html: '<div style="text-align:justify;line-height:1.6">این عملیات تمامی چینش‌های قبلی را پاک کرده و چینش جدیدی به صورت پراکنده انجام خواهد داد. این روش زمانی مناسب است که ساختمان‌های برگزاری آزمون از هم دور نبوده و مراقبین در کنار کار مراقبت باید به امور دانشجویان نیز رسیدگی نمایند. آیا مطمئن هستید که می‌خواهید ادامه دهید؟</div>',
-            icon: 'warning',
-            showCancelButton: true,
-            confirmButtonText: 'بله، ادامه می‌دهم',
-            cancelButtonText: 'انصراف',
-        // colors are handled by button classes; set a fixed width to avoid wrapping
-    customClass: { popup: 'swal2-rtl swal2-glass', confirmButton: 'btn btn-danger', cancelButton: 'btn btn-cancel' },
-    width: '520px'
-        });
-                if (result.isConfirmed) {
-                    // TODO: Implement scattered assignment logic here
-                    await Swal.fire({
-                        title: 'اطلاع',
-                        text: 'کد عملیات چینش خودکار مراقبین به صورت پراکنده بعداً پیاده‌سازی خواهد شد.',
-                        icon: 'info',
-                        confirmButtonText: 'باشه',
-        customClass: { popup: 'swal2-rtl swal2-glass', confirmButton: 'btn btn-primary' },
-        width: '520px'
-                    });
-                }
+                await openScatteredAssignmentFlow();
             });
         }
 
@@ -1516,7 +1637,7 @@
         } catch (e) { console.warn('getExamsDetail failed', e); }
 
         // calculate summary
-        let days = 0, sessions = 0, totalRequired = 0;
+        let days = 0, sessions = 0, totalRequired = 0, morningTotal = 0, afternoonTotal = 0;
         function toPersian(n) { try { return toPersianDigits(n); } catch (e) { return String(n); } }
 
         if (exams && exams.length) {
@@ -1524,7 +1645,15 @@
             const dates = new Set();
             exams.forEach(e => {
                 dates.add((e.exam_date || '').trim());
-                totalRequired += Number(e.required_proctors || 0);
+                const req = Number(e.required_proctors || 0);
+                totalRequired += req;
+                const time = (e.exam_time || '').trim();
+                const hour = time ? parseInt(time.split(':')[0], 10) : 0;
+                if (hour >= 12) {
+                    afternoonTotal += req;
+                } else {
+                    morningTotal += req;
+                }
             });
             days = dates.size;
         } else {
@@ -1557,24 +1686,32 @@
                             const t = fe.exam_time || '';
                             try {
                                 const repResp = await fetch(`/API/getNextExamReport.php?exam_date=${encodeURIComponent(d)}&exam_time=${encodeURIComponent(t)}`, { cache: 'no-store' });
-                                if (!repResp || !repResp.ok) return { date: d, proctors: 0 };
+                                if (!repResp || !repResp.ok) return { date: d, time: t, proctors: 0 };
                                 const rep = await repResp.json();
                                 const students = Array.isArray(rep.students) ? rep.students : [];
                                 const usedKeys = new Set();
                                 students.forEach(s => usedKeys.add(`${(s.building||'').trim()}||${(s.class_name||'').trim()}`));
                                 let sessionSum = 0;
                                 usedKeys.forEach(k => { if (locMap.has(k)) sessionSum += Number(locMap.get(k)) || 0; });
-                                return { date: d, proctors: sessionSum };
+                                return { date: d, time: t, proctors: sessionSum };
                             } catch (e) {
                                 console.warn('assignment summary session fetch failed', e);
-                                return { date: d, proctors: 0 };
+                                return { date: d, time: t, proctors: 0 };
                             }
                         });
                         const results = await Promise.all(promises);
                         results.forEach(r => {
                             if (r) {
-                                totalRequired += Number(r.proctors || 0);
+                                const req = Number(r.proctors || 0);
+                                totalRequired += req;
                                 if (r.date) datesSet.add(r.date);
+                                const time = (r.time || '').trim();
+                                const hour = time ? parseInt(time.split(':')[0], 10) : 0;
+                                if (hour >= 12) {
+                                    afternoonTotal += req;
+                                } else {
+                                    morningTotal += req;
+                                }
                             }
                         });
                     }
@@ -1588,7 +1725,14 @@
         // populate UI values
         if (daysEl) daysEl.textContent = (days > 0) ? toPersian(days) : '-';
         if (sessionsEl) sessionsEl.textContent = (sessions > 0) ? toPersian(sessions) : '-';
-        if (totalEl) totalEl.textContent = (totalRequired > 0) ? toPersian(totalRequired) : '-';
+        
+        // Build detailed breakdown with morning and afternoon totals (no emoji, no debug logs)
+        let totalText = '-';
+        if (totalRequired > 0) {
+            totalText = `${toPersian(totalRequired)} (<span style="color:#1e90ff;font-weight:bold;">${toPersian(morningTotal)}</span> <span style="color:#999;">/</span> <span style="color:#dc3545;font-weight:bold;">${toPersian(afternoonTotal)}</span>)`;
+        }
+        if (totalEl) totalEl.innerHTML = totalText;
+        
         if (registeredEl) registeredEl.textContent = toPersian(registered);
 
         let per = '-';
@@ -1617,7 +1761,7 @@
             }
             if (assignScatteredBtn && !assignScatteredBtn._wired) {
                 assignScatteredBtn.addEventListener('click', async () => {
-                    await Swal.fire({ title: 'چینش پراکنده', html: '<div style="direction:rtl;text-align:right">این دکمه الگوریتم "پراکنده" را اجرا خواهد کرد. لطفاً قوانین را بگویید تا پیاده‌سازی کنم.</div>', confirmButtonText: 'متوجه شدم', customClass: { popup: 'swal2-rtl swal2-glass', confirmButton: 'btn btn-primary' } });
+                    await openScatteredAssignmentFlow();
                 });
                 assignScatteredBtn._wired = true;
             }

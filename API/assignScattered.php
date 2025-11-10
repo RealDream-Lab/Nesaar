@@ -213,6 +213,7 @@ try {
         $prevSessionIndex = $gIndex - 1;
 
         $skipConsecutiveCheck = in_array('allow_consecutive', $allowRelaxes, true);
+        $ignoreMax = in_array('ignore_max', $allowRelaxes, true);
 
         foreach ($proctors as $p) {
             $pid = intval($p['id']);
@@ -220,8 +221,8 @@ try {
             if (isset($restrictions[$pid]) && isset($restrictions[$pid][$key])) { $excludedByRestriction[$pid]++; continue; }
             // prevent multiple assignments for the same (date|time) session
             if (isset($assignedInGroup[$pid][$gIndex]) && $assignedInGroup[$pid][$gIndex] === true) { continue; }
-            // max limit
-            if ($assignedCount[$pid] >= $targetMax) { $excludedByMax[$pid]++; continue; }
+            // max limit (unless we're forcing fill with ignore_max)
+            if (!$ignoreMax && $assignedCount[$pid] >= $targetMax) { $excludedByMax[$pid]++; continue; }
             // consecutive avoidance: if allowed, skip those with lastAssignedSessionIndex == prevSessionIndex
             if (!$skipConsecutiveCheck) {
                 $hasEnoughAssignments = ($assignedCount[$pid] >= $targetMin);
@@ -260,6 +261,10 @@ try {
         // Try 2: allow consecutive if none
         if (empty($cands)) {
             $cands = $findEligible($slot, ['allow_consecutive']);
+        }
+        // Try 3: ignore max cap to force-fill this slot if still empty
+        if (empty($cands)) {
+            $cands = $findEligible($slot, ['allow_consecutive', 'ignore_max']);
         }
         if (empty($cands)) {
             // No eligible proctor: leave unassigned
@@ -545,6 +550,148 @@ try {
 
                 if (!$swapDone) {
                     break;
+                }
+            }
+        }
+    }
+
+    // ------------------------------------------------------------------
+    // Balancing pass 3: fine-tune overall load so distribution matches a
+    // feasible (ceil/floor) pattern. Goal: have X proctors at ceilMean and
+    // (N-X) at floorMean where X = totalSlots - floorMean * numProctors.
+    // Example: total=342, proctors=12, mean=28.5 => floor=28, ceil=29,
+    // X = 342 - (28*12) = 6. We aim for exactly six proctors at 29 and six
+    // at 28, eliminating counts of 30 without creating new shortages.
+    // ------------------------------------------------------------------
+    $desiredCeilHolders = $totalSlots - ($floorMean * $numProctors); // X
+    if ($desiredCeilHolders < 0) $desiredCeilHolders = 0;
+    if ($desiredCeilHolders > $numProctors) $desiredCeilHolders = $numProctors;
+
+    // Current classification
+    $aboveMax = []; // > ceilMean
+    $atCeil = [];   // == ceilMean
+    $atFloor = [];  // == floorMean
+    $belowFloor = []; // < floorMean (should not typically occur now)
+    foreach ($proctors as $p) {
+        $pid = intval($p['id']);
+        if ($assignedCount[$pid] > $ceilMean) $aboveMax[] = $pid; elseif ($assignedCount[$pid] === $ceilMean) $atCeil[] = $pid; elseif ($assignedCount[$pid] === $floorMean) $atFloor[] = $pid; else $belowFloor[] = $pid;
+    }
+
+    // We only act if there are proctors above ceil OR we have too many at ceil compared to desiredCeilHolders.
+    $currentCeilCount = count($atCeil) + count($aboveMax); // those >= ceilMean
+    if (!empty($aboveMax) || $currentCeilCount > $desiredCeilHolders) {
+        // Build recipient list: proctors that can receive an extra slot (strictly below ceilMean) prioritizing those at floor then belowFloor.
+        $canReceive = array_merge($atFloor, $belowFloor);
+        // Sort donors (aboveMax first then, if over target desiredCeilHolders, some of the atCeil)
+        // Donor ordering: higher assignedCount first, then higher afternoonCount (we prefer moving MORNING slots to keep afternoon distribution stable).
+        $potentialDonors = [];
+        foreach ($aboveMax as $pid) $potentialDonors[] = $pid;
+        if ($currentCeilCount > $desiredCeilHolders) {
+            // We have excess ceil holders; select some of the atCeil as donors to reduce.
+            $excess = $currentCeilCount - $desiredCeilHolders;
+            // Sort atCeil by (assignedCount, afternoonCount) descending to pick those easiest to trim.
+            usort($atCeil, function($a,$b) use (&$assignedCount,&$afternoonCount){
+                if ($assignedCount[$a] === $assignedCount[$b]) {
+                    if ($afternoonCount[$a] === $afternoonCount[$b]) return $b <=> $a; // stable tie
+                    return $afternoonCount[$b] <=> $afternoonCount[$a];
+                }
+                return $assignedCount[$b] <=> $assignedCount[$a];
+            });
+            foreach ($atCeil as $pid) {
+                if ($excess <= 0) break;
+                $potentialDonors[] = $pid; $excess--;
+            }
+        }
+        // Sort donors
+        usort($potentialDonors, function($a,$b) use (&$assignedCount,&$afternoonCount){
+            if ($assignedCount[$a] === $assignedCount[$b]) {
+                if ($afternoonCount[$a] === $afternoonCount[$b]) return $b <=> $a;
+                return $afternoonCount[$b] <=> $afternoonCount[$a];
+            }
+            return $assignedCount[$b] <=> $assignedCount[$a];
+        });
+
+        // Sort recipients: lower assignedCount first, then lower afternoonCount (so they can absorb morning slots if possible)
+        usort($canReceive, function($a,$b) use (&$assignedCount,&$afternoonCount){
+            if ($assignedCount[$a] === $assignedCount[$b]) {
+                if ($afternoonCount[$a] === $afternoonCount[$b]) return $a <=> $b;
+                return $afternoonCount[$a] <=> $afternoonCount[$b];
+            }
+            return $assignedCount[$a] <=> $assignedCount[$b];
+        });
+
+        // Helper to attempt moving one slot from donor to recipient
+        $tryTransfer = function($donorPid, $recipientPid) use (&$slots,&$proctorAssignments,&$proctorHasGroup,&$assignedCount,&$afternoonCount,$isAfternoon,$targetMin,$ceilMean,$floorMean,&$assignedInGroup,&$restrictions) {
+            if ($assignedCount[$donorPid] <= $floorMean) return false; // donor too low
+            if ($assignedCount[$recipientPid] >= $ceilMean) return false; // recipient already at or above ceil
+            // Candidate slots: donor's morning slots first, then afternoon if necessary.
+            $candidateSlotIdxsMorning = [];
+            $candidateSlotIdxsAfternoon = [];
+            foreach ($proctorAssignments[$donorPid] as $sidx) {
+                $groupIndex = $slots[$sidx]['groupIndex'];
+                // Ensure recipient not in same group (session) already
+                if (isset($proctorHasGroup[$recipientPid][$groupIndex])) continue;
+                // Avoid consecutive sessions for recipient (respect the adjacency constraint like other passes)
+                if (isset($proctorHasGroup[$recipientPid][$groupIndex - 1]) || isset($proctorHasGroup[$recipientPid][$groupIndex + 1])) continue;
+                // Respect explicit restrictions for recipient on this slot
+                $key = $slots[$sidx]['exam_date'] . '|' . $slots[$sidx]['exam_time'];
+                if (isset($restrictions[$recipientPid]) && isset($restrictions[$recipientPid][$key])) continue;
+                $time = $slots[$sidx]['exam_time'];
+                if ($isAfternoon($time)) {
+                    $candidateSlotIdxsAfternoon[] = $sidx; // store but prefer morning
+                } else {
+                    $candidateSlotIdxsMorning[] = $sidx;
+                }
+            }
+            $pickList = array_merge($candidateSlotIdxsMorning, $candidateSlotIdxsAfternoon);
+            foreach ($pickList as $slotIdx) {
+                $groupIndex = $slots[$slotIdx]['groupIndex'];
+                // Perform reassignment
+                $oldAfternoon = $isAfternoon($slots[$slotIdx]['exam_time']);
+                // Remove from donor
+                $assignedCount[$donorPid] = max(0, $assignedCount[$donorPid]-1);
+                if ($oldAfternoon && $afternoonCount[$donorPid] > 0) $afternoonCount[$donorPid]--;
+                // Remove mapping
+                foreach ($proctorAssignments[$donorPid] as $k=>$v) { if ($v === $slotIdx) { unset($proctorAssignments[$donorPid][$k]); break; } }
+                $proctorAssignments[$donorPid] = array_values($proctorAssignments[$donorPid]);
+                unset($proctorHasGroup[$donorPid][$groupIndex]);
+                if (isset($assignedInGroup[$donorPid][$groupIndex])) unset($assignedInGroup[$donorPid][$groupIndex]);
+                // Assign to recipient
+                $slots[$slotIdx]['assigned'] = $recipientPid;
+                $assignedCount[$recipientPid]++;
+                if ($oldAfternoon) $afternoonCount[$recipientPid]++;
+                $proctorAssignments[$recipientPid][] = $slotIdx;
+                $proctorHasGroup[$recipientPid][$groupIndex] = true;
+                $assignedInGroup[$recipientPid][$groupIndex] = true; // maintain per-session tracker
+                return true;
+            }
+            return false;
+        };
+
+        // Execute minimal transfers needed
+        foreach ($potentialDonors as $donor) {
+            // Recompute classification early stop
+            $currentCeilCount = 0;
+            $aboveCountExists = false;
+            foreach ($proctors as $p) {
+                $pid = intval($p['id']);
+                if ($assignedCount[$pid] > $ceilMean) { $aboveCountExists = true; $currentCeilCount++; }
+                elseif ($assignedCount[$pid] === $ceilMean) { $currentCeilCount++; }
+            }
+            if (!$aboveCountExists && $currentCeilCount <= $desiredCeilHolders) break; // target reached
+            // Attempt transfer to recipients in priority order
+            foreach ($canReceive as $recIdx => $rec) {
+                if ($assignedCount[$rec] >= $ceilMean) continue; // already at ceil
+                if ($tryTransfer($donor, $rec)) {
+                    // Resort recipients after change for fairness
+                    usort($canReceive, function($a,$b) use (&$assignedCount,&$afternoonCount){
+                        if ($assignedCount[$a] === $assignedCount[$b]) {
+                            if ($afternoonCount[$a] === $afternoonCount[$b]) return $a <=> $b;
+                            return $afternoonCount[$a] <=> $afternoonCount[$b];
+                        }
+                        return $assignedCount[$a] <=> $assignedCount[$b];
+                    });
+                    break; // move to next donor (single slot per donor pass)
                 }
             }
         }

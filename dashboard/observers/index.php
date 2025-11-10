@@ -62,25 +62,24 @@ try {
                         </div>
                     </div>
                     <div class="d-flex align-items-center">
-                        <!-- Locations quick-open button (hidden: shows locations card when clicked) -->
+                        <!-- Locations quick-open button (hidden: shows locations card when clicked) 
                         <button id="showLocationsBtn" class="btn btn-icon p-0" type="button" title="نمایش مکان‌ها" style="background:transparent;border:none;margin-inline-end:8px;padding:0;">
                             <img src="/dashboard/observers/locations.png" alt="مکان‌ها" style="width:40px;height:40px;object-fit:contain;display:block;">
                         </button>
-                        <!-- Stats quick-open button: shows the session stats card when clicked -->
                         <button id="showStatsBtn" class="btn btn-icon p-0" type="button" title="نمایش نمودار" style="background:transparent;border:none;margin-inline-end:8px;padding:0;">
                             <img src="/dashboard/statices.png" alt="نمودار" style="width:40px;height:40px;object-fit:contain;display:block;">
                         </button>
-                        <!-- Exams detail quick-open button-->
                         <button id="showExamsDetailBtn" class="btn btn-icon p-0" type="button" title="جزئیات جلسات" style="background:transparent;border:none;margin-inline-end:8px;padding:0;">
                             <img src="/dashboard/statices.png" alt="جزئیات" style="width:40px;height:40px;object-fit:contain;display:block;">
-                        </button>
-                        <!-- Proctors quick-open button-->
+                        </button>-->
                         <button id="showProctorsBtn" class="btn btn-icon p-0" type="button" title="مشخصات مراقبین" style="background:transparent;border:none;margin-inline-end:8px;padding:0;">
                             <img src="/dashboard/statices.png" alt="مراقبین" style="width:40px;height:40px;object-fit:contain;display:block;">
                         </button> 
-                        <!-- Assignment quick-open button -->
                         <button id="showAssignmentBtn" class="btn btn-icon p-0" type="button" title="چینش مراقبین" style="background:transparent;border:none;margin-inline-end:8px;padding:0;">
                             <img src="/dashboard/statices.png" alt="چینش" style="width:40px;height:40px;object-fit:contain;display:block;">
+                        </button>
+                        <button id="showReportBtn" class="btn btn-icon p-0" type="button" title="گزارش مراقبین" style="background:transparent;border:none;margin-inline-end:8px;padding:0;">
+                            <img src="/assets/app/report.png" alt="گزارش" style="width:40px;height:40px;object-fit:contain;display:block;">
                         </button>
                         <button id="backToDashboardBtn" class="btn btn-icon p-0" type="button" title="بازگشت به داشبورد" style="background:transparent;border:none;margin-inline-end:8px;padding:0;">
                             <img src="/dashboard/home.png" alt="بازگشت" style="width:40px;height:40px;object-fit:contain;display:block;">
@@ -197,7 +196,7 @@ $showLocationsCard) ? '' : 'display:none;'); ?>">
                     <div id="assignmentStats" style="margin-top:0.6rem;direction:rtl;text-align:right;">
                         <div style="margin-bottom:0.45rem">تعداد روزهای آزمون: <strong id="assignmentDays">-</strong></div>
                         <div style="margin-bottom:0.45rem">تعداد جلسات: <strong id="assignmentSessions">-</strong></div>
-                        <div style="margin-bottom:0.45rem">مجموع مراقبین موردنیاز: <strong id="assignmentTotalRequired">-</strong></div>
+                        <div style="margin-bottom:0.45rem">مجموع مراقبین موردنیاز: <strong id="assignmentTotalRequired" style="font-family:'Vazir',Tahoma,sans-serif;">-</strong></div>
                         <div style="margin-bottom:0.45rem">تعداد مراقبین ثبت‌شده: <strong id="assignmentRegisteredProctors">-</strong></div>
                         <div style="margin-bottom:0.45rem">میانگین جلسات برای هر مراقب: <strong id="assignmentSessionsPerProctor">-</strong></div>
                     </div>
