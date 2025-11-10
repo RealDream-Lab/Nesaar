@@ -2086,11 +2086,11 @@
             <table class="table" style="direction:rtl;text-align:right;margin:0;">
                 <thead>
                     <tr>
-                        <th style="width:50px">ردیف</th>
-                        <th>نام</th>
-                        <th>نام خانوادگی</th>
-                        <th>شماره همراه</th>
-                        <th style="width:100px">عملیات</th>
+                        <th style="width:5%">ردیف</th>
+                        <th style="width:25%">نام</th>
+                        <th style="width:25%">نام خانوادگی</th>
+                        <th style="width:25%">شماره همراه</th>
+                        <th style="width:20%">عملیات</th>
                     </tr>
                 </thead><tbody>`;
 
@@ -2101,12 +2101,12 @@
             const last = escapeHtml(p.last_name || '');
             const phone = toPersianDigits(escapeHtml(p.phone || ''));
             html += `<tr data-id="${id}" style="cursor:pointer;">
-                <td style="vertical-align:middle;text-align:center;">${idx + 1}</td>
-                <td style="vertical-align:middle">${first}</td>
-                <td style="vertical-align:middle">${last}</td>
-                <td style="vertical-align:middle">${phone}</td>
-                <td style="vertical-align:middle">
-                    <button class="btn btn-sm btn-success edit-restrictions" data-id="${id}">ویرایش محدودیت‌ها</button>
+                <td style="vertical-align:middle;text-align:center;width:5%">${idx + 1}</td>
+                <td style="vertical-align:middle;width:25%">${first}</td>
+                <td style="vertical-align:middle;width:25%">${last}</td>
+                <td style="vertical-align:middle;width:25%">${phone}</td>
+                <td style="vertical-align:middle;width:20%">
+                    <button class="btn btn-sm btn-success edit-restrictions" data-id="${id}">محدودیت‌ها</button>
                     <button class="btn btn-sm btn-danger delete-proctor" data-id="${id}" style="margin-inline-start:6px">حذف</button>
                 </td>
             </tr>`;
@@ -2271,7 +2271,7 @@
             const html = `<div class="proctor-session-grid" style="direction:rtl;text-align:center;padding:8px">` + btns + `</div>`;
 
             const { value: confirmed } = await Swal.fire({
-                title: `ویرایش محدودیت‌ها — ${escapeHtml(proctorName || '')}`,
+                title: `ویرایش محدودیت‌ها  (${escapeHtml(proctorName || '')})`,
                 html: html,
                 showCancelButton: true,
                 confirmButtonText: 'اتمام',
@@ -2320,7 +2320,7 @@
                 });
                 const j = await resp.json();
                 if (resp.ok && j && j.success) {
-                    await Swal.fire({ toast: true, position: 'top-end', icon: 'success', title: 'محدودیت‌ها ذخیره شد', showConfirmButton: false, timer: 2000, customClass: { popup: 'swal2-rtl' } });
+                    await Swal.fire({ toast: true, position: 'top-end', icon: 'success', title: `محدودیت‌های ${escapeHtml(proctorName || '')} ذخیره شد`, showConfirmButton: false, timer: 2000, customClass: { popup: 'swal2-rtl' } });
                 } else {
                     await Swal.fire({ title: 'خطا', text: (j && j.error) ? j.error : 'ذخیره ناموفق بود', icon: 'error', customClass: { popup: 'swal2-rtl swal2-glass' } });
                 }
