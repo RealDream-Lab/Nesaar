@@ -31,22 +31,27 @@ try {
         exit;
     }
 
-    // Drop and recreate table with specified column lengths
+    // Drop (preview refresh) and recreate table with the same schema used by assignScattered apply
     $pdo->exec("DROP TABLE IF EXISTS `ExamAssignments`");
     $pdo->exec("CREATE TABLE `ExamAssignments` (
         `id` INT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
         `exam_date` CHAR(10) DEFAULT '' COLLATE utf8mb4_unicode_ci,
         `exam_time` CHAR(5) DEFAULT '' COLLATE utf8mb4_unicode_ci,
-        `proctor_name` VARCHAR(80) DEFAULT '' COLLATE utf8mb4_unicode_ci,
-        `exam_type` CHAR(11) DEFAULT '' COLLATE utf8mb4_unicode_ci,
+        `proctor_id` INT NULL,
+        `proctor_name` VARCHAR(120) DEFAULT '' COLLATE utf8mb4_unicode_ci,
         `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
+    // Keep the same unique key as apply path; NULL proctor_id allows multiple preview rows per session
+    try {
+        $pdo->exec("ALTER TABLE `ExamAssignments` ADD UNIQUE KEY `uniq_session_proctor` (`exam_date`,`exam_time`,`proctor_id`)");
+    } catch (Throwable $e) { /* ignore if index exists or cannot be added now */ }
 
     // Fetch exams detail
     $stmt = $pdo->query("SELECT exam_date, exam_time, required_proctors FROM `ExamsDetil` ORDER BY exam_date, exam_time");
     $exams = $stmt ? $stmt->fetchAll(PDO::FETCH_ASSOC) : [];
 
-    $insertStmt = $pdo->prepare("INSERT INTO `ExamAssignments` (exam_date, exam_time, proctor_name, exam_type) VALUES (?, ?, '', '')");
+    // For preview we leave proctor_id NULL and proctor_name empty.
+    $insertStmt = $pdo->prepare("INSERT INTO `ExamAssignments` (exam_date, exam_time, proctor_id, proctor_name) VALUES (?, ?, NULL, '')");
 
     $totalInserted = 0;
 
