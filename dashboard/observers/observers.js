@@ -2146,7 +2146,7 @@
                     showCancelButton: true,
                     confirmButtonText: 'بله، حذف',
                     cancelButtonText: 'لغو',
-                    customClass: { popup: 'swal2-rtl swal2-glass' }
+                    customClass: { popup: 'swal2-rtl swal2-glass', confirmButton: 'btn btn-primary', cancelButton: 'btn btn-cancel' }
                 });
                 if (confirm.isConfirmed) {
                     try {
