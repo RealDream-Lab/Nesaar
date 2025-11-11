@@ -440,6 +440,11 @@ function getCookie(name) {
     return null;
 }
 
+function getCsrfToken() {
+    const meta = document.querySelector('meta[name="csrf-token"]');
+    return meta ? meta.getAttribute('content') : null;
+}
+
 function showLicenseForbidden(message) {
     Swal.fire({
         icon: 'error',
@@ -472,8 +477,21 @@ async function handleLicenseGuardResponse(response) {
     throw err;
 }
 
-async function guardedFetch(resource, options) {
-    const response = await fetch(resource, options);
+async function guardedFetch(resource, options = {}) {
+    const opts = { ...options };
+    const method = (opts.method || 'GET').toUpperCase();
+    if (['POST', 'PUT', 'DELETE', 'PATCH'].includes(method)) {
+        const csrfToken = getCsrfToken();
+        if (csrfToken) {
+            if (opts.headers instanceof Headers) {
+                opts.headers.set('X-CSRF-Token', csrfToken);
+            } else {
+                opts.headers = { ...(opts.headers || {}), 'X-CSRF-Token': csrfToken };
+            }
+        }
+    }
+
+    const response = await fetch(resource, opts);
     await handleLicenseGuardResponse(response);
     return response;
 }
