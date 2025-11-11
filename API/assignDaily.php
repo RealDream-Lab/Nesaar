@@ -158,7 +158,7 @@ try {
     // Build fast lookup: remaining per day/session already in $orderedDays
 
     // Candidate builder for a day
-    $buildCandidatesForDay = function($dayIndex, $allowConsecDays = false, $ignoreMax = false) use (&$orderedDays, &$restrictions, &$assignedCount, &$afternoonCount, &$lastAssignedDayIndex, $isAfternoon, $targetMax, $targetMin, $ceilMean, $proctors) {
+    $buildCandidatesForDay = function($dayIndex, $allowConsecDays = false, $ignoreMax = false) use (&$orderedDays, &$restrictions, &$assignedCount, &$afternoonCount, &$lastAssignedDayIndex, &$sessionAssignedProctors, $isAfternoon, $targetMax, $targetMin, $ceilMean, $proctors) {
         $day = $orderedDays[$dayIndex];
         $cands = [];
         foreach ($proctors as $p) {
@@ -177,6 +177,11 @@ try {
                 $key = $day['date'] . '|' . $s['time'];
                 if (isset($restrictions[$pid]) && isset($restrictions[$pid][$key])) {
                     $restrictedCount++;
+                    continue;
+                }
+                // Check if proctor already assigned to this session
+                if (isset($sessionAssignedProctors[$key][$pid])) {
+                    // Skip this session as it's already assigned to this proctor
                     continue;
                 }
                 $allowedSessions[] = $si;
@@ -226,6 +231,10 @@ try {
 
     // Assignments container
     $assignmentsForOutput = [];
+    
+    // Track which proctors are already assigned to each session (to prevent duplicates)
+    // Key: "exam_date|exam_time" => [proctor_id => true]
+    $sessionAssignedProctors = [];
 
     // Phase A: package assignments per day
     foreach ($orderedDays as $dIndex => $_day) {
@@ -261,21 +270,42 @@ try {
             }
 
             // Assign one slot in each allowed session (chronological order already ensured)
+            $assignedAnyInThisPackage = false;
             foreach ($allowedSessions as $si) {
                 $sess =& $orderedDays[$dIndex]['sessions'][$si];
                 if ($sess['remaining'] <= 0) continue;
+                
+                // Check if proctor already assigned to this session
+                $sessionKey = $orderedDays[$dIndex]['date'] . '|' . $sess['time'];
+                if (isset($sessionAssignedProctors[$sessionKey][$pid])) {
+                    // Skip: proctor already assigned to this session
+                    continue;
+                }
+                
                 // assign
                 $sess['remaining'] -= 1;
                 $assignedCount[$pid]++;
                 if ($isAfternoon($sess['time'])) $afternoonCount[$pid]++;
+                
+                // Mark proctor as assigned to this session BEFORE adding to output
+                if (!isset($sessionAssignedProctors[$sessionKey])) {
+                    $sessionAssignedProctors[$sessionKey] = [];
+                }
+                $sessionAssignedProctors[$sessionKey][$pid] = true;
+                
                 $assignmentsForOutput[] = [
                     'exam_date' => $orderedDays[$dIndex]['date'],
                     'exam_time' => $sess['time'],
                     'proctor_id' => $pid,
                     'proctor_name' => $proctorMap[$pid] ?? ''
                 ];
+                
+                $assignedAnyInThisPackage = true;
             }
-            $lastAssignedDayIndex[$pid] = $dIndex;
+            // Only mark day as assigned if we actually assigned something
+            if ($assignedAnyInThisPackage) {
+                $lastAssignedDayIndex[$pid] = $dIndex;
+            }
         }
     }
 
@@ -318,6 +348,10 @@ try {
                         // restriction check
                         $key = $slot['date'] . '|' . $slot['time'];
                         if (isset($restrictions[$pid]) && isset($restrictions[$pid][$key])) continue;
+                        
+                        // Check if proctor already assigned to this session
+                        if (isset($sessionAssignedProctors[$key][$pid])) continue;
+                        
                         // day adjacency check
                         if (!$allowConsecDays) {
                             if ($lastAssignedDayIndex[$pid] !== null && $lastAssignedDayIndex[$pid] === ($slot['dayIndex'] - 1)) continue;
@@ -325,6 +359,13 @@ try {
                         // assign
                         $assignedCount[$pid]++;
                         if ($slot['isAfternoon']) $afternoonCount[$pid]++;
+                        
+                        // Mark proctor as assigned to this session BEFORE adding to output
+                        if (!isset($sessionAssignedProctors[$key])) {
+                            $sessionAssignedProctors[$key] = [];
+                        }
+                        $sessionAssignedProctors[$key][$pid] = true;
+                        
                         $assignmentsForOutput[] = [
                             'exam_date' => $slot['date'],
                             'exam_time' => $slot['time'],
@@ -332,6 +373,7 @@ try {
                             'proctor_name' => $proctorMap[$pid] ?? ''
                         ];
                         $lastAssignedDayIndex[$pid] = $slot['dayIndex'];
+                        
                         // consume this remaining slot
                         $remainingSlots[$i] = null;
                         $found = true;
@@ -377,12 +419,8 @@ try {
         $proctorAssignments[$pid][] = $ai;
     }
 
-    $sessionHasProctor = []; // key date|time => [pid=>true]
-    foreach ($assignmentsForOutput as $a) {
-        $k = $a['exam_date'] . '|' . $a['exam_time'];
-        if (!isset($sessionHasProctor[$k])) $sessionHasProctor[$k] = [];
-        if ($a['proctor_id'] !== null) $sessionHasProctor[$k][$a['proctor_id']] = true;
-    }
+    // Reuse $sessionAssignedProctors as $sessionHasProctor for consistency
+    $sessionHasProctor =& $sessionAssignedProctors;
 
     $loopGuard = 0;
     while ($loopGuard < 500) {
@@ -772,6 +810,20 @@ try {
         unset($aAf, $aMo);
     }
 
+    // Deduplicate assignments (final safety check)
+    $seen = [];
+    $dedupedAssignments = [];
+    foreach ($assignmentsForOutput as $a) {
+        $key = $a['exam_date'] . '|' . $a['exam_time'] . '|' . $a['proctor_id'];
+        if (isset($seen[$key])) {
+            // Skip duplicate
+            continue;
+        }
+        $seen[$key] = true;
+        $dedupedAssignments[] = $a;
+    }
+    $assignmentsForOutput = $dedupedAssignments;
+    
     // Recalculate final counts one last time for reporting integrity
     foreach ($proctors as $p) { $pid = intval($p['id']); $assignedCount[$pid] = 0; $afternoonCount[$pid] = 0; }
     foreach ($assignmentsForOutput as $a) { $pid = $a['proctor_id']; if ($pid === null) continue; $assignedCount[$pid]++; if ($isAfternoon($a['exam_time'])) $afternoonCount[$pid]++; }
@@ -829,6 +881,7 @@ try {
     // Apply to DB if requested
     if ($apply && !$dryRun) {
         try {
+            // DDL operations must be outside transaction (implicit commit in MySQL)
             $needsSchemaReset = false;
             try {
                 $colStmt = $pdo->query("SHOW COLUMNS FROM `ExamAssignments` LIKE 'proctor_id'");
@@ -852,25 +905,32 @@ try {
                 `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
 
-            // unique session/proctor
+            // unique session/proctor index (outside transaction)
             try {
                 $idxStmt = $pdo->query("SHOW INDEX FROM `ExamAssignments` WHERE Key_name='uniq_session_proctor'");
                 $hasIdx = $idxStmt && $idxStmt->fetch(PDO::FETCH_ASSOC);
                 if (!$hasIdx) {
                     $pdo->exec("ALTER TABLE `ExamAssignments` ADD UNIQUE KEY `uniq_session_proctor` (`exam_date`,`exam_time`,`proctor_id`)");
                 }
-            } catch (Throwable $e) { /* ignore if index exists */ }
+            } catch (Throwable $e) { /* ignore if index already exists */ }
 
+            // Now perform data operations in transaction
             $pdo->beginTransaction();
-            $pdo->exec("DELETE FROM `ExamAssignments`");
-            $ins = $pdo->prepare('INSERT INTO `ExamAssignments` (exam_date, exam_time, proctor_id, proctor_name) VALUES (?, ?, ?, ?)');
-            foreach ($assignmentsForOutput as $a) {
-                $ins->execute([$a['exam_date'], $a['exam_time'], $a['proctor_id'], $a['proctor_name']]);
+            try {
+                $pdo->exec("DELETE FROM `ExamAssignments`");
+                $ins = $pdo->prepare('INSERT INTO `ExamAssignments` (exam_date, exam_time, proctor_id, proctor_name) VALUES (?, ?, ?, ?)');
+                foreach ($assignmentsForOutput as $a) {
+                    $ins->execute([$a['exam_date'], $a['exam_time'], $a['proctor_id'], $a['proctor_name']]);
+                }
+                $pdo->commit();
+                $report['applied'] = true;
+            } catch (Throwable $insertErr) {
+                if ($pdo->inTransaction()) {
+                    try { $pdo->rollBack(); } catch (Throwable $rbEx) {}
+                }
+                throw $insertErr; // re-throw to outer catch
             }
-            $pdo->commit();
-            $report['applied'] = true;
         } catch (Throwable $e) {
-            if ($pdo->inTransaction()) { try { $pdo->rollBack(); } catch (Throwable $ee) {} }
             http_response_code(500);
             echo json_encode(['success' => false, 'error' => 'db_write_failed', 'message' => $e->getMessage()], JSON_UNESCAPED_UNICODE);
             exit;

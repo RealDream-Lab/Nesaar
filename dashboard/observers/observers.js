@@ -39,6 +39,10 @@
 
     // Chart instance for session stats (kept across renders)
     let sessionStatsChart = null;
+    // Cache for sessions list and paging offset used by the next/prev 3 UI
+    let _sessionListCache = null;
+    let _sessionListOffset = 0;
+    let _lastRenderedOffset = -1; // track last rendered offset to avoid redundant animations
     // Spinner safety timeout id to avoid it remaining visible indefinitely
     let sessionStatsSpinnerTimeout = null;
 
@@ -484,7 +488,9 @@
                 const j2 = await resp2.json();
                 Swal.close();
                 if (!resp2.ok || !j2 || !j2.success) {
-                    await Swal.fire({ icon: 'error', title: 'خطا در اعمال', text: (j2 && j2.error) ? j2.error : 'نوشتن در دیتابیس ناموفق بود', customClass: { popup: 'swal2-rtl swal2-glass' } });
+                    console.error('assignDaily apply failed:', j2);
+                    const errorMsg = (j2 && j2.message) ? j2.message : ((j2 && j2.error) ? j2.error : 'نوشتن در دیتابیس ناموفق بود');
+                    await Swal.fire({ icon: 'error', title: 'خطا در اعمال', text: errorMsg, customClass: { popup: 'swal2-rtl swal2-glass' } });
                     return;
                 }
                 await Swal.fire({ icon: 'success', title: 'اعمال شد', text: j2.unfilled_count ? (`${toPersianDigits(j2.unfilled_count)} جلسه بدون مراقب باقی مانده است.`) : 'تمام جلسات تخصیص داده شدند.', customClass: { popup: 'swal2-rtl swal2-glass' } });
@@ -1881,6 +1887,8 @@
         const container = document.getElementById('sessionStatsContent');
         if (!card || !container) return;
 
+    try { console.log('renderSessionStatsCard: start'); } catch (e) {}
+
         // spinner element used to show loading overlay while fetching/rendering
         const spinner = document.getElementById('sessionChartSpinner');
         if (spinner) {
@@ -2094,7 +2102,11 @@
             // labels are the dates (show fully)
             const labels = dates.map(d => escapeHtml(d));
 
-            // Color assignment: if exactly 3 time-slots, make two blue shades and one warm color
+            // Color assignment: when exactly 3 time-slots are present, use the
+            // project's three-color palette (dark blue, coral, light blue)
+            // and render a small visible legend on the page matching the provided
+            // design. For other counts, fall back to the existing palette logic.
+            const palette3 = ['#0b5f8b', '#ff8a80', '#b3e5ff']; // dark blue, coral, light blue
             const blue1 = 'rgba(26,111,166,0.95)';
             const blue2 = 'rgba(18,140,205,0.95)';
             const warm = 'rgba(255,193,7,0.95)';
@@ -2104,31 +2116,40 @@
             const green = 'rgba(76,175,80,0.95)';
             const colorMap = new Map();
             if (times.length === 3) {
-                // default: two blues and one warm
-                const defaults = [blue1, blue2, warm];
+                // Use the exact three-color palette in the order of times
                 times.forEach((t, i) => {
-                    // if the time is 11 (starts with '11'), assign green regardless
-                    if (String(t).trim().startsWith('11')) {
-                        colorMap.set(t, green);
-                    } else {
-                        colorMap.set(t, defaults[i % defaults.length]);
-                    }
+                    colorMap.set(t, palette3[i % palette3.length]);
                 });
             } else {
+                // Existing behavior for other counts: keep the '11'->green override
                 times.forEach((t, i) => {
                     if (String(t).trim().startsWith('11')) colorMap.set(t, green);
                     else colorMap.set(t, fallbackPalette[i % fallbackPalette.length]);
                 });
             }
+
             // Build per-time color arrays (one color per dataset/time-slot)
             const perTimeColor = {};
             times.forEach((t, i) => { perTimeColor[t] = colorMap.get(t) || fallbackPalette[i % fallbackPalette.length]; });
 
-            // Hide the legend element (we don't need a separate color legend when the chart is self-explanatory)
+            // Populate the small legend element with three swatches when there are
+            // exactly three time slots so the UI matches the provided image.
             const legendEl = document.getElementById('sessionTimeLegend');
             if (legendEl) {
-                legendEl.innerHTML = '';
-                legendEl.style.display = 'none';
+                if (times.length === 3) {
+                    // Build compact swatches + labels
+                    const items = times.map((t, i) => {
+                        const c = palette3[i % palette3.length];
+                        return `<div style="text-align:center;min-width:64px;margin-inline:8px">
+                                    <div style="width:56px;height:12px;border-radius:3px;background:${c};margin:0 auto 6px"></div>
+                                    <div style="font-size:0.85rem;color:#666">${escapeHtml(t)}</div>
+                                </div>`;
+                    }).join('');
+                    legendEl.style.display = 'flex';
+                } else {
+                    legendEl.innerHTML = '';
+                    legendEl.style.display = 'none';
+                }
             }
 
             // Ensure canvas exists (index.php includes a canvas with this id, but be defensive)
@@ -2277,7 +2298,232 @@
                     }
                 });
             }
-            // hide spinner after rendering
+            // After rendering the chart, fetch and show assigned proctors for the
+            // next three upcoming sessions (if any). This uses /API/getExamAssignments.php
+            // and will only display proctor names when `proctor_name` is filled.
+            try {
+                const statsResp = await fetch('/API/getStatistics.php', { cache: 'no-store' });
+                const stats = (statsResp && statsResp.ok) ? await statsResp.json() : {};
+                // Prefer futureExams when available, otherwise fall back to allExams
+                const sessionsList = Array.isArray(stats.futureExams) && stats.futureExams.length ? stats.futureExams : (Array.isArray(stats.allExams) ? stats.allExams : []);
+                if (sessionsList && sessionsList.length) {
+                    // Sort by date then time ascending
+                    sessionsList.sort((a, b) => {
+                        const da = (a.exam_date || '') + ' ' + (a.exam_time || '');
+                        const db = (b.exam_date || '') + ' ' + (b.exam_time || '');
+                        return da.localeCompare(db);
+                    });
+
+                    // cache sessions and keep offset state between renders
+                    _sessionListCache = sessionsList;
+                    try { console.log('renderSessionStatsCard: sessionsList length=', _sessionListCache.length); } catch (e) {}
+                    if (!_sessionListOffset || _sessionListOffset < 0) _sessionListOffset = 0;
+                    if (_sessionListOffset >= Math.max(0, _sessionListCache.length)) _sessionListOffset = 0;
+
+                    // Build container (idempotent)
+                    let nextEl = document.getElementById('sessionNextProctors');
+                    if (!nextEl) {
+                        nextEl = document.createElement('div');
+                        nextEl.id = 'sessionNextProctors';
+                        // full-width flexible row — let columns stretch equally
+                        nextEl.style.display = 'flex';
+                        nextEl.style.flexDirection = 'column';
+                        nextEl.style.gap = '10px';
+                        nextEl.style.justifyContent = 'flex-start';
+                        nextEl.style.alignItems = 'stretch';
+                        nextEl.style.margin = '12px 0 0 0';
+                        nextEl.style.width = '100%';
+                        // insert AFTER the chart wrapper so it appears below the chart
+                        const chartWrapper = document.getElementById('sessionChartWrapper');
+                        if (chartWrapper && chartWrapper.parentNode) chartWrapper.parentNode.insertBefore(nextEl, chartWrapper.nextSibling);
+                        else container.appendChild(nextEl);
+                        // show loading placeholder while we fetch the page
+                        try { nextEl.innerHTML = `<div style="padding:10px;color:var(--text-muted);text-align:center">در حال بارگذاری جلسات...</div>`; } catch (e) {}
+                    }
+
+                    // helper: render a page of 3 sessions starting at offset
+                    async function renderSessionPage(offset, direction) {
+                        // direction used to drive slide animation: 'next' or 'prev'
+                        if (typeof direction === 'undefined' || !direction) direction = 'next';
+                        
+                        // Check if slice actually changed to avoid redundant animations
+                        const slice = _sessionListCache.slice(offset, offset + 3);
+                        if (!slice || slice.length === 0) return; // no data to render
+                        
+                        const columns = await Promise.all(slice.map(async (sess) => {
+                            const d = sess.exam_date || '';
+                            const t = sess.exam_time || '';
+                            try {
+                                const aResp = await fetch(`/API/getExamAssignments.php?exam_date=${encodeURIComponent(d)}&exam_time=${encodeURIComponent(t)}`, { cache: 'no-store' });
+                                if (!aResp.ok) return { date: d, time: t, proctors: [] };
+                                const aj = await aResp.json();
+                                const procs = Array.isArray(aj.proctors) ? aj.proctors.map(p => (p.proctor_name || '').trim()).filter(Boolean) : [];
+                                return { date: d, time: t, proctors: procs };
+                            } catch (e) {
+                                return { date: d, time: t, proctors: [] };
+                            }
+                        }));
+
+                        // compute card title color for date styling
+                        let cardTitleColor = null;
+                        try {
+                            const titleEl = card ? card.querySelector('h4') : null;
+                            if (titleEl) cardTitleColor = getComputedStyle(titleEl).color || null;
+                        } catch (e) { cardTitleColor = null; }
+
+                        const colHtml = columns.map(col => {
+                            // show time and date side-by-side separated by a pipe; color the date like the card title
+                            const timeText = escapeHtml(col.time || '');
+                            const dateText = escapeHtml(col.date || '');
+                            const pipe = ' | ';
+                            const dateStyle = cardTitleColor ? `style=\"color:${cardTitleColor};font-weight:700;\"` : 'style=\"font-weight:700;\"';
+                            // Apply same styling to time so both parts match the card title color
+                            const timeStyle = dateStyle;
+                            const header = `<div style=\"font-weight:700;margin-bottom:6px;text-align:center;line-height:1.1\">` +
+                                `<span class=\"ns-time\" ${timeStyle}>${timeText}</span><span class=\"ns-pipe\">${pipe}</span><span class=\"ns-date\" ${dateStyle}>${dateText}</span>` +
+                                `</div>`;
+                            const list = (col.proctors && col.proctors.length) ? (`<div style=\"text-align:right;direction:rtl\">` + col.proctors.map(n => `<div style=\"padding:6px 8px;border-radius:6px;background:#fff;box-shadow:0 1px 2px rgba(0,0,0,0.04);margin-bottom:8px;color:#04202a;font-weight:600\">${escapeHtml(n)}</div>`).join('') + `</div>`) : `<div style=\"color:var(--text-muted);text-align:center;min-height:48px;display:flex;align-items:center;justify-content:center\">بدون تخصیص</div>`;
+                            return `<div style=\"flex:1;min-width:0;direction:rtl;text-align:center;padding:0 6px\">${header}${list}</div>`;
+                        }).join('');
+
+                        // controls: prev/next buttons (above columns)
+                        const hasPrev = offset > 0;
+                        const hasNext = (offset + 3) < _sessionListCache.length;
+                        const prevBtnHtml = `<button id=\"sessionPrevBtn\" class=\"btn btn-sm btn-light\" ${hasPrev ? '' : 'disabled'} style=\"padding:6px 10px;border-radius:8px;\">` +
+                            `<svg class=\"ns-chevron\" width=\"14\" height=\"14\" viewBox=\"0 0 24 24\" fill=\"none\" xmlns=\"http://www.w3.org/2000/svg\"><path d=\"M15 18l-6-6 6-6\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"/></svg>` +
+                            `</button>`;
+                        const nextBtnHtml = `<button id=\"sessionNextBtn\" class=\"btn btn-sm btn-light\" ${hasNext ? '' : 'disabled'} style=\"padding:6px 10px;border-radius:8px;\">` +
+                            `<svg class=\"ns-chevron\" width=\"14\" height=\"14\" viewBox=\"0 0 24 24\" fill=\"none\" xmlns=\"http://www.w3.org/2000/svg\"><path d=\"M9 6l6 6-6 6\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"/></svg>` +
+                            `</button>`;
+
+                        const controlsRow = `<div style=\"display:flex;justify-content:center;gap:12px;margin-bottom:8px;\">${prevBtnHtml}${nextBtnHtml}</div>`;
+                        const columnsRow = `<div style=\"display:flex;gap:12px;justify-content:stretch;align-items:flex-start;direction:rtl;width:100%\">${colHtml}</div>`;
+
+                        if (!nextEl.querySelector('.ns-viewport')) {
+                            nextEl.innerHTML = '<div class="ns-viewport" style="position:relative;overflow:hidden;min-height:80px;"></div>';
+                        }
+                        const viewport = nextEl.querySelector('.ns-viewport');
+
+                        const newContent = `<div class=\"ns-inner-content\">${controlsRow}${columnsRow}</div>`;
+
+                        // animation helper: replace content with slide effect (only when content truly changes)
+                        async function animateReplace(vp, html, dir, animate) {
+                            const existing = vp.querySelector('.ns-inner');
+
+                            if (!existing) {
+                                // Initial render: no animation, just show content
+                                vp.innerHTML = `<div class="ns-inner" style="position:relative;width:100%;transform:translateX(0)">${html}</div>`;
+                                return;
+                            }
+
+                            if (!animate) {
+                                existing.style.transition = 'none';
+                                existing.style.transform = 'none';
+                                existing.innerHTML = html;
+                                return;
+                            }
+
+                            // Animate between existing and new content
+                            const newDiv = document.createElement('div');
+                            newDiv.className = 'ns-inner';
+                            newDiv.style.position = 'absolute';
+                            newDiv.style.top = '0';
+                            newDiv.style.left = '0';
+                            newDiv.style.width = '100%';
+                            newDiv.style.transition = 'transform 360ms ease';
+                            newDiv.style.willChange = 'transform';
+                            newDiv.innerHTML = html;
+
+                            if (dir === 'next') newDiv.style.transform = 'translateX(100%)';
+                            else newDiv.style.transform = 'translateX(-100%)';
+                            vp.appendChild(newDiv);
+                            void newDiv.offsetWidth; // reflow
+
+                            if (dir === 'next') {
+                                existing.style.transition = 'transform 360ms ease';
+                                existing.style.transform = 'translateX(-100%)';
+                                newDiv.style.transform = 'translateX(0)';
+                            } else {
+                                existing.style.transition = 'transform 360ms ease';
+                                existing.style.transform = 'translateX(100%)';
+                                newDiv.style.transform = 'translateX(0)';
+                            }
+
+                            await new Promise((resolve) => {
+                                let done = false;
+                                function finish() { if (done) return; done = true; try { if (existing && existing.parentNode) existing.parentNode.removeChild(existing); } catch (e) {} resolve(); }
+                                newDiv.addEventListener('transitionend', finish);
+                                setTimeout(finish, 420);
+                            });
+                            newDiv.style.position = 'relative';
+                            newDiv.style.transform = 'none';
+                        }
+
+                        const existingInner = viewport.querySelector('.ns-inner');
+                        const shouldAnimate = !!existingInner && (direction === 'prev' || direction === 'next') && (_lastRenderedOffset !== offset);
+
+                        await animateReplace(viewport, newContent, direction || 'next', shouldAnimate);
+                        _lastRenderedOffset = offset;
+
+                        // flip chevrons for RTL if needed
+                        try {
+                            const dirAttr = (document.documentElement && document.documentElement.getAttribute('dir')) || document.dir || 'ltr';
+                            if (dirAttr.toLowerCase() === 'rtl') {
+                                viewport.querySelectorAll('.ns-chevron').forEach(sv => { try { sv.style.transform = 'scaleX(-1)'; } catch (e) {} });
+                            }
+                        } catch (e) {}
+
+                        // attach handlers to buttons
+                        try {
+                            const pBtn = document.getElementById('sessionPrevBtn');
+                            const nBtn = document.getElementById('sessionNextBtn');
+                            if (pBtn) {
+                                pBtn.addEventListener('click', (ev) => {
+                                    ev.preventDefault();
+                                    if (_sessionListOffset <= 0) return;
+                                    _sessionListOffset = Math.max(0, _sessionListOffset - 3);
+                                    renderSessionPage(_sessionListOffset, 'prev').catch(e => console.warn('renderSessionPage prev failed', e));
+                                });
+                            }
+                            if (nBtn) {
+                                nBtn.addEventListener('click', (ev) => {
+                                    ev.preventDefault();
+                                    if ((_sessionListOffset + 3) >= _sessionListCache.length) return;
+                                    _sessionListOffset = Math.min(_sessionListCache.length - 3, _sessionListOffset + 3);
+                                    renderSessionPage(_sessionListOffset, 'next').catch(e => console.warn('renderSessionPage next failed', e));
+                                });
+                            }
+                        } catch (e) { /* ignore attach errors */ }
+                    }
+
+                    // Initial render
+                    try { console.log('renderSessionStatsCard: initial renderSessionPage offset=', _sessionListOffset); renderSessionPage(_sessionListOffset).catch((err) => { console.warn('renderSessionPage error', err); }); } catch (e) { console.warn('initial renderSessionPage failed', e); }
+                } else {
+                    // remove nextEl if exists
+                    const existing = document.getElementById('sessionNextProctors');
+                    if (existing && existing.parentNode) existing.parentNode.removeChild(existing);
+                }
+            } catch (e) {
+                console.warn('Failed to fetch next-3 proctors', e);
+                // Show a visible placeholder so the user sees that something went wrong
+                try {
+                    let existing = document.getElementById('sessionNextProctors');
+                    if (!existing) {
+                        existing = document.createElement('div');
+                        existing.id = 'sessionNextProctors';
+                        existing.style.width = '100%';
+                        existing.style.margin = '12px 0';
+                        existing.style.textAlign = 'center';
+                        existing.style.color = 'var(--text-muted)';
+                        const chartWrapper = document.getElementById('sessionChartWrapper');
+                        if (chartWrapper && chartWrapper.parentNode) chartWrapper.parentNode.insertBefore(existing, chartWrapper.nextSibling);
+                        else container.appendChild(existing);
+                    }
+                    existing.innerHTML = `<div style="padding:10px;border-radius:8px;background:rgba(250,250,250,0.02);color:var(--text-muted);">اطلاعات جلسات قابل دریافت نیست. خطا را در کنسول مرورگر بررسی کنید.</div>`;
+                } catch (ie) { /* ignore UI fallback errors */ }
+            }
+
+            // hide spinner after rendering and post-processing
             if (spinner) { try { spinner.style.display = 'none'; } catch(e) {} }
             if (sessionStatsSpinnerTimeout) { clearTimeout(sessionStatsSpinnerTimeout); sessionStatsSpinnerTimeout = null; }
         } catch (e) {

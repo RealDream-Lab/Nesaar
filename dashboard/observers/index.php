@@ -91,7 +91,7 @@ try {
             <div class="observers-main">
                 <!-- کارت آمار جلسات و مراقبین -->
                 <div class="dashboard-card module-card no-hover" id="sessionStatsCard" style="display:none;">
-                    <h4>آمار جلسات و مراقبین</h4>
+                    <h4>وضعیت جلسات و مراقبین</h4>
                     <div id="sessionStatsContent" style="margin-top:0.6rem; position:relative;">
                         <!-- legend for time slots will be injected here -->
                         <div id="sessionTimeLegend" style="display:flex;gap:0.6rem;flex-wrap:wrap;margin-bottom:0.6rem;align-items:center;
