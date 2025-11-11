@@ -1,7 +1,7 @@
 
 
-const CACHE_NAME = 'exam-seat-v0.5.0';
-const VERSION = '0.5.0';
+const CACHE_NAME = 'exam-seat-v0.5.5';
+const VERSION = '0.5.5';
 const urlsToCache = [
   '/',
   '/index.php',
@@ -90,10 +90,7 @@ self.addEventListener('activate', event => {
                       version: CACHE_NAME,
                       tagVersion: `نسخه ${VERSION}`,
                       changes: [
-                        'افزودن الگوریتم چینش بر اساس حضور روزانه (پیش‌نمایش + اعمال)',
-                        'الگوریتم بالانس بعدازظهر و پاس همگرایی روزها برای بهبود هم‌ترازی حضورها',
-                        'بهبود UI مودال‌ها و پیش‌فرض فارسی برای دکمه‌ها در ماژول مراقبین',
-                        'بسته شدن برخی باگ‌ها و بهبودهای جزئی در منطق تخصیص'
+                        'بسته شدن برخی باگ‌ها و بهبودهای جزئی'
                       ]
                     });
         });
