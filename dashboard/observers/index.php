@@ -56,7 +56,7 @@ try {
                     <div class="d-flex align-items-center">
                         <div class="admin-info" style="margin-right:24px;">
                             <div>
-                                <h5 class="mb-0">ماژول مراقبین</h5>
+                                <h5 class="mb-0">ماژول مراقبین (نسخه آزمایشی)</h5>
                                 <small class="text-muted" id="adminUsername">مدیر سیستم</small>
                             </div>
                         </div>
@@ -79,7 +79,7 @@ try {
                             <img src="/dashboard/statices.png" alt="چینش" style="width:40px;height:40px;object-fit:contain;display:block;">
                         </button>
                         <button id="showReportBtn" class="btn btn-icon p-0" type="button" title="گزارش مراقبین" style="background:transparent;border:none;margin-inline-end:8px;padding:0;">
-                            <img src="/assets/app/report.png" alt="گزارش" style="width:40px;height:40px;object-fit:contain;display:block;">
+                            <img src="/dashboard/observers/calendar.png" alt="گزارش" style="width:40px;height:40px;object-fit:contain;display:block;">
                         </button>
                         <button id="backToDashboardBtn" class="btn btn-icon p-0" type="button" title="بازگشت به داشبورد" style="background:transparent;border:none;margin-inline-end:8px;padding:0;">
                             <img src="/dashboard/home.png" alt="بازگشت" style="width:40px;height:40px;object-fit:contain;display:block;">
