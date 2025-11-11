@@ -170,8 +170,8 @@
             await Swal.fire({
                 title: displayTitle,
                 html: cardsHtml,
-                confirmButtonText: 'بستن',
-                customClass: { popup: 'swal2-rtl swal2-glass proctor-restrictions-modal proctor-sessions-modal', confirmButton: 'btn btn-primary' },
+                showConfirmButton: false,
+                customClass: { popup: 'swal2-rtl swal2-glass proctor-restrictions-modal proctor-sessions-modal' },
                 showCloseButton: true,
                 focusConfirm: false
             });
@@ -2481,11 +2481,11 @@
                         nextEl.style.gap = '10px';
                         nextEl.style.justifyContent = 'flex-start';
                         nextEl.style.alignItems = 'stretch';
-                        nextEl.style.margin = '12px 0 0 0';
+                        nextEl.style.margin = '0 0 12px 0';
                         nextEl.style.width = '100%';
-                        // insert AFTER the chart wrapper so it appears below the chart
+                        // insert BEFORE the chart wrapper so proctor names sit above the chart
                         const chartWrapper = document.getElementById('sessionChartWrapper');
-                        if (chartWrapper && chartWrapper.parentNode) chartWrapper.parentNode.insertBefore(nextEl, chartWrapper.nextSibling);
+                        if (chartWrapper && chartWrapper.parentNode) chartWrapper.parentNode.insertBefore(nextEl, chartWrapper);
                         else container.appendChild(nextEl);
                         // show loading placeholder while we fetch the page
                         try { nextEl.innerHTML = `<div style="padding:10px;color:var(--text-muted);text-align:center">در حال بارگذاری جلسات...</div>`; } catch (e) {}
@@ -2677,11 +2677,11 @@
                         existing = document.createElement('div');
                         existing.id = 'sessionNextProctors';
                         existing.style.width = '100%';
-                        existing.style.margin = '12px 0';
+                        existing.style.margin = '0 0 12px 0';
                         existing.style.textAlign = 'center';
                         existing.style.color = 'var(--text-muted)';
                         const chartWrapper = document.getElementById('sessionChartWrapper');
-                        if (chartWrapper && chartWrapper.parentNode) chartWrapper.parentNode.insertBefore(existing, chartWrapper.nextSibling);
+                        if (chartWrapper && chartWrapper.parentNode) chartWrapper.parentNode.insertBefore(existing, chartWrapper);
                         else container.appendChild(existing);
                     }
                     existing.innerHTML = `<div style="padding:10px;border-radius:8px;background:rgba(250,250,250,0.02);color:var(--text-muted);">اطلاعات جلسات قابل دریافت نیست. خطا را در کنسول مرورگر بررسی کنید.</div>`;
