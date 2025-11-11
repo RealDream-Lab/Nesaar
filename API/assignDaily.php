@@ -630,7 +630,153 @@ try {
         }
     }
 
-    // Build per_proctor summary after balancing & consolidation
+    // ------------------------------------------------------------------
+    // Fairness Normalization Pass (post-consolidation)
+    // Ensures each proctor's total assignments lie within [floorMean, ceilMean].
+    // Strategy:
+    // 1. Recompute counts from current assignments (after previous swaps).
+    // 2. Attempt whole-day transfers from overfull -> underfull where unrestricted.
+    // 3. If whole-day transfer not possible, allow single-session reassignment.
+    // 4. Keep totals within bounds and respect restrictions & uniqueness.
+    // ------------------------------------------------------------------
+    // Recompute counts fresh
+    $assignedCount = []; $afternoonCount = []; $proctorDayTimes = [];
+    foreach ($proctors as $p) { $pid = intval($p['id']); $assignedCount[$pid] = 0; $afternoonCount[$pid] = 0; $proctorDayTimes[$pid] = []; }
+    foreach ($assignmentsForOutput as $ai => $a) {
+        $pid = $a['proctor_id']; if ($pid === null) continue; $assignedCount[$pid]++;
+        if ($isAfternoon($a['exam_time'])) $afternoonCount[$pid]++;
+        $date = $a['exam_date']; $time = $a['exam_time'];
+        if (!isset($proctorDayTimes[$pid][$date])) $proctorDayTimes[$pid][$date] = []; $proctorDayTimes[$pid][$date][$time] = true;
+    }
+
+    // Build helper: all sessions per date
+    $allDaySessions = [];
+    foreach ($orderedDays as $d) { $tlist = []; foreach ($d['sessions'] as $s) { $tlist[] = $s['time']; } $allDaySessions[$d['date']] = $tlist; }
+
+    $fairLoop = 0; $fairProgress = true;
+    while ($fairLoop < 300 && $fairProgress) {
+        $fairLoop++; $fairProgress = false;
+        $below = []; $above = [];
+        foreach ($proctors as $p) {
+            $pid = intval($p['id']); $tot = $assignedCount[$pid];
+            if ($tot < $floorMean) $below[] = $pid; elseif ($tot > $ceilMean) $above[] = $pid;
+        }
+        if (empty($below) || empty($above)) break;
+        // Order: largest surplus first, largest deficit first
+        usort($above, function($a,$b) use (&$assignedCount){ return $assignedCount[$b] <=> $assignedCount[$a]; });
+        usort($below, function($a,$b) use (&$assignedCount){ return $assignedCount[$a] <=> $assignedCount[$b]; });
+
+        foreach ($below as $pidBelow) {
+            if ($assignedCount[$pidBelow] >= $floorMean) continue;
+            foreach ($above as $pidAbove) {
+                if ($assignedCount[$pidAbove] <= $ceilMean) continue; // donor no longer above
+
+                // Attempt whole-day transfer
+                $donorDays = array_keys($proctorDayTimes[$pidAbove] ?? []);
+                $shuffleWithRand($donorDays);
+                $transferred = false;
+                foreach ($donorDays as $dDate) {
+                    $sessionsInDay = $allDaySessions[$dDate] ?? [];
+                    $sessionCount = count($sessionsInDay);
+                    if ($assignedCount[$pidBelow] + $sessionCount > $ceilMean) continue; // would exceed ceil
+                    if ($assignedCount[$pidAbove] - $sessionCount < $floorMean) continue; // would drop below floor
+                    // ensure below proctor has no presence that day (requires package transfer semantics)
+                    if (isset($proctorDayTimes[$pidBelow][$dDate])) continue;
+                    // Check restrictions across full day
+                    $blocked = false;
+                    foreach ($sessionsInDay as $t) {
+                        $k = $dDate . '|' . $t;
+                        if (isset($restrictions[$pidBelow]) && isset($restrictions[$pidBelow][$k])) { $blocked = true; break; }
+                    }
+                    if ($blocked) continue;
+                    // Perform transfer: reassign all assignments in that day from donor to recipient
+                    foreach ($assignmentsForOutput as $ai => &$rec) {
+                        if ($rec['exam_date'] === $dDate && $rec['proctor_id'] === $pidAbove) {
+                            $rec['proctor_id'] = $pidBelow; $rec['proctor_name'] = $proctorMap[$pidBelow] ?? '';
+                            $assignedCount[$pidAbove]--; $assignedCount[$pidBelow]++;
+                            if ($isAfternoon($rec['exam_time'])) { $afternoonCount[$pidAbove]--; $afternoonCount[$pidBelow]++; }
+                        }
+                    }
+                    unset($rec);
+                    // Update day maps
+                    unset($proctorDayTimes[$pidAbove][$dDate]);
+                    $proctorDayTimes[$pidBelow][$dDate] = [];
+                    foreach ($sessionsInDay as $t) { $proctorDayTimes[$pidBelow][$dDate][$t] = true; }
+                    $fairProgress = true; $transferred = true; break;
+                }
+                if ($transferred) break; // move to next below
+
+                // Partial (single-session) transfer fallback if whole-day failed
+                // Find donor session not restricted for recipient
+                foreach ($assignmentsForOutput as $ai => &$rec2) {
+                    if ($rec2['proctor_id'] !== $pidAbove) continue;
+                    if ($assignedCount[$pidBelow] >= $floorMean) break; // reached floor
+                    $k = $rec2['exam_date'] . '|' . $rec2['exam_time'];
+                    if (isset($restrictions[$pidBelow]) && isset($restrictions[$pidBelow][$k])) continue;
+                    // Transfer single session
+                    $rec2['proctor_id'] = $pidBelow; $rec2['proctor_name'] = $proctorMap[$pidBelow] ?? '';
+                    $assignedCount[$pidAbove]--; $assignedCount[$pidBelow]++;
+                    if ($isAfternoon($rec2['exam_time'])) { $afternoonCount[$pidAbove]--; $afternoonCount[$pidBelow]++; }
+                    // Update day-time maps
+                    $dateX = $rec2['exam_date']; $timeX = $rec2['exam_time'];
+                    if (!isset($proctorDayTimes[$pidBelow][$dateX])) $proctorDayTimes[$pidBelow][$dateX] = [];
+                    $proctorDayTimes[$pidBelow][$dateX][$timeX] = true;
+                    unset($proctorDayTimes[$pidAbove][$dateX][$timeX]); if (empty($proctorDayTimes[$pidAbove][$dateX])) unset($proctorDayTimes[$pidAbove][$dateX]);
+                    $fairProgress = true;
+                    // stop if donor now within bounds or recipient reached floor
+                    if ($assignedCount[$pidBelow] >= $floorMean || $assignedCount[$pidAbove] <= $ceilMean) { unset($rec2); break; }
+                }
+                unset($rec2);
+                if ($assignedCount[$pidBelow] >= $floorMean) break;
+            }
+        }
+    }
+
+    // After normalization, ensure no one outside bounds; (soft guarantee)
+    // Second Afternoon Tightening Pass (narrow band: difference <= 2)
+    // Rebuild proctorAssignments structure
+    $proctorAssignments = []; foreach ($proctors as $p) { $proctorAssignments[intval($p['id'])] = []; }
+    foreach ($assignmentsForOutput as $ai => $a) { $pid = $a['proctor_id']; if ($pid !== null) $proctorAssignments[$pid][] = $ai; }
+
+    $sessionHasProctor = []; foreach ($assignmentsForOutput as $a) { $k = $a['exam_date'] . '|' . $a['exam_time']; if (!isset($sessionHasProctor[$k])) $sessionHasProctor[$k] = []; if ($a['proctor_id'] !== null) $sessionHasProctor[$k][$a['proctor_id']] = true; }
+
+    $tightIter = 0;
+    while ($tightIter < 400) {
+        $tightIter++;
+        // compute min/max afternoon counts
+        $minAf = PHP_INT_MAX; $maxAf = -1; $pidMin = null; $pidMax = null;
+        foreach ($proctors as $p) { $pid = intval($p['id']); $afc = $afternoonCount[$pid]; if ($afc < $minAf) { $minAf = $afc; $pidMin = $pid; } if ($afc > $maxAf) { $maxAf = $afc; $pidMax = $pid; } }
+        if ($maxAf - $minAf <= 2) break; // band acceptable
+
+        // find afternoon assignment of pidMax and morning assignment of pidMin
+        $afternoonAi = null; foreach ($proctorAssignments[$pidMax] as $ai) { $a = $assignmentsForOutput[$ai]; if ($isAfternoon($a['exam_time'])) { $k = $a['exam_date'].'|'.$a['exam_time']; if (isset($sessionHasProctor[$k][$pidMin])) continue; if (isset($restrictions[$pidMin]) && isset($restrictions[$pidMin][$k])) continue; $afternoonAi = $ai; break; } }
+        $morningAi = null; foreach ($proctorAssignments[$pidMin] as $ai) { $a = $assignmentsForOutput[$ai]; if (!$isAfternoon($a['exam_time'])) { $k = $a['exam_date'].'|'.$a['exam_time']; if (isset($sessionHasProctor[$k][$pidMax])) continue; if (isset($restrictions[$pidMax]) && isset($restrictions[$pidMax][$k])) continue; $morningAi = $ai; break; } }
+        if ($afternoonAi === null || $morningAi === null) break; // cannot improve
+
+        // perform swap
+        $aAf =& $assignmentsForOutput[$afternoonAi];
+        $aMo =& $assignmentsForOutput[$morningAi];
+        $kAf = $aAf['exam_date'].'|'.$aAf['exam_time']; $kMo = $aMo['exam_date'].'|'.$aMo['exam_time'];
+        unset($sessionHasProctor[$kAf][$pidMax]); $sessionHasProctor[$kAf][$pidMin] = true;
+        unset($sessionHasProctor[$kMo][$pidMin]); $sessionHasProctor[$kMo][$pidMax] = true;
+        $aAf['proctor_id'] = $pidMin; $aAf['proctor_name'] = $proctorMap[$pidMin] ?? '';
+        $aMo['proctor_id'] = $pidMax; $aMo['proctor_name'] = $proctorMap[$pidMax] ?? '';
+        // update afternoon counts
+        $afternoonCount[$pidMax]--; $afternoonCount[$pidMin]++;
+        // update assignment lists
+        foreach ($proctorAssignments[$pidMax] as $k => $v) { if ($v === $afternoonAi) { unset($proctorAssignments[$pidMax][$k]); break; } }
+        foreach ($proctorAssignments[$pidMin] as $k => $v) { if ($v === $morningAi) { unset($proctorAssignments[$pidMin][$k]); break; } }
+        $proctorAssignments[$pidMax] = array_values($proctorAssignments[$pidMax]);
+        $proctorAssignments[$pidMin] = array_values($proctorAssignments[$pidMin]);
+        $proctorAssignments[$pidMax][] = $morningAi; $proctorAssignments[$pidMin][] = $afternoonAi;
+        unset($aAf, $aMo);
+    }
+
+    // Recalculate final counts one last time for reporting integrity
+    foreach ($proctors as $p) { $pid = intval($p['id']); $assignedCount[$pid] = 0; $afternoonCount[$pid] = 0; }
+    foreach ($assignmentsForOutput as $a) { $pid = $a['proctor_id']; if ($pid === null) continue; $assignedCount[$pid]++; if ($isAfternoon($a['exam_time'])) $afternoonCount[$pid]++; }
+
+    // Build per_proctor summary after all normalization phases
     $perProctor = [];
     foreach ($proctors as $p) {
         $pid = intval($p['id']);
