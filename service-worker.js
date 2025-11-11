@@ -1,7 +1,7 @@
 
 
-const CACHE_NAME = 'exam-seat-v0.4.1';
-const VERSION = '0.4.1';
+const CACHE_NAME = 'exam-seat-v0.5.0';
+const VERSION = '0.5.0';
 const urlsToCache = [
   '/',
   '/index.php',
@@ -85,16 +85,17 @@ self.addEventListener('activate', event => {
 
             self.clients.matchAll().then(clients => {
         clients.forEach(client => {
-          client.postMessage({
-            type: 'sw-update',
-            version: CACHE_NAME,
-            tagVersion: `نسخه ${VERSION}`,
-            changes: [
-              'اصلاح منطق دکمهٔ اتمام معرفی مراقبین و مودال تایید نهایی',
-              'هماهنگ‌سازی استایل مودال‌ها و دکمه‌ها (swal2-glass, btn-cancel)',
-              'بهبود همگام‌سازی آمار مراقبین پس از ذخیره‌سازی'
-            ]
-          });
+                    client.postMessage({
+                      type: 'sw-update',
+                      version: CACHE_NAME,
+                      tagVersion: `نسخه ${VERSION}`,
+                      changes: [
+                        'افزودن الگوریتم چینش بر اساس حضور روزانه (پیش‌نمایش + اعمال)',
+                        'الگوریتم بالانس بعدازظهر و پاس همگرایی روزها برای بهبود هم‌ترازی حضورها',
+                        'بهبود UI مودال‌ها و پیش‌فرض فارسی برای دکمه‌ها در ماژول مراقبین',
+                        'بسته شدن برخی باگ‌ها و بهبودهای جزئی در منطق تخصیص'
+                      ]
+                    });
         });
       });
     })
