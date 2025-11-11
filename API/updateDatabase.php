@@ -10,12 +10,31 @@ require_once __DIR__ . '/../includes/license_guard.php';
 require_once __DIR__ . '/../includes/csrf_protection.php';
 require_once __DIR__ . '/db_init.php';
 
-// Enforce license and CSRF protection (enable when ready)
+// Enforce license and CSRF protection
 try {
     license_guard_enforce_api();
-    // csrf_enforce();
+    csrf_enforce();
 } catch (Throwable $e) {
-    // license_guard_enforce_api() already responded with 403 on failure
+    exit; // guard already sent response
+}
+
+// Admin authentication (consistent with assignment endpoints)
+$adminSession = $_COOKIE['adminSession'] ?? null;
+if (!$adminSession) {
+    http_response_code(401);
+    echo json_encode(['error' => 'unauthorized'], JSON_UNESCAPED_UNICODE);
+    exit;
+}
+try {
+    $sessionData = json_decode(urldecode($adminSession), true);
+    if (!$sessionData || ($sessionData['type'] ?? '') !== 'admin') {
+        http_response_code(401);
+        echo json_encode(['error' => 'unauthorized'], JSON_UNESCAPED_UNICODE);
+        exit;
+    }
+} catch (Exception $e) {
+    http_response_code(401);
+    echo json_encode(['error' => 'unauthorized'], JSON_UNESCAPED_UNICODE);
     exit;
 }
 

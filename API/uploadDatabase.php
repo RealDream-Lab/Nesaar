@@ -65,32 +65,32 @@ function formatBytes($bytes) {
 }
 
 // Enforce license and CSRF protection
-// license_guard_enforce_api(); // Temporarily disabled for testing
-// csrf_enforce(); // Temporarily disabled for testing
+license_guard_enforce_api();
+csrf_enforce();
 
 // Set response header
 header('Content-Type: application/json; charset=utf-8');
 
 // Check if admin is authenticated
-// $adminSession = $_COOKIE['adminSession'] ?? null;
-// if (!$adminSession) {
-//     http_response_code(401);
-//     echo json_encode(['error' => 'دسترسی غیرمجاز']);
-//     exit;
-// }
+$adminSession = $_COOKIE['adminSession'] ?? null;
+if (!$adminSession) {
+    http_response_code(401);
+    echo json_encode(['error' => 'دسترسی غیرمجاز']);
+    exit;
+}
 
-// try {
-//     $session = json_decode(urldecode($adminSession), true);
-//     if (!$session || ($session['type'] ?? '') !== 'admin') {
-//         http_response_code(401);
-//         echo json_encode(['error' => 'دسترسی غیرمجاز']);
-//         exit;
-//     }
-// } catch (Exception $e) {
-//     http_response_code(401);
-//     echo json_encode(['error' => 'دسترسی غیرمجاز']);
-//     exit;
-// }
+try {
+    $session = json_decode(urldecode($adminSession), true);
+    if (!$session || ($session['type'] ?? '') !== 'admin') {
+        http_response_code(401);
+        echo json_encode(['error' => 'دسترسی غیرمجاز']);
+        exit;
+    }
+} catch (Exception $e) {
+    http_response_code(401);
+    echo json_encode(['error' => 'دسترسی غیرمجاز']);
+    exit;
+}
 
 // Check if file was uploaded
 if (!isset($_FILES['file']) || $_FILES['file']['error'] !== UPLOAD_ERR_OK) {
