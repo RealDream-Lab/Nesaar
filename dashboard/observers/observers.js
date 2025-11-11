@@ -155,7 +155,7 @@
 
             const cardsHtml = !ordered.length
                 ? '<div style="padding:18px;text-align:center;color:var(--text-muted);">برای این مراقب جلسه‌ای ثبت نشده است.</div>'
-                : `<div class="proctor-session-grid" style="direction:rtl;text-align:center;padding:8px;">${ordered.map(item => {
+                : `<div class="proctor-session-grid sessions-view" dir="rtl">${ordered.map(item => {
                         const isPast = item.status === 'past';
                         const classes = `proctor-session-card session-display ${isPast ? 'past' : 'upcoming'}`;
                         const pieces = [];
@@ -2031,37 +2031,6 @@
     }
     }
 
-    // Show modal with all sessions assigned to a proctor
-    async function showProctorAssignments(proctorId, proctorName) {
-        try {
-            const resp = await fetch(`/API/getProctorAssignments.php?proctor_id=${encodeURIComponent(proctorId)}`, { cache: 'no-store' });
-            if (!resp.ok) {
-                await Swal.fire({ icon: 'error', title: 'خطا', text: 'دریافت جلسات مراقب امکان‌پذیر نیست', customClass: { popup: 'swal2-rtl swal2-glass' } });
-                return;
-            }
-            const j = await resp.json();
-            const assigns = Array.isArray(j.assignments) ? j.assignments : [];
-
-            let html = `<div style="direction:rtl;text-align:right;display:flex;flex-wrap:wrap;gap:8px;max-height:420px;overflow:auto">`;
-            if (!assigns.length) html += `<div style="color:var(--text-muted);padding:12px">برای این مراقب جلسه‌ای یافت نشد.</div>`;
-            assigns.forEach(a => {
-                const isPast = !!a.past;
-                const bg = isPast ? '#ffe6e6' : '#e8f6ea';
-                const border = isPast ? '1px solid rgba(220,53,69,0.12)' : '1px solid rgba(40,167,69,0.08)';
-                html += `<div style=\"min-width:140px;flex:0 0 140px;padding:8px;border-radius:8px;background:${bg};border:${border};font-size:12px;color:#04202a;\">` +
-                    `<div style=\"font-weight:700;margin-bottom:6px;text-align:center\">${escapeHtml(a.exam_time || '')} | ${escapeHtml(a.exam_date || '')}</div>` +
-                    `<div style=\"text-align:center;font-size:11px;color:var(--text-muted)\">${isPast ? 'پایان یافته' : 'در انتظار'}</div>` +
-                    `</div>`;
-            });
-            html += `</div>`;
-
-            await Swal.fire({ title: `جلسات ${escapeHtml(proctorName)}`, html: html, width: '720px', customClass: { popup: 'swal2-rtl' } });
-        } catch (e) {
-            console.warn('showProctorAssignments failed', e);
-            await Swal.fire({ icon: 'error', title: 'خطا', text: 'خطا در دریافت جلسات', customClass: { popup: 'swal2-rtl swal2-glass' } });
-        }
-    }
-
     // Render session stats card (fills #sessionStatsContent) — chart-only (no summary text)
     async function renderSessionStatsCard() {
         const card = document.getElementById('sessionStatsCard');
@@ -2540,16 +2509,12 @@
                                 const aResp = await fetch(`/API/getExamAssignments.php?exam_date=${encodeURIComponent(d)}&exam_time=${encodeURIComponent(t)}`, { cache: 'no-store' });
                                 if (!aResp.ok) return { date: d, time: t, proctors: [] };
                                 const aj = await aResp.json();
-<<<<<<< HEAD
-                                const procs = Array.isArray(aj.proctors) ? aj.proctors.map(p => ({ id: p.proctor_id, name: (p.proctor_name || '').trim() })).filter(p => p.name) : [];
-=======
                                 const procs = Array.isArray(aj.proctors)
                                     ? aj.proctors.map(p => ({
                                         id: Number(p.proctor_id || p.id || 0),
                                         name: (p.proctor_name || '').trim()
                                     })).filter(p => p && p.name)
                                     : [];
->>>>>>> 681c2bb (اضافه شدن وضعیت مراقبین به صفحه آمار)
                                 return { date: d, time: t, proctors: procs };
                             } catch (e) {
                                 return { date: d, time: t, proctors: [] };
@@ -2574,16 +2539,6 @@
                             const header = `<div style=\"font-weight:700;margin-bottom:6px;text-align:center;line-height:1.1\">` +
                                 `<span class=\"ns-time\" ${timeStyle}>${timeText}</span><span class=\"ns-pipe\">${pipe}</span><span class=\"ns-date\" ${dateStyle}>${dateText}</span>` +
                                 `</div>`;
-<<<<<<< HEAD
-
-                            // Render proctors as clickable buttons. Each button has data-proctor-id
-                            const list = (col.proctors && col.proctors.length) ? (
-                                `<div style=\"text-align:right;direction:rtl;display:flex;flex-direction:column;align-items:stretch\">` +
-                                col.proctors.map(p => `<button class=\"ns-proctor-link\" data-proctor-id=\"${p.id}\" style=\"padding:6px 8px;border-radius:6px;background:#fff;border:0;box-shadow:0 1px 2px rgba(0,0,0,0.04);margin-bottom:8px;color:#04202a;font-weight:600;text-align:right;cursor:pointer\">${escapeHtml(p.name)}</button>`).join('') +
-                                `</div>`
-                            ) : `<div style=\"color:var(--text-muted);text-align:center;min-height:48px;display:flex;align-items:center;justify-content:center\">بدون تخصیص</div>`;
-
-=======
                             const list = (col.proctors && col.proctors.length) ? (`<div style=\"text-align:right;direction:rtl;display:flex;flex-direction:column;gap:8px;\">` + col.proctors.map(p => {
                                 const safeName = escapeHtml(p.name || '');
                                 if (p.id && p.id > 0) {
@@ -2591,7 +2546,6 @@
                                 }
                                 return `<div class=\"ns-proctor-chip ns-proctor-chip-disabled\">${safeName}</div>`;
                             }).join('') + `</div>`) : `<div style=\"color:var(--text-muted);text-align:center;min-height:48px;display:flex;align-items:center;justify-content:center\">بدون تخصیص</div>`;
->>>>>>> 681c2bb (اضافه شدن وضعیت مراقبین به صفحه آمار)
                             return `<div style=\"flex:1;min-width:0;direction:rtl;text-align:center;padding:0 6px\">${header}${list}</div>`;
                         }).join('');
 
@@ -2704,21 +2658,6 @@
                                     renderSessionPage(_sessionListOffset, 'next').catch(e => console.warn('renderSessionPage next failed', e));
                                 });
                             }
-
-                            // attach handlers to proctor name buttons
-                            try {
-                                viewport.querySelectorAll('.ns-proctor-link').forEach(btn => {
-                                    try {
-                                        btn.addEventListener('click', (ev) => {
-                                            ev.preventDefault();
-                                            const pid = btn.getAttribute('data-proctor-id');
-                                            const name = (btn.textContent || '').trim();
-                                            if (!pid) return;
-                                            showProctorAssignments(pid, name);
-                                        });
-                                    } catch (e) { /* ignore per-button errors */ }
-                                });
-                            } catch (e) { /* ignore */ }
                         } catch (e) { /* ignore attach errors */ }
                     }
 
