@@ -37,6 +37,156 @@
         return d.innerHTML;
     }
 
+    const PROCTOR_CHIP_STYLE_ID = 'ns-proctor-chip-style';
+
+    function ensureProctorChipStyles() {
+        try {
+            if (document.getElementById(PROCTOR_CHIP_STYLE_ID)) return;
+            const style = document.createElement('style');
+            style.id = PROCTOR_CHIP_STYLE_ID;
+            style.textContent = `
+                .ns-proctor-chip {
+                    display: block;
+                    width: 100%;
+                    background: rgba(255, 255, 255, 0.92);
+                    border: 1px solid rgba(15, 32, 42, 0.12);
+                    border-radius: 10px;
+                    padding: 8px 10px;
+                    text-align: center;
+                    font-weight: 600;
+                    color: #04202a;
+                    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.08);
+                    cursor: pointer;
+                    transition: transform 150ms ease, box-shadow 150ms ease, border-color 150ms ease;
+                }
+                .ns-proctor-chip:hover,
+                .ns-proctor-chip:focus {
+                    transform: translateY(-1px);
+                    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.12);
+                    border-color: rgba(15, 32, 42, 0.2);
+                    outline: none;
+                }
+                .ns-proctor-chip:focus-visible {
+                    outline: 2px solid rgba(15, 89, 201, 0.65);
+                    outline-offset: 2px;
+                }
+                .ns-proctor-chip.ns-proctor-chip-disabled {
+                    cursor: default;
+                    opacity: 0.65;
+                    pointer-events: none;
+                }
+                .ns-proctor-chip.ns-proctor-chip-disabled:hover {
+                    transform: none;
+                    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.08);
+                    border-color: rgba(15, 32, 42, 0.12);
+                }
+            `;
+            document.head.appendChild(style);
+        } catch (e) { /* ignore style attachment errors */ }
+    }
+
+    function attachProctorChipHandlers(root) {
+        if (!root) return;
+        try {
+            const chips = root.querySelectorAll('.ns-proctor-chip[data-proctor-id]');
+            chips.forEach(chip => {
+                if (chip.dataset.wired === '1') return;
+                chip.dataset.wired = '1';
+                chip.addEventListener('click', (ev) => {
+                    ev.preventDefault();
+                    ev.stopPropagation();
+                    const id = Number(chip.dataset.proctorId || 0);
+                    if (!id) return;
+                    const name = (chip.textContent || '').trim();
+                    openProctorSessionsModal(id, name).catch(err => console.warn('openProctorSessionsModal failed', err));
+                });
+            });
+        } catch (err) {
+            console.warn('attachProctorChipHandlers error', err);
+        }
+    }
+
+    async function openProctorSessionsModal(proctorId, proctorName) {
+        const id = Number(proctorId || 0);
+        if (!id) return;
+        if (typeof Swal === 'undefined' || !Swal || typeof Swal.fire !== 'function') return;
+
+        try {
+            Swal.fire({
+                title: 'در حال بارگذاری...',
+                allowOutsideClick: false,
+                showConfirmButton: false,
+                didOpen: () => { try { Swal.showLoading(); } catch (e) {} },
+                customClass: { popup: 'swal2-rtl swal2-glass' }
+            });
+        } catch (e) { /* ignore */ }
+
+        try {
+            const resp = await fetch(`/API/getProctorSessions.php?proctor_id=${encodeURIComponent(id)}`, { cache: 'no-store' });
+            let payload = null;
+            try { payload = await resp.json(); } catch (jsonErr) { payload = null; }
+
+            if (!resp.ok || !payload || payload.success !== true) {
+                const message = (payload && payload.message) ? payload.message : 'امکان دریافت جلسات مراقب وجود ندارد.';
+                throw new Error(message);
+            }
+
+            try { Swal.close(); } catch (e) {}
+
+            const proctorDisplay = (proctorName || payload.proctor_name || '').trim();
+            const displayTitle = escapeHtml(proctorDisplay || 'جلسات مراقب');
+
+            const sessions = Array.isArray(payload.sessions) ? payload.sessions : [];
+            const normalized = sessions.map(item => {
+                const status = item && typeof item.status === 'string' ? item.status : 'upcoming';
+                const safeStatus = (status === 'past') ? 'past' : 'upcoming';
+                const rawDate = (item && item.exam_date) ? String(item.exam_date) : '';
+                const rawTime = (item && item.exam_time) ? String(item.exam_time) : '';
+                return {
+                    status: safeStatus,
+                    exam_date: rawDate,
+                    exam_time: rawTime
+                };
+            });
+
+            const upcoming = normalized.filter(n => n.status !== 'past');
+            const past = normalized.filter(n => n.status === 'past');
+            const ordered = upcoming.concat(past);
+
+            const cardsHtml = !ordered.length
+                ? '<div style="padding:18px;text-align:center;color:var(--text-muted);">برای این مراقب جلسه‌ای ثبت نشده است.</div>'
+                : `<div class="proctor-session-grid" style="direction:rtl;text-align:center;padding:8px;">${ordered.map(item => {
+                        const isPast = item.status === 'past';
+                        const classes = `proctor-session-card session-display ${isPast ? 'past' : 'upcoming'}`;
+                        const pieces = [];
+                        const cleanTime = (item.exam_time || '').trim();
+                        const cleanDate = (item.exam_date || '').trim();
+                        if (cleanTime) pieces.push(toPersianDigits(cleanTime));
+                        if (cleanDate) pieces.push(toPersianDigits(cleanDate));
+                        const combined = pieces.length ? pieces.join(' | ') : '-';
+                        return `<div class="${classes}"><div class="ps-dt">${escapeHtml(combined)}</div></div>`;
+                    }).join('')}</div>`;
+
+            await Swal.fire({
+                title: displayTitle,
+                html: cardsHtml,
+                confirmButtonText: 'بستن',
+                customClass: { popup: 'swal2-rtl swal2-glass proctor-restrictions-modal proctor-sessions-modal', confirmButton: 'btn btn-primary' },
+                showCloseButton: true,
+                focusConfirm: false
+            });
+        } catch (error) {
+            try { Swal.close(); } catch (e) {}
+            const message = (error && error.message) ? error.message : 'خطای ناشناخته رخ داد.';
+            await Swal.fire({
+                icon: 'error',
+                title: 'خطا',
+                text: message,
+                customClass: { popup: 'swal2-rtl swal2-glass', confirmButton: 'btn btn-primary' }
+            });
+        }
+    }
+
     // Chart instance for session stats (kept across renders)
     let sessionStatsChart = null;
     // Cache for sessions list and paging offset used by the next/prev 3 UI
@@ -2381,6 +2531,8 @@
                         const slice = _sessionListCache.slice(offset, offset + 3);
                         if (!slice || slice.length === 0) return; // no data to render
                         
+                        ensureProctorChipStyles();
+
                         const columns = await Promise.all(slice.map(async (sess) => {
                             const d = sess.exam_date || '';
                             const t = sess.exam_time || '';
@@ -2388,7 +2540,16 @@
                                 const aResp = await fetch(`/API/getExamAssignments.php?exam_date=${encodeURIComponent(d)}&exam_time=${encodeURIComponent(t)}`, { cache: 'no-store' });
                                 if (!aResp.ok) return { date: d, time: t, proctors: [] };
                                 const aj = await aResp.json();
+<<<<<<< HEAD
                                 const procs = Array.isArray(aj.proctors) ? aj.proctors.map(p => ({ id: p.proctor_id, name: (p.proctor_name || '').trim() })).filter(p => p.name) : [];
+=======
+                                const procs = Array.isArray(aj.proctors)
+                                    ? aj.proctors.map(p => ({
+                                        id: Number(p.proctor_id || p.id || 0),
+                                        name: (p.proctor_name || '').trim()
+                                    })).filter(p => p && p.name)
+                                    : [];
+>>>>>>> 681c2bb (اضافه شدن وضعیت مراقبین به صفحه آمار)
                                 return { date: d, time: t, proctors: procs };
                             } catch (e) {
                                 return { date: d, time: t, proctors: [] };
@@ -2413,6 +2574,7 @@
                             const header = `<div style=\"font-weight:700;margin-bottom:6px;text-align:center;line-height:1.1\">` +
                                 `<span class=\"ns-time\" ${timeStyle}>${timeText}</span><span class=\"ns-pipe\">${pipe}</span><span class=\"ns-date\" ${dateStyle}>${dateText}</span>` +
                                 `</div>`;
+<<<<<<< HEAD
 
                             // Render proctors as clickable buttons. Each button has data-proctor-id
                             const list = (col.proctors && col.proctors.length) ? (
@@ -2421,6 +2583,15 @@
                                 `</div>`
                             ) : `<div style=\"color:var(--text-muted);text-align:center;min-height:48px;display:flex;align-items:center;justify-content:center\">بدون تخصیص</div>`;
 
+=======
+                            const list = (col.proctors && col.proctors.length) ? (`<div style=\"text-align:right;direction:rtl;display:flex;flex-direction:column;gap:8px;\">` + col.proctors.map(p => {
+                                const safeName = escapeHtml(p.name || '');
+                                if (p.id && p.id > 0) {
+                                    return `<button type=\"button\" class=\"ns-proctor-chip\" data-proctor-id=\"${p.id}\">${safeName}</button>`;
+                                }
+                                return `<div class=\"ns-proctor-chip ns-proctor-chip-disabled\">${safeName}</div>`;
+                            }).join('') + `</div>`) : `<div style=\"color:var(--text-muted);text-align:center;min-height:48px;display:flex;align-items:center;justify-content:center\">بدون تخصیص</div>`;
+>>>>>>> 681c2bb (اضافه شدن وضعیت مراقبین به صفحه آمار)
                             return `<div style=\"flex:1;min-width:0;direction:rtl;text-align:center;padding:0 6px\">${header}${list}</div>`;
                         }).join('');
 
@@ -2502,6 +2673,8 @@
 
                         await animateReplace(viewport, newContent, direction || 'next', shouldAnimate);
                         _lastRenderedOffset = offset;
+
+                        try { attachProctorChipHandlers(viewport); } catch (e) { console.warn('attachProctorChipHandlers viewport failed', e); }
 
                         // flip chevrons for RTL if needed
                         try {

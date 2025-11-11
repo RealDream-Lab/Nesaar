@@ -835,6 +835,9 @@ body::after {
   overflow: hidden;
   text-overflow: ellipsis;
 }
+.proctor-session-card.session-display {
+  cursor: default;
+}
 .proctor-session-card .ps-dt {
   font-weight: 600;
   font-size: 0.86rem; /* date and time small and on one line */
@@ -848,6 +851,28 @@ body::after {
   /* hover visual intentionally disabled; selection controls visual state */
   transform: none;
   box-shadow: 0 8px 20px rgba(2, 18, 24, 0.06);
+}
+.proctor-session-card.session-display.upcoming {
+  background: linear-gradient(
+    140deg,
+    rgba(226, 245, 235, 0.94),
+    rgba(212, 239, 223, 0.9)
+  );
+  border-color: rgba(33, 126, 74, 0.28);
+  color: #1f5a39;
+}
+.proctor-session-card.session-display.past {
+  background: linear-gradient(
+    140deg,
+    rgba(255, 236, 236, 0.94),
+    rgba(255, 223, 223, 0.92)
+  );
+  border-color: rgba(194, 58, 63, 0.3);
+  color: #7b2028;
+}
+.proctor-session-card.session-display.upcoming .ps-dt,
+.proctor-session-card.session-display.past .ps-dt {
+  color: inherit;
 }
 .proctor-session-card.selected {
   /* selected keeps a visible state but should NOT move vertically
@@ -901,6 +926,10 @@ body::after {
   max-height: calc(78vh - 140px);
   overflow: auto;
   padding: 6px;
+}
+.swal2-popup.proctor-sessions-modal .swal2-html-container {
+  max-height: none;
+  overflow: visible;
 }
 
 /* Make the edit restrictions and delete buttons inline and aligned */
