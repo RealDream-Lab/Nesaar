@@ -3880,6 +3880,31 @@ async function printEssentialsSecretary() {
 
         report = report || { exam_date: '', exam_time: '', courses: [], students: window.allStudents || [] };
 
+        const normalizedExamDate = report && report.exam_date ? normalizeDate(report.exam_date) : '';
+        const normalizedExamTime = report && report.exam_time ? normalizeTime(report.exam_time) : '';
+        let proctorAssignments = [];
+        let proctorAssignedTotal = 0;
+        let proctorRequiredTotal = 0;
+
+        if (normalizedExamDate && normalizedExamTime) {
+            try {
+                const assignResp = await guardedFetch(`../API/getExamAssignments.php?exam_date=${encodeURIComponent(normalizedExamDate)}&exam_time=${encodeURIComponent(normalizedExamTime)}`, { cache: 'no-store' });
+                if (assignResp.ok) {
+                    const assignData = await assignResp.json();
+                    if (assignData && assignData.success) {
+                        const rawList = Array.isArray(assignData.proctors) ? assignData.proctors : [];
+                        proctorAssignments = rawList.filter(p => (p && typeof p.proctor_name === 'string' && p.proctor_name.trim().length > 0));
+                        proctorAssignedTotal = proctorAssignments.length;
+                        proctorRequiredTotal = Number(assignData.required_total || 0);
+                    }
+                }
+            } catch (assignErr) {
+                console.warn('Failed to load proctor assignments for secretary report:', assignErr);
+            }
+        }
+
+        const hasCompleteProctorAssignments = proctorAssignments.length > 0 && proctorRequiredTotal > 0 && proctorAssignedTotal >= proctorRequiredTotal;
+
         // local esc helper (some contexts may not expose the global esc)
         const esc = (txt) => { try { const d = document.createElement('div'); d.textContent = txt || ''; return d.innerHTML; } catch (e) { return String(txt || ''); } };
 
@@ -3924,6 +3949,9 @@ async function printEssentialsSecretary() {
             return nums;
         };
 
+        let proctorSectionHtml = '';
+        let proctorSectionOnNewPage = false;
+
         // Build HTML
         let docHtml = `<!doctype html><html lang="fa" dir="rtl"><head><meta charset="utf-8"><title>ملزومات منشی جلسه</title><link rel="stylesheet" href="${fontHref}">`;
         docHtml += `<style>
@@ -3955,12 +3983,66 @@ async function printEssentialsSecretary() {
             /* type header spans same width as tables to keep alignment consistent */
             .etypeBar { display:block; width:100%; text-align:center; }
             .etypeBar .label { display:block; width:100%; background:#000; color:#fff; font-weight:900; padding:8px 0; border-radius:8px; font-size:15pt; }
+            .proctor-page { page-break-before: always; }
+            .proctor-roster { margin-top: 16px; }
+            .proctor-roster .roster-inner { width:96%; margin:0 auto; }
+            .proctor-roster .proctor-title { font-size: 14pt; font-weight:800; text-align:center; margin-bottom:4px; }
+            .proctor-roster .proctor-meta { font-size: 11pt; font-weight:600; text-align:center; margin-bottom:6px; color:#000; }
+            .proctor-columns { display:grid; grid-template-columns: repeat(var(--proctor-col-count, 1), minmax(0, 1fr)); gap:6px; margin-top:6px; }
+            .proctor-column { box-sizing:border-box; }
+            .proctor-column table { width:100%; border-collapse:collapse; box-sizing:border-box; }
+            .proctor-column th, .proctor-column td { border:1px solid #ddd; padding:4px 6px; text-align:right; font-size:10.5pt; box-sizing:border-box; }
+            .proctor-column th { background:#f1f1f1; font-weight:700; text-align:center; }
+            .proctor-column td.index { width:30%; text-align:center; }
+            .proctor-column td.name { width:70%; text-align:right; white-space:pre-wrap; word-break:break-word; }
             @media print { .no-print { display:none !important; } }
         </style></head><body>`;
 
         // Header: white background, black text, larger date/time
         const examDate = report.exam_date || '';
         const examTime = report.exam_time || '';
+
+        if (hasCompleteProctorAssignments) {
+            const indexed = proctorAssignments
+                .map((p, idx) => ({ index: idx + 1, name: (p.proctor_name || '').trim() }))
+                .filter(item => item.name.length > 0);
+            if (indexed.length) {
+                let columnCount = 1;
+                if (indexed.length >= 18) columnCount = 3;
+                else if (indexed.length >= 4) columnCount = 2;
+                const perColumn = Math.ceil(indexed.length / columnCount);
+                const columns = [];
+                for (let c = 0; c < columnCount; c++) {
+                    const slice = indexed.slice(c * perColumn, (c + 1) * perColumn);
+                    if (slice.length) columns.push(slice);
+                }
+                const effectiveColumns = Math.max(1, Math.min(columns.length, 3));
+                const rowsPerColumn = Math.ceil(indexed.length / effectiveColumns) || 0;
+                const rosterNeedsPageBreak = rowsPerColumn > 12;
+                if (rosterNeedsPageBreak) {
+                    proctorSectionOnNewPage = true;
+                }
+                let html = rosterNeedsPageBreak ? `<div class="page proctor-page">` : '';
+                html += `<div class="proctor-roster">`;
+                html += `<div class="roster-inner">`;
+                html += `<div class="proctor-title">لیست مراقبین جلسه</div>`;
+                html += `<div class="proctor-meta">${toPersianDigits(examTime)} &nbsp; | &nbsp; ${toPersianDigits(examDate)}</div>`;
+                html += `<div class="proctor-columns" style="--proctor-col-count:${effectiveColumns};">`;
+                columns.forEach(col => {
+                    html += `<div class="proctor-column"><table><thead><tr><th>ردیف</th><th>نام مراقب</th></tr></thead><tbody>`;
+                    col.forEach(item => {
+                        html += `<tr><td class="index">${toPersianDigits(item.index)}</td><td class="name">${esc(item.name)}</td></tr>`;
+                    });
+                    html += `</tbody></table></div>`;
+                });
+                html += `</div></div></div>`;
+                if (rosterNeedsPageBreak) {
+                    html += `</div>`;
+                }
+                proctorSectionHtml = html;
+            }
+        }
+
         docHtml += `<div class="page">`;
         docHtml += `<div class="header" style="background:transparent;color:#000;padding:4px 2px 6px 2px;text-align:center;">` +
             `<div class="title" style="font-size:16pt;font-weight:900;color:#000;margin-bottom:2px;">لیست منشی جلسه</div>` +
@@ -4080,7 +4162,16 @@ async function printEssentialsSecretary() {
 
         // add a fixed footer which will show page numbers when printing. total will be filled by parent script.
         // docHtml += `<div class="printed-footer"><span class="totalPages"></span></div>`;
-        docHtml += `</div></body></html>`;
+        if (proctorSectionOnNewPage && proctorSectionHtml) {
+            docHtml += `</div>`;
+            docHtml += proctorSectionHtml;
+            docHtml += `</body></html>`;
+        } else {
+            if (proctorSectionHtml) {
+                docHtml += proctorSectionHtml;
+            }
+            docHtml += `</div></body></html>`;
+        }
 
         const iframe = document.createElement('iframe');
         iframe.style.position = 'fixed';

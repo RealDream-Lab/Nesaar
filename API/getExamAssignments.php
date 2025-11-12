@@ -32,7 +32,28 @@ try {
     foreach ($rows as $r) {
         $proctors[] = ['proctor_id' => $r['proctor_id'], 'proctor_name' => $r['proctor_name']];
     }
-    echo json_encode(['success' => true, 'exam_date' => $examDate, 'exam_time' => $examTime, 'proctors' => $proctors], JSON_UNESCAPED_UNICODE);
+    $assignedTotal = count($proctors);
+
+    $requiredTotal = 0;
+    try {
+        $sumStmt = $pdo->prepare('SELECT SUM(required_proctors) AS total FROM `ExamsDetil` WHERE exam_date = ? AND exam_time = ?');
+        $sumStmt->execute([$examDate, $examTime]);
+        $val = $sumStmt->fetchColumn();
+        if ($val !== false && $val !== null) {
+            $requiredTotal = (int)$val;
+        }
+    } catch (PDOException $sumErr) {
+        error_log('getExamAssignments: failed to compute required proctor total: ' . $sumErr->getMessage());
+    }
+
+    echo json_encode([
+        'success' => true,
+        'exam_date' => $examDate,
+        'exam_time' => $examTime,
+        'proctors' => $proctors,
+        'assigned_total' => $assignedTotal,
+        'required_total' => $requiredTotal
+    ], JSON_UNESCAPED_UNICODE);
 } catch (PDOException $e) {
     http_response_code(500);
     echo json_encode(['error' => 'خطا در دریافت تخصیص‌ها: ' . $e->getMessage()], JSON_UNESCAPED_UNICODE);
