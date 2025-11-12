@@ -576,7 +576,7 @@ try {
             const headVal = cfg.HeadOfEDU || '';
             const chairVal = cfg.Chairman || '';
             const groupByCourseChecked = String(cfg.GroupByCourse || '').toUpperCase() === 'YES';
-            const paperSavingChecked = String(cfg.PaperSaving || cfg.PaperSaving === undefined ? cfg.PaperSaving : '').toUpperCase() === 'YES' || String(cfg.PaperSaving || '').toUpperCase() === 'YES';
+            const paperSavingChecked = String(cfg.PaperSaving || '').toUpperCase() === 'YES';
 
             // Form HTML: use SweetAlert's glass popup background (don't add a bright inner background)
             // Inputs use transparent background and subtle borders so the modal looks like the existing glass theme
@@ -4026,11 +4026,12 @@ async function printEssentialsSecretary() {
                 const effectiveColumns = Math.max(1, Math.min(columns.length, 3));
                 const rowsPerColumn = Math.ceil(indexed.length / effectiveColumns) || 0;
                 const rosterNeedsPageBreak = rowsPerColumn > 12;
-                const paperSavingEnabled = String((cfg && cfg.PaperSaving) || (window.appConfig && window.appConfig.PaperSaving) || '').toUpperCase() === 'YES';
-                if (rosterNeedsPageBreak || paperSavingEnabled) {
+                const paperSavingEnabled = String((window.appConfig && window.appConfig.PaperSaving) || '').toUpperCase() === 'YES';
+                const startRosterOnNewPage = rosterNeedsPageBreak || !paperSavingEnabled;
+                if (startRosterOnNewPage) {
                     proctorSectionOnNewPage = true;
                 }
-                let html = (rosterNeedsPageBreak || paperSavingEnabled) ? `<div class="page proctor-page">` : '';
+                let html = startRosterOnNewPage ? `<div class="page proctor-page">` : '';
                 html += `<div class="proctor-roster">`;
                 html += `<div class="roster-inner">`;
                 html += `<div class="proctor-title">لیست مراقبین جلسه</div>`;
@@ -4044,7 +4045,7 @@ async function printEssentialsSecretary() {
                     html += `</tbody></table></div>`;
                 });
                 html += `</div></div></div>`;
-                if (rosterNeedsPageBreak || paperSavingEnabled) {
+                if (startRosterOnNewPage) {
                     html += `</div>`;
                 }
                 proctorSectionHtml = html;
@@ -4246,7 +4247,8 @@ async function printEssentialsSecretary() {
 
         const msg = (err && err.message) ? String(err.message) : 'خطا در آماده‌سازی گزارش چاپ';
         const stack = (err && err.stack) ? String(err.stack).split('\n').slice(0, 6).join('\n') : '';
-        Swal.fire({ icon: 'error', title: 'خطا در آماده‌سازی گزارش چاپ', html: `<div style="text-align:right;direction:ltr;white-space:pre-wrap;">${esc(msg)}<br><small style='color:#666;margin-top:8px;display:block;'>${esc(stack)}</small></div>`, confirmButtonText: 'باشه', customClass: { popup: 'swal2-rtl swal2-glass', confirmButton: 'btn btn-primary' } });
+        const htmlEsc = (typeof escapeHtml === 'function') ? escapeHtml : (value => String(value || ''));
+        Swal.fire({ icon: 'error', title: 'خطا در آماده‌سازی گزارش چاپ', html: `<div style="text-align:right;direction:ltr;white-space:pre-wrap;">${htmlEsc(msg)}<br><small style='color:#666;margin-top:8px;display:block;'>${htmlEsc(stack)}</small></div>`, confirmButtonText: 'باشه', customClass: { popup: 'swal2-rtl swal2-glass', confirmButton: 'btn btn-primary' } });
     }
 }
 
