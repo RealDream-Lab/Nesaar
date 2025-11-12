@@ -16,7 +16,8 @@ try {
     $session = admin_session_require($pdo);
 
     $rateLimitKey = 'assign_scattered:' . ($session['username'] ?? 'unknown');
-    rate_limit_enforce($pdo, $rateLimitKey, 5, 120);
+    // This endpoint may be called repeatedly during tuning; increase allowance
+    rate_limit_enforce($pdo, $rateLimitKey, 100, 120);
 
     // Params
     $dryRun = true;

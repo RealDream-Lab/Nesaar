@@ -16,7 +16,8 @@ try {
     $session = admin_session_require($pdo);
 
     $rateLimitKey = 'generate_assignments:' . ($session['username'] ?? 'unknown');
-    rate_limit_enforce($pdo, $rateLimitKey, 5, 120);
+    // Allow higher rate for generating assignments during bulk operations
+    rate_limit_enforce($pdo, $rateLimitKey, 100, 120);
 
     // Drop (preview refresh) and recreate table with the same schema used by assignScattered apply
     $pdo->exec("DROP TABLE IF EXISTS `ExamAssignments`");

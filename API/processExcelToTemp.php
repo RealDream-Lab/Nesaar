@@ -58,7 +58,8 @@ header('Content-Type: application/json; charset=utf-8');
 $session = admin_session_require($pdo);
 
 $rateLimitKey = 'process_excel:' . ($session['username'] ?? 'unknown');
-rate_limit_enforce($pdo, $rateLimitKey, 3, 300);
+// Processing can be invoked frequently by batch flows; raise limit to avoid false positives
+rate_limit_enforce($pdo, $rateLimitKey, 100, 300);
 
 // Get exam type and filename
 $examType = $_POST['examType'] ?? '';

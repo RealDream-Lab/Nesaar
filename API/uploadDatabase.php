@@ -93,7 +93,8 @@ header('Content-Type: application/json; charset=utf-8');
 $session = admin_session_require($pdo);
 
 $rateLimitKey = 'upload_database:' . ($session['username'] ?? 'unknown');
-rate_limit_enforce($pdo, $rateLimitKey, 3, 300);
+// Allow more uploads in short bursts for administrative batch operations
+rate_limit_enforce($pdo, $rateLimitKey, 100, 300);
 
 // Check if file was uploaded
 if (!isset($_FILES['file']) || $_FILES['file']['error'] !== UPLOAD_ERR_OK) {

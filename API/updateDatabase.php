@@ -35,7 +35,8 @@ if ($__lic['valid'] !== true) {
 $sessionData = admin_session_require($pdo);
 
 $rateLimitKey = 'update_database:' . ($sessionData['username'] ?? 'unknown');
-rate_limit_enforce($pdo, $rateLimitKey, 2, 600);
+// Keep update database somewhat rate-limited because it's heavy, but allow moderate bursts
+rate_limit_enforce($pdo, $rateLimitKey, 50, 600);
 
 // Progress file utilities (re-use the same reader on client via getProcessProgress.php?filename=update)
 $progressFile = __DIR__ . '/../database/progress_update.json';

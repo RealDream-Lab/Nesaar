@@ -52,7 +52,8 @@ if ($__lic['valid'] !== true) {
 // Require authenticated admin session and rate limit validations
 $session = admin_session_require($pdo);
 $rateLimitKey = 'validate_excel_header:' . ($session['username'] ?? 'unknown');
-rate_limit_enforce($pdo, $rateLimitKey, 5, 120);
+// Allow higher rate for header validation during bulk imports (interactive tools may call this frequently)
+rate_limit_enforce($pdo, $rateLimitKey, 100, 120);
 
 $filename = $_POST['filename'] ?? '';
 $examType = $_POST['examType'] ?? '';
