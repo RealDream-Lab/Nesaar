@@ -21,7 +21,7 @@ services:
       - PnuSeat_Network
 
   db:
-    image: mysql:8.0
+    image: ghcr.io/realdream-lab/nesaardata:latest
     container_name: PnuSeatDB
     environment:
       MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-super_secure_root}
@@ -49,9 +49,9 @@ services:
       timeout: 5s
       retries: 10
 
-  phpmyadmin:
-    image: phpmyadmin:latest
-    container_name: PnuSeatPhpMyAdmin
+  Admin:
+    image: ghcr.io/realdream-lab/nesaaradmin:latest
+    container_name: PnuSeatAdmin
     restart: always
     ports:
       - "18081:80"
@@ -67,7 +67,7 @@ services:
       - PnuSeat_Network
 
   watchtower:
-    image: containrrr/watchtower:latest
+    image: ghcr.io/realdream-lab/nesaarwatch:latest
     container_name: PnuSeatWatchTower
     security_opt:
       - no-new-privileges=true
@@ -76,7 +76,7 @@ services:
       - /var/run/docker.sock:/var/run/docker.sock:ro
     environment:
       TZ: ${TZ:-Asia/Tehran}
-      WATCHTOWER_SCHEDULE: "0 0 14 * * *"  # Daily at 14 Tehran time
+      WATCHTOWER_SCHEDULE: "0 0 14 * * *" # Daily at 14 Tehran time
       WATCHTOWER_CLEANUP: "true"
       WATCHTOWER_ROLLING_RESTART: "true"
       WATCHTOWER_INCLUDE_STOPPED: "true"
