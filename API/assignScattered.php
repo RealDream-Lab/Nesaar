@@ -87,9 +87,28 @@ try {
         exit;
     }
 
-    // Fetch ProctorRestrictions
-    $rstmt = $pdo->query('SELECT proctor_id, exam_date, exam_time FROM `ProctorRestrictions`');
-    $restrs = $rstmt ? $rstmt->fetchAll(PDO::FETCH_ASSOC) : [];
+    // Ensure ProctorRestrictions table exists (safe no-op if already present)
+    try {
+        $pdo->exec("CREATE TABLE IF NOT EXISTS `ProctorRestrictions` (
+            `id` INT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
+            `proctor_id` INT UNSIGNED NOT NULL,
+            `exam_date` VARCHAR(10) NOT NULL,
+            `exam_time` VARCHAR(5) NOT NULL,
+            `created_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            UNIQUE KEY `ux_proctor_date_time` (`proctor_id`,`exam_date`,`exam_time`)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
+    } catch (Throwable $e) {
+        // ignore: if creation fails later SELECT will be wrapped below
+    }
+
+    // Fetch ProctorRestrictions (tolerate missing table)
+    $restrs = [];
+    try {
+        $rstmt = $pdo->query('SELECT proctor_id, exam_date, exam_time FROM `ProctorRestrictions`');
+        $restrs = $rstmt ? $rstmt->fetchAll(PDO::FETCH_ASSOC) : [];
+    } catch (Throwable $e) {
+        $restrs = [];
+    }
     $restrictions = [];
     foreach ($restrs as $r) {
         $pid = intval($r['proctor_id']);
