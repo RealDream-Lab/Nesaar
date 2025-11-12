@@ -117,6 +117,18 @@ function session_cookie_should_use_secure(): bool
         return $cached;
     }
 
+    $forwardedProto = strtolower((string)($_SERVER['HTTP_X_FORWARDED_PROTO'] ?? ''));
+    if ($forwardedProto === 'https') {
+        $cached = true;
+        return $cached;
+    }
+
+    $forwardedSsl = strtolower((string)($_SERVER['HTTP_X_FORWARDED_SSL'] ?? ''));
+    if ($forwardedSsl === 'on') {
+        $cached = true;
+        return $cached;
+    }
+
     $host = strtolower((string)($_SERVER['HTTP_HOST'] ?? ''));
     $isLocalHost = in_array($host, ['localhost', '127.0.0.1', '::1'], true);
 
@@ -125,10 +137,12 @@ function session_cookie_should_use_secure(): bool
         return $cached;
     }
 
-    if (empty($_SERVER['HTTPS']) || $_SERVER['HTTPS'] === 'off') {
-        error_log('session_cookie_set: HTTPS is not enabled but Secure flag is enforced; cookie may be discarded by the browser.');
+    if (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') {
+        $cached = true;
+        return $cached;
     }
 
+    error_log('session_cookie_set: HTTPS is not enabled but Secure flag is enforced; cookie may be discarded by the browser.');
     $cached = true;
     return $cached;
 }

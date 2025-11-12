@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # ==============================================================================
-# PnuSeat Multi-Platform Setup Script
+# Nesaar Multi-Platform Setup Script
 # Supports: Linux (Ubuntu/Debian/CentOS/Fedora/Arch), macOS, Windows (WSL/Git Bash)
 # ==============================================================================
 
@@ -9,7 +9,7 @@ set -e
 
 INSTALL_DIR="/opt/Nesaar"
 COMPOSE_FILE="docker-compose.yml"
-REPO_URL="https://github.com/RealDream-Lab/PnuSeat.git"
+REPO_URL="https://github.com/RealDream-Lab/Nesaar.git"
 
 # Colors for output
 RED='\033[0;31m'
@@ -298,7 +298,7 @@ pull_images() {
 # Start services
 # ==============================================================================
 start_services() {
-    print_info "Starting PnuSeat services..."
+    print_info "Starting Nesaar services..."
     
     cd "$INSTALL_DIR"
     docker compose up -d
@@ -312,7 +312,7 @@ start_services() {
 display_info() {
     echo ""
     echo "╔════════════════════════════════════════════════════════════╗"
-    echo "║          🎉 PnuSeat Installation Complete! 🎉            ║"
+    echo "║          🎉 Nesaar Installation Complete! 🎉            ║"
     echo "╠════════════════════════════════════════════════════════════╣"
     echo "║                                                            ║"
     echo "║  📁 Installation Directory: $INSTALL_DIR"
@@ -347,7 +347,7 @@ display_info() {
 # ==============================================================================
 main() {
     echo "╔════════════════════════════════════════════════════════════╗"
-    echo "║        🚀 PnuSeat Multi-Platform Setup Script 🚀          ║"
+    echo "║        🚀 Nesaar Multi-Platform Setup Script 🚀          ║"
     echo "║                                                            ║"
     echo "║  Supports: Linux, macOS, Windows (WSL/Git Bash)           ║"
     echo "╚════════════════════════════════════════════════════════════╝"
