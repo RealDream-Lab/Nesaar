@@ -63,6 +63,11 @@ if (!hash_equals($expectedUsername, $username) || !hash_equals($expectedPassword
 
 audit_log_auth($pdo, 'admin_login', true, $expectedUsername);
 
+if (session_status() !== PHP_SESSION_ACTIVE) {
+    session_start();
+}
+session_regenerate_id(true);
+
 admin_session_set($pdo, [
     'username' => $expectedUsername,
 ]);

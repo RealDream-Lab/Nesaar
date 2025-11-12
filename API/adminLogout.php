@@ -25,6 +25,13 @@ if ($session) {
     audit_log_auth($pdo, 'admin_logout', true, (string)($session['username'] ?? 'admin'));
 }
 
+if (session_status() !== PHP_SESSION_ACTIVE) {
+    session_start();
+}
+$_SESSION = [];
+session_regenerate_id(true);
+session_destroy();
+
 admin_session_clear();
 
 echo json_encode(['success' => true], JSON_UNESCAPED_UNICODE);
