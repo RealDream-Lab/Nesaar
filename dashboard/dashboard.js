@@ -576,6 +576,7 @@ try {
             const headVal = cfg.HeadOfEDU || '';
             const chairVal = cfg.Chairman || '';
             const groupByCourseChecked = String(cfg.GroupByCourse || '').toUpperCase() === 'YES';
+            const paperSavingChecked = String(cfg.PaperSaving || cfg.PaperSaving === undefined ? cfg.PaperSaving : '').toUpperCase() === 'YES' || String(cfg.PaperSaving || '').toUpperCase() === 'YES';
 
             // Form HTML: use SweetAlert's glass popup background (don't add a bright inner background)
             // Inputs use transparent background and subtle borders so the modal looks like the existing glass theme
@@ -600,6 +601,10 @@ try {
                             <input id="er_groupByCourse" type="checkbox" ${groupByCourseChecked ? 'checked' : ''} style="width:1.15rem;height:1.15rem;">
                             <label for="er_groupByCourse" style="margin:0;cursor:pointer;">مرتب‌سازی صندلی‌ها براساس درس</label>
                         </div>
+                        <div style="margin-top:8px; display:flex; align-items:center; gap:8px;">
+                            <input id="er_paperSaving" type="checkbox" ${paperSavingChecked ? 'checked' : ''} style="width:1.15rem;height:1.15rem;">
+                            <label for="er_paperSaving" style="margin:0;cursor:pointer;">صرفه‌جویی در مصرف کاغذ</label>
+                        </div>
                     </div>
                 </div>`;
 
@@ -618,8 +623,9 @@ try {
                     const head = document.getElementById('er_head')?.value || '';
                     const chair = document.getElementById('er_chair')?.value || '';
                     const groupByCourse = (document.getElementById('er_groupByCourse')?.checked) ? 'YES' : 'NO';
+                    const paperSaving = (document.getElementById('er_paperSaving')?.checked) ? 'YES' : 'NO';
                     // return values to then handle save confirmation
-                    return { AdminNickName: admin.trim(), BossNickName: boss.trim(), HeadOfEDU: head.trim(), Chairman: chair.trim(), GroupByCourse: groupByCourse };
+                    return { AdminNickName: admin.trim(), BossNickName: boss.trim(), HeadOfEDU: head.trim(), Chairman: chair.trim(), GroupByCourse: groupByCourse, PaperSaving: paperSaving };
                 }
             });
 
@@ -655,6 +661,7 @@ try {
                     }
                     // Update global config for immediate effect
                     window.appConfig.GroupByCourse = values.GroupByCourse;
+                    window.appConfig.PaperSaving = values.PaperSaving;
                     await Swal.fire({ icon: 'success', title: 'ذخیره شد', text: 'اطلاعات با موفقیت ذخیره شد', confirmButtonText: 'باشه', customClass: { popup: 'swal2-rtl swal2-glass', confirmButton: 'btn btn-primary' } });
                 } else {
                     throw new Error((saveJson && saveJson.error) ? saveJson.error : 'خطا در ذخیره تنظیمات');
@@ -4019,10 +4026,11 @@ async function printEssentialsSecretary() {
                 const effectiveColumns = Math.max(1, Math.min(columns.length, 3));
                 const rowsPerColumn = Math.ceil(indexed.length / effectiveColumns) || 0;
                 const rosterNeedsPageBreak = rowsPerColumn > 12;
-                if (rosterNeedsPageBreak) {
+                const paperSavingEnabled = String((cfg && cfg.PaperSaving) || (window.appConfig && window.appConfig.PaperSaving) || '').toUpperCase() === 'YES';
+                if (rosterNeedsPageBreak || paperSavingEnabled) {
                     proctorSectionOnNewPage = true;
                 }
-                let html = rosterNeedsPageBreak ? `<div class="page proctor-page">` : '';
+                let html = (rosterNeedsPageBreak || paperSavingEnabled) ? `<div class="page proctor-page">` : '';
                 html += `<div class="proctor-roster">`;
                 html += `<div class="roster-inner">`;
                 html += `<div class="proctor-title">لیست مراقبین جلسه</div>`;
@@ -4036,7 +4044,7 @@ async function printEssentialsSecretary() {
                     html += `</tbody></table></div>`;
                 });
                 html += `</div></div></div>`;
-                if (rosterNeedsPageBreak) {
+                if (rosterNeedsPageBreak || paperSavingEnabled) {
                     html += `</div>`;
                 }
                 proctorSectionHtml = html;
