@@ -3,20 +3,20 @@ name: Build and Push Docker image
 on:
   push:
     tags:
-      - 'v*'   # فقط وقتی تگ جدید (مثل v1.0.0) ساخته بشه
+      - "v*" # فقط وقتی تگ جدید (مثل v1.0.0) ساخته بشه
   workflow_dispatch:
     inputs:
       tag:
-        description: 'Image tag to use (default: manual-<short_sha>)'
+        description: "Image tag to use (default: manual-<short_sha>)"
         required: false
         type: string
       push_latest:
-        description: 'Also tag and push as latest'
+        description: "Also tag and push as latest"
         required: false
         default: true
         type: boolean
       push:
-        description: 'Push image to registry (disable to only build)'
+        description: "Push image to registry (disable to only build)"
         required: false
         default: true
         type: boolean
@@ -39,7 +39,7 @@ jobs:
         id: vars
         run: |
           OWNER="$OWNER"
-          IMAGE="ghcr.io/${OWNER}/pnuseat"
+          IMAGE="ghcr.io/${OWNER}/nesaar"
           if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
             TAG="${{ inputs.tag }}"
             if [ -z "$TAG" ]; then
@@ -88,7 +88,7 @@ jobs:
         env:
           OWNER: ${{ env.OWNER }}
           IMAGE_TAG: ${{ steps.vars.outputs.image_tag }}
-          PACKAGE_NAME: pnuseat
+          PACKAGE_NAME: nesaar
         with:
           # Prefer a CR_PAT (personal access token) stored in secrets.CR_PAT.
           # Fallback to the workflow token if CR_PAT isn't provided.

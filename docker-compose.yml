@@ -2,8 +2,8 @@ version: "3.9"
 
 services:
   web:
-    image: ghcr.io/RealDream-Lab/pnuseat:latest
-    container_name: PnuSeatWeb
+    image: ghcr.io/RealDream-Lab/nesaar:latest
+    container_name: NesaarWeb
     ports:
       - "18080:80"
     environment:
@@ -18,11 +18,11 @@ services:
     labels:
       - "com.centurylinklabs.watchtower.enable=true"
     networks:
-      - PnuSeat_Network
+      - Nesaar_Network
 
   db:
     image: ghcr.io/realdream-lab/nesaardata:latest
-    container_name: PnuSeatDB
+    container_name: NesaarDB
     environment:
       MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-super_secure_root}
       MYSQL_DATABASE: ${MYSQL_DATABASE:-PnuExamsSeatNumber}
@@ -43,7 +43,7 @@ services:
     labels:
       - "com.centurylinklabs.watchtower.enable=true"
     networks:
-      - PnuSeat_Network
+      - Nesaar_Network
     healthcheck:
       test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
       timeout: 5s
@@ -51,7 +51,7 @@ services:
 
   Admin:
     image: ghcr.io/realdream-lab/nesaaradmin:latest
-    container_name: PnuSeatAdmin
+    container_name: NesaarAdmin
     restart: always
     ports:
       - "18081:80"
@@ -64,11 +64,11 @@ services:
     labels:
       - "com.centurylinklabs.watchtower.enable=true"
     networks:
-      - PnuSeat_Network
+      - Nesaar_Network
 
   watchtower:
     image: ghcr.io/realdream-lab/nesaarwatch:latest
-    container_name: PnuSeatWatchTower
+    container_name: NesaarWatchTower
     security_opt:
       - no-new-privileges=true
     read_only: true
@@ -84,12 +84,12 @@ services:
       WATCHTOWER_LABEL_ENABLE: "true"
     restart: always
     networks:
-      - PnuSeat_Network
+      - Nesaar_Network
 
 volumes:
   db_data:
     driver: local
 
 networks:
-  PnuSeat_Network:
+  Nesaar_Network:
     driver: bridge

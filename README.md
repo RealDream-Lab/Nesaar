@@ -58,13 +58,13 @@ sudo systemctl enable docker
 **گزینه سریع**: اجرای اسکریپت خودکار:
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/RealDream-Lab/PnuSeat/master/setup.sh | bash
+curl -fsSL https://raw.githubusercontent.com/RealDream-Lab/Nesaar/master/setup.sh | bash
 ```
 
 یا دانلود و اجرای دستی:
 
 ```bash
-wget https://raw.githubusercontent.com/RealDream-Lab/PnuSeat/master/setup.sh
+wget https://raw.githubusercontent.com/RealDream-Lab/Nesaar/master/setup.sh
 chmod +x setup.sh
 ./setup.sh
 ```
@@ -72,8 +72,8 @@ chmod +x setup.sh
 **راه‌اندازی دستی**:
 
 ```bash
-git clone https://github.com/RealDream-Lab/PnuSeat.git
-cd PnuSeat
+git clone https://github.com/RealDream-Lab/Nesaar.git
+cd Nesaar
 ```
 
 2. **تنظیم متغیرهای محیطی**:
@@ -109,19 +109,19 @@ cd PnuSeat
 
    ```bash
    # دریافت آخرین نسخه
-   docker pull ghcr.io/RealDream-Lab/pnuseat:latest
+   docker pull ghcr.io/RealDream-Lab/nesaar:latest
 
    # یا دریافت نسخه خاص (مثلاً v1.7.0)
-   docker pull ghcr.io/RealDream-Lab/pnuseat:v1.7.0
+   docker pull ghcr.io/RealDream-Lab/nesaar:v1.7.0
    ```
 
 4. **ساخت ایمیج (اختیاری، فقط برای توسعه‌دهندگان)**:
    اگر می‌خواهید خودتان ایمیج را بسازید:
 
    ```bash
-   git clone https://github.com/RealDream-Lab/PnuSeat.git
-   cd PnuSeat
-   docker build -t ghcr.io/RealDream-Lab/pnuseat:latest .
+   git clone https://github.com/RealDream-Lab/Nesaar.git
+   cd Nesaar
+   docker build -t ghcr.io/RealDream-Lab/Nesaar:latest .
    ```
 
 5. **ساخت و اجرای کانتینرها**:
@@ -183,7 +183,7 @@ composer install
 
 ```bash
 cd /var/www/html
-git clone https://github.com/RealDream-Lab/PnuSeat.git .
+git clone https://github.com/RealDream-Lab/Nesaar.git .
 sudo chown -R www-data:www-data /var/www/html
 ```
 
