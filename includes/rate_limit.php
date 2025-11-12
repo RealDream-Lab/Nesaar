@@ -71,9 +71,16 @@ function rate_limit_enforce(PDO $pdo, string $key, int $maxAttempts = 10, int $w
         http_response_code(429);
         header('Content-Type: application/json; charset=utf-8');
         header('Retry-After: ' . $windowSeconds);
+        $humanMessage = sprintf(
+            'تعداد درخواست‌ها بیش از حد مجاز (%d درخواست در %d ثانیه) است. لطفاً %d ثانیه صبر کنید و دوباره تلاش کنید.',
+            $maxAttempts,
+            $windowSeconds,
+            $windowSeconds
+        );
+
         echo json_encode([
             'error' => 'rate_limit_exceeded',
-            'message' => 'تعداد درخواست‌ها بیش از حد مجاز است. لطفاً چند لحظه صبر کنید.',
+            'message' => $humanMessage,
             'retry_after' => $windowSeconds
         ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
         exit;
