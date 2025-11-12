@@ -12,6 +12,7 @@ services:
       DB_USER: ${DB_USER:-pnu_user}
       DB_PASS: ${DB_PASS:-change_me}
       TZ: ${TZ:-Asia/Tehran}
+      SESSION_COOKIE_ALLOW_INSECURE: "1"
     depends_on:
       - db
     restart: always
