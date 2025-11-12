@@ -1,9 +1,13 @@
 <?php
 header('Content-Type: application/json; charset=utf-8');
 require_once __DIR__ . '/../includes/license_guard.php';
+require_once __DIR__ . '/../includes/csrf_protection.php';
+require_once __DIR__ . '/../includes/admin_session.php';
 require_once 'db_init.php';
 
+csrf_enforce();
 license_guard_enforce_api();
+$session = admin_session_require($pdo);
 
 $input = json_decode(file_get_contents('php://input'), true);
 if (!$input || !is_array($input)) {

@@ -6,6 +6,18 @@ function isDesktopDevice() {
     return !isTouch && width > 900 && !isMobileUA;
 }
 
+function escapeHtml(value) {
+    if (value === null || value === undefined) {
+        return '';
+    }
+    return String(value)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+}
+
 
 try {
     window.addEventListener('afterprint', () => {
@@ -432,14 +444,6 @@ document.addEventListener('DOMContentLoaded', function () {
     }
 });
 
-// Check admin authentication
-function getCookie(name) {
-    const value = `; ${document.cookie}`;
-    const parts = value.split(`; ${name}=`);
-    if (parts.length === 2) return parts.pop().split(';').shift();
-    return null;
-}
-
 function getCsrfToken() {
     const meta = document.querySelector('meta[name="csrf-token"]');
     return meta ? meta.getAttribute('content') : null;
@@ -496,21 +500,20 @@ async function guardedFetch(resource, options = {}) {
     return response;
 }
 
-function checkAuth() {
-    const adminSession = getCookie('adminSession');
-    if (!adminSession) {
-        window.location.href = '../';
-        return false;
-    }
+async function checkAuth() {
     try {
-        const session = JSON.parse(decodeURIComponent(adminSession));
-        if (session.type !== 'admin') {
-            window.location.href = '../';
-            return false;
+        const response = await guardedFetch('../API/adminSession.php', { cache: 'no-store' });
+        if (!response.ok) {
+            throw new Error('unauthorized');
         }
-        document.getElementById('adminUsername').textContent = session.username || 'مدیر سیستم';
+        const session = await response.json();
+        const username = session.displayName || session.username || 'مدیر سیستم';
+        const usernameTarget = document.getElementById('adminUsername');
+        if (usernameTarget) {
+            usernameTarget.textContent = username;
+        }
         return true;
-    } catch (e) {
+    } catch (error) {
         window.location.href = '../';
         return false;
     }
@@ -530,7 +533,11 @@ document.getElementById('logoutBtn').addEventListener('click', async () => {
     });
 
     if (result.isConfirmed) {
-        document.cookie = 'adminSession=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;';
+        try {
+            await guardedFetch('../API/adminLogout.php', { method: 'POST' });
+        } catch (logoutError) {
+            console.warn('Admin logout request failed:', logoutError);
+        }
         window.location.href = '../';
     }
 });
@@ -569,9 +576,6 @@ try {
             const headVal = cfg.HeadOfEDU || '';
             const chairVal = cfg.Chairman || '';
             const groupByCourseChecked = String(cfg.GroupByCourse || '').toUpperCase() === 'YES';
-
-            // local escape helper (avoid relying on functions defined elsewhere)
-            const escapeHtml = (text) => { const div = document.createElement('div'); div.textContent = text || ''; return div.innerHTML; };
 
             // Form HTML: use SweetAlert's glass popup background (don't add a bright inner background)
             // Inputs use transparent background and subtle borders so the modal looks like the existing glass theme
@@ -1304,12 +1308,6 @@ if (copyrightFooter) {
             const persianDigits = ['۰', '۱', '۲', '۳', '۴', '۵', '۶', '۷', '۸', '۹'];
             return String(num).replace(/\d/g, d => persianDigits[d]);
         }
-        function escapeHtml(text) {
-            const div = document.createElement('div');
-            div.textContent = text;
-            return div.innerHTML;
-        }
-
         let countdownInterval;
         let university = 'دانشگاه پیام نور مرکز بیجار';
         try {
@@ -1366,9 +1364,11 @@ if (copyrightFooter) {
 }
 
 
-if (checkAuth()) {
-    loadDashboardData();
-}
+checkAuth().then(isAuthorized => {
+    if (isAuthorized) {
+        loadDashboardData();
+    }
+});
 
 
 let reportsChartInstance = null;

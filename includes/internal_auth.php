@@ -6,6 +6,27 @@
  */
 
 declare(strict_types=1);
+const INTERNAL_AUTH_TOKEN_FILE = __DIR__ . '/../database/internal_api_token.secret';
+
+/**
+ * Retrieve path where the plaintext internal token is stored for local use
+ */
+function internal_auth_token_file(): string
+{
+    return INTERNAL_AUTH_TOKEN_FILE;
+}
+
+/**
+ * Load hashed token from Config table (if present)
+ */
+function internal_auth_get_hash(PDO $pdo): ?string
+{
+    $stmt = $pdo->prepare("SELECT ConfigValue FROM Config WHERE ConfigName = 'InternalAPIToken'");
+    $stmt->execute();
+    $row = $stmt->fetch(PDO::FETCH_ASSOC);
+    $hash = trim((string)($row['ConfigValue'] ?? ''));
+    return $hash !== '' ? $hash : null;
+}
 
 /**
  * Generate a secure internal API token
@@ -14,6 +35,7 @@ declare(strict_types=1);
 function internal_auth_generate_token(PDO $pdo): string
 {
     $token = bin2hex(random_bytes(32)); // 64 character hex string
+    $hash = hash('sha256', $token);
     
     $stmt = $pdo->prepare('
         INSERT INTO Config (ConfigName, ConfigValue)
@@ -22,8 +44,16 @@ function internal_auth_generate_token(PDO $pdo): string
     ');
     $stmt->execute([
         'name' => 'InternalAPIToken',
-        'value' => $token
+        'value' => $hash
     ]);
+
+    $path = internal_auth_token_file();
+    try {
+        file_put_contents($path, $token . "\n", LOCK_EX);
+        @chmod($path, 0600);
+    } catch (Throwable $e) {
+        error_log('Failed to persist Internal API token file: ' . $e->getMessage());
+    }
     
     return $token;
 }
@@ -33,15 +63,15 @@ function internal_auth_generate_token(PDO $pdo): string
  */
 function internal_auth_get_token(PDO $pdo): string
 {
-    $stmt = $pdo->prepare("SELECT ConfigValue FROM Config WHERE ConfigName = 'InternalAPIToken'");
-    $stmt->execute();
-    $row = $stmt->fetch(PDO::FETCH_ASSOC);
-    
-    if (!$row || empty($row['ConfigValue'])) {
-        return internal_auth_generate_token($pdo);
+    $path = internal_auth_token_file();
+    if (is_readable($path)) {
+        $token = trim((string)@file_get_contents($path));
+        if ($token !== '') {
+            return $token;
+        }
     }
-    
-    return $row['ConfigValue'];
+
+    return internal_auth_generate_token($pdo);
 }
 
 /**
@@ -59,9 +89,15 @@ function internal_auth_validate(): bool
     // روش ۱: بررسی Internal Token در Header
     $providedToken = $_SERVER['HTTP_X_INTERNAL_TOKEN'] ?? '';
     if (!empty($providedToken)) {
-        $validToken = internal_auth_get_token($pdo);
-        if (hash_equals($validToken, $providedToken)) {
-            return true;
+        $storedHash = internal_auth_get_hash($pdo);
+        if ($storedHash !== null) {
+            $computed = hash('sha256', $providedToken);
+            if (hash_equals($storedHash, $computed)) {
+                return true;
+            }
+            if (strlen($storedHash) === 64 && ctype_xdigit($storedHash) && hash_equals($storedHash, $providedToken)) {
+                return true;
+            }
         }
     }
     

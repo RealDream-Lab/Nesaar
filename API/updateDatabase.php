@@ -8,35 +8,34 @@ header('Content-Type: application/json; charset=utf-8');
 
 require_once __DIR__ . '/../includes/license_guard.php';
 require_once __DIR__ . '/../includes/csrf_protection.php';
+require_once __DIR__ . '/../includes/admin_session.php';
+require_once __DIR__ . '/../includes/rate_limit.php';
 require_once __DIR__ . '/db_init.php';
 
-// Enforce license and CSRF protection
-try {
-    license_guard_enforce_api();
-    csrf_enforce();
-} catch (Throwable $e) {
-    exit; // guard already sent response
+// Enforce CSRF first
+try { csrf_enforce(); } catch (Throwable $e) { exit; }
+// Enforce license with optional soft bypass (consistent with import endpoints)
+$__lic = license_guard_validate(false);
+if ($__lic['valid'] !== true) {
+    $allowBypass = false;
+    try {
+        if (isset($pdo) && $pdo instanceof PDO) {
+            $st = $pdo->prepare("SELECT ConfigValue FROM Config WHERE ConfigName='AllowImportOnInvalidLicense'");
+            $st->execute();
+            $val = strtoupper(trim((string)($st->fetchColumn() ?? '')));
+            $allowBypass = ($val === 'YES');
+        }
+    } catch (Throwable $e) { /* ignore */ }
+    if (!$allowBypass) {
+        license_guard_respond_forbidden($__lic['message'] ?? 'License validation failed');
+    }
 }
 
 // Admin authentication (consistent with assignment endpoints)
-$adminSession = $_COOKIE['adminSession'] ?? null;
-if (!$adminSession) {
-    http_response_code(401);
-    echo json_encode(['error' => 'unauthorized'], JSON_UNESCAPED_UNICODE);
-    exit;
-}
-try {
-    $sessionData = json_decode(urldecode($adminSession), true);
-    if (!$sessionData || ($sessionData['type'] ?? '') !== 'admin') {
-        http_response_code(401);
-        echo json_encode(['error' => 'unauthorized'], JSON_UNESCAPED_UNICODE);
-        exit;
-    }
-} catch (Exception $e) {
-    http_response_code(401);
-    echo json_encode(['error' => 'unauthorized'], JSON_UNESCAPED_UNICODE);
-    exit;
-}
+$sessionData = admin_session_require($pdo);
+
+$rateLimitKey = 'update_database:' . ($sessionData['username'] ?? 'unknown');
+rate_limit_enforce($pdo, $rateLimitKey, 2, 600);
 
 // Progress file utilities (re-use the same reader on client via getProcessProgress.php?filename=update)
 $progressFile = __DIR__ . '/../database/progress_update.json';

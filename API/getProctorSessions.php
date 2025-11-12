@@ -6,6 +6,7 @@ if (session_status() === PHP_SESSION_NONE) {
 
 require_once __DIR__ . '/../includes/license_guard.php';
 require_once __DIR__ . '/../includes/csrf_protection.php';
+require_once __DIR__ . '/../includes/admin_session.php';
 require_once __DIR__ . '/db_init.php';
 require_once __DIR__ . '/jdf.php';
 
@@ -21,25 +22,7 @@ try {
         exit;
     }
 
-    $adminSession = $_COOKIE['adminSession'] ?? null;
-    if (!$adminSession) {
-        http_response_code(401);
-        echo json_encode(['success' => false, 'error' => 'unauthorized'], JSON_UNESCAPED_UNICODE);
-        exit;
-    }
-
-    try {
-        $sessionData = json_decode(urldecode($adminSession), true);
-        if (!$sessionData || ($sessionData['type'] ?? '') !== 'admin') {
-            http_response_code(401);
-            echo json_encode(['success' => false, 'error' => 'unauthorized'], JSON_UNESCAPED_UNICODE);
-            exit;
-        }
-    } catch (Throwable $decodeErr) {
-        http_response_code(401);
-        echo json_encode(['success' => false, 'error' => 'unauthorized'], JSON_UNESCAPED_UNICODE);
-        exit;
-    }
+    $sessionData = admin_session_require($pdo);
 
     $proctorId = isset($_GET['proctor_id']) ? (int) $_GET['proctor_id'] : 0;
     if ($proctorId <= 0) {

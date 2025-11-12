@@ -54,15 +54,7 @@ self.addEventListener('fetch', event => {
   }
 
   if (url.pathname.startsWith('/API/')) {
-    event.respondWith(
-      fetch(request).catch(() => new Response(
-        JSON.stringify({ error: 'offline_unavailable', message: 'داده‌ها بدون اتصال به اینترنت در دسترس نیستند.' }),
-        {
-          status: 503,
-          headers: { 'Content-Type': 'application/json; charset=utf-8' }
-        }
-      ))
-    );
+    event.respondWith(handleApiRequest(request));
     return;
   }
 
@@ -109,7 +101,7 @@ async function networkFirst(request) {
   try {
     const fresh = await fetch(request);
     if (fresh.status === 403) {
-      await cache.delete(request);
+      await handleLicenseForbidden();
       return fresh;
     }
     cache.put(request, fresh.clone());
@@ -130,6 +122,50 @@ async function cacheFirst(request) {
     return cached;
   }
   const fresh = await fetch(request);
+  if (fresh.status === 403) {
+    await handleLicenseForbidden();
+    return fresh;
+  }
   cache.put(request, fresh.clone());
   return fresh;
+}
+
+async function handleApiRequest(request) {
+  try {
+    const response = await fetch(request);
+    if (response.status === 403) {
+      await handleLicenseForbidden();
+    }
+    return response;
+  } catch (error) {
+    return new Response(
+      JSON.stringify({ error: 'offline_unavailable', message: 'داده‌ها بدون اتصال به اینترنت در دسترس نیستند.' }),
+      {
+        status: 503,
+        headers: { 'Content-Type': 'application/json; charset=utf-8' }
+      }
+    );
+  }
+}
+
+let licenseForbiddenNotified = false;
+
+async function handleLicenseForbidden() {
+  await purgeAllCaches();
+  if (licenseForbiddenNotified) {
+    return;
+  }
+  licenseForbiddenNotified = true;
+  const clients = await self.clients.matchAll();
+  for (const client of clients) {
+    client.postMessage({
+      type: 'license-forbidden',
+      message: 'مجوز سامانه معتبر نیست، لطفاً دوباره وارد شوید.'
+    });
+  }
+}
+
+async function purgeAllCaches() {
+  const keys = await caches.keys();
+  await Promise.all(keys.map(key => caches.delete(key)));
 }

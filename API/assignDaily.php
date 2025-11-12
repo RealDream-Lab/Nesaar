@@ -4,30 +4,14 @@ header('Content-Type: application/json; charset=utf-8');
 if (session_status() === PHP_SESSION_NONE) session_start();
 
 require_once __DIR__ . '/../includes/license_guard.php';
+require_once __DIR__ . '/../includes/csrf_protection.php';
+require_once __DIR__ . '/../includes/admin_session.php';
 require_once __DIR__ . '/db_init.php';
 
 try {
+    csrf_enforce();
     license_guard_enforce_api();
-
-    // Admin check
-    $adminSession = $_COOKIE['adminSession'] ?? null;
-    if (!$adminSession) {
-        http_response_code(401);
-        echo json_encode(['error' => 'unauthorized'], JSON_UNESCAPED_UNICODE);
-        exit;
-    }
-    try {
-        $session = json_decode(urldecode($adminSession), true);
-        if (!$session || ($session['type'] ?? '') !== 'admin') {
-            http_response_code(401);
-            echo json_encode(['error' => 'unauthorized'], JSON_UNESCAPED_UNICODE);
-            exit;
-        }
-    } catch (Exception $e) {
-        http_response_code(401);
-        echo json_encode(['error' => 'unauthorized'], JSON_UNESCAPED_UNICODE);
-        exit;
-    }
+    $adminSession = admin_session_require($pdo);
 
     // Params
     $dryRun = true;

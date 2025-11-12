@@ -889,28 +889,6 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
 
-    function setCookie(name, value, days) {
-        const d = new Date();
-        d.setTime(d.getTime() + days * 24 * 60 * 60 * 1000);
-        const expires = 'expires=' + d.toUTCString();
-        document.cookie = `${name}=${value};${expires};path=/`;
-    }
-
-    function getCookie(name) {
-        const cname = name + '=';
-        const decodedCookie = decodeURIComponent(document.cookie);
-        const ca = decodedCookie.split(';');
-        for (let c of ca) {
-            while (c.charAt(0) === ' ') c = c.substring(1);
-            if (c.indexOf(cname) === 0) return c.substring(cname.length, c.length);
-        }
-        return '';
-    }
-
-    function eraseCookie(name) {
-        document.cookie = name + '=; Max-Age=-99999999; path=/';
-    }
-
 
     function stopAutoRefresh() {
         if (refreshTimer) {
@@ -979,7 +957,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function clearResults() {
-        if (examCards) examCards.innerHTML = '';
+        if (examCards) examCards.textContent = '';
         lastPayload = [];
         lastFullName = '';
         lastStudentId = '';
@@ -1016,37 +994,31 @@ document.addEventListener('DOMContentLoaded', () => {
             }
 
             try {
+                const response = await secureFetch('API/adminLogin.php', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ username: studentId, password: nationalId })
+                });
 
-                const configResponse = await guardedFetch('API/getConfig.php', { cache: 'no-store' });
-                const config = await configResponse.json();
-
-                if (!config.LicenseToken || !config.SaadCode) {
-                    showAlert('error', 'خطا', 'سیستم هنوز راه‌اندازی نشده است.');
+                const result = await response.json();
+                if (!response.ok || !result.success) {
+                    const message = result?.error || 'نام کاربری یا رمز عبور اشتباه است.';
+                    showAlert('error', 'ورود ناموفق', message);
                     return;
                 }
 
-                const licenseToken = config.LicenseToken;
-                const saadCode = config.SaadCode;
+                try {
+                    appConfig = await loadConfig();
+                } catch (configError) {
+                    console.warn('Failed to refresh config after login:', configError);
+                }
 
-
-                const expectedUsername = 'admin' + saadCode;
-
-
-                const expectedPassword = licenseToken.split('').reverse().join('');
-
-                // Validate credentials
-                if (studentId === expectedUsername && nationalId === expectedPassword) {
-                    // If any of the display/name fields are missing, ask once and save them together
-                    const missing = [];
-                    if (!config.AdminNickName) missing.push('AdminNickName');
-                    if (!config.BossNickName) missing.push('BossNickName');
-                    if (!config.HeadOfEDU) missing.push('HeadOfEDU');
-                    if (!config.Chairman) missing.push('Chairman');
-
-                    if (missing.length) {
-                        const { value: formValues } = await Swal.fire({
-                            title: 'اطلاعات امضاءکنندگان',
-                            html: `
+                const missingFields = Array.isArray(result.missingFields) ? result.missingFields : [];
+                if (missingFields.length) {
+                    const config = appConfig || {};
+                    const { value: formValues } = await Swal.fire({
+                        title: 'اطلاعات امضاءکنندگان',
+                        html: `
                                 <div style="text-align:right;direction:rtl;">
                                     <label style="font-weight:600;">نام نمایشی شما (نمایش در داشبورد)</label>
                                     <input id="swal-adminnick" class="swal2-input" value="${escapeHtml(config.AdminNickName || '')}" placeholder="مثال: آرتین حسنی">
@@ -1061,63 +1033,46 @@ document.addEventListener('DOMContentLoaded', () => {
                                     <input id="swal-chairman" class="swal2-input" value="${escapeHtml(config.Chairman || '')}" placeholder="مثال: سید احمد موسوی">
                                 </div>
                             `,
-                            focusConfirm: false,
-                            showCancelButton: false,
-                            confirmButtonText: 'ذخیره',
-                            preConfirm: () => {
-                                const admin = document.getElementById('swal-adminnick')?.value.trim() || '';
-                                const boss = document.getElementById('swal-boss')?.value.trim() || '';
-                                const headofedu = document.getElementById('swal-headofedu')?.value.trim() || '';
-                                const chairman = document.getElementById('swal-chairman')?.value.trim() || '';
-                                if (!admin || !boss || !headofedu || !chairman) {
-                                    Swal.showValidationMessage('لطفاً همهٔ فیلدها را پر کنید');
-                                    return false;
-                                }
-                                return { AdminNickName: admin, BossNickName: boss, HeadOfEDU: headofedu, Chairman: chairman };
-                            },
-                            customClass: { popup: 'swal2-rtl swal2-glass' }
-                        });
-
-                        if (formValues) {
-                            try {
-                                const saveResponse = await guardedFetch('API/saveConfig.php', {
-                                    method: 'POST',
-                                    headers: { 'Content-Type': 'application/json' },
-                                    body: JSON.stringify(formValues)
-                                });
-                                const saveResult = await saveResponse.json();
-                                if (!saveResult.success) {
-                                    throw new Error(saveResult.error || 'Failed to save configuration');
-                                }
-
-                                appConfig = await loadConfig();
-                            } catch (error) {
-                                console.error('Error saving admin/signature info:', error);
-                                showAlert('error', 'خطا', 'خطا در ذخیره اطلاعات مدیریت');
-                                return;
+                        focusConfirm: false,
+                        showCancelButton: false,
+                        confirmButtonText: 'ذخیره',
+                        preConfirm: () => {
+                            const admin = document.getElementById('swal-adminnick')?.value.trim() || '';
+                            const boss = document.getElementById('swal-boss')?.value.trim() || '';
+                            const headofedu = document.getElementById('swal-headofedu')?.value.trim() || '';
+                            const chairman = document.getElementById('swal-chairman')?.value.trim() || '';
+                            if (!admin || !boss || !headofedu || !chairman) {
+                                Swal.showValidationMessage('لطفاً همهٔ فیلدها را پر کنید');
+                                return false;
                             }
+                            return { AdminNickName: admin, BossNickName: boss, HeadOfEDU: headofedu, Chairman: chairman };
+                        },
+                        customClass: { popup: 'swal2-rtl swal2-glass' }
+                    });
+
+                    if (formValues) {
+                        try {
+                            const saveResponse = await guardedFetch('API/saveConfig.php', {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify(formValues)
+                            });
+                            const saveResult = await saveResponse.json();
+                            if (!saveResult.success) {
+                                throw new Error(saveResult.error || 'Failed to save configuration');
+                            }
+
+                            appConfig = await loadConfig();
+                        } catch (error) {
+                            console.error('Error saving admin/signature info:', error);
+                            showAlert('error', 'خطا', 'خطا در ذخیره اطلاعات مدیریت');
+                            return;
                         }
                     }
-
-
-                    const adminSession = {
-                        type: 'admin',
-                        username: expectedUsername,
-                        loginTime: new Date().toISOString()
-                    };
-                    try {
-                        setCookie('adminSession', encodeURIComponent(JSON.stringify(adminSession)), 1);
-                    } catch (e) {
-                        console.warn('Failed to set admin cookie', e);
-                    }
-
-
-                    window.location.href = 'dashboard/';
-                    return;
-                } else {
-                    showAlert('error', 'ورود ناموفق', 'نام کاربری یا رمز عبور اشتباه است.');
-                    return;
                 }
+
+                window.location.href = 'dashboard/';
+                return;
             } catch (error) {
                 console.error('Admin login error:', error);
                 showAlert('error', 'خطا', 'مشکلی در احراز هویت رخ داده است.');
@@ -1148,16 +1103,17 @@ document.addEventListener('DOMContentLoaded', () => {
             const first = payload[0] || null;
             const fullName = first ? `${first.first_name || ''} ${first.last_name || ''}`.trim() : '';
             lastFullName = fullName;
-            const session = {
-                student_id: studentId,
-                national_id: nationalId,
-                first_name: first?.first_name || '',
-                last_name: first?.last_name || ''
-            };
             try {
-                setCookie('userSession', encodeURIComponent(JSON.stringify(session)), 30);
-            } catch (e) {
-                console.warn('Failed to set cookie', e);
+                const sessionInfo = {
+                    student_id: studentId,
+                    national_id: nationalId,
+                    first_name: first?.first_name || '',
+                    last_name: first?.last_name || '',
+                    stored_at: Date.now()
+                };
+                localStorage.setItem('userSession', JSON.stringify(sessionInfo));
+            } catch (storageError) {
+                console.warn('Failed to persist user session', storageError);
             }
 
             renderResults(payload, fullName, studentId);
@@ -1180,9 +1136,16 @@ document.addEventListener('DOMContentLoaded', () => {
 
 
 
-    (async function autoLoginFromCookie() {
-        const raw = getCookie('userSession');
-        if (!raw) {
+    (async function autoLoginFromStorage() {
+        let stored = null;
+        try {
+            stored = JSON.parse(localStorage.getItem('userSession') || 'null');
+        } catch (parseError) {
+            console.warn('Failed to parse stored session', parseError);
+            localStorage.removeItem('userSession');
+        }
+
+        if (!stored || !stored.student_id || !stored.national_id) {
             stopAutoRefresh();
             currentCredentials = null;
             lastSnapshot = '';
@@ -1190,39 +1153,42 @@ document.addEventListener('DOMContentLoaded', () => {
             showLogin();
             return;
         }
-        try {
-            const data = JSON.parse(decodeURIComponent(raw));
-            const sid = (data.student_id || '').toString().trim();
-            const nid = (data.national_id || '').toString().trim();
-            if (!sid || !nid) return;
 
+        const sid = toEnglishDigits(String(stored.student_id)).trim();
+        const nid = toEnglishDigits(String(stored.national_id)).trim();
+        if (!sid || !nid) {
+            localStorage.removeItem('userSession');
+            showLogin();
+            return;
+        }
+
+        try {
             hideLogin();
             toggleLoading(true);
             clearResults();
             updateServerClock();
 
-            // Encrypt credentials for auto-login
-            const credentials = { student_id: sid, national_id: nid };
-            const encryptedData = encryptData(credentials);
-
-            if (!encryptedData) {
-                throw new Error('Failed to encrypt data');
+            const payload = await fetchExamPayload(sid, nid);
+            if (!Array.isArray(payload) || payload.length === 0) {
+                throw new Error('هیچ امتحانی یافت نشد');
             }
-
-            const body = new FormData();
-            body.append('encrypted_data', encryptedData);
-            const response = await guardedFetch('API/getStudentExams.php', { method: 'POST', body });
-            if (!response.ok) throw new Error(`HTTP ${response.status}`);
-            const payload = await response.json();
-            if (payload.error) {
-                const userError = new Error(payload.error);
-                userError.isUserError = true;
-                throw userError;
-            }
-            if (!Array.isArray(payload) || payload.length === 0) throw new Error('هیچ امتحانی یافت نشد');
 
             const first = payload[0];
-            const fullName = `${first.first_name || ''} ${first.last_name || ''}`.trim();
+            const fullName = `${first?.first_name || ''} ${first?.last_name || ''}`.trim();
+
+            try {
+                const refreshedSession = {
+                    student_id: sid,
+                    national_id: nid,
+                    first_name: first?.first_name || '',
+                    last_name: first?.last_name || '',
+                    stored_at: Date.now()
+                };
+                localStorage.setItem('userSession', JSON.stringify(refreshedSession));
+            } catch (storageError) {
+                console.warn('Failed to refresh stored session', storageError);
+            }
+
             lastFullName = fullName;
             renderResults(payload, fullName, sid);
             lastSnapshot = JSON.stringify(payload || []);
@@ -1235,8 +1201,8 @@ document.addEventListener('DOMContentLoaded', () => {
             lastPayload = [];
             lastFullName = '';
             if (!e?.isLicenseError) {
-                // اگر خطای لایسنس نیست، کوکی را پاک کن
-                eraseCookie('userSession');
+                localStorage.removeItem('userSession');
+                try { await secureFetch('API/userLogout.php', { method: 'POST' }); } catch (logoutErr) { console.debug('userLogout failed', logoutErr); }
             }
             if (e?.isLicenseError) {
 
@@ -1393,7 +1359,12 @@ document.addEventListener('DOMContentLoaded', () => {
                 lastPayload = [];
                 lastFullName = '';
                 lastStudentId = '';
-                eraseCookie('userSession');
+                try {
+                    await secureFetch('API/userLogout.php', { method: 'POST' });
+                } catch (logoutErr) {
+                    console.debug('userLogout failed', logoutErr);
+                }
+                localStorage.removeItem('userSession');
                 clearResults();
                 showLogin();
             });

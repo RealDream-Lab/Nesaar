@@ -37,6 +37,27 @@
         return d.innerHTML;
     }
 
+    function getCsrfToken() {
+        const metaTag = document.querySelector('meta[name="csrf-token"]');
+        return metaTag ? metaTag.getAttribute('content') : null;
+    }
+
+    function csrfFetch(input, init = {}) {
+        const opts = { ...(init || {}) };
+        const method = (opts.method || 'GET').toUpperCase();
+        if (['POST', 'PUT', 'DELETE', 'PATCH'].includes(method)) {
+            const token = getCsrfToken();
+            if (token) {
+                if (opts.headers instanceof Headers) {
+                    opts.headers.set('X-CSRF-Token', token);
+                } else {
+                    opts.headers = { ...(opts.headers || {}), 'X-CSRF-Token': token };
+                }
+            }
+        }
+        return window.fetch(input, opts);
+    }
+
     const PROCTOR_CHIP_STYLE_ID = 'ns-proctor-chip-style';
 
     function ensureProctorChipStyles() {
@@ -122,7 +143,7 @@
         } catch (e) { /* ignore */ }
 
         try {
-            const resp = await fetch(`/API/getProctorSessions.php?proctor_id=${encodeURIComponent(id)}`, { cache: 'no-store' });
+            const resp = await csrfFetch(`/API/getProctorSessions.php?proctor_id=${encodeURIComponent(id)}`, { cache: 'no-store' });
             let payload = null;
             try { payload = await resp.json(); } catch (jsonErr) { payload = null; }
 
@@ -227,13 +248,6 @@
         }
     } catch (e) { /* ignore if Swal not available yet */ }
 
-    function getCookie(name) {
-        const value = `; ${document.cookie}`;
-        const parts = value.split(`; ${name}=`);
-        if (parts.length === 2) return parts.pop().split(';').shift();
-        return null;
-    }
-
     // CSRF token helper (module scope) - make available to functions declared
     // outside the DOMContentLoaded handler (e.g. computeAndShowProctorSummary)
     function getCsrfToken() {
@@ -263,44 +277,36 @@
             }, 8000);
         }
     try {
-            const adminSession = getCookie('adminSession');
-            if (!adminSession) {
+            const sessionResp = await csrfFetch('/API/adminSession.php', { cache: 'no-store' });
+            if (!sessionResp || !sessionResp.ok) {
                 window.location.href = '/';
                 return false;
             }
-            try {
-                const session = JSON.parse(decodeURIComponent(adminSession));
-                if (session.type !== 'admin') {
-                    window.location.href = '/';
-                    return false;
-                }
-                // prefer display name from config (AdminNickName); fall back to session.username
-                let displayName = session.username || '';
-                try {
-                    const resp = await fetch('/API/getConfig.php', { cache: 'no-store' });
-                    if (resp && resp.ok) {
-                        const cfg = await resp.json();
-                        if (cfg && cfg.AdminNickName) {
-                            displayName = cfg.AdminNickName;
-                        }
-                        // update footer university text if available
-                        if (cfg && cfg.University) {
-                            const ft = document.getElementById('footerText');
-                            if (ft) ft.textContent = `نسار - ${cfg.University}`;
-                        }
-                    }
-                } catch (e) {
-                    // ignore config errors and keep session username
-                }
 
-                const userEl = document.getElementById('adminUsername');
-                if (userEl && displayName) userEl.textContent = displayName;
-                return true;
-            } catch (e) {
-                window.location.href = '/';
-                return false;
+            const session = await sessionResp.json();
+            let displayName = session.displayName || session.username || '';
+
+            try {
+                const resp = await csrfFetch('/API/getConfig.php', { cache: 'no-store' });
+                if (resp && resp.ok) {
+                    const cfg = await resp.json();
+                    if (cfg && cfg.AdminNickName) {
+                        displayName = cfg.AdminNickName;
+                    }
+                    if (cfg && cfg.University) {
+                        const ft = document.getElementById('footerText');
+                        if (ft) ft.textContent = `نسار - ${cfg.University}`;
+                    }
+                }
+            } catch (configErr) {
+                console.debug('Config fetch failed, using session defaults', configErr);
             }
+
+            const userEl = document.getElementById('adminUsername');
+            if (userEl && displayName) userEl.textContent = displayName;
+            return true;
         } catch (e) {
+            window.location.href = '/';
             return false;
         }
     }
@@ -336,7 +342,7 @@
 
     async function getZerosCount() {
         try {
-            const resp = await fetch('/API/getLocationsZeros.php', { cache: 'no-store' });
+            const resp = await csrfFetch('/API/getLocationsZeros.php', { cache: 'no-store' });
             if (!resp.ok) return null;
             const j = await resp.json();
             return Number(j.zeros || 0);
@@ -382,7 +388,7 @@
         // fetch persisted exams detail (counts and sum)
         let exams = [];
         try {
-            const r = await fetch('/API/getExamsDetail.php', { cache: 'no-store' });
+            const r = await csrfFetch('/API/getExamsDetail.php', { cache: 'no-store' });
             if (r && r.ok) {
                 const j = await r.json();
                 exams = Array.isArray(j.exams) ? j.exams : [];
@@ -392,7 +398,7 @@
         // fetch registered proctors count
         let registered = 0;
         try {
-            const r = await fetch('/API/getProctors.php', { cache: 'no-store' });
+            const r = await csrfFetch('/API/getProctors.php', { cache: 'no-store' });
             if (r && r.ok) {
                 const j = await r.json();
                 const arr = Array.isArray(j.proctors) ? j.proctors : [];
@@ -469,7 +475,7 @@
         Swal.fire({ title: 'در حال آماده‌سازی پیش‌نمایش...', allowOutsideClick: false, didOpen: () => { Swal.showLoading(); }, customClass: { popup: 'swal2-rtl swal2-glass' } });
 
         try {
-            const resp = await fetch('/API/assignScattered.php', {
+            const resp = await csrfFetch('/API/assignScattered.php', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8' },
                 body: new URLSearchParams({ dry_run: 'true' })
@@ -530,7 +536,7 @@
             // Apply: call API with dry_run=false & apply=true
             Swal.fire({ title: 'در حال اعمال چینش...', allowOutsideClick: false, didOpen: () => { Swal.showLoading(); }, customClass: { popup: 'swal2-rtl swal2-glass' } });
             try {
-                const resp2 = await fetch('/API/assignScattered.php', {
+                const resp2 = await csrfFetch('/API/assignScattered.php', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8' },
                     body: new URLSearchParams({ dry_run: 'false', apply: 'true' })
@@ -572,7 +578,7 @@
         Swal.fire({ title: 'در حال آماده‌سازی پیش‌نمایش...', allowOutsideClick: false, didOpen: () => { Swal.showLoading(); }, customClass: { popup: 'swal2-rtl swal2-glass' } });
 
         try {
-            const resp = await fetch('/API/assignDaily.php', {
+            const resp = await csrfFetch('/API/assignDaily.php', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8' },
                 body: new URLSearchParams({ dry_run: 'true' })
@@ -630,7 +636,7 @@
 
             Swal.fire({ title: 'در حال اعمال چینش...', allowOutsideClick: false, didOpen: () => { Swal.showLoading(); }, customClass: { popup: 'swal2-rtl swal2-glass' } });
             try {
-                const resp2 = await fetch('/API/assignDaily.php', {
+                const resp2 = await csrfFetch('/API/assignDaily.php', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8' },
                     body: new URLSearchParams({ dry_run: 'false', apply: 'true' })
@@ -661,7 +667,7 @@
                 // after auth, check locations table
                 (async function checkLocations() {
                     try {
-                        const resp = await fetch('/API/getLocationsCount.php', { cache: 'no-store' });
+                        const resp = await csrfFetch('/API/getLocationsCount.php', { cache: 'no-store' });
                         if (!resp || !resp.ok) return;
                         const data = await resp.json();
                         const count = Number(data.locations || 0);
@@ -693,7 +699,7 @@
             if (!el) return;
             el.innerHTML = '<div style="padding:1rem;text-align:center;color:var(--text-muted);">در حال بارگیری...</div>';
             try {
-                const r = await fetch('/API/getLocations.php', { cache: 'no-store' });
+                const r = await csrfFetch('/API/getLocations.php', { cache: 'no-store' });
                 if (!r.ok) throw new Error('fetch_failed');
                 const j = await r.json();
                 const locations = Array.isArray(j.locations) ? j.locations : [];
@@ -826,7 +832,7 @@
                     Swal.fire({ title: 'در حال ذخیره...', allowOutsideClick: false, didOpen: () => { Swal.showLoading(); }, customClass: { popup: 'swal2-rtl swal2-glass' } });
                     try {
                         const csrf = getCsrfToken();
-                        const resp = await fetch('/API/saveLocationProctors.php', {
+                        const resp = await csrfFetch('/API/saveLocationProctors.php', {
                             method: 'POST',
                             headers: { 'Content-Type': 'application/json; charset=utf-8', 'X-CSRF-Token': csrf },
                             body: JSON.stringify({ id: Number(id), required_proctors: num })
@@ -890,7 +896,7 @@
             if (!container) return;
             try {
                 container.innerHTML = '<div style="text-align:center;padding:1rem;color:var(--text-muted)">در حال بارگذاری...</div>';
-                const resp = await fetch('/API/getExamsDetail.php', { cache: 'no-store' });
+                const resp = await csrfFetch('/API/getExamsDetail.php', { cache: 'no-store' });
                 if (!resp.ok) throw new Error('failed');
                 const j = await resp.json();
                 const exams = Array.isArray(j.exams) ? j.exams : [];
@@ -1128,7 +1134,7 @@
                         let failed = 0;
                         for (const p of pending) {
                             try {
-                                const resp = await fetch('/API/saveExamsDetailRow.php', {
+                                const resp = await csrfFetch('/API/saveExamsDetailRow.php', {
                                     method: 'POST',
                                     headers: { 'Content-Type': 'application/json; charset=utf-8', 'X-CSRF-Token': csrf },
                                     body: JSON.stringify({ id: p.id, required_proctors: Number(p.value) })
@@ -1182,7 +1188,7 @@
                     let failed = 0;
                     for (const p of pending) {
                         try {
-                            const resp = await fetch('/API/saveExamsDetailRow.php', {
+                            const resp = await csrfFetch('/API/saveExamsDetailRow.php', {
                                 method: 'POST',
                                 headers: { 'Content-Type': 'application/json; charset=utf-8', 'X-CSRF-Token': csrf },
                                 body: JSON.stringify({ id: p.id, required_proctors: Number(p.value) })
@@ -1336,7 +1342,7 @@
                 try { await loadAssignmentSummary(); } catch (err) { console.warn('loadAssignmentSummary failed', err); }
                 // Generate ExamAssignments table when assignment card is shown
                 try {
-                    const genResp = await fetch('/API/generateExamAssignments.php', { method: 'POST', cache: 'no-store' });
+                    const genResp = await csrfFetch('/API/generateExamAssignments.php', { method: 'POST', cache: 'no-store' });
                     if (genResp && genResp.ok) {
                         const gj = await genResp.json();
                         if (gj && gj.success) {
@@ -1394,8 +1400,8 @@
                 // double-check counts before opening assignment card
                 try {
                     const [pResp, eResp] = await Promise.all([
-                        fetch('/API/getProctors.php', { cache: 'no-store' }),
-                        fetch('/API/getExamsDetail.php', { cache: 'no-store' })
+                        csrfFetch('/API/getProctors.php', { cache: 'no-store' }),
+                        csrfFetch('/API/getExamsDetail.php', { cache: 'no-store' })
                     ]);
                     const pJson = (pResp && pResp.ok) ? await pResp.json() : { proctors: [] };
                     const eJson = (eResp && eResp.ok) ? await eResp.json() : { exams: [] };
@@ -1439,7 +1445,7 @@
                     // Ensure the server-side ExamAssignments table is generated when
                     // the assignment card is opened from the proctors flow as well.
                     try {
-                        const genResp = await fetch('/API/generateExamAssignments.php', { method: 'POST', cache: 'no-store' });
+                        const genResp = await csrfFetch('/API/generateExamAssignments.php', { method: 'POST', cache: 'no-store' });
                         if (genResp && genResp.ok) {
                             const gj = await genResp.json();
                             if (gj && gj.success) {
@@ -1580,7 +1586,7 @@
                 // Fetch current server-side locations to see which rows are still zero on the server
                 let serverLocations = [];
                 try {
-                    const resp = await fetch('/API/getLocations.php', { cache: 'no-store' });
+                    const resp = await csrfFetch('/API/getLocations.php', { cache: 'no-store' });
                     if (resp && resp.ok) {
                         const j = await resp.json();
                         serverLocations = Array.isArray(j.locations) ? j.locations : [];
@@ -1610,7 +1616,7 @@
                 let failed = 0;
                 for (const p of pending) {
                     try {
-                        const resp = await fetch('/API/saveLocationProctors.php', {
+                        const resp = await csrfFetch('/API/saveLocationProctors.php', {
                             method: 'POST',
                             headers: { 'Content-Type': 'application/json; charset=utf-8', 'X-CSRF-Token': csrf },
                             body: JSON.stringify({ id: Number(p.id), required_proctors: Number(p.value) })
@@ -1674,7 +1680,7 @@
             copyrightFooter.addEventListener('click', async () => {
                 let university = 'دانشگاه پیام نور مرکز بیجار';
                 try {
-                    const cfgResp = await fetch('/API/getConfig.php', { cache: 'no-store' });
+                    const cfgResp = await csrfFetch('/API/getConfig.php', { cache: 'no-store' });
                     if (cfgResp && cfgResp.ok) {
                         const cfg = await cfgResp.json();
                         if (cfg && cfg.University) university = cfg.University;
@@ -1733,7 +1739,7 @@
     // Compute per-session proctor needs and show a summary modal
     async function computeAndShowProctorSummary() {
         // Fetch locations (required_proctors per building/class)
-        const locResp = await fetch('/API/getLocations.php', { cache: 'no-store' });
+    const locResp = await csrfFetch('/API/getLocations.php', { cache: 'no-store' });
         if (!locResp.ok) throw new Error('failed to fetch locations');
         const locJson = await locResp.json();
         const locations = Array.isArray(locJson.locations) ? locJson.locations : [];
@@ -1744,7 +1750,7 @@
         });
 
         // Fetch statistics to get future sessions
-        const statsResp = await fetch('/API/getStatistics.php', { cache: 'no-store' });
+    const statsResp = await csrfFetch('/API/getStatistics.php', { cache: 'no-store' });
         if (!statsResp.ok) throw new Error('failed to fetch statistics');
         const stats = await statsResp.json();
         // Prefer a full list when available. Use `allExams` if provided by API,
@@ -1769,7 +1775,7 @@
             const d = fe.exam_date;
             const t = fe.exam_time;
             try {
-                const repResp = await fetch(`/API/getNextExamReport.php?exam_date=${encodeURIComponent(d)}&exam_time=${encodeURIComponent(t)}`, { cache: 'no-store' });
+                const repResp = await csrfFetch(`/API/getNextExamReport.php?exam_date=${encodeURIComponent(d)}&exam_time=${encodeURIComponent(t)}`, { cache: 'no-store' });
                 if (!repResp.ok) {
                     // skip this session on error
                     continue;
@@ -1827,7 +1833,7 @@
     try {
         const csrf = getCsrfToken();
         const payload = { sessions: perSessionTotals.map(p => ({ exam_date: p.exam_date, exam_time: p.exam_time, proctors: Number(p.proctors || 0), students_count: Number(p.student_count || 0) })) };
-        const saveResp = await fetch('/API/saveExamsDetail.php', {
+    const saveResp = await csrfFetch('/API/saveExamsDetail.php', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json; charset=utf-8', 'X-CSRF-Token': csrf },
             body: JSON.stringify(payload)
@@ -1874,7 +1880,7 @@
         // fetch registered proctors
         let registered = 0;
         try {
-            const r = await fetch('/API/getProctors.php', { cache: 'no-store' });
+            const r = await csrfFetch('/API/getProctors.php', { cache: 'no-store' });
             if (r && r.ok) {
                 const j = await r.json();
                 const arr = Array.isArray(j.proctors) ? j.proctors : [];
@@ -1885,7 +1891,7 @@
         // fetch persisted exams detail
         let exams = [];
         try {
-            const r = await fetch('/API/getExamsDetail.php', { cache: 'no-store' });
+            const r = await csrfFetch('/API/getExamsDetail.php', { cache: 'no-store' });
             if (r && r.ok) {
                 const j = await r.json();
                 exams = Array.isArray(j.exams) ? j.exams : [];
@@ -1916,7 +1922,7 @@
             // Fallback: compute live from locations + statistics when ExamsDetil is empty
             try {
                 // fetch locations map
-                const locResp = await fetch('/API/getLocations.php', { cache: 'no-store' });
+                const locResp = await csrfFetch('/API/getLocations.php', { cache: 'no-store' });
                 const locJson = (locResp && locResp.ok) ? await locResp.json() : { locations: [] };
                 const locations = Array.isArray(locJson.locations) ? locJson.locations : [];
                 const locMap = new Map();
@@ -1926,7 +1932,7 @@
                 });
 
                 // fetch sessions from statistics
-                const statsResp = await fetch('/API/getStatistics.php', { cache: 'no-store' });
+                const statsResp = await csrfFetch('/API/getStatistics.php', { cache: 'no-store' });
                 const stats = (statsResp && statsResp.ok) ? await statsResp.json() : {};
                 const sessionsList = Array.isArray(stats.allExams) ? stats.allExams : (Array.isArray(stats.futureExams) ? stats.futureExams : []);
 
@@ -1941,7 +1947,7 @@
                             const d = fe.exam_date || '';
                             const t = fe.exam_time || '';
                             try {
-                                const repResp = await fetch(`/API/getNextExamReport.php?exam_date=${encodeURIComponent(d)}&exam_time=${encodeURIComponent(t)}`, { cache: 'no-store' });
+                                const repResp = await csrfFetch(`/API/getNextExamReport.php?exam_date=${encodeURIComponent(d)}&exam_time=${encodeURIComponent(t)}`, { cache: 'no-store' });
                                 if (!repResp || !repResp.ok) return { date: d, time: t, proctors: 0 };
                                 const rep = await repResp.json();
                                 const students = Array.isArray(rep.students) ? rep.students : [];
@@ -2060,7 +2066,7 @@
             // Prefer persisted per-session proctor data from ExamsDetil when available
             let perSessionTotals = [];
             try {
-                const edResp = await fetch('/API/getExamsDetail.php', { cache: 'no-store' });
+                const edResp = await csrfFetch('/API/getExamsDetail.php', { cache: 'no-store' });
                 if (edResp && edResp.ok) {
                     const edj = await edResp.json();
                     if (Array.isArray(edj.exams) && edj.exams.length) {
@@ -2076,7 +2082,7 @@
 
                         // Enrich persisted sessions with student counts from getStatistics.php
                         try {
-                            const statsResp = await fetch('/API/getStatistics.php', { cache: 'no-store' });
+                            const statsResp = await csrfFetch('/API/getStatistics.php', { cache: 'no-store' });
                             if (statsResp && statsResp.ok) {
                                 const stats = await statsResp.json();
                                 const allExams = Array.isArray(stats.allExams) ? stats.allExams : [];
@@ -2104,7 +2110,7 @@
             // If no persisted rows, fall back to live computation (existing behavior)
             if (!perSessionTotals.length) {
                 // fetch locations and build map
-                const locResp = await fetch('/API/getLocations.php', { cache: 'no-store' });
+                const locResp = await csrfFetch('/API/getLocations.php', { cache: 'no-store' });
                 if (!locResp.ok) throw new Error('failed to fetch locations');
                 const locJson = await locResp.json();
                 const locations = Array.isArray(locJson.locations) ? locJson.locations : [];
@@ -2115,7 +2121,7 @@
                 });
 
                 // fetch sessions (prefer all sessions if API provides it)
-                const statsResp = await fetch('/API/getStatistics.php', { cache: 'no-store' });
+                const statsResp = await csrfFetch('/API/getStatistics.php', { cache: 'no-store' });
                 if (!statsResp.ok) throw new Error('failed to fetch statistics');
                 const stats = await statsResp.json();
                 const sessions = Array.isArray(stats.allExams) ? stats.allExams : (Array.isArray(stats.futureExams) ? stats.futureExams : []);
@@ -2138,7 +2144,7 @@
                         const d = fe.exam_date;
                         const t = fe.exam_time;
                         try {
-                            const repResp = await fetch(`/API/getNextExamReport.php?exam_date=${encodeURIComponent(d)}&exam_time=${encodeURIComponent(t)}`, { cache: 'no-store' });
+                            const repResp = await csrfFetch(`/API/getNextExamReport.php?exam_date=${encodeURIComponent(d)}&exam_time=${encodeURIComponent(t)}`, { cache: 'no-store' });
                             if (!repResp.ok) {
                                 // If server returns non-OK, return a placeholder so session stays in the list
                                 return { exam_date: d, exam_time: t, proctors: 0, missingLocations: 0, student_count: Number(fe.student_count || 0), student_ids: [] };
@@ -2452,7 +2458,7 @@
             // next three upcoming sessions (if any). This uses /API/getExamAssignments.php
             // and will only display proctor names when `proctor_name` is filled.
             try {
-                const statsResp = await fetch('/API/getStatistics.php', { cache: 'no-store' });
+                const statsResp = await csrfFetch('/API/getStatistics.php', { cache: 'no-store' });
                 const stats = (statsResp && statsResp.ok) ? await statsResp.json() : {};
                 // Prefer futureExams when available, otherwise fall back to allExams
                 const sessionsList = Array.isArray(stats.futureExams) && stats.futureExams.length ? stats.futureExams : (Array.isArray(stats.allExams) ? stats.allExams : []);
@@ -2506,7 +2512,7 @@
                             const d = sess.exam_date || '';
                             const t = sess.exam_time || '';
                             try {
-                                const aResp = await fetch(`/API/getExamAssignments.php?exam_date=${encodeURIComponent(d)}&exam_time=${encodeURIComponent(t)}`, { cache: 'no-store' });
+                                const aResp = await csrfFetch(`/API/getExamAssignments.php?exam_date=${encodeURIComponent(d)}&exam_time=${encodeURIComponent(t)}`, { cache: 'no-store' });
                                 if (!aResp.ok) return { date: d, time: t, proctors: [] };
                                 const aj = await aResp.json();
                                 const procs = Array.isArray(aj.proctors)
@@ -2711,7 +2717,7 @@
         if (!container) return;
         try {
             container.innerHTML = '<div style="text-align:center;padding:1rem;color:var(--text-muted)">در حال بارگذاری...</div>';
-            const resp = await fetch('/API/getProctors.php', { cache: 'no-store' });
+            const resp = await csrfFetch('/API/getProctors.php', { cache: 'no-store' });
             if (!resp.ok) throw new Error('failed');
             const j = await resp.json();
             const proctors = Array.isArray(j.proctors) ? j.proctors : [];
@@ -2805,7 +2811,7 @@
                 });
                 if (confirm.isConfirmed) {
                     try {
-                        const resp = await fetch('/API/deleteProctor.php', {
+                        const resp = await csrfFetch('/API/deleteProctor.php', {
                             method: 'POST',
                             headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': getCsrfToken() },
                             body: JSON.stringify({ id: id })
@@ -2843,12 +2849,12 @@
         if (!statsEl) return;
         try {
             // Get current proctors count
-            const resp = await fetch('/API/getProctors.php', { cache: 'no-store' });
+            const resp = await csrfFetch('/API/getProctors.php', { cache: 'no-store' });
             const j = await resp.json();
             const current = Array.isArray(j.proctors) ? j.proctors.length : 0;
 
             // Get max required from ExamsDetil
-            const edResp = await fetch('/API/getExamsDetail.php', { cache: 'no-store' });
+            const edResp = await csrfFetch('/API/getExamsDetail.php', { cache: 'no-store' });
             const edj = await edResp.json();
             const exams = Array.isArray(edj.exams) ? edj.exams : [];
             const maxRequired = exams.length ? Math.max(...exams.map(e => Number(e.required_proctors || 0))) : 0;
@@ -2871,7 +2877,7 @@
     async function openProctorRestrictionsModal(proctorId, proctorName) {
         try {
             // Fetch sessions (prefer allExams)
-            const statsResp = await fetch('/API/getStatistics.php', { cache: 'no-store' });
+            const statsResp = await csrfFetch('/API/getStatistics.php', { cache: 'no-store' });
             const stats = (statsResp && statsResp.ok) ? await statsResp.json() : {};
             let sessions = [];
             if (Array.isArray(stats.allExams) && stats.allExams.length) sessions = stats.allExams;
@@ -2880,7 +2886,7 @@
             // Fetch existing restrictions for this proctor
             let existing = [];
             try {
-                const r = await fetch('/API/getProctorRestrictions.php?proctor_id=' + encodeURIComponent(proctorId), { cache: 'no-store' });
+                const r = await csrfFetch('/API/getProctorRestrictions.php?proctor_id=' + encodeURIComponent(proctorId), { cache: 'no-store' });
                 if (r && r.ok) {
                     const j = await r.json();
                     existing = Array.isArray(j.restrictions) ? j.restrictions : [];
@@ -2996,7 +3002,7 @@
 
             // Submit to server
             try {
-                const resp = await fetch('/API/saveProctorRestrictions.php', {
+                const resp = await csrfFetch('/API/saveProctorRestrictions.php', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json; charset=utf-8', 'X-CSRF-Token': getCsrfToken() },
                     body: JSON.stringify({ proctor_id: Number(proctorId), sessions: payloadSessions })
@@ -3023,8 +3029,8 @@
         if (!btn) return;
         try {
             const [pResp, eResp] = await Promise.all([
-                fetch('/API/getProctors.php', { cache: 'no-store' }),
-                fetch('/API/getExamsDetail.php', { cache: 'no-store' })
+                csrfFetch('/API/getProctors.php', { cache: 'no-store' }),
+                csrfFetch('/API/getExamsDetail.php', { cache: 'no-store' })
             ]);
             const pJson = pResp && pResp.ok ? await pResp.json() : { proctors: [] };
             const eJson = eResp && eResp.ok ? await eResp.json() : { exams: [] };
@@ -3127,7 +3133,7 @@
             }
 
             try {
-                const resp = await fetch('/API/saveProctor.php', {
+                const resp = await csrfFetch('/API/saveProctor.php', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': getCsrfToken() },
                     body: JSON.stringify({

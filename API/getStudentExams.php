@@ -1,6 +1,7 @@
 <?php
 require_once 'jdf.php';
 require_once __DIR__ . '/../includes/license_guard.php';
+require_once __DIR__ . '/../includes/user_session.php';
 $current_persian_date = jdate('Y/m/d', '', '', 'Asia/Tehran', 'en');
 $current_time = jdate('H:i', '', '', 'Asia/Tehran', 'en');
 header('Content-Type: application/json; charset=utf-8');
@@ -140,6 +141,17 @@ $results = $stmt->fetchAll();
 if (empty($results)) {
     echo json_encode(['error' => 'اطلاعاتی برای این شماره دانشجویی پیدا نشد']);
     exit;
+}
+
+try {
+    user_session_set($pdo, [
+        'student_id' => $student_id,
+        'national_id' => $national_id,
+        'first_name' => $results[0]['first_name'] ?? '',
+        'last_name' => $results[0]['last_name'] ?? '',
+    ]);
+} catch (Throwable $e) {
+    error_log('Failed to set user session cookie: ' . $e->getMessage());
 }
 
 // بررسی زمان امتحان برای مخفی کردن اطلاعات

@@ -21,38 +21,44 @@ set_exception_handler(function($e) {
 
 require_once __DIR__ . '/../includes/license_guard.php';
 require_once __DIR__ . '/../includes/csrf_protection.php';
+require_once __DIR__ . '/../includes/admin_session.php';
+require_once __DIR__ . '/../includes/rate_limit.php';
 require_once __DIR__ . '/../vendor/autoload.php'; // For OpenSpout
+require_once __DIR__ . '/db_init.php';
 
 use OpenSpout\Reader\XLSX\Reader as XLSXReader;
 use OpenSpout\Reader\XLS\Reader as XLSReader;
 
-// Enforce license and CSRF protection
-license_guard_enforce_api();
+// Enforce CSRF first (cheap)
 csrf_enforce();
+// Enforce license with optional soft bypass controlled by Config
+$__lic = license_guard_validate(false);
+if ($__lic['valid'] !== true) {
+    // Optional soft bypass: Allow import when license is temporarily invalid
+    // Controlled by Config key 'AllowImportOnInvalidLicense' == 'YES'
+    $allowBypass = false;
+    try {
+        if (isset($pdo) && $pdo instanceof PDO) {
+            $st = $pdo->prepare("SELECT ConfigValue FROM Config WHERE ConfigName = 'AllowImportOnInvalidLicense'");
+            $st->execute();
+            $val = strtoupper(trim((string)($st->fetchColumn() ?? '')));
+            $allowBypass = ($val === 'YES');
+        }
+    } catch (Throwable $e) { /* ignore and deny bypass */ }
+    if (!$allowBypass) {
+        license_guard_respond_forbidden($__lic['message'] ?? 'License validation failed');
+    }
+}
+
 
 // Set response header
 header('Content-Type: application/json; charset=utf-8');
 
-// Check if admin is authenticated
-$adminSession = $_COOKIE['adminSession'] ?? null;
-if (!$adminSession) {
-    http_response_code(401);
-    echo json_encode(['error' => 'دسترسی غیرمجاز']);
-    exit;
-}
+// Check if admin is authenticated via signed session cookie
+$session = admin_session_require($pdo);
 
-try {
-    $session = json_decode(urldecode($adminSession), true);
-    if (!$session || ($session['type'] ?? '') !== 'admin') {
-        http_response_code(401);
-        echo json_encode(['error' => 'دسترسی غیرمجاز']);
-        exit;
-    }
-} catch (Exception $e) {
-    http_response_code(401);
-    echo json_encode(['error' => 'دسترسی غیرمجاز']);
-    exit;
-}
+$rateLimitKey = 'process_excel:' . ($session['username'] ?? 'unknown');
+rate_limit_enforce($pdo, $rateLimitKey, 3, 300);
 
 // Get exam type and filename
 $examType = $_POST['examType'] ?? '';
@@ -145,8 +151,6 @@ try {
     ], JSON_UNESCAPED_UNICODE));
     
     // Connect to database
-    require_once 'db_init.php';
-    
 
     // Validate header (first row) and build mapping from expected columns to actual indexes
     $headerRow = $rows[0];
