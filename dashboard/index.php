@@ -56,11 +56,11 @@ if ($licenseStatus['valid'] !== true) {
                         <button id="dashboardHomeBtn" class="btn btn-icon p-0" type="button" title="بازگشت به داشبورد" style="background:transparent;border:none;margin-inline-end:8px;padding:0;" onclick="window.location.href='/dashboard';">
                             <img src="/dashboard/home.png" alt="بازگشت به داشبورد" style="width:40px;height:40px;object-fit:contain;display:block;">
                         </button>
-                                                <button id="infoStatsBtn" class="btn btn-icon p-0" type="button" title="اطلاعات و آمار" style="background:transparent;border:none;margin-inline-end:8px;padding:0;">
-                            <img src="/dashboard/statices.png" alt="اطلاعات و آمار" style="width:40px;height:40px;object-fit:contain;display:block;">
+                                                <button id="infoStatsBtn" class="btn btn-icon p-0" type="button" title="اطلاعات و آمار" style="background:transparent;border:none;margin-inline-end:8px;">
+                            <img src="/dashboard/statices.png" alt="اطلاعات و آمار" style="width:40px;height:40px;object-fit:contain;display:block;padding:2px;">
                         </button>
                                                 <button id="proctorNoticeBtn" class="btn btn-icon p-0" type="button" title="ابلاغ مراقبین" style="background:transparent;border:none;margin-inline-end:8px;padding:0;">
-                                                    <img src="/dashboard/observers/calendar.png" alt="ابلاغ مراقبین" style="width:40px;height:40px;object-fit:contain;display:block;">
+                                                    <img src="/dashboard/observers/calendar.png" alt="ابلاغ مراقبین" style="width:40px;height:40px;object-fit:contain;display:block;margin-top:3px;">
                                                 </button>
                         <button id="editRolesBtn" class="btn btn-icon p-0" type="button" title="ویرایش نقش‌ها" style="background:transparent;border:none;margin-inline-end:8px;padding:0;">
                             <img src="/dashboard/config.png" alt="ویرایش نقش‌ها" class="rotating-icon" style="width:40px;height:40px;object-fit:contain;display:block;">
