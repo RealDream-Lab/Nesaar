@@ -3957,7 +3957,7 @@ async function printProctorNotices() {
             .schedule-table { width: 100%; border-collapse: collapse; table-layout: fixed; font-size: 8.6pt; }
             .schedule-table thead th { background: #f2f2f2; font-weight: 700; padding: 4px 3px; border: 1px solid #d9d9d9; text-align: center; }
             .schedule-table thead th.row-col { width: 12%; }
-            .schedule-table thead th.row-col span { display: inline-block; writing-mode: vertical-rl; text-orientation: mixed; letter-spacing: 1px; margin: 0 auto; }
+            .schedule-table thead th.row-col span { display: inline-block; writing-mode: horizontal-tb; text-orientation: initial; letter-spacing: 0.5px; margin: 0 auto; padding: 2px 0; text-align: center; }
             .schedule-table thead th.date-col { width: 32%; }
             .schedule-table thead th.time-col { width: auto; padding: 4px 3px; text-align: center; }
             .schedule-table thead th.time-col span { display: inline-block; writing-mode: vertical-rl; text-orientation: mixed; letter-spacing: 1px; margin: 0 auto; }
@@ -3974,7 +3974,7 @@ async function printProctorNotices() {
         </style></head><body>`;
 
         const renderTable = (dateSlice, sessionSet) => {
-            let tableHtml = '<table class="schedule-table"><thead><tr><th class="row-col"><span>ردیف</span></th><th class="date-col">تاریخ</th>';
+            let tableHtml = '<table class="schedule-table"><thead><tr><th class="row-col"><span>#</span></th><th class="date-col">تاریخ</th>';
             sortedTimes.forEach(timeObj => {
                 tableHtml += `<th class="time-col"><span>${toPersianDigits(timeObj.normalized)}</span></th>`;
             });
