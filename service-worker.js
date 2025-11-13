@@ -1,7 +1,7 @@
 
 
-const CACHE_NAME = 'exam-seat-v0.5.6';
-const VERSION = '0.5.6';
+const CACHE_NAME = 'exam-seat-v0.6.0';
+const VERSION = '0.6.0';
 const urlsToCache = [
   '/',
   '/index.php',
@@ -82,8 +82,8 @@ self.addEventListener('activate', event => {
                       version: CACHE_NAME,
                       tagVersion: `نسخه ${VERSION}`,
                       changes: [
-                        'رفع ایرادات جزئی'
-                      ]
+                          'پیاده‌سازی ابلاغ عوامل اجرائی'
+                        ]
                     });
         });
       });

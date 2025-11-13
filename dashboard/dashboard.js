@@ -636,7 +636,7 @@ try {
             // Second confirmation before saving
             const second = await Swal.fire({
                 title: 'تأیید نهایی',
-                text: 'ذخیره تغییرات باعث به‌روز‌رسانی اطلاعات صورتجلسه‌ها خواهد شد. آیا مطمئن به ذخیره هستید؟',
+                text: 'ذخیره تغییرات باعث به‌روز‌رسانی اطلاعات صورتجلسه‌ها و تنظیمات خواهد شد. آیا مطمئن به ذخیره هستید؟',
                 icon: 'question',
                 showCancelButton: true,
                 confirmButtonText: 'بله، ذخیره کن',
@@ -944,6 +944,21 @@ try {
     }
 } catch (e) {
     console.warn('Failed to init info stats button', e);
+}
+
+try {
+    const proctorNoticeBtn = document.getElementById('proctorNoticeBtn');
+    if (proctorNoticeBtn) {
+        proctorNoticeBtn.addEventListener('click', () => {
+            try {
+                printProctorNotices();
+            } catch (err) {
+                console.error('printProctorNotices invocation failed:', err);
+            }
+        });
+    }
+} catch (e) {
+    console.warn('Failed to init proctor notice button', e);
 }
 
 // Proctor module button: navigate to the dedicated observers module folder
@@ -3771,6 +3786,327 @@ async function printSeatNumbersReport() {
 }
 
 
+async function printProctorNotices() {
+    try {
+        Swal.fire({
+            title: 'در حال ساخت ابلاغ مراقبین',
+            html: 'لطفاً منتظر بمانید...',
+            allowOutsideClick: false,
+            didOpen: () => { Swal.showLoading(); },
+            customClass: { popup: 'swal2-rtl swal2-glass' },
+            showConfirmButton: false
+        });
+
+        let payload = null;
+        try {
+            const response = await guardedFetch('../API/getProctorNotifications.php', { cache: 'no-store' });
+            payload = await response.json();
+            if (!response.ok || !payload || payload.success !== true) {
+                const message = payload && (payload.message || payload.error) ? (payload.message || payload.error) : 'خطا در دریافت اطلاعات مراقبین';
+                throw new Error(message);
+            }
+        } catch (fetchErr) {
+            try { Swal.close(); } catch (e) { }
+            const msg = (fetchErr && fetchErr.message) ? fetchErr.message : 'خطا در دریافت اطلاعات مراقبین';
+            return Swal.fire({ icon: 'error', title: 'خطا', text: msg, confirmButtonText: 'باشه', customClass: { popup: 'swal2-rtl swal2-glass', confirmButton: 'btn btn-primary' } });
+        }
+
+        const proctors = Array.isArray(payload.proctors) ? payload.proctors : [];
+        if (!proctors.length) {
+            try { Swal.close(); } catch (e) { }
+            return Swal.fire({ icon: 'info', title: 'اطلاعات', text: 'برای هیچ مراقبی جلسهٔ ثبت‌شده‌ای وجود ندارد.', confirmButtonText: 'باشه', customClass: { popup: 'swal2-rtl swal2-glass', confirmButton: 'btn btn-primary' } });
+        }
+
+        const normalizeDate = (value) => {
+            const ascii = toEnglishDigits(String(value || '')).replace(/[^0-9/]/g, '');
+            const parts = ascii.split('/');
+            if (parts.length >= 3) {
+                const y = (parts[0] || '').padStart(4, '0');
+                const m = (parts[1] || '').padStart(2, '0');
+                const d = (parts[2] || '').padStart(2, '0');
+                return `${y}/${m}/${d}`;
+            }
+            return ascii;
+        };
+        const normalizeTime = (value) => {
+            const ascii = toEnglishDigits(String(value || '')).replace(/[^0-9:]/g, '');
+            const parts = ascii.split(':');
+            if (parts.length >= 2) {
+                const h = (parts[0] || '').padStart(2, '0');
+                const min = (parts[1] || '').padStart(2, '0');
+                return `${h}:${min}`;
+            }
+            return ascii;
+        };
+        const dateOrder = (value) => {
+            const parts = normalizeDate(value).split('/');
+            if (parts.length >= 3) {
+                return Number(`${parts[0]}${parts[1]}${parts[2]}`);
+            }
+            return Number.MAX_SAFE_INTEGER;
+        };
+        const timeOrder = (value) => {
+            const parts = normalizeTime(value).split(':');
+            if (parts.length >= 2) {
+                const hour = parseInt(parts[0], 10) || 0;
+                const minute = parseInt(parts[1], 10) || 0;
+                return hour * 60 + minute;
+            }
+            return Number.MAX_SAFE_INTEGER;
+        };
+
+        const dateMap = new Map();
+        const timeMap = new Map();
+        const absorbDate = (raw) => {
+            const normalized = normalizeDate(raw);
+            if (!normalized) return;
+            if (!dateMap.has(normalized)) {
+                dateMap.set(normalized, raw);
+            }
+        };
+        const absorbTime = (raw) => {
+            const normalized = normalizeTime(raw);
+            if (!normalized) return;
+            if (!timeMap.has(normalized)) {
+                timeMap.set(normalized, raw);
+            }
+        };
+
+        (Array.isArray(payload.dates) ? payload.dates : []).forEach(absorbDate);
+        (Array.isArray(payload.times) ? payload.times : []).forEach(absorbTime);
+        proctors.forEach(item => {
+            const sessions = Array.isArray(item.sessions) ? item.sessions : [];
+            sessions.forEach(sess => {
+                absorbDate(sess.exam_date || '');
+                absorbTime(sess.exam_time || '');
+            });
+        });
+
+        const sortedDates = Array.from(dateMap.entries())
+            .map(([normalized, raw]) => ({ normalized, raw }))
+            .sort((a, b) => dateOrder(a.normalized) - dateOrder(b.normalized));
+        const sortedTimes = Array.from(timeMap.entries())
+            .map(([normalized, raw]) => ({ normalized, raw }))
+            .sort((a, b) => timeOrder(a.normalized) - timeOrder(b.normalized));
+
+        if (!sortedDates.length || !sortedTimes.length) {
+            try { Swal.close(); } catch (e) { }
+            return Swal.fire({ icon: 'info', title: 'اطلاعات', text: 'جدول زمان‌بندی مراقبین خالی است.', confirmButtonText: 'باشه', customClass: { popup: 'swal2-rtl swal2-glass', confirmButton: 'btn btn-primary' } });
+        }
+
+        const firstDate = sortedDates[0]?.normalized || '';
+        let semesterLabel = 'ترم نامشخص';
+        let acadStart = 0;
+        let acadEnd = 0;
+        if (firstDate) {
+            const parts = firstDate.split('/');
+            const year = parseInt(parts[0], 10) || new Date().getFullYear();
+            const month = parseInt(parts[1], 10) || 0;
+            if ([9, 10].includes(month)) semesterLabel = 'نیمسال اول';
+            else if ([2, 3].includes(month)) semesterLabel = 'نیمسال دوم';
+            else if ([5, 6].includes(month)) semesterLabel = 'نیمسال تابستان';
+            else if (month >= 7 && month <= 12) semesterLabel = 'نیمسال اول';
+            else if (month >= 1 && month <= 4) semesterLabel = 'نیمسال دوم';
+            acadStart = (semesterLabel === 'نیمسال اول') ? year : year - 1;
+            acadEnd = (semesterLabel === 'نیمسال اول') ? year + 1 : year;
+        }
+
+        const persianYearRange = (acadStart && acadEnd)
+            ? `<span dir="ltr" style="unicode-bidi: embed; direction: ltr;">${toPersianDigits(acadStart)}-${toPersianDigits(acadEnd)}</span>`
+            : 'نامشخص';
+        const termPhrase = `${semesterLabel}${acadStart ? ` سال‌تحصیلی ${persianYearRange}` : ''}`;
+
+        let chairName = '';
+        try {
+            let cfg = null;
+            try {
+                const cfgResp = await guardedFetch('../API/getConfig.php', { cache: 'no-store' });
+                if (cfgResp && cfgResp.ok) {
+                    cfg = await cfgResp.json();
+                    window.appConfig = { ...(window.appConfig || {}), ...cfg };
+                }
+            } catch (cfgFetchErr) {
+                console.warn('Config fetch for proctor notices failed, using cached config if any', cfgFetchErr);
+                cfg = (window.appConfig && typeof window.appConfig === 'object') ? window.appConfig : null;
+            }
+            if (cfg && cfg.Chairman) {
+                chairName = cfg.Chairman;
+            }
+        } catch (cfgErr) {
+            console.warn('Failed to resolve config for proctor notices', cfgErr);
+        }
+        const chairNameSafe = escapeHtml(chairName || '________________');
+
+        const complianceText = 'لطفاً در کلیه جلسات امتحانی از همراه داشتن موبایل خودداری کنید. همراه داشتن جزوه یا کتاب جهت مطالعه در سر جلسه ممنوع است. ضمن حفظ سکوت، از صحبت با سایر عوامل و دانشجویان حاضر در جلسه پرهیز نمایید. حضور حداقل یک ربع پیش از شروع جلسه با اتیکت عکس‌دار نصب‌شده الزامی است.';
+
+        const fontHref = (window.location && window.location.origin ? window.location.origin : '') + '/assets/fonts/vazir/vazir.css';
+        let html = `<!doctype html><html lang="fa" dir="rtl"><head><meta charset="utf-8"><title>ابلاغ مراقبین</title><link rel="stylesheet" href="${fontHref}">`;
+        html += `<style>
+            @page { size: A5 portrait; margin: 5.5mm 6.2mm; }
+            html, body { margin: 0; padding: 0; }
+            body { font-family: Vazir, Tahoma, Arial, sans-serif; background: #fff; color: #111; font-size: 10pt; line-height: 1.6; }
+            .page { width: 100%; max-width: 130mm; margin: 0 auto; min-height: calc(210mm - 11mm); box-sizing: border-box; padding: 6mm 6.6mm 7.6mm; display: flex; flex-direction: column; page-break-after: always; }
+            .page:last-child { page-break-after: auto; }
+            .page-content { flex: 1 0 auto; display: flex; flex-direction: column; }
+            .greeting { font-size: 10.7pt; font-weight: 800; margin-bottom: 3.5mm; text-align: right; }
+            .term-line { font-size: 8.4pt; line-height: 1.75; margin-bottom: 3.5mm; text-align: justify; }
+            .schedule-grid { display: flex; flex-wrap: wrap; gap: 2.6mm; margin-bottom: 3mm; }
+            .schedule-grid.columns-1 .schedule-table { flex: 1 1 100%; }
+            .schedule-grid.columns-2 .schedule-table { flex: 1 1 calc(50% - 1.3mm); }
+            .schedule-grid .schedule-table { min-width: 0; }
+            .schedule-table { width: 100%; border-collapse: collapse; table-layout: fixed; font-size: 8.6pt; }
+            .schedule-table thead th { background: #f2f2f2; font-weight: 700; padding: 4px 3px; border: 1px solid #d9d9d9; text-align: center; }
+            .schedule-table thead th.row-col { width: 12%; }
+            .schedule-table thead th.row-col span { display: inline-block; writing-mode: vertical-rl; text-orientation: mixed; letter-spacing: 1px; margin: 0 auto; }
+            .schedule-table thead th.date-col { width: 32%; }
+            .schedule-table thead th.time-col { width: auto; padding: 4px 3px; text-align: center; }
+            .schedule-table thead th.time-col span { display: inline-block; writing-mode: vertical-rl; text-orientation: mixed; letter-spacing: 1px; margin: 0 auto; }
+            .schedule-table tbody td { border: 1px solid #d9d9d9; padding: 3px 2px; text-align: center; min-height: 10px; }
+            .schedule-table tbody td.date { text-align: center; font-weight: 700; line-height: 1.3; }
+            .check-mark { font-size: 12pt; color: #0a7; }
+            .compliance-note { font-size: 8.6pt; line-height: 1.7; text-align: justify; background: #f8f8f8; border: 1px dashed #c4c4c4; padding: 3.3mm 4.3mm; border-radius: 2mm; margin-top: auto; }
+            .signature-block { flex: 0 0 auto; margin-top: 5mm; text-align: center; font-size: 9pt; font-weight: 700; }
+            .signature-block .name { display: block; margin-top: 1.3mm; font-weight: 800; font-size: 9.4pt; }
+            @media print {
+                body { background: #fff; }
+                .page { box-shadow: none; }
+            }
+        </style></head><body>`;
+
+        const renderTable = (dateSlice, sessionSet) => {
+            let tableHtml = '<table class="schedule-table"><thead><tr><th class="row-col"><span>ردیف</span></th><th class="date-col">تاریخ</th>';
+            sortedTimes.forEach(timeObj => {
+                tableHtml += `<th class="time-col"><span>${toPersianDigits(timeObj.normalized)}</span></th>`;
+            });
+            tableHtml += '</tr></thead><tbody>';
+            dateSlice.forEach(dateObj => {
+                tableHtml += '<tr>';
+                const rowLabel = dateObj.rowNumber ? toPersianDigits(dateObj.rowNumber) : '';
+                tableHtml += `<td>${rowLabel}</td>`;
+                tableHtml += `<td class="date">${toPersianDigits(dateObj.normalized)}</td>`;
+                sortedTimes.forEach(timeObj => {
+                    const key = `${dateObj.normalized}|${timeObj.normalized}`;
+                    const hasSession = sessionSet.has(key);
+                    tableHtml += `<td>${hasSession ? '<span class="check-mark">&#10003;</span>' : ''}</td>`;
+                });
+                tableHtml += '</tr>';
+            });
+            tableHtml += '</tbody></table>';
+            return tableHtml;
+        };
+
+        proctors.forEach(item => {
+            const name = escapeHtml(item.proctor_name || '');
+            const gender = (item.gender || '').trim();
+            let prefix = 'همکار ارجمند';
+            if (gender === 'مرد') prefix = 'همکار ارجمند جناب آقای';
+            else if (gender === 'زن') prefix = 'همکار ارجمند سرکار خانم';
+
+            const sessionEntries = Array.isArray(item.sessions) ? item.sessions : [];
+            const sessionSet = new Set();
+            const uniqueDateSet = new Set();
+            sessionEntries.forEach(sess => {
+                const d = normalizeDate(sess.exam_date || '');
+                const t = normalizeTime(sess.exam_time || '');
+                if (d && t) {
+                    sessionSet.add(`${d}|${t}`);
+                    uniqueDateSet.add(d);
+                }
+            });
+
+            const proctorDates = sortedDates.filter(dateObj => {
+                return sortedTimes.some(timeObj => sessionSet.has(`${dateObj.normalized}|${timeObj.normalized}`));
+            });
+
+            const sessionCount = sessionSet.size;
+            const dayCount = uniqueDateSet.size || proctorDates.length;
+            let countsText = '';
+            if (sessionCount > 0 && dayCount > 0) {
+                countsText = ` (${toPersianDigits(sessionCount)} جلسه در ${toPersianDigits(dayCount)} روز)`;
+            } else if (sessionCount > 0) {
+                countsText = ` (${toPersianDigits(sessionCount)} جلسه)`;
+            } else if (dayCount > 0) {
+                countsText = ` (${toPersianDigits(dayCount)} روز)`;
+            }
+
+            html += `<div class="page">`;
+            html += `<div class="page-content">`;
+            html += `<div class="greeting">${prefix} ${name}</div>`;
+            html += `<div class="term-line">بدینوسیله برنامه حضور شما در جلسات امتحانی (${termPhrase}) به شرح ذیل اعلام می‌گردد${countsText}:</div>`;
+
+            const effectiveDatesSource = proctorDates.length ? proctorDates : sortedDates;
+            const effectiveDates = effectiveDatesSource.map((dateObj, idx) => ({ ...dateObj, rowNumber: idx + 1 }));
+            const useTwoColumns = (sortedTimes.length <= 4 && effectiveDates.length > 10) || (effectiveDates.length > 14);
+            const columns = useTwoColumns ? 2 : 1;
+            const rowsPerColumn = columns > 1 ? Math.max(1, Math.ceil(effectiveDates.length / columns)) : Math.max(1, effectiveDates.length);
+            const chunks = [];
+            for (let i = 0; i < effectiveDates.length; i += rowsPerColumn) {
+                chunks.push(effectiveDates.slice(i, i + rowsPerColumn));
+            }
+
+            html += `<div class="schedule-grid columns-${columns}">`;
+            chunks.forEach(chunk => {
+                html += renderTable(chunk, sessionSet);
+            });
+            html += `</div>`;
+
+            html += `<div class="compliance-note">${escapeHtml(complianceText)}</div>`;
+            html += `</div>`; // page-content
+            html += `<div class="signature-block"><div class="label">مسئول امتحانات مرکز</div><div class="name">${chairNameSafe}</div></div>`;
+            html += `</div>`;
+        });
+
+        html += `</body></html>`;
+
+        const iframe = document.createElement('iframe');
+        iframe.style.position = 'fixed';
+        iframe.style.left = '-10000px';
+        iframe.style.top = '0';
+        iframe.style.width = '148mm';
+        iframe.style.height = '210mm';
+        iframe.style.border = '0';
+        iframe.style.visibility = 'hidden';
+        document.body.appendChild(iframe);
+
+        try {
+            const doc = iframe.contentDocument || iframe.contentWindow.document;
+            doc.open();
+            doc.write(html);
+            doc.close();
+            try { Swal.close(); } catch (e) { }
+            const cw = iframe.contentWindow;
+            let cleaned = false;
+            const cleanup = () => {
+                if (cleaned) return;
+                cleaned = true;
+                try { closeSwalLoadingHard(); } catch (e) { }
+                try { document.body.removeChild(iframe); } catch (e) { }
+                try { window.removeEventListener('focus', onFocusOnce, true); } catch (e) { }
+                try { reopenEssentialsMenuIfRequested(); } catch (e) { }
+            };
+            const onFocusOnce = () => { setTimeout(cleanup, 150); };
+            if (cw) {
+                cw.onafterprint = cleanup;
+                window.addEventListener('focus', onFocusOnce, true);
+                try { safePrintIframe(iframe, cw); } catch (e) { console.error('Print error (proctor notices):', e); }
+                setTimeout(cleanup, 5000);
+            } else {
+                setTimeout(cleanup, 300);
+            }
+        } catch (err) {
+            try { document.body.removeChild(iframe); } catch (e) { }
+            try { Swal.close(); } catch (e) { }
+            Swal.fire({ icon: 'error', title: 'خطا', text: 'خطا در چاپ ابلاغ مراقبین', confirmButtonText: 'باشه', customClass: { popup: 'swal2-rtl swal2-glass', confirmButton: 'btn btn-primary' } });
+        }
+    } catch (error) {
+        console.error('printProctorNotices error:', error);
+        try { Swal.close(); } catch (e) { }
+        const msg = (error && error.message) ? error.message : 'خطا در آماده‌سازی ابلاغ مراقبین';
+        Swal.fire({ icon: 'error', title: 'خطا', text: msg, confirmButtonText: 'باشه', customClass: { popup: 'swal2-rtl swal2-glass', confirmButton: 'btn btn-primary' } });
+    }
+}
+
+
 async function examEssentialsHandler() {
     Swal.fire({
         icon: 'info',
@@ -3818,6 +4154,7 @@ function startEssentialsPrint(kind) {
     setTimeout(() => {
         try {
             if (kind === 'secretary') printEssentialsSecretary();
+            else if (kind === 'proctorNotice') printProctorNotices();
             else if (kind === 'reproduction') printEssentialsReproduction();
             else if (kind === 'descriptive') printEssentialsDescriptive();
             else if (kind === 'test') printEssentialsTest();
@@ -3840,6 +4177,7 @@ async function printEssentialsSecretary() {
         });
 
         const fontHref = (window.location && window.location.origin ? window.location.origin : '') + '/assets/fonts/vazir/vazir.css';
+
         const university = (document.getElementById('footerText')?.textContent || '').trim().replace(/^نسار\s*-\s*/, '') || 'گزارش ملزومات منشی جلسه';
 
         const context = window._lastExamContext || null;

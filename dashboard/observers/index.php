@@ -77,10 +77,10 @@ try {
                         </button> 
                         <button id="showAssignmentBtn" class="btn btn-icon p-0" type="button" title="چینش مراقبین" style="background:transparent;border:none;margin-inline-end:8px;padding:0;">
                             <img src="/dashboard/statices.png" alt="چینش" style="width:40px;height:40px;object-fit:contain;display:block;">
-                        </button>
+                        </button> <!-- 
                         <button id="showReportBtn" class="btn btn-icon p-0" type="button" title="گزارش مراقبین" style="background:transparent;border:none;margin-inline-end:8px;padding:0;">
                             <img src="/dashboard/observers/calendar.png" alt="گزارش" style="width:40px;height:40px;object-fit:contain;display:block;">
-                        </button>
+                        </button>-->
                         <button id="backToDashboardBtn" class="btn btn-icon p-0" type="button" title="بازگشت به داشبورد" style="background:transparent;border:none;margin-inline-end:8px;padding:0;">
                             <img src="/dashboard/home.png" alt="بازگشت" style="width:40px;height:40px;object-fit:contain;display:block;">
                         </button>
