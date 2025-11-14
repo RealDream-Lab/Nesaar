@@ -2947,7 +2947,7 @@ async function showNextExamReport() {
             <div>
                 <h5 class="text-primary mb-3">لیست دانشجویان</h5>
                 <div id="studentsTableInfo" class="alert alert-info text-center" role="alert" style="margin-bottom:1rem;">
-                    برای مشاهدهٔ اسامی لطفاً یک درس را از لیست دروس انتخاب کنید یا روی «همه دروس» کلیک کنید.
+                    برای مشاهدهٔ اسامی، لطفاً یک درس را از لیست دروس انتخاب کنید یا روی «همه دروس» کلیک کنید.
                 </div>
                 <div class="table-responsive d-none" id="studentsTableWrap">
                     <table class="table table-striped table-hover">

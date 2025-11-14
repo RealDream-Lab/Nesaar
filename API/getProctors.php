@@ -14,11 +14,17 @@ try {
         `gender` VARCHAR(3) DEFAULT '',
         `first_name` VARCHAR(40) DEFAULT '',
         `last_name` VARCHAR(40) DEFAULT '',
+        `national_id` CHAR(10) NOT NULL DEFAULT '',
         `phone` VARCHAR(11) DEFAULT '',
-        `created_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+        `created_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        INDEX `idx_national_id` (`national_id`)
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
+    $col = $pdo->query("SHOW COLUMNS FROM `Proctors` LIKE 'national_id'");
+    if (!$col || $col->rowCount() === 0) {
+        $pdo->exec("ALTER TABLE `Proctors` ADD `national_id` CHAR(10) NOT NULL DEFAULT '' AFTER `last_name`");
+    }
 
-    $stmt = $pdo->query('SELECT id, gender, first_name, last_name, phone, created_at FROM `Proctors` ORDER BY id');
+    $stmt = $pdo->query('SELECT id, gender, first_name, last_name, national_id, phone, created_at FROM `Proctors` ORDER BY id');
     $rows = $stmt ? $stmt->fetchAll(PDO::FETCH_ASSOC) : [];
 
     echo json_encode(['success' => true, 'proctors' => $rows], JSON_UNESCAPED_UNICODE);

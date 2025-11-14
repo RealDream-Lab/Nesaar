@@ -157,15 +157,20 @@ $showLocationsCard) ? '' : 'display:none;'); ?>">
                                     <option value="مرد">مرد</option>
                                 </select>
                             </div>
-                            <div class="col-md-4">
+                            <div class="col-md-3">
                                 <label class="form-label">نام</label>
                                 <input type="text" class="form-control" id="proctorFirstName" maxlength="40" aria-describedby="proctorFirstNameHelp">
                                 <div id="proctorFirstNameHelp" class="invalid-feedback" style="display:none;">فقط حروف انگلیسی مجاز است (حداکثر 40 کاراکتر).</div>
                             </div>
-                            <div class="col-md-4">
+                            <div class="col-md-3">
                                 <label class="form-label">نام خانوادگی</label>
                                 <input type="text" class="form-control" id="proctorLastName" maxlength="40" aria-describedby="proctorLastNameHelp">
                                 <div id="proctorLastNameHelp" class="invalid-feedback" style="display:none;">فقط حروف انگلیسی مجاز است (حداکثر 40 کاراکتر).</div>
+                            </div>
+                            <div class="col-md-2">
+                                <label class="form-label">شماره ملی</label>
+                                <input type="text" class="form-control" id="proctorNationalId" maxlength="10" inputmode="numeric" aria-describedby="proctorNationalIdHelp">
+                                <div id="proctorNationalIdHelp" class="invalid-feedback" style="display:none;">شماره ملی باید دقیقا ۱۰ رقم (فارسی یا انگلیسی) باشد.</div>
                             </div>
                             <div class="col-md-2">
                                 <label class="form-label">شماره همراه</label>

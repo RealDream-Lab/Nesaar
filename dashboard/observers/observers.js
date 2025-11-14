@@ -2748,9 +2748,10 @@
                 <thead>
                     <tr>
                         <th style="width:5%">ردیف</th>
-                        <th style="width:25%">نام</th>
-                        <th style="width:25%">نام خانوادگی</th>
-                        <th style="width:25%">شماره همراه</th>
+                        <th style="width:23%">نام</th>
+                        <th style="width:22%">نام خانوادگی</th>
+                        <th style="width:15%">شماره ملی</th>
+                        <th style="width:15%">شماره همراه</th>
                         <th style="width:20%">عملیات</th>
                     </tr>
                 </thead><tbody>`;
@@ -2760,13 +2761,15 @@
             const genderTitle = getGenderTitle(p.gender);
             const first = genderTitle + ' ' + escapeHtml(p.first_name || '');
             const last = escapeHtml(p.last_name || '');
-            const phone = toPersianDigits(escapeHtml(p.phone || ''));
+            const nationalId = escapeHtml(toPersianDigits(p.national_id || ''));
+            const phone = escapeHtml(toPersianDigits(p.phone || ''));
             html += `<tr data-id="${id}" style="cursor:pointer;">
                 <td style="vertical-align:middle;text-align:center;width:5%">${idx + 1}</td>
-                <td style="vertical-align:middle;width:25%">${first}</td>
-                <td style="vertical-align:middle;width:25%">${last}</td>
-                <td style="vertical-align:middle;width:25%">${phone}</td>
-                <td style="vertical-align:middle;width:20%">
+                <td style="vertical-align:middle;width:23%">${first}</td>
+                <td style="vertical-align:middle;width:22%">${last}</td>
+                <td style="vertical-align:middle;width:15%">${nationalId || '—'}</td>
+                <td style="vertical-align:middle;width:15%">${phone || '—'}</td>
+                <td style="vertical-align:middle;width:20%;white-space:nowrap">
                     <button class="btn btn-sm btn-success edit-restrictions" data-id="${id}">محدودیت‌ها</button>
                     <button class="btn btn-sm btn-danger delete-proctor" data-id="${id}" style="margin-inline-start:6px">حذف</button>
                 </td>
@@ -2786,6 +2789,8 @@
                     document.getElementById('proctorGender').value = p.gender || '';
                     document.getElementById('proctorFirstName').value = p.first_name || '';
                     document.getElementById('proctorLastName').value = p.last_name || '';
+                    const nationalIdInput = document.getElementById('proctorNationalId');
+                    if (nationalIdInput) nationalIdInput.value = toPersianDigits(p.national_id || '');
                     document.getElementById('proctorPhone').value = toPersianDigits(p.phone || '');
                     // Store editing id
                     document.getElementById('saveProctorBtn').dataset.editingId = id;
@@ -3051,6 +3056,7 @@
     const saveProctorBtn = document.getElementById('saveProctorBtn');
     const firstInput = document.getElementById('proctorFirstName');
     const lastInput = document.getElementById('proctorLastName');
+    const nationalIdInput = document.getElementById('proctorNationalId');
     const phoneInput = document.getElementById('proctorPhone');
     const genderSelect = document.getElementById('proctorGender');
 
@@ -3068,15 +3074,27 @@
         return /^\d{11}$/.test(eng);
     }
 
+    function normalizeNationalId(value) {
+        if (!value) return '';
+        return toEnglishDigits(String(value)).replace(/[^0-9]/g, '').substring(0, 10);
+    }
+
+    function isValidNationalId(value) {
+        const normalized = normalizeNationalId(value);
+        return /^\d{10}$/.test(normalized);
+    }
+
     function updateProctorSaveState() {
         try {
             const first = firstInput ? firstInput.value.trim() : '';
             const last = lastInput ? lastInput.value.trim() : '';
             const phone = phoneInput ? phoneInput.value.trim() : '';
+            const nationalId = nationalIdInput ? nationalIdInput.value.trim() : '';
 
             const firstOk = isPersianName(first) && first.length <= 40;
             const lastOk = isPersianName(last) && last.length <= 40;
             const phoneOk = isValidPhone(phone);
+            const nationalIdOk = isValidNationalId(nationalId);
             const genderVal = genderSelect ? (genderSelect.value || '').trim() : '';
             const genderOk = genderVal === 'زن' || genderVal === 'مرد';
 
@@ -3093,13 +3111,18 @@
                 phoneInput.classList.toggle('is-valid', phoneOk);
                 phoneInput.classList.toggle('is-invalid', !phoneOk && phone.length > 0);
             }
+            if (nationalIdInput) {
+                nationalIdInput.classList.toggle('is-valid', nationalIdOk);
+                nationalIdInput.classList.toggle('is-invalid', !nationalIdOk && nationalId.length > 0);
+            }
 
-            if (saveProctorBtn) saveProctorBtn.disabled = !(firstOk && lastOk && phoneOk && genderOk);
+            if (saveProctorBtn) saveProctorBtn.disabled = !(firstOk && lastOk && phoneOk && nationalIdOk && genderOk);
         } catch (e) { /* ignore */ }
     }
 
     if (firstInput) firstInput.addEventListener('input', () => { updateProctorSaveState(); });
     if (lastInput) lastInput.addEventListener('input', () => { updateProctorSaveState(); });
+    if (nationalIdInput) nationalIdInput.addEventListener('input', () => { updateProctorSaveState(); });
     if (phoneInput) phoneInput.addEventListener('input', () => { updateProctorSaveState(); });
     if (genderSelect) genderSelect.addEventListener('change', () => { updateProctorSaveState(); });
 
@@ -3111,11 +3134,13 @@
             const gender = document.getElementById('proctorGender').value.trim();
             const first = firstInput ? firstInput.value.trim() : '';
             const last = lastInput ? lastInput.value.trim() : '';
+            let nationalId = nationalIdInput ? nationalIdInput.value.trim() : '';
             let phone = phoneInput ? phoneInput.value.trim() : '';
             const editingId = saveProctorBtn.dataset.editingId || '';
 
             // Clean phone: convert to English digits, keep only numbers, ensure 11
             phone = toEnglishDigits(phone).replace(/[^0-9]/g, '').substring(0, 11);
+            nationalId = normalizeNationalId(nationalId);
 
             // Final validation before submit
             if (!isPersianName(first) || !isPersianName(last)) {
@@ -3124,6 +3149,10 @@
             }
             if (!/^\d{11}$/.test(phone)) {
                 Swal.fire({ title: 'خطا', text: 'شماره همراه باید دقیقا ۱۱ رقم باشد', icon: 'error', customClass: { popup: 'swal2-rtl swal2-glass' } });
+                return;
+            }
+            if (!/^\d{10}$/.test(nationalId)) {
+                Swal.fire({ title: 'خطا', text: 'شماره ملی باید دقیقا ۱۰ رقم باشد (فارسی یا انگلیسی)', icon: 'error', customClass: { popup: 'swal2-rtl swal2-glass' } });
                 return;
             }
             const genderVal = genderSelect ? (genderSelect.value || '').trim() : '';
@@ -3141,6 +3170,7 @@
                         gender: gender,
                         first_name: first,
                         last_name: last,
+                        national_id: nationalId,
                         phone: phone
                     })
                 });
@@ -3150,6 +3180,7 @@
                     document.getElementById('proctorGender').value = '';
                     if (firstInput) firstInput.value = '';
                     if (lastInput) lastInput.value = '';
+                    if (nationalIdInput) nationalIdInput.value = '';
                     if (phoneInput) phoneInput.value = '';
                     delete saveProctorBtn.dataset.editingId;
                     updateProctorSaveState();
@@ -3171,7 +3202,7 @@
         clearProctorBtn.addEventListener('click', () => {
             // Clear values
             try { document.getElementById('proctorGender').value = ''; } catch (e) {}
-            const inputs = [firstInput, lastInput, phoneInput];
+            const inputs = [firstInput, lastInput, nationalIdInput, phoneInput];
             inputs.forEach(inp => {
                 try {
                     if (!inp) return;

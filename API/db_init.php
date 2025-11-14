@@ -162,4 +162,24 @@ INSERT INTO Config (ConfigName, ConfigValue) VALUES
     echo json_encode(['error' => 'خطا در راه‌اندازی پایگاه داده']);
     exit;
 }
+
+// Patch: ensure Proctors table has national_id column for this release
+try {
+    $pdo->exec("CREATE TABLE IF NOT EXISTS `Proctors` (
+        `id` INT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
+        `gender` VARCHAR(3) DEFAULT '',
+        `first_name` VARCHAR(40) DEFAULT '',
+        `last_name` VARCHAR(40) DEFAULT '',
+        `national_id` CHAR(10) NOT NULL DEFAULT '',
+        `phone` VARCHAR(11) DEFAULT '',
+        `created_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        INDEX `idx_national_id` (`national_id`)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
+    $col = $pdo->query("SHOW COLUMNS FROM `Proctors` LIKE 'national_id'");
+    if (!$col || $col->rowCount() === 0) {
+        $pdo->exec("ALTER TABLE `Proctors` ADD `national_id` CHAR(10) NOT NULL DEFAULT '' AFTER `last_name`");
+    }
+} catch (\PDOException $e) {
+    error_log('Proctors patch failed: ' . $e->getMessage());
+}
 ?>

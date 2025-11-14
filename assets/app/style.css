@@ -230,17 +230,6 @@ body::after {
   overflow: hidden;
 }
 
-/* Header icon button tweaks: ensure small offsets are applied and visible
-   Use IDs for highest specificity so inline/other rules don't override. */
-#proctorNoticeBtn {
-  margin-top: 3px !important;
-  align-self: flex-start !important;
-}
-
-#infoStatsBtn {
-  padding: 2px !important;
-}
-
 .dashboard-card {
   background: linear-gradient(
     135deg,
