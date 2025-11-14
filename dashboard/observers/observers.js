@@ -1371,11 +1371,11 @@
         const noChangeBtn = document.getElementById('noChangeBtn');
         if (noChangeBtn) {
             noChangeBtn.addEventListener('click', (e) => {
-                try { if (e && typeof e.preventDefault === 'function') e.preventDefault(); } catch (err) {}
-                const card = document.getElementById('proctorsCard');
-                if (!card) return;
-                showOnlyCard('proctorsCard');
-                try { card.scrollIntoView({ behavior: 'smooth', block: 'start' }); } catch (e) { /* ignore */ }
+                try { if (e && typeof e.preventDefault === 'function') e.preventDefault(); } catch (err) {
+                    /* ignore */
+                }
+                showOnlyCard(null); // hide proctors card and show the first dashboard view again
+                try { window.scrollTo({ top: 0, behavior: 'smooth' }); } catch (scrollErr) { /* ignore */ }
             });
         }
 
@@ -1485,6 +1485,7 @@
                 }
             });
         }
+
         // initial sync of finish button state
         try { if (typeof updateFinishProctorsBtn === 'function') updateFinishProctorsBtn(); } catch (e) {}
 
