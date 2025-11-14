@@ -1360,14 +1360,6 @@
             });
         }
 
-        // "تغییر ایجاد نکردم" button (in proctors card footer)
-        function hideNoChangeBtn() {
-            try {
-                const b = document.getElementById('noChangeBtn');
-                if (b) b.style.display = 'none';
-            } catch (e) { /* ignore */ }
-        }
-
         const noChangeBtn = document.getElementById('noChangeBtn');
         if (noChangeBtn) {
             noChangeBtn.addEventListener('click', (e) => {
@@ -2731,6 +2723,23 @@
         }
     }
 
+    // Track "no change" button visibility so we can hide it globally when any proctor data changes
+    let proctorsNoChangeHidden = false;
+    function hideNoChangeBtn() {
+        if (proctorsNoChangeHidden) return;
+        try {
+            const btn = document.getElementById('noChangeBtn');
+            if (btn) {
+                btn.style.display = 'none';
+                proctorsNoChangeHidden = true;
+            }
+        } catch (e) { /* ignore */ }
+    }
+
+    function markProctorsChanged() {
+        try { hideNoChangeBtn(); } catch (e) { /* ignore */ }
+    }
+
     // Proctors management
     async function loadProctors() {
         const container = document.getElementById('proctorsList');
@@ -2843,7 +2852,7 @@
                         });
                         if (resp.ok) {
                             await loadProctors();
-                            try { hideNoChangeBtn(); } catch (e) {}
+                            markProctorsChanged();
                         } else {
                             Swal.fire({ title: 'خطا', text: 'حذف ناموفق', icon: 'error', customClass: { popup: 'swal2-rtl swal2-glass' } });
                         }
@@ -3036,6 +3045,7 @@
                 const j = await resp.json();
                 if (resp.ok && j && j.success) {
                     await Swal.fire({ toast: true, position: 'top-end', icon: 'success', title: `محدودیت‌های ${escapeHtml(proctorName || '')} ذخیره شد`, showConfirmButton: false, timer: 2000, customClass: { popup: 'swal2-rtl' } });
+                    markProctorsChanged();
                 } else {
                     await Swal.fire({ title: 'خطا', text: (j && j.error) ? j.error : 'ذخیره ناموفق بود', icon: 'error', customClass: { popup: 'swal2-rtl swal2-glass' } });
                 }
@@ -3141,11 +3151,12 @@
         } catch (e) { /* ignore */ }
     }
 
-    if (firstInput) firstInput.addEventListener('input', () => { updateProctorSaveState(); });
-    if (lastInput) lastInput.addEventListener('input', () => { updateProctorSaveState(); });
-    if (nationalIdInput) nationalIdInput.addEventListener('input', () => { updateProctorSaveState(); });
-    if (phoneInput) phoneInput.addEventListener('input', () => { updateProctorSaveState(); });
-    if (genderSelect) genderSelect.addEventListener('change', () => { updateProctorSaveState(); });
+    const handleProctorFieldDirty = () => { updateProctorSaveState(); };
+    if (firstInput) firstInput.addEventListener('input', handleProctorFieldDirty);
+    if (lastInput) lastInput.addEventListener('input', handleProctorFieldDirty);
+    if (nationalIdInput) nationalIdInput.addEventListener('input', handleProctorFieldDirty);
+    if (phoneInput) phoneInput.addEventListener('input', handleProctorFieldDirty);
+    if (genderSelect) genderSelect.addEventListener('change', handleProctorFieldDirty);
 
     // initialize state
     updateProctorSaveState();
@@ -3197,7 +3208,7 @@
                 });
                 if (resp.ok) {
                     await loadProctors();
-                    try { hideNoChangeBtn(); } catch (e) {}
+                    markProctorsChanged();
                     // Clear form
                     document.getElementById('proctorGender').value = '';
                     if (firstInput) firstInput.value = '';
@@ -3215,9 +3226,6 @@
             }
         });
     }
-
-    // ensure gender change updates save button state as well
-    if (genderSelect) genderSelect.addEventListener('change', () => { try { updateProctorSaveState(); } catch (e) {} });
 
     const clearProctorBtn = document.getElementById('clearProctorBtn');
     if (clearProctorBtn) {
