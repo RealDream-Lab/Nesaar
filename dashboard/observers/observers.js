@@ -1360,6 +1360,25 @@
             });
         }
 
+        // "تغییر ایجاد نکردم" button (in proctors card footer)
+        function hideNoChangeBtn() {
+            try {
+                const b = document.getElementById('noChangeBtn');
+                if (b) b.style.display = 'none';
+            } catch (e) { /* ignore */ }
+        }
+
+        const noChangeBtn = document.getElementById('noChangeBtn');
+        if (noChangeBtn) {
+            noChangeBtn.addEventListener('click', (e) => {
+                try { if (e && typeof e.preventDefault === 'function') e.preventDefault(); } catch (err) {}
+                const card = document.getElementById('proctorsCard');
+                if (!card) return;
+                showOnlyCard('proctorsCard');
+                try { card.scrollIntoView({ behavior: 'smooth', block: 'start' }); } catch (e) { /* ignore */ }
+            });
+        }
+
         // Header button for reports (placeholder modal)
         const showReportBtn = document.getElementById('showReportBtn');
         if (showReportBtn) {
@@ -1428,7 +1447,7 @@
                     // database re-sync/update. Require explicit confirmation.
                     const confirmProceed = await Swal.fire({
                         title: 'تأیید نهایی',
-                        html: '<div style="text-align:justify;line-height:1.6">با ادامهٔ عملیات، شما دیگر قادر به بازگشت و ویرایش اطلاعات این صفحه نخواهید بود و در صورت نیاز باید تمامی مراحل به‌روزرسانی را از ابتدا انجام دهید. آیا مطمئن هستید که می‌خواهید ادامه دهید؟</div>',
+                        html: '<div style="text-align:justify;line-height:1.6">با ادامهٔ عملیات، اطلاعات چینش مراقبین پاک شده و شما باید مجدد عملیات چینش رابرای مراقبین موجود انجام دهید. بستن این صفحه در صورت اضافه یا کم کردن مراقب ممکن است باعث ایجاد اخلال در گزارش‌های قبلی ابلاغ مراقبین شود. آیا مطمئن هستید که می‌خواهید ادامه دهید؟</div>',
                         icon: 'warning',
                         showCancelButton: true,
                         confirmButtonText: 'بله، مطمئنم',
@@ -2823,6 +2842,7 @@
                         });
                         if (resp.ok) {
                             await loadProctors();
+                            try { hideNoChangeBtn(); } catch (e) {}
                         } else {
                             Swal.fire({ title: 'خطا', text: 'حذف ناموفق', icon: 'error', customClass: { popup: 'swal2-rtl swal2-glass' } });
                         }
@@ -3176,6 +3196,7 @@
                 });
                 if (resp.ok) {
                     await loadProctors();
+                    try { hideNoChangeBtn(); } catch (e) {}
                     // Clear form
                     document.getElementById('proctorGender').value = '';
                     if (firstInput) firstInput.value = '';

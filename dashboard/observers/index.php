@@ -73,11 +73,11 @@ try {
                             <img src="/dashboard/statices.png" alt="جزئیات" style="width:40px;height:40px;object-fit:contain;display:block;">
                         </button>-->
                         <button id="showProctorsBtn" class="btn btn-icon p-0" type="button" title="مشخصات مراقبین" style="background:transparent;border:none;margin-inline-end:8px;padding:0;">
-                            <img src="/dashboard/statices.png" alt="مراقبین" style="width:40px;height:40px;object-fit:contain;display:block;">
-                        </button> 
+                            <img src="/dashboard/observers/users.png" alt="مراقبین" style="width:40px;height:40px;object-fit:contain;display:block;">
+                        </button> <!-- 
                         <button id="showAssignmentBtn" class="btn btn-icon p-0" type="button" title="چینش مراقبین" style="background:transparent;border:none;margin-inline-end:8px;padding:0;">
                             <img src="/dashboard/statices.png" alt="چینش" style="width:40px;height:40px;object-fit:contain;display:block;">
-                        </button> <!-- 
+                        </button> 
                         <button id="showReportBtn" class="btn btn-icon p-0" type="button" title="گزارش مراقبین" style="background:transparent;border:none;margin-inline-end:8px;padding:0;">
                             <img src="/dashboard/observers/calendar.png" alt="گزارش" style="width:40px;height:40px;object-fit:contain;display:block;">
                         </button>-->
@@ -190,6 +190,7 @@ $showLocationsCard) ? '' : 'display:none;'); ?>">
                     <div id="proctorsList" style="margin-top:0.8rem;"></div>
                     <div style="margin-top:0.9rem;text-align:center;">
                         <button id="finishProctorsBtn" class="btn btn-success" style="width:280px;" disabled>اتمام معرفی مراقبین</button>
+                        <button id="noChangeBtn" class="btn btn-outline-secondary" style="width:220px; margin-inline-start:8px;">تغییر ایجاد نکردم</button>
                     </div>
                 </div>
                 <!-- کارت چینش مراقبین -->
