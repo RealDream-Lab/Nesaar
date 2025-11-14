@@ -1,7 +1,7 @@
 
 
-const CACHE_NAME = 'exam-seat-v0.6.0';
-const VERSION = '0.6.0';
+const CACHE_NAME = 'exam-seat-v0.6.1';
+const VERSION = '0.6.1';
 const urlsToCache = [
   '/',
   '/index.php',
@@ -82,7 +82,10 @@ self.addEventListener('activate', event => {
                       version: CACHE_NAME,
                       tagVersion: `نسخه ${VERSION}`,
                       changes: [
-                          'پیاده‌سازی ابلاغ عوامل اجرائی'
+                          'افزودن فیلد شمارهٔ ملی برای ماژول مراقبین',
+                          'بهبود فرم و لیست مراقبین (اعتبارسنجی شماره ملی و نمایش)',
+                          'ماژول مراقبین: پاکسازی و بهبود رابط کاربری',
+                          'به‌روزرسانی کش و استراتژی سرویس‌ورکر'
                         ]
                     });
         });
