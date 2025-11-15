@@ -2840,23 +2840,12 @@ async function showNextExamReport() {
         const timeDisplayInline = data.exam_time ? toPersianDigits(data.exam_time) : 'بدون ساعت';
         const courseCountInline = Array.isArray(courses) ? courses.length : 0;
         const studentCountInline = Array.isArray(students) ? students.length : 0;
-        const inlineInfo = `${dateDisplayInline} | ${timeDisplayInline} | ${toPersianDigits(courseCountInline)} درس | ${toPersianDigits(studentCountInline)} نفر`;
+        const quickStatsInfo = `${toPersianDigits(courseCountInline)} درس | ${toPersianDigits(studentCountInline)} نفر`;
 
-        const headerTitle = window.customExamReportTitle || 'جزئیات جلسه آزمون';
-        // Compact single-row details bar with 5 cells: date | time | courses | students | essentials icon
+        const headerTitle = window.customExamReportTitle || `آزمون تاریخ ${dateDisplayInline} ساعت ${timeDisplayInline}`;
         let html = `
             <div class="mb-4">
                 <h5 class="text-primary mb-3">${headerTitle}</h5>
-                <div class="table-responsive">
-                    <style>
-                        .details-compact { width:100%; border-collapse:separate; border-spacing:0; direction: rtl; }
-                        .details-compact td { padding: 6px 10px; vertical-align: middle; text-align: center; border: 1px solid #e3e6ea; height: 56px; color: #495057; white-space: nowrap; }
-                        .details-compact td.icon-cell { width: 56px; }
-                        .details-compact img.icon { width: 44px; height: 44px; display:block; margin: 0 auto; object-fit: contain; pointer-events: none; }
-                    </style>
-
-
-                </div>
         `;
 
         // Show course list for any number of courses (including one)
@@ -2905,7 +2894,7 @@ async function showNextExamReport() {
             html += `
                     <li class="list-group-item">
                         <div id="miniPieSection" class="d-flex flex-column gap-2">
-                            <h6 class="mb-2">آمار سریع جلسه <span class="text-muted">(${inlineInfo})</span></h6>
+                            <h6 class="mb-2">آمار سریع جلسه <span class="text-muted">(${quickStatsInfo})</span></h6>
                             <div class="d-flex flex-row justify-content-center align-items-center gap-3">
                                 <div class="text-center">
                                     <canvas id="miniPieCourse" class="mini-pie" aria-label="نمایش فراوانی دروس" role="img" title="نمایش فراوانی دروس"></canvas>
