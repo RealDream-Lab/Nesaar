@@ -1,49 +1,49 @@
-
-
-const CACHE_NAME = 'exam-seat-v0.6.1';
-const VERSION = '0.6.1';
+const CACHE_NAME = "exam-seat-v0.7.0";
+const VERSION = "0.7.0";
 const urlsToCache = [
-  '/',
-  '/index.php',
-  '/manifest.json',
-  '/assets/fonts/vazir/vazir.css',
-  '/assets/bootstrap/bootstrap.min.css',
-  '/assets/sweetalert2/sweetalert2.min.css',
-  '/assets/app/style.css',
-  '/assets/bootstrap/bootstrap.bundle.min.js',
-  '/assets/sweetalert2/sweetalert2.min.js',
-  '/assets/crypto-js.min.js',
-  '/assets/app/app.js',
-  '/assets/app/version.js',
-  '/assets/vendor/chartjs/chart.min.js',
-  '/dashboard/dashboard.js',
-  '/assets/app/logo.png',
-  '/assets/app/Pnulogo.png',
-  '/pwa-icons/icon-192.png',
-  '/pwa-icons/icon-512.png'
+  "/",
+  "/index.php",
+  "/manifest.json",
+  "/assets/fonts/vazir/vazir.css",
+  "/assets/fonts/vazir/Farsi-Digits/Vazir-Regular-FD.woff2",
+  "/assets/fonts/vazir/Farsi-Digits/Vazir-Medium-FD.woff2",
+  "/assets/fonts/vazir/Farsi-Digits/Vazir-Bold-FD.woff2",
+  "/assets/bootstrap/bootstrap.min.css",
+  "/assets/sweetalert2/sweetalert2.min.css",
+  "/assets/app/style.css",
+  "/assets/bootstrap/bootstrap.bundle.min.js",
+  "/assets/sweetalert2/sweetalert2.min.js",
+  "/assets/crypto-js.min.js",
+  "/assets/app/app.js",
+  "/assets/app/version.js",
+  "/assets/vendor/chartjs/chart.min.js",
+  "/dashboard/dashboard.js",
+  "/assets/app/logo.png",
+  "/assets/app/Pnulogo.png",
+  "/pwa-icons/icon-192.png",
+  "/pwa-icons/icon-512.png",
 ];
 
-self.addEventListener('install', event => {
-
+self.addEventListener("install", (event) => {
   self.skipWaiting();
   event.waitUntil(
-    caches.open(CACHE_NAME).then(async cache => {
+    caches.open(CACHE_NAME).then(async (cache) => {
       for (const url of urlsToCache) {
         try {
-          const request = new Request(url, { cache: 'reload' });
+          const request = new Request(url, { cache: "reload" });
           await cache.add(request);
         } catch (error) {
-          console.warn('[SW] Skipping cache for', url, error);
+          console.warn("[SW] Skipping cache for", url, error);
         }
       }
     })
   );
 });
 
-self.addEventListener('fetch', event => {
+self.addEventListener("fetch", (event) => {
   const request = event.request;
 
-  if (request.method !== 'GET') {
+  if (request.method !== "GET") {
     return;
   }
 
@@ -53,12 +53,12 @@ self.addEventListener('fetch', event => {
     return;
   }
 
-  if (url.pathname.startsWith('/API/')) {
+  if (url.pathname.startsWith("/API/")) {
     event.respondWith(handleApiRequest(request));
     return;
   }
 
-  if (request.mode === 'navigate' || shouldUseNetworkFirst(url.pathname)) {
+  if (request.mode === "navigate" || shouldUseNetworkFirst(url.pathname)) {
     event.respondWith(networkFirst(request));
     return;
   }
@@ -66,34 +66,37 @@ self.addEventListener('fetch', event => {
   event.respondWith(cacheFirst(request));
 });
 
-self.addEventListener('activate', event => {
+self.addEventListener("activate", (event) => {
   event.waitUntil(
-    caches.keys().then(keys =>
-      Promise.all(
-        keys.filter(key => key !== CACHE_NAME).map(key => caches.delete(key))
+    caches
+      .keys()
+      .then((keys) =>
+        Promise.all(
+          keys
+            .filter((key) => key !== CACHE_NAME)
+            .map((key) => caches.delete(key))
+        )
       )
-    ).then(() => {
-      self.clients.claim();
+      .then(() => {
+        self.clients.claim();
 
-            self.clients.matchAll().then(clients => {
-        clients.forEach(client => {
-                    client.postMessage({
-                      type: 'sw-update',
-                      version: CACHE_NAME,
-                      tagVersion: `نسخه ${VERSION}`,
-                      changes: [
-                          'رفع ایرادات جزئی و بهبود عملکرد کلی'
-                        ]
-                    });
+        self.clients.matchAll().then((clients) => {
+          clients.forEach((client) => {
+            client.postMessage({
+              type: "sw-update",
+              version: CACHE_NAME,
+              tagVersion: `نسخه ${VERSION}`,
+              changes: ["بهبود در فرایندی های داشبورد مدیریت"],
+            });
+          });
         });
-      });
-    })
+      })
   );
 });
 
 function shouldUseNetworkFirst(pathname) {
-  const networkFirstExts = ['.html', '.js', '.mjs', '.css', '.json', '.wasm'];
-  return networkFirstExts.some(ext => pathname.endsWith(ext));
+  const networkFirstExts = [".html", ".js", ".mjs", ".css", ".json", ".wasm"];
+  return networkFirstExts.some((ext) => pathname.endsWith(ext));
 }
 
 async function networkFirst(request) {
@@ -139,10 +142,13 @@ async function handleApiRequest(request) {
     return response;
   } catch (error) {
     return new Response(
-      JSON.stringify({ error: 'offline_unavailable', message: 'داده‌ها بدون اتصال به اینترنت در دسترس نیستند.' }),
+      JSON.stringify({
+        error: "offline_unavailable",
+        message: "داده‌ها بدون اتصال به اینترنت در دسترس نیستند.",
+      }),
       {
         status: 503,
-        headers: { 'Content-Type': 'application/json; charset=utf-8' }
+        headers: { "Content-Type": "application/json; charset=utf-8" },
       }
     );
   }
@@ -159,13 +165,13 @@ async function handleLicenseForbidden() {
   const clients = await self.clients.matchAll();
   for (const client of clients) {
     client.postMessage({
-      type: 'license-forbidden',
-      message: 'مجوز سامانه معتبر نیست، لطفاً دوباره وارد شوید.'
+      type: "license-forbidden",
+      message: "مجوز سامانه معتبر نیست، لطفاً دوباره وارد شوید.",
     });
   }
 }
 
 async function purgeAllCaches() {
   const keys = await caches.keys();
-  await Promise.all(keys.map(key => caches.delete(key)));
+  await Promise.all(keys.map((key) => caches.delete(key)));
 }
