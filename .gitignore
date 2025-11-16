@@ -1,6 +1,6 @@
 # Ignore environment files with sensitive credentials
 .env
-
+README copy.md
 # Ignore local development artifacts
 /vendor/
 /node_modules/
