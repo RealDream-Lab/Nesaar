@@ -1,423 +1,123 @@
-# گزارش بهبودهای امنیتی سیستم لایسنس گارد
+# نقشه امنیتی نِسار – آبان ۱۴۰۴
 
-📅 **تاریخ:** ۲۵ اکتبر ۲۰۲۵  
-🔐 **وضعیت:** تکمیل شده
+این سند خلاصهٔ همهٔ اقداماتی است که در هفته‌های اخیر برای افزایش امنیت سامانه انجام شده است و وضعیت فعلی هر لایه را مشخص می‌کند. هدف این است که توسعه‌دهندگان بدانند چه چیزهایی فعال است، چه سناریوهایی باید تست شود و برای استقرار بعدی چه چک‌لیست‌هایی داریم.
 
 ---
 
 ## 🎯 خلاصه اجرایی
 
-تمام آسیب‌پذیری‌های بحرانی و مهم سیستم لایسنس گارد شناسایی و برطرف شدند. امنیت سیستم به‌طور قابل توجهی افزایش یافته است.
+- لایهٔ لایسنس گارد بازنویسی شد (`includes/license_guard.php`) و الان قبل از سرو کردن هر API وضعیت لایسنس را با **کش، Grace Period و ریت‌لیمیت** بررسی می‌کند.
+- تمام درخواست‌های حساس سمت سرور با **CSRF، نشست امن و توابع `guardedFetch`** در `assets/app/app.js` و `dashboard/dashboard.js` محافظت می‌شوند.
+- برای جلوگیری از سوءاستفادهٔ داخلی، **احراز هویت داخلی** (`includes/internal_auth.php`) و **ثبت وقایع** (`includes/audit_log.php`) به‌صورت پیش‌فرض در تمام جریان‌های لایسنس فعال شد.
+- APIها و اسکریپت‌های داشبورد قبل از اجرای عملیات، **Rate Limiting سطح IP** و **بررسی نشست** را فراخوانی می‌کنند؛ بنابراین حملات brute-force و flood کنترل می‌شود.
+
+نتیجه: سطح ریسک بحرانی از «قرمز» به «سبز» منتقل شده و الان پنج لایهٔ دفاعی هم‌زمان فعال است.
 
 ---
 
-## 📊 آسیب‌پذیری‌های شناسایی شده
+## 🧱 لایه‌های دفاعی
 
-### ❌ قبل از بهبود
+### 1. لایسنس گارد و کش هوشمند
 
-| # | آسیب‌پذیری | شدت | وضعیت |
-|---|------------|-----|-------|
-| 1 | Client-Side License Check | 🔴 بحرانی | ✅ برطرف شد |
-| 2 | Unprotected APIs | 🔴 بحرانی | ✅ برطرف شد |
-| 3 | Replay Attack | 🟠 بالا | ✅ برطرف شد |
-| 4 | Token in URL | 🟡 متوسط | ✅ بهبود یافت |
-| 5 | No Rate Limiting | 🟡 متوسط | ✅ برطرف شد |
-| 6 | Manipulable Grace Period | 🟡 متوسط | ✅ برطرف شد |
-| 7 | Weak Error Handling | 🟢 پایین | ✅ بهبود یافت |
+- فایل اصلی: `includes/license_guard.php`
+- هر API حساس ابتدا `license_guard_enforce_api()` را صدا می‌زند (مثلاً `API/getLicenseToken.php`, `API/getLicenseCache.php`, `API/updateLicenseStatus.php`).
+- لایسنس دایمی هر ۲۴ ساعت و لایسنس آزمایشی هر ۱۵ دقیقه بازآزمایی می‌شود. اگر webhook در دسترس نباشد، Grace Period ۲۴ ساعته فعال می‌شود.
+- برای هر بار چک جدید، rate-limit ۱۰۰ درخواست در ۶۰ ثانیه اعمال می‌شود و نتیجه در جدول Config + AuditLogs ذخیره می‌شود.
 
----
+### 2. احراز هویت داخلی
 
-## ✅ بهبودهای اعمال شده
+- فایل: `includes/internal_auth.php`
+- توکن ۶۴ کاراکتری در `Config.InternalAPIToken` نگهداری و نسخهٔ plaintext در `database/internal_api_token.secret` ذخیره می‌شود.
+- API های داخلی (مثل `updateLicenseStatus.php`) فقط وقتی اجرا می‌شوند که:
+  1. هدر `X-Internal-Token` معتبر باشد، یا
+  2. درخواست از `127.0.0.1/::1` بیاید، یا
+  3. هدر `X-Internal-Call: true` تنظیم شده باشد.
 
-### 1️⃣ محافظت APIهای حساس با License Guard
+### 3. محافظت CSRF و نشست امن
 
-**فایل‌های اصلاح شده:**
-- ✅ `API/getLicenseToken.php`
-- ✅ `API/getLicenseCache.php`
+- فایل: `includes/csrf_protection.php`
+- متا‌تگ `csrf_meta_tag()` در `index.php` و داشبورد تزریق می‌شود؛ `guardedFetch` در سمت کلاینت به صورت خودکار توکن را به هر درخواست POST/PUT/PATCH/DELETE اضافه می‌کند.
+- تمام فُرم‌ها و APIهای مدیریتی قبل از اجرا `csrf_enforce()` را صدا می‌زنند. در صورت خطا، پاسخ ۴۰۳ JSON استاندارد برمی‌گردد.
 
-**تغییرات:**
-```php
-require_once __DIR__ . '/../includes/license_guard.php';
-license_guard_enforce_api();
-```
+### 4. Rate Limiting و پاسخ انسانی
 
-**نتیجه:** هر درخواست به این APIها ابتدا لایسنس را بررسی می‌کند.
+- فایل: `includes/rate_limit.php`
+- داده‌ها در جدول `RateLimits` ذخیره می‌شود و هر ساعت رکوردهای منقضی حذف می‌شوند.
+- برای هر کلید (مثلاً `license_validation`, `admin_login`, `api_upload`) می‌توان پنجره، سقف و پیام را تنظیم کرد. پاسخ ۴۲۹ با پیام فارسی و هدر `Retry-After` ارسال می‌شود.
 
----
+### 5. لاگ‌برداری و مانیتورینگ
 
-### 2️⃣ سیستم Internal Authentication
-
-**فایل جدید:** `includes/internal_auth.php`
-
-**قابلیت‌ها:**
-- ✅ تولید توکن داخلی 64 کاراکتری
-- ✅ بررسی IP (localhost only)
-- ✅ بررسی header `X-Internal-Token`
-- ✅ محافظت از `updateLicenseStatus.php`
-
-**کد نمونه:**
-```php
-internal_auth_enforce(); // فقط سرور داخلی می‌تواند فراخوانی کند
-```
-
-**نتیجه:** هکر نمی‌تواند از خارج وضعیت لایسنس را تغییر دهد.
+- فایل: `includes/audit_log.php`
+- همهٔ رخدادها (بررسی لایسنس، تغییر تنظیمات، ورود/خروج، دسترسی API) در جدول `AuditLogs` با متادیتای IP و User-Agent ذخیره می‌شود.
+- توابع کمکی `audit_log_license`, `audit_log_auth`, `audit_log_config`, `audit_log_api` در APIهای جدید استفاده شده‌اند؛ برای پاک‌سازی هم `audit_cleanup($pdo, $keepDays)` داریم.
 
 ---
 
-### 3️⃣ سیستم Rate Limiting
+## 🆕 تغییرات شاخص اخیر
 
-**فایل جدید:** `includes/rate_limit.php`
-
-**تنظیمات:**
-- 🔢 **حداکثر تلاش:** 20 درخواست
-- ⏱️ **بازه زمانی:** 60 ثانیه
-- 📍 **بر اساس:** IP Address
-
-**جدول دیتابیس:**
-```sql
-CREATE TABLE RateLimits (
-    id INT AUTO_INCREMENT PRIMARY KEY,
-    identifier VARCHAR(255) NOT NULL,
-    timestamp INT NOT NULL,
-    INDEX idx_identifier_timestamp (identifier, timestamp)
-);
-```
-
-**نتیجه:** جلوگیری از حملات Brute Force و DDoS
+| ردیف | تغییر                                                                                 | فایل‌های درگیر                                                       | وضعیت   |
+| ---- | ------------------------------------------------------------------------------------- | -------------------------------------------------------------------- | ------- |
+| 1    | بازنویسی کامل `license_guard_validate` با کش، Grace و لاگ                             | `includes/license_guard.php`, `includes/audit_log.php`               | ✅ فعال |
+| 2    | فعال‌سازی `internal_auth_enforce()` روی `API/updateLicenseStatus.php` و webhook داخلی | `API/updateLicenseStatus.php`, `includes/internal_auth.php`          | ✅ فعال |
+| 3    | یکپارچه‌سازی `csrf_meta_tag` و `guardedFetch` در داشبورد                              | `dashboard/index.php`, `dashboard/dashboard.js`, `assets/app/app.js` | ✅ فعال |
+| 4    | افزودن rate-limit با پیام فارسی روی تمام مسیرهای لایسنس                               | `includes/rate_limit.php`, `includes/license_guard.php`              | ✅ فعال |
+| 5    | اضافه شدن بررسی نشست امن پشت پروکسی و پشتیبانی از کوکی ناامن برای محیط dev            | `includes/internal_auth.php`, `includes/session_tokens.php`          | ✅ فعال |
 
 ---
 
-### 4️⃣ بهبود Error Handling
+## 🔍 سناریوهای تست پیشنهادی
 
-**قبل:**
-```php
-$response = @file_get_contents($url, false, $context);
-```
-
-**بعد:**
-```php
-try {
-    $response = file_get_contents($url, false, $context);
-} catch (Exception $e) {
-    error_log("License webhook call failed: " . $e->getMessage());
-}
-```
-
-**بهبودها:**
-- ✅ حذف `@` operator
-- ✅ استفاده از try-catch
-- ✅ Logging مناسب
-- ✅ تنظیمات SSL/TLS
-
-**نتیجه:** خطاها دیده می‌شوند و قابل رفع هستند.
+1. **تست لایسنس در حالت عادی**
+   - اجرای `curl /API/getLicenseCache.php` → پاسخ ۲۰۰ همراه با `usedCache: true/false`.
+2. **شبیه‌سازی قطع وب‌هوک**
+   - تغییر DNS یا خاموش‌کردن اینترنت → انتظار پیام «Grace period is active». مقدار `graceUntil` باید در پاسخ باشد.
+3. **Rate-Limit**
+   - ارسال ۱۱۰ درخواست ظرف ۶۰ ثانیه به `API/getLicenseToken.php` → پاسخ ۴۲۹ با پیام فارسی و هدر `Retry-After`.
+4. **CSRF**
+   - ارسال POST بدون هدر `X-CSRF-Token` → پاسخ ۴۰۳ `csrf_validation_failed`.
+5. **احراز هویت داخلی**
+   - فراخوانی `API/updateLicenseStatus.php` از یک IP غیرمجاز بدون هدر → پاسخ ۴۰۳ `forbidden`.
+6. **Audit Log**
+   - اجرای یکی از سناریو‌های بالا و سپس:
+     ```sql
+     SELECT event_type, description, created_at
+     FROM AuditLogs ORDER BY id DESC LIMIT 5;
+     ```
+     باید رکورد جدید با IP و متادیتا ثبت شده باشد.
 
 ---
 
-### 5️⃣ محافظت CSRF (Cross-Site Request Forgery)
+## 🧾 فایل‌ها و ماژول‌های مرتبط
 
-**فایل جدید:** `includes/csrf_protection.php`
-
-**قابلیت‌ها:**
-- ✅ تولید توکن CSRF در session
-- ✅ بررسی از header یا POST data
-- ✅ محافظت خودکار درخواست‌های POST/PUT/DELETE/PATCH
-
-**استفاده در HTML:**
-```php
-<?php echo csrf_meta_tag(); ?>
-```
-
-**استفاده در JavaScript:**
-```javascript
-async function secureFetch(url, options = {}) {
-    const csrfToken = getCsrfToken();
-    if (csrfToken && ['POST', 'PUT', 'DELETE', 'PATCH'].includes(options.method)) {
-        options.headers['X-CSRF-Token'] = csrfToken;
-    }
-    return fetch(url, options);
-}
-```
-
-**فایل‌های محافظت شده:**
-- ✅ `API/updateConfig.php`
-- ✅ `index.php`
-- ✅ `dashboard/index.php`
-
-**نتیجه:** حملات CSRF غیرممکن شدند.
+- `includes/license_guard.php` – منطق اصلی صدور مجوز + ریت‌لیمیت و Grace
+- `includes/internal_auth.php` – تولید و اعتبارسنجی توکن داخلی
+- `includes/csrf_protection.php` – ساخت متاتگ، اعتبارسنجی هدر، helper فرم‌ها
+- `includes/rate_limit.php` – helper عمومی برای شمارش، پاک‌سازی و enforce
+- `includes/audit_log.php` – ثبت وقایع + توابع تخصصی برای license/config/auth/api
+- `assets/app/app.js`, `dashboard/dashboard.js` – متد `guardedFetch`, اضافه‌کردن هدرهای CSRF و مدیریت خطاها
 
 ---
 
-### 6️⃣ سیستم Audit Logging
+## ✅ چک‌لیست استقرار Production
 
-**فایل جدید:** `includes/audit_log.php` (فراخوانی شده اما فایل باید ایجاد شود)
-
-**رویدادهای ثبت شده:**
-- 📝 تغییرات وضعیت لایسنس
-- 📝 بررسی‌های موفق/ناموفق webhook
-- 📝 تغییرات پیکربندی
-- 📝 لایسنس منقضی شده
-
-**نتیجه:** امکان monitoring و troubleshooting
-
----
-
-### 7️⃣ بهبود JavaScript Security
-
-**تغییرات در `assets/app/app.js` و `app.original.js`:**
-
-**قبل:**
-```javascript
-const response = await fetch('API/updateConfig.php', {
-    method: 'POST',
-    body: JSON.stringify(data)
-});
-```
-
-**بعد:**
-```javascript
-const response = await secureFetch('API/updateConfig.php', {
-    method: 'POST',
-    body: JSON.stringify(data)
-});
-// secureFetch به‌طور خودکار CSRF token را اضافه می‌کند
-```
-
-**نتیجه:** تمام درخواست‌های POST محافظت شده‌اند.
+1. `php includes/internal_auth.php` → تولید توکن و اطمینان از وجود فایل `database/internal_api_token.secret` با دسترسی 600.
+2. اجرای `bash obfuscate.sh` بعد از هر build تا مسیرهای حساس سمت کلاینت مخفی بمانند.
+3. مانیتور `AuditLogs` و `RateLimits` با کوئری‌های زیر:
+   ```sql
+   SELECT event_type, COUNT(*) FROM AuditLogs WHERE created_at >= NOW() - INTERVAL 1 DAY GROUP BY event_type;
+   SELECT identifier, COUNT(*) FROM RateLimits WHERE timestamp >= UNIX_TIMESTAMP() - 3600 GROUP BY identifier;
+   ```
+4. بررسی دسترسی کرون/وب‌هوک به `API/updateLicenseStatus.php` و اضافه‌کردن هدر `X-Internal-Token`.
+5. فعال‌سازی HTTPS و اطمینان از قرارگیری سرور پشت Reverse Proxy با هدری که در `includes/session_tokens.php` تنظیم شده است.
 
 ---
 
-## 🛡️ معماری امنیتی جدید
+## ℹ️ نکات تکمیلی
 
-```
-┌─────────────────────────────────────────────────────────┐
-│                     Client (Browser)                    │
-│  • CSRF Token in Meta Tag                               │
-│  • Obfuscated JavaScript (Production)                   │
-│  • secureFetch() wrapper                                │
-└────────────────────┬────────────────────────────────────┘
-                     │
-                     │ HTTPS + CSRF Token
-                     │
-┌────────────────────▼────────────────────────────────────┐
-│                  Server-Side Layer 1                    │
-│         license_guard_enforce_api()                     │
-│  • Rate Limiting (20 req/min per IP)                    │
-│  • License Validation                                   │
-│  • Grace Period Check (24h)                             │
-└────────────────────┬────────────────────────────────────┘
-                     │
-                     │ Valid License
-                     │
-┌────────────────────▼────────────────────────────────────┐
-│                  Server-Side Layer 2                    │
-│              CSRF Protection                            │
-│  • Token Validation                                     │
-│  • Session Check                                        │
-└────────────────────┬────────────────────────────────────┘
-                     │
-                     │ Valid Request
-                     │
-┌────────────────────▼────────────────────────────────────┐
-│                  Server-Side Layer 3                    │
-│          Internal Authentication                        │
-│  • IP Whitelist (127.0.0.1)                             │
-│  • Internal Token                                       │
-│  • فقط برای APIهای حساس                                │
-└────────────────────┬────────────────────────────────────┘
-                     │
-                     │ Authorized
-                     │
-┌────────────────────▼────────────────────────────────────┐
-│                Business Logic                           │
-│  • Database Operations                                  │
-│  • Audit Logging                                        │
-└─────────────────────────────────────────────────────────┘
-```
+- فایل‌های قبلی مربوط به «بهبودهای امنیتی لایسنس» با این سند ادغام شده‌اند؛ از این پس تنها مرجع رسمی وضعیت امنیتی، همین فایل است.
+- در صورت اضافه‌شدن لایه جدید (مثلاً WAF یا IDS)، لطفاً بخش «لایه‌های دفاعی» و «سناریوهای تست» را به‌روزرسانی کنید.
+- هرگونه تغییر در ساختار جداول `Config`, `RateLimits`, `AuditLogs` باید در این سند و `docs/LICENSE_SECURITY.md` ثبت شود.
 
 ---
 
-## 📝 فایل‌های جدید ایجاد شده
-
-1. ✅ `includes/internal_auth.php` - سیستم احراز هویت داخلی
-2. ✅ `includes/rate_limit.php` - محدودسازی درخواست
-3. ✅ `includes/csrf_protection.php` - محافظت CSRF
-4. ⚠️ `includes/audit_log.php` - **نیاز به ایجاد دارد**
-
----
-
-## 📋 فایل‌های اصلاح شده
-
-### PHP Backend:
-1. ✅ `includes/license_guard.php`
-2. ✅ `API/getLicenseToken.php`
-3. ✅ `API/getLicenseCache.php`
-4. ✅ `API/updateLicenseStatus.php`
-5. ✅ `API/updateConfig.php`
-6. ✅ `index.php`
-7. ✅ `dashboard/index.php`
-
-### JavaScript Frontend:
-1. ✅ `assets/app/app.js`
-2. ✅ `assets/app/app.original.js`
-
----
-
-## ⚠️ کارهای باقیمانده
-
-### 1. ایجاد فایل `includes/audit_log.php`
-
-```php
-<?php
-/**
- * Audit Logging System
- */
-
-declare(strict_types=1);
-
-function audit_log_license(PDO $pdo, string $action, string $status, array $metadata = []): void
-{
-    try {
-        // ایجاد جدول اگر وجود نداشته باشد
-        $pdo->exec("
-            CREATE TABLE IF NOT EXISTS AuditLogs (
-                id INT AUTO_INCREMENT PRIMARY KEY,
-                log_type VARCHAR(50) NOT NULL,
-                action VARCHAR(100) NOT NULL,
-                status VARCHAR(50) NOT NULL,
-                metadata JSON,
-                ip_address VARCHAR(45),
-                user_agent TEXT,
-                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                INDEX idx_type_action (log_type, action),
-                INDEX idx_created_at (created_at)
-            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
-        ");
-        
-        $stmt = $pdo->prepare("
-            INSERT INTO AuditLogs (log_type, action, status, metadata, ip_address, user_agent)
-            VALUES ('license', :action, :status, :metadata, :ip, :ua)
-        ");
-        
-        $stmt->execute([
-            'action' => $action,
-            'status' => $status,
-            'metadata' => json_encode($metadata),
-            'ip' => $_SERVER['REMOTE_ADDR'] ?? null,
-            'ua' => $_SERVER['HTTP_USER_AGENT'] ?? null
-        ]);
-    } catch (PDOException $e) {
-        error_log("Audit log failed: " . $e->getMessage());
-    }
-}
-
-function audit_log_config(PDO $pdo, string $key, ?string $oldValue, string $newValue): void
-{
-    try {
-        $pdo->exec("
-            CREATE TABLE IF NOT EXISTS AuditLogs (
-                id INT AUTO_INCREMENT PRIMARY KEY,
-                log_type VARCHAR(50) NOT NULL,
-                action VARCHAR(100) NOT NULL,
-                status VARCHAR(50) NOT NULL,
-                metadata JSON,
-                ip_address VARCHAR(45),
-                user_agent TEXT,
-                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                INDEX idx_type_action (log_type, action),
-                INDEX idx_created_at (created_at)
-            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
-        ");
-        
-        $stmt = $pdo->prepare("
-            INSERT INTO AuditLogs (log_type, action, status, metadata, ip_address, user_agent)
-            VALUES ('config', :action, 'updated', :metadata, :ip, :ua)
-        ");
-        
-        $stmt->execute([
-            'action' => "config_change_{$key}",
-            'metadata' => json_encode([
-                'key' => $key,
-                'old_value' => $oldValue,
-                'new_value' => $newValue
-            ]),
-            'ip' => $_SERVER['REMOTE_ADDR'] ?? null,
-            'ua' => $_SERVER['HTTP_USER_AGENT'] ?? null
-        ]);
-    } catch (PDOException $e) {
-        error_log("Audit log failed: " . $e->getMessage());
-    }
-}
-
-?>
-```
-
-### 2. Obfuscate کردن JavaScript
-
-```bash
-cd /var/www/html
-bash obfuscate.sh
-```
-
-### 3. تست کامل سیستم
-
-- ✅ تست license validation
-- ✅ تست CSRF protection
-- ✅ تست rate limiting
-- ✅ تست internal authentication
-- ✅ تست audit logging
-
----
-
-## 🔒 نتیجه نهایی
-
-### امتیاز امنیتی
-
-**قبل:** 🔴 3/10 (ضعیف)  
-**بعد:** 🟢 9/10 (عالی)
-
-### بهبودها:
-- ✅ **API Security:** از 0% به 100%
-- ✅ **CSRF Protection:** اضافه شد
-- ✅ **Rate Limiting:** اضافه شد
-- ✅ **Audit Logging:** اضافه شد
-- ✅ **Error Handling:** بهبود یافت
-- ✅ **Internal Auth:** اضافه شد
-
-### آسیب‌پذیری‌های برطرف شده:
-- ✅ Client-side bypass
-- ✅ API manipulation
-- ✅ CSRF attacks
-- ✅ Brute force attacks
-- ✅ Grace period manipulation
-- ✅ Token exposure
-
----
-
-## 📞 توصیه‌های نهایی
-
-### برای Production:
-1. ✅ حتماً `obfuscate.sh` را اجرا کنید
-2. ✅ فایل `audit_log.php` را ایجاد کنید
-3. ✅ لاگ‌ها را به‌طور منظم بررسی کنید
-4. ✅ Rate limiting را بر اساس نیاز تنظیم کنید
-5. ⚠️ توکن webhook را در environment variable قرار دهید
-
-### Monitoring:
-```sql
--- بررسی تلاش‌های ناموفق
-SELECT * FROM AuditLogs 
-WHERE status = 'invalid' OR status = 'error'
-ORDER BY created_at DESC LIMIT 100;
-
--- بررسی rate limiting
-SELECT identifier, COUNT(*) as attempts
-FROM RateLimits
-WHERE timestamp > UNIX_TIMESTAMP() - 3600
-GROUP BY identifier
-HAVING attempts > 50;
-```
-
----
-
-**✅ تمام بهبودها با موفقیت اعمال شدند!**
-
+**آخرین به‌روزرسانی:** ۲۵ آبان ۱۴۰۴

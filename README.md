@@ -19,10 +19,8 @@
 برای اطلاعات تکمیلی به پوشه [`docs/`](docs/) مراجعه کنید:
 
 - **[CHANGELOG.md](docs/CHANGELOG.md)** - تاریخچه تغییرات نسخه‌ها
-- **[LICENSE_CACHE_GRACE_PERIOD.md](docs/LICENSE_CACHE_GRACE_PERIOD.md)** - سیستم Cache و Grace Period لایسنس
-- **[LICENSE_SMART_CHECK_DOCUMENTATION.md](docs/LICENSE_SMART_CHECK_DOCUMENTATION.md)** - سیستم هوشمند بررسی لایسنس
-- **[LICENSE_CHECK_DOCUMENTATION.md](docs/LICENSE_CHECK_DOCUMENTATION.md)** - مستندات سیستم لایسنس
-- **[SECURITY_IMPROVEMENTS.md](SECURITY_IMPROVEMENTS.md)** - گزارش کامل بهبودهای امنیتی
+- **[LICENSE_SECURITY.md](docs/LICENSE_SECURITY.md)** - معماری یکپارچهٔ لایسنس (کش، Grace، فرکانس هوشمند)
+- **[SECURITY_IMPROVEMENTS.md](docs/SECURITY_IMPROVEMENTS.md)** - گزارش جامع لایه‌های امنیتی اخیر
 
 ## نسخه فعلی: ۰.۷.۰
 
