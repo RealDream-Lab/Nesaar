@@ -4026,22 +4026,57 @@
   }
 
   let proctorsWarningShown = false;
-  function ensureProctorsChangeWarning() {
-    if (proctorsWarningShown) return;
+  let proctorsWarningCheckPromise = null;
+
+  async function hasPersistedProctorAssignments() {
     try {
-      proctorsWarningShown = true;
-      Swal.fire({
-        icon: "info",
-        title: "هشدار تغییر عوامل اجرائی",
-        html: '<div style="direction:rtl;text-align:justify;line-height:1.7">هر گونه تغییری در لیست مراقبین و عوامل اجرائی باعث تغییر در ساختار چینش و صدور ابلاغ عوامل اجرائی خواهد شد.</div>',
-        confirmButtonText: "متوجه شدم",
-        customClass: {
-          popup: "swal2-rtl swal2-glass",
-          confirmButton: "btn btn-primary",
-        },
+      const resp = await csrfFetch("/API/getAssignmentsPresence.php", {
+        cache: "no-store",
       });
-    } catch (e) {
-      proctorsWarningShown = false;
+      if (!resp || !resp.ok) return false;
+      const data = await resp.json();
+      if (!data) return false;
+      if (typeof data.has_assignments === "boolean") {
+        return data.has_assignments;
+      }
+      return Number(data.count || 0) > 0;
+    } catch (err) {
+      console.warn("hasPersistedProctorAssignments failed", err);
+      return false;
+    }
+  }
+
+  async function ensureProctorsChangeWarning() {
+    if (proctorsWarningShown) return;
+    if (proctorsWarningCheckPromise) return proctorsWarningCheckPromise;
+
+    proctorsWarningCheckPromise = (async () => {
+      const hasAssignments = await hasPersistedProctorAssignments();
+      if (!hasAssignments || proctorsWarningShown) return;
+      try {
+        proctorsWarningShown = true;
+        await Swal.fire({
+          icon: "info",
+          title: "هشدار تغییر عوامل اجرائی",
+          html: '<div style="direction:rtl;text-align:justify;line-height:1.7">هر گونه تغییری در لیست مراقبین و عوامل اجرائی باعث تغییر در ساختار چینش و صدور ابلاغ عوامل اجرائی شده و شما ملزم به چینش مجدد عوامل اجرائی خواهید شد.</div>',
+          confirmButtonText: "متوجه شدم",
+          customClass: {
+            popup: "swal2-rtl swal2-glass",
+            confirmButton: "btn btn-primary",
+          },
+        });
+      } catch (e) {
+        proctorsWarningShown = false;
+        throw e;
+      }
+    })();
+
+    try {
+      await proctorsWarningCheckPromise;
+    } catch (err) {
+      console.warn("ensureProctorsChangeWarning failed", err);
+    } finally {
+      proctorsWarningCheckPromise = null;
     }
   }
 
