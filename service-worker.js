@@ -86,7 +86,7 @@ self.addEventListener("activate", (event) => {
               type: "sw-update",
               version: CACHE_NAME,
               tagVersion: `نسخه ${VERSION}`,
-              changes: ["بهبود در فرایندی های داشبورد مدیریت"],
+              changes: ["بهبود در فرایندهای داشبورد مدیریت"],
             });
           });
         });
