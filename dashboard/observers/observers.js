@@ -4597,6 +4597,23 @@
         exam_time: el.getAttribute("data-time") || "",
       }));
 
+      const selectedSet = new Set(
+        payloadSessions.map(
+          (item) => `${item.exam_date || ""}||${item.exam_time || ""}`
+        )
+      );
+      let restrictionsChanged = false;
+      if (selectedSet.size !== existingSet.size) {
+        restrictionsChanged = true;
+      } else {
+        for (const combo of selectedSet) {
+          if (!existingSet.has(combo)) {
+            restrictionsChanged = true;
+            break;
+          }
+        }
+      }
+
       // Submit to server
       try {
         const resp = await csrfFetch("/API/saveProctorRestrictions.php", {
@@ -4612,6 +4629,9 @@
         });
         const j = await resp.json();
         if (resp.ok && j && j.success) {
+          if (restrictionsChanged) {
+            markProctorsChanged();
+          }
           await Swal.fire({
             toast: true,
             position: "top-end",
@@ -4621,7 +4641,6 @@
             timer: 2000,
             customClass: { popup: "swal2-rtl" },
           });
-          markProctorsChanged();
         } else {
           await Swal.fire({
             title: "خطا",
