@@ -1179,6 +1179,11 @@ table .btn {
     align-items: center;
   }
 
+  .session-card .session-actions {
+    width: 100%;
+    justify-content: center;
+  }
+
   .session-card .session-logout-btn {
     width: 100%;
     justify-content: center;
@@ -1331,7 +1336,12 @@ body.login-active #loginRow {
 
 .exam-card.past {
   opacity: 0.88;
-  border-color: rgba(25, 118, 210, 0.5);
+  border-color: rgba(220, 53, 69, 0.5);
+}
+
+.coworker-session-card .exam-title {
+  text-align: center;
+  justify-content: center;
 }
 
 .exam-card.past:hover {
@@ -1369,6 +1379,18 @@ body.login-active #loginRow {
   display: flex;
   flex-direction: column;
   gap: 0.35rem;
+}
+
+.session-meta {
+  font-size: 1rem;
+  color: var(--accent-secondary);
+}
+
+.session-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  justify-content: flex-end;
 }
 
 .session-name {
@@ -1412,6 +1434,15 @@ body.login-active #loginRow {
   );
   transform: translateY(-2px);
   box-shadow: 0 26px 52px rgba(7, 18, 35, 0.38);
+}
+
+.session-stats-btn {
+  border-color: rgba(255, 255, 255, 0.18);
+  background: linear-gradient(
+    135deg,
+    rgba(255, 255, 255, 0.08),
+    rgba(255, 255, 255, 0.02)
+  );
 }
 
 .session-logout-btn:active {

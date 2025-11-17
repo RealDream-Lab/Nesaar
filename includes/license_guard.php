@@ -13,10 +13,10 @@ require_once __DIR__ . '/../API/db_init.php';
 require_once __DIR__ . '/rate_limit.php';
 require_once __DIR__ . '/audit_log.php';
 
-const LICENSE_WEBHOOK_URL = 'https://wfa.pnubijar.ac.ir/webhook/LC';
-const LICENSE_GRACE_PERIOD_SECONDS = 24 * 60 * 60; // 24 hours from last success
+const LICENSE_WEBHOOK_URL              = 'https://wfa.pnubijar.ac.ir/webhook/LC';
+const LICENSE_GRACE_PERIOD_SECONDS     = 24 * 60 * 60; // 24 hours from last success
 const LICENSE_REVALIDATE_TRIAL_SECONDS = 15 * 60; // revalidate trials at least every 15 minutes
-const LICENSE_REVALIDATE_DAY_SECONDS = 24 * 60 * 60; // for permanent licenses revalidate daily
+const LICENSE_REVALIDATE_DAY_SECONDS   = 24 * 60 * 60; // for permanent licenses revalidate daily
 
 /**
  * Enforce license validity for API endpoints. Terminates the request with a
@@ -31,6 +31,7 @@ function license_guard_enforce_api(): array
     }
 
     license_guard_respond_forbidden($result['message'] ?? 'License validation failed');
+    return $result;
 }
 
 /**
@@ -54,13 +55,13 @@ function license_guard_validate(bool $forceRefresh = false): array
             'message' => 'Database connection not available'
         ];
     }
-    
+
     // Check if system is initialized
     $stmt = $pdo->prepare("SELECT ConfigValue FROM Config WHERE ConfigName = 'IsInit'");
     $stmt->execute();
-    $row = $stmt->fetch(PDO::FETCH_ASSOC);
+    $row    = $stmt->fetch(PDO::FETCH_ASSOC);
     $isInit = $row ? $row['ConfigValue'] : 'NO';
-    
+
     // If not initialized, allow access (setup mode)
     if ($isInit !== 'YES') {
         return [
@@ -69,16 +70,16 @@ function license_guard_validate(bool $forceRefresh = false): array
             'setupMode' => true
         ];
     }
-    
-    $config = license_guard_fetch_config($pdo);
-    $now = new DateTimeImmutable('now', new DateTimeZone('Asia/Tehran'));
+
+    $config    = license_guard_fetch_config($pdo);
+    $now       = new DateTimeImmutable('now', new DateTimeZone('Asia/Tehran'));
     $nowString = $now->format('Y-m-d H:i:s');
 
-    $lastStatus = $config['LicenseLastStatus'] ?? null;
+    $lastStatus     = $config['LicenseLastStatus'] ?? null;
     $lastSuccessRaw = $config['LicenseLastSuccess'] ?? $config['LicenseLastSuccessCheck'] ?? null;
-    $lastSuccess = license_guard_parse_datetime($lastSuccessRaw, $now->getTimezone());
-    $lastChecked = license_guard_parse_datetime($config['LicenseLastChecked'] ?? null, $now->getTimezone());
-    $currentType = $config['LicenseCurrentType'] ?? null;
+    $lastSuccess    = license_guard_parse_datetime($lastSuccessRaw, $now->getTimezone());
+    $lastChecked    = license_guard_parse_datetime($config['LicenseLastChecked'] ?? null, $now->getTimezone());
+    $currentType    = $config['LicenseCurrentType'] ?? null;
 
     // Remove legacy expiry entry if it still exists.
     license_guard_upsert_config($pdo, 'LicenseExpiry', null);
@@ -86,7 +87,7 @@ function license_guard_validate(bool $forceRefresh = false): array
     // If we have a recent successful check, respect it according to cache rules.
     // این قبل از rate limiting چک می‌شود تا کاربران عادی محدود نشوند
     if (!$forceRefresh && $lastStatus === 'valid') {
-        $isPermanent = ($currentType === 'permanent');
+        $isPermanent      = ($currentType === 'permanent');
         $revalidateWindow = $isPermanent
             ? LICENSE_REVALIDATE_DAY_SECONDS
             : LICENSE_REVALIDATE_TRIAL_SECONDS;
@@ -106,7 +107,7 @@ function license_guard_validate(bool $forceRefresh = false): array
             }
         }
     }
-    
+
     // Rate limiting: فقط برای درخواست‌های جدید (غیر cache شده)
     // 100 درخواست در هر 60 ثانیه از هر IP
     if (rate_limit_check($pdo, 'license_validation', 100, 60)) {
@@ -173,14 +174,14 @@ function license_guard_validate(bool $forceRefresh = false): array
         ];
     }
 
-    $licenceType = $webhookData['licenceType'];
+    $licenceType  = $webhookData['licenceType'];
     $expiryString = $webhookData['expiry'];
 
     if ($licenceType === 'permanent') {
         license_guard_upsert_config($pdo, 'LicenseLastStatus', 'valid');
         license_guard_upsert_config($pdo, 'LicenseLastSuccess', $nowString);
         license_guard_upsert_config($pdo, 'LicenseCurrentType', 'permanent');
-        
+
         // Audit log
         audit_log_license($pdo, 'webhook_check', 'valid', [
             'license_type' => 'permanent',
@@ -200,13 +201,13 @@ function license_guard_validate(bool $forceRefresh = false): array
         if (!$expiryDate || $expiryDate <= $now) {
             license_guard_upsert_config($pdo, 'LicenseLastStatus', 'invalid');
             license_guard_upsert_config($pdo, 'LicenseCurrentType', 'trial');
-            
+
             // Audit log
             audit_log_license($pdo, 'webhook_check', 'expired', [
                 'license_type' => 'trial',
                 'expiry' => $expiryString
             ]);
-            
+
             return [
                 'valid' => false,
                 'message' => 'دوره آزمایشی پایان یافته، در صورتی که کاربر این سامانه هستید لطفاً به ادمین اطلاع دهید تا نسبت به فعال‌سازی لایسنس اقدام نماید.'
@@ -216,7 +217,7 @@ function license_guard_validate(bool $forceRefresh = false): array
         license_guard_upsert_config($pdo, 'LicenseLastStatus', 'valid');
         license_guard_upsert_config($pdo, 'LicenseLastSuccess', $nowString);
         license_guard_upsert_config($pdo, 'LicenseCurrentType', 'trial');
-        
+
         // Audit log
         audit_log_license($pdo, 'webhook_check', 'valid', [
             'license_type' => 'trial',
@@ -234,7 +235,7 @@ function license_guard_validate(bool $forceRefresh = false): array
 
     license_guard_upsert_config($pdo, 'LicenseLastStatus', 'invalid');
     license_guard_upsert_config($pdo, 'LicenseCurrentType', null);
-    
+
     // Audit log
     audit_log_license($pdo, 'webhook_check', 'invalid', [
         'reason' => 'Invalid license type received from server'
@@ -261,7 +262,7 @@ function license_guard_fetch_config(PDO $pdo): array
     ];
 
     $placeholders = implode(',', array_fill(0, count($keys), '?'));
-    $stmt = $pdo->prepare("SELECT ConfigName, ConfigValue FROM Config WHERE ConfigName IN ($placeholders)");
+    $stmt         = $pdo->prepare("SELECT ConfigName, ConfigValue FROM Config WHERE ConfigName IN ($placeholders)");
     $stmt->execute($keys);
 
     $config = [];
@@ -336,15 +337,15 @@ function license_guard_call_webhook(string $token): array
     ]);
 
     $response = false;
-    $error = null;
-    
+    $error    = null;
+
     try {
         $response = file_get_contents($url, false, $context);
     } catch (Exception $e) {
         $error = $e->getMessage();
         error_log("License webhook call failed: " . $error);
     }
-    
+
     if ($response === false) {
         return [
             'success' => false,
@@ -361,7 +362,7 @@ function license_guard_call_webhook(string $token): array
     }
 
     $licenceType = $decoded['LicenceType'] ?? '';
-    $expiry = $decoded['Exp'] ?? null;
+    $expiry      = $decoded['Exp'] ?? null;
 
     if ($licenceType === 'Licenced') {
         return [

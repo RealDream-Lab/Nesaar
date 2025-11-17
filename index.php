@@ -1,7 +1,7 @@
 <?php
 // Start session before any output
 if (session_status() === PHP_SESSION_NONE) {
-    session_start();
+  session_start();
 }
 
 require_once __DIR__ . '/includes/license_guard.php';
@@ -76,6 +76,12 @@ if ($licenseStatus['valid'] !== true) {
                         همکار
                       </label>
                       <input class="form-check-input" type="radio" name="userType" id="staffType" value="staff">
+                    </div>
+                    <div class="form-check form-check-inline">
+                      <label class="form-check-label" for="coworkerType">
+                        عوامل اجرائی
+                      </label>
+                      <input class="form-check-input" type="radio" name="userType" id="coworkerType" value="coworker">
                     </div>
                   </div>
 
