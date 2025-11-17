@@ -21,6 +21,42 @@ function escapeHtml(value) {
     .replace(/'/g, "&#39;");
 }
 
+async function copyToClipboard(text) {
+  if (typeof text !== "string" || !text) {
+    return false;
+  }
+
+  try {
+    if (
+      navigator.clipboard &&
+      typeof navigator.clipboard.writeText === "function"
+    ) {
+      await navigator.clipboard.writeText(text);
+      return true;
+    }
+  } catch (err) {
+    console.warn("Clipboard API copy failed", err);
+  }
+
+  try {
+    const textarea = document.createElement("textarea");
+    textarea.value = text;
+    textarea.setAttribute("readonly", "readonly");
+    textarea.style.position = "fixed";
+    textarea.style.top = "-200px";
+    textarea.style.opacity = "0";
+    document.body.appendChild(textarea);
+    textarea.focus();
+    textarea.select();
+    const success = document.execCommand("copy");
+    document.body.removeChild(textarea);
+    return success;
+  } catch (fallbackError) {
+    console.warn("Fallback clipboard copy failed", fallbackError);
+    return false;
+  }
+}
+
 try {
   window.addEventListener(
     "afterprint",
@@ -1428,6 +1464,178 @@ try {
   }
 } catch (e) {
   console.warn("Failed to init info stats button", e);
+}
+
+try {
+  const reporterBtn = document.getElementById("reporterAccessBtn");
+  if (reporterBtn) {
+    reporterBtn.addEventListener("click", async () => {
+      try {
+        Swal.fire({
+          title: "در حال آماده‌سازی...",
+          html: "لطفاً صبر کنید",
+          showConfirmButton: false,
+          allowOutsideClick: false,
+          customClass: { popup: "swal2-rtl swal2-glass" },
+          didOpen: () => {
+            Swal.showLoading();
+          },
+        });
+
+        const response = await guardedFetch(
+          "../API/getReporterCredentials.php",
+          {
+            cache: "no-store",
+          }
+        );
+        const data = await response.json();
+
+        if (!response.ok || data.success !== true) {
+          throw new Error(
+            data && data.error
+              ? data.error
+              : "امکان دریافت رمز کاربر گزارش‌گیر وجود ندارد"
+          );
+        }
+
+        Swal.close();
+
+        const username = data.username || "reporter";
+        const password = data.password || "";
+        if (!password) {
+          throw new Error("رمز عبور معتبر از سمت سرور دریافت نشد");
+        }
+
+        const escapeAttr = (value) =>
+          String(value ?? "").replace(
+            /["'&<>]/g,
+            (ch) =>
+              ({
+                '"': "&quot;",
+                "'": "&#39;",
+                "&": "&amp;",
+                "<": "&lt;",
+                ">": "&gt;",
+              }[ch] || ch)
+          );
+
+        const modalHtml = `
+          <div class="reporter-credential-card">
+            <div class="reporter-credential-heading">
+              <img src="/assets/app/reporter.png" alt="گزارش‌گیر">
+              <div>
+                <p>این اطلاعات را فقط در اختیار افراد مجاز قرار دهید.</p>
+              </div>
+            </div>
+            <div class="reporter-credential-field">
+              <div class="reporter-credential-pair">
+                <div class="reporter-credential-row">
+                  <span class="reporter-row-label">نام کاربری</span>
+                  <span class="reporter-credential-value reporter-row-value">${escapeHtml(
+                    username
+                  )}</span>
+                </div>
+                <div class="reporter-credential-row">
+                  <span class="reporter-row-label">رمز عبور</span>
+                  <span class="reporter-password-value reporter-row-value" role="button" tabindex="0" data-password="${escapeAttr(
+                    password
+                  )}">${escapeHtml(password)}</span>
+                </div>
+              </div>
+              <div class="reporter-password-feedback" aria-live="polite"></div>
+            </div>
+          </div>
+        `;
+
+        await Swal.fire({
+          title: "دسترسی گزارش‌گیری",
+          html: modalHtml,
+          focusConfirm: false,
+          confirmButtonText: "بستن",
+          customClass: {
+            popup: "swal2-rtl swal2-glass reporter-modal",
+            confirmButton: "btn btn-primary",
+          },
+          didOpen: (popup) => {
+            try {
+              const passwordEl = popup.querySelector(
+                ".reporter-password-value"
+              );
+              if (!passwordEl) return;
+              const feedbackEl = popup.querySelector(
+                ".reporter-password-feedback"
+              );
+              const passwordValue =
+                passwordEl.getAttribute("data-password") || "";
+              if (!passwordValue) return;
+
+              // Ensure initial focus stays on the confirm button so the password stays blurred
+              const confirmBtn = Swal.getConfirmButton();
+              if (confirmBtn) {
+                confirmBtn.focus({ preventScroll: true });
+              }
+              passwordEl.blur();
+
+              const updateFeedback = (state, message) => {
+                if (!feedbackEl) return;
+                feedbackEl.textContent = message;
+                feedbackEl.classList.remove("success", "error");
+                if (state) feedbackEl.classList.add(state);
+              };
+
+              const resetFeedback = () => updateFeedback("", "");
+
+              const handleCopy = async () => {
+                const ok = await copyToClipboard(passwordValue);
+                if (ok) {
+                  passwordEl.setAttribute("data-copied", "true");
+                  updateFeedback("success", "رمز در کلیپ‌بورد کپی شد.");
+                  setTimeout(() => {
+                    passwordEl.removeAttribute("data-copied");
+                    resetFeedback();
+                  }, 1800);
+                } else {
+                  updateFeedback("error", "کپی خودکار انجام نشد.");
+                  setTimeout(resetFeedback, 1800);
+                }
+              };
+
+              passwordEl.addEventListener("click", handleCopy);
+              passwordEl.addEventListener("keypress", (evt) => {
+                if (evt.key === "Enter" || evt.key === " ") {
+                  evt.preventDefault();
+                  handleCopy();
+                }
+              });
+            } catch (err) {
+              console.warn("Reporter password popup init failed", err);
+            }
+          },
+        });
+      } catch (err) {
+        Swal.close();
+        if (err && err.isLicenseError) {
+          return;
+        }
+        console.error("Failed to show reporter credentials", err);
+        Swal.fire({
+          icon: "error",
+          title: "خطا",
+          text:
+            err && err.message
+              ? err.message
+              : "خطا در دریافت اطلاعات گزارش‌گیر",
+          confirmButtonText: "باشه",
+          customClass: {
+            popup: "swal2-rtl swal2-glass",
+            confirmButton: "btn btn-primary",
+          },
+        });
+      }
+    });
+  }
+} catch (e) {
+  console.warn("Failed to init reporter credential modal", e);
 }
 
 try {
