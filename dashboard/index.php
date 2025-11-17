@@ -64,9 +64,9 @@ if ($licenseStatus['valid'] !== true) {
                             <img src="/dashboard/statices.png" alt="اطلاعات و آمار"
                                 style="width:40px;height:40px;object-fit:contain;display:block;padding: 2px;">
                         </button>
-                        <button id="reporterAccessBtn" class="btn btn-icon p-0" type="button" title="کاربر گزارش‌گیر"
+                        <button id="recipientAccessBtn" class="btn btn-icon p-0" type="button" title="کاربر Recipient"
                             style="background:transparent;border:none;margin-inline-end:8px;padding:0;">
-                            <img src="/assets/app/reporter.png" alt="کاربر گزارش‌گیر"
+                            <img src="/assets/app/recipient.png" alt="کاربر Recipient"
                                 style="width:40px;height:40px;object-fit:contain;display:block;">
                         </button>
                         <button id="proctorNoticeBtn" class="btn btn-icon p-0" type="button" title="ابلاغ مراقبین"

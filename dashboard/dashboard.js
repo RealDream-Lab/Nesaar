@@ -1467,9 +1467,9 @@ try {
 }
 
 try {
-  const reporterBtn = document.getElementById("reporterAccessBtn");
-  if (reporterBtn) {
-    reporterBtn.addEventListener("click", async () => {
+  const recipientBtn = document.getElementById("recipientAccessBtn");
+  if (recipientBtn) {
+    recipientBtn.addEventListener("click", async () => {
       try {
         Swal.fire({
           title: "در حال آماده‌سازی...",
@@ -1483,7 +1483,7 @@ try {
         });
 
         const response = await guardedFetch(
-          "../API/getReporterCredentials.php",
+          "../API/getRecipientCredentials.php",
           {
             cache: "no-store",
           }
@@ -1494,13 +1494,13 @@ try {
           throw new Error(
             data && data.error
               ? data.error
-              : "امکان دریافت رمز کاربر گزارش‌گیر وجود ندارد"
+              : "امکان دریافت رمز کاربر Recipient وجود ندارد"
           );
         }
 
         Swal.close();
 
-        const username = data.username || "reporter";
+        const username = data.username || "Recipient";
         const password = data.password || "";
         if (!password) {
           throw new Error("رمز عبور معتبر از سمت سرور دریافت نشد");
@@ -1520,50 +1520,50 @@ try {
           );
 
         const modalHtml = `
-          <div class="reporter-credential-card">
-            <div class="reporter-credential-heading">
-              <img src="/assets/app/reporter.png" alt="گزارش‌گیر">
+          <div class="recipient-credential-card">
+            <div class="recipient-credential-heading">
+              <img src="/assets/app/recipient.png" alt="Recipient">
               <div>
-                <p>این اطلاعات را فقط در اختیار افراد مجاز قرار دهید.</p>
+                <p>هشدار ! این اطلاعات را فقط در اختیار افراد مجاز قرار دهید.</p>
               </div>
             </div>
-            <div class="reporter-credential-field">
-              <div class="reporter-credential-pair">
-                <div class="reporter-credential-row">
-                  <span class="reporter-row-label">نام کاربری</span>
-                  <span class="reporter-credential-value reporter-row-value">${escapeHtml(
+            <div class="recipient-credential-field">
+              <div class="recipient-credential-pair">
+                <div class="recipient-credential-row">
+                  <span class="recipient-row-label">نام کاربری</span>
+                  <span class="recipient-credential-value recipient-row-value">${escapeHtml(
                     username
                   )}</span>
                 </div>
-                <div class="reporter-credential-row">
-                  <span class="reporter-row-label">رمز عبور</span>
-                  <span class="reporter-password-value reporter-row-value" role="button" tabindex="0" data-password="${escapeAttr(
+                <div class="recipient-credential-row">
+                  <span class="recipient-row-label">رمز عبور</span>
+                  <span class="recipient-password-value recipient-row-value" role="button" tabindex="0" data-password="${escapeAttr(
                     password
                   )}">${escapeHtml(password)}</span>
                 </div>
               </div>
-              <div class="reporter-password-feedback" aria-live="polite"></div>
+              <div class="recipient-password-feedback" aria-live="polite"></div>
             </div>
           </div>
         `;
 
         await Swal.fire({
-          title: "دسترسی گزارش‌گیری",
+          title: "دسترسی کاربر گزارش‌گیری",
           html: modalHtml,
           focusConfirm: false,
           confirmButtonText: "بستن",
           customClass: {
-            popup: "swal2-rtl swal2-glass reporter-modal",
+            popup: "swal2-rtl swal2-glass recipient-modal",
             confirmButton: "btn btn-primary",
           },
           didOpen: (popup) => {
             try {
               const passwordEl = popup.querySelector(
-                ".reporter-password-value"
+                ".recipient-password-value"
               );
               if (!passwordEl) return;
               const feedbackEl = popup.querySelector(
-                ".reporter-password-feedback"
+                ".recipient-password-feedback"
               );
               const passwordValue =
                 passwordEl.getAttribute("data-password") || "";
@@ -1608,7 +1608,7 @@ try {
                 }
               });
             } catch (err) {
-              console.warn("Reporter password popup init failed", err);
+              console.warn("Recipient password popup init failed", err);
             }
           },
         });
@@ -1617,14 +1617,14 @@ try {
         if (err && err.isLicenseError) {
           return;
         }
-        console.error("Failed to show reporter credentials", err);
+        console.error("Failed to show recipient credentials", err);
         Swal.fire({
           icon: "error",
           title: "خطا",
           text:
             err && err.message
               ? err.message
-              : "خطا در دریافت اطلاعات گزارش‌گیر",
+              : "خطا در دریافت اطلاعات Recipient",
           confirmButtonText: "باشه",
           customClass: {
             popup: "swal2-rtl swal2-glass",
@@ -1635,7 +1635,7 @@ try {
     });
   }
 } catch (e) {
-  console.warn("Failed to init reporter credential modal", e);
+  console.warn("Failed to init recipient credential modal", e);
 }
 
 try {

@@ -30,23 +30,23 @@ if ($licenseToken === '') {
     exit;
 }
 
-$adminPassword    = strrev($licenseToken);
-$chars            = preg_split('//u', $adminPassword, -1, PREG_SPLIT_NO_EMPTY);
-$reporterPassword = '';
+$adminPassword     = strrev($licenseToken);
+$chars             = preg_split('//u', $adminPassword, -1, PREG_SPLIT_NO_EMPTY);
+$recipientPassword = '';
 foreach ($chars as $index => $ch) {
     if ($index % 2 === 0) { // 1-based odd positions -> 0,2,4...
-        $reporterPassword .= $ch;
+        $recipientPassword .= $ch;
     }
 }
 
-if ($reporterPassword === '') {
+if ($recipientPassword === '') {
     http_response_code(500);
-    echo json_encode(['success' => false, 'error' => 'امکان تولید رمز گزارش‌گیر وجود ندارد'], JSON_UNESCAPED_UNICODE);
+    echo json_encode(['success' => false, 'error' => 'امکان تولید رمز Recipient وجود ندارد'], JSON_UNESCAPED_UNICODE);
     exit;
 }
 
 echo json_encode([
     'success' => true,
-    'username' => 'reporter',
-    'password' => $reporterPassword,
+    'username' => 'Recipient',
+    'password' => $recipientPassword,
 ], JSON_UNESCAPED_UNICODE);

@@ -42,7 +42,7 @@ while ($row = $configStmt->fetch(PDO::FETCH_ASSOC)) {
     $config[$row['ConfigName']] = $row['ConfigValue'];
 }
 
-$saadCode = trim((string)($config['SaadCode'] ?? ''));
+$saadCode     = trim((string)($config['SaadCode'] ?? ''));
 $licenseToken = trim((string)($config['LicenseToken'] ?? ''));
 
 if ($saadCode === '' || $licenseToken === '') {
@@ -54,14 +54,41 @@ if ($saadCode === '' || $licenseToken === '') {
 $expectedUsername = 'admin' . $saadCode;
 $expectedPassword = strrev($licenseToken);
 
-if (!hash_equals($expectedUsername, $username) || !hash_equals($expectedPassword, $password)) {
+$recipientUsername = 'Recipient';
+$chars             = preg_split('//u', $expectedPassword, -1, PREG_SPLIT_NO_EMPTY);
+$recipientPassword = '';
+foreach ($chars as $index => $ch) {
+    if ($index % 2 === 0) {
+        $recipientPassword .= $ch;
+    }
+}
+
+$normalizedInput     = mb_strtolower($username, 'UTF-8');
+$normalizedAdmin     = mb_strtolower($expectedUsername, 'UTF-8');
+$normalizedRecipient = mb_strtolower($recipientUsername, 'UTF-8');
+
+$isAdminAttempt     = hash_equals($normalizedAdmin, $normalizedInput);
+$isRecipientAttempt = hash_equals($normalizedRecipient, $normalizedInput);
+
+if (!$isAdminAttempt && !$isRecipientAttempt) {
     audit_log_auth($pdo, 'admin_login', false, $username);
     http_response_code(401);
     echo json_encode(['success' => false, 'error' => 'نام کاربری یا رمز عبور اشتباه است']);
     exit;
 }
 
-audit_log_auth($pdo, 'admin_login', true, $expectedUsername);
+$expectedPasswordForAttempt = $isAdminAttempt ? $expectedPassword : $recipientPassword;
+$auditKey                   = $isAdminAttempt ? 'admin_login' : 'recipient_login';
+$canonicalUsername          = $isAdminAttempt ? $expectedUsername : $recipientUsername;
+
+if (!hash_equals($expectedPasswordForAttempt, $password)) {
+    audit_log_auth($pdo, $auditKey, false, $username);
+    http_response_code(401);
+    echo json_encode(['success' => false, 'error' => 'نام کاربری یا رمز عبور اشتباه است']);
+    exit;
+}
+
+audit_log_auth($pdo, $auditKey, true, $canonicalUsername);
 
 if (session_status() !== PHP_SESSION_ACTIVE) {
     session_start();
@@ -69,19 +96,28 @@ if (session_status() !== PHP_SESSION_ACTIVE) {
 session_regenerate_id(true);
 
 admin_session_set($pdo, [
-    'username' => $expectedUsername,
+    'username' => $canonicalUsername,
+    'actor' => $isAdminAttempt ? 'admin' : 'recipient',
 ]);
 
 $missing = [];
-if (empty($config['AdminNickName'])) $missing[] = 'AdminNickName';
-if (empty($config['BossNickName'])) $missing[] = 'BossNickName';
-if (empty($config['HeadOfEDU'])) $missing[] = 'HeadOfEDU';
-if (empty($config['Chairman'])) $missing[] = 'Chairman';
+if ($isAdminAttempt) {
+    if (empty($config['AdminNickName']))
+        $missing[] = 'AdminNickName';
+    if (empty($config['BossNickName']))
+        $missing[] = 'BossNickName';
+    if (empty($config['HeadOfEDU']))
+        $missing[] = 'HeadOfEDU';
+    if (empty($config['Chairman']))
+        $missing[] = 'Chairman';
+}
+
+$displayName = $isAdminAttempt ? ($config['AdminNickName'] ?? '') : 'Recipient';
 
 echo json_encode([
     'success' => true,
-    'username' => $expectedUsername,
-    'displayName' => $config['AdminNickName'] ?? '',
+    'username' => $canonicalUsername,
+    'displayName' => $displayName,
     'missingFields' => $missing,
     'ttlSeconds' => ADMIN_SESSION_TTL,
 ], JSON_UNESCAPED_UNICODE);
