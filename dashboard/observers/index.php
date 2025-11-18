@@ -77,10 +77,13 @@ try {
                             style="background:transparent;border:none;margin-inline-end:8px;padding:0;">
                             <img src="/dashboard/observers/users.png" alt="مراقبین و عوامل اجرائی"
                                 style="width:40px;height:40px;object-fit:contain;display:block;padding-bottom: 2px;padding-top: 2px;">
-                        </button> <!-- 
-                        <button id="showAssignmentBtn" class="btn btn-icon p-0" type="button" title="چینش مراقبین و عوامل اجرائی" style="background:transparent;border:none;margin-inline-end:8px;padding:0;">
-                            <img src="/dashboard/statices.png" alt="چینش" style="width:40px;height:40px;object-fit:contain;display:block;">
-                        </button> 
+                        </button>
+                        <button id="showAssignmentBtn" class="btn btn-icon p-0" type="button"
+                            title="چینش مراقبین و عوامل اجرائی"
+                            style="background:transparent;border:none;margin-inline-end:8px;padding:0;">
+                            <img src="/dashboard/statices.png" alt="چینش"
+                                style="width:40px;height:40px;object-fit:contain;display:block;">
+                        </button> <!--
                         <button id="showReportBtn" class="btn btn-icon p-0" type="button" title="گزارش مراقبین و عوامل اجرائی" style="background:transparent;border:none;margin-inline-end:8px;padding:0;">
                             <img src="/dashboard/observers/calendar.png" alt="گزارش" style="width:40px;height:40px;object-fit:contain;display:block;">
                         </button>-->
@@ -246,19 +249,19 @@ try {
                     <br>
 
                     <div class="row g-2" style="margin-top:0.8rem;">
-                        <div class="col-12 col-md-4">
+                        <div class="col-12 col-md-6">
                             <button id="assignScatteredBtn" class="btn btn-upload w-100">چینش خودکار عوامل
                                 اجرائی به صورت
                                 پراکنده</button>
                         </div>
-                        <div class="col-12 col-md-4">
+                        <div class="col-12 col-md-6">
                             <button id="assignDailyBtn" class="btn btn-upload w-100">چینش خودکار بر اساس حضور روزانه
                                 مراقب</button>
-                        </div>
+                        </div><!--
                         <div class="col-12 col-md-4">
                             <button id="assignManualBtn" class="btn btn-upload w-100">چینش دستی مراقبین و عوامل
                                 اجرائی</button>
-                        </div>
+                        </div>-->
                     </div>
                 </div>
             </div>
