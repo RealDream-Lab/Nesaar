@@ -2396,7 +2396,7 @@
           // Show a non-toast loading modal only when SaveAll is invoked and we're about to compute the proctor summary
           Swal.fire({
             title: "ذخیره‌ی گروهی با موفقیت انجام شد",
-            html: '<div style="margin-top:0.4rem;font-weight:600">در حال محاسبه مراقبین و عوامل اجرائی مورد نیاز</div>',
+            html: '<div style="margin-top:0.4rem;font-weight:600">در حال محاسبه عوامل اجرائی مورد نیاز</div>',
             icon: "success",
             showConfirmButton: false,
             allowOutsideClick: false,

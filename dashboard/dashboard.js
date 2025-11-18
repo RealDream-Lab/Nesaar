@@ -1848,7 +1848,7 @@ try {
             const es = result.inserted?.exam_seats ?? 0;
             const l = result.inserted?.locations ?? 0;
             const proctorResetHtml = result?.proctorsCleared
-              ? '<br><span style="font-size:0.95rem;color:#0a4d68;">جدول مشخصات مراقبین برای همگام‌سازی مجدد پاکسازی شد.</span>'
+              ? '<br><span style="font-size:0.95rem;color:#ffffff;">جدول مشخصات مراقبین برای همگام‌سازی مجدد پاکسازی شد.</span>'
               : "";
 
             await Swal.fire({

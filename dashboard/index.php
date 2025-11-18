@@ -64,20 +64,21 @@ if ($licenseStatus['valid'] !== true) {
                             <img src="/dashboard/statices.png" alt="اطلاعات و آمار"
                                 style="width:40px;height:40px;object-fit:contain;display:block;padding: 2px;">
                         </button>
-                        <button id="recipientAccessBtn" class="btn btn-icon p-0" type="button" title="کاربر Recipient"
-                            style="background:transparent;border:none;margin-inline-end:8px;padding:0;">
-                            <img src="/assets/app/recipient.png" alt="کاربر Recipient"
-                                style="width:40px;height:40px;object-fit:contain;display:block;">
-                        </button>
+
                         <button id="proctorProfilesBtn" class="btn btn-icon p-0" type="button" title="مشخصات مراقبین"
                             style="background:transparent;border:none;margin-inline-end:8px;padding:0;">
                             <img src="/dashboard/observers/users.png" alt="مشخصات مراقبین"
-                                style="width:40px;height:40px;object-fit:contain;display:block;">
+                                style="width:40px;height:40px;object-fit:contain;display:block;margin-bottom: 5px;">
                         </button>
                         <button id="proctorNoticeBtn" class="btn btn-icon p-0" type="button" title="ابلاغ مراقبین"
                             style="background:transparent;border:none;margin-inline-end:8px;padding:0;">
                             <img src="/dashboard/observers/calendar.png" alt="ابلاغ مراقبین"
                                 style="width:40px;height:40px;object-fit:contain;display:block; margin-top: 3px !important;">
+                        </button>
+                        <button id="recipientAccessBtn" class="btn btn-icon p-0" type="button" title="کاربر گزارش گیر"
+                            style="background:transparent;border:none;margin-inline-end:8px;padding:0;">
+                            <img src="/assets/app/recipient.png" alt="کاربر Recipient"
+                                style="width:40px;height:40px;object-fit:contain;display:block;">
                         </button>
                         <button id="editRolesBtn" class="btn btn-icon p-0" type="button" title="ویرایش نقش‌ها"
                             style="background:transparent;border:none;margin-inline-end:8px;padding:0;">
