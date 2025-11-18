@@ -1677,18 +1677,16 @@ try {
   console.warn("Failed to init proctor notice button", e);
 }
 
-// Proctor module button: navigate to the dedicated observers module folder
+// Header shortcut for observers (proctor profiles)
 try {
-  const proctorBtn = document.getElementById("proctorBtn");
-  if (proctorBtn) {
-    proctorBtn.addEventListener("click", (e) => {
-      // Navigate to the new module folder under /dashboard/observers/
-      // Use absolute path to avoid relative path mistakes from different pages.
+  const proctorProfilesBtn = document.getElementById("proctorProfilesBtn");
+  if (proctorProfilesBtn) {
+    proctorProfilesBtn.addEventListener("click", () => {
       window.location.href = "/dashboard/observers/";
     });
   }
 } catch (e) {
-  console.warn("Failed to init proctor button", e);
+  console.warn("Failed to init proctor profiles button", e);
 }
 
 // Update Database button: show temp table counts, warn and block in demo
@@ -1849,11 +1847,15 @@ try {
             const s = result.inserted?.students ?? 0;
             const es = result.inserted?.exam_seats ?? 0;
             const l = result.inserted?.locations ?? 0;
+            const proctorResetHtml = result?.proctorsCleared
+              ? '<br><span style="font-size:0.95rem;color:#0a4d68;">جدول مشخصات مراقبین برای همگام‌سازی مجدد پاکسازی شد.</span>'
+              : "";
+
             await Swal.fire({
               icon: "success",
               title: "موفق",
               width: "60rem",
-              html: `به‌روزرسانی با موفقیت انجام شد<br>دروس: <b>${c}</b> | دانشجویان: <b>${s}</b> | صندلی‌ها: <b>${es}</b> | مکان‌ها: <b>${l}</b>`,
+              html: `به‌روزرسانی با موفقیت انجام شد<br>دروس: <b>${c}</b> | دانشجویان: <b>${s}</b> | صندلی‌ها: <b>${es}</b> | مکان‌ها: <b>${l}</b>${proctorResetHtml}`,
               confirmButtonText: "باشه",
               customClass: {
                 popup: "swal2-rtl swal2-glass",

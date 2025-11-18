@@ -1892,26 +1892,6 @@
         }
       });
     }
-    // Header button for proctors card
-    const showProctorsBtn = document.getElementById("showProctorsBtn");
-    if (showProctorsBtn) {
-      showProctorsBtn.addEventListener("click", async (e) => {
-        try {
-          if (e && typeof e.preventDefault === "function") e.preventDefault();
-        } catch (err) {
-          /* ignore */
-        }
-        const card = document.getElementById("proctorsCard");
-        if (!card) return;
-        showOnlyCard("proctorsCard");
-        try {
-          await loadProctors();
-        } catch (err) {
-          console.warn("loadProctors failed", err);
-        }
-      });
-    }
-
     // Header button for assignment card
     const showAssignmentBtn = document.getElementById("showAssignmentBtn");
     if (showAssignmentBtn) {

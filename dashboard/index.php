@@ -69,6 +69,11 @@ if ($licenseStatus['valid'] !== true) {
                             <img src="/assets/app/recipient.png" alt="کاربر Recipient"
                                 style="width:40px;height:40px;object-fit:contain;display:block;">
                         </button>
+                        <button id="proctorProfilesBtn" class="btn btn-icon p-0" type="button" title="مشخصات مراقبین"
+                            style="background:transparent;border:none;margin-inline-end:8px;padding:0;">
+                            <img src="/dashboard/observers/users.png" alt="مشخصات مراقبین"
+                                style="width:40px;height:40px;object-fit:contain;display:block;">
+                        </button>
                         <button id="proctorNoticeBtn" class="btn btn-icon p-0" type="button" title="ابلاغ مراقبین"
                             style="background:transparent;border:none;margin-inline-end:8px;padding:0;">
                             <img src="/dashboard/observers/calendar.png" alt="ابلاغ مراقبین"
@@ -151,26 +156,21 @@ if ($licenseStatus['valid'] !== true) {
 
         <!-- Database Update (moved here to bottom-most section) -->
         <div class="dashboard-card no-hover">
-            <h4 class="mb-3">ابزار</h4>
+            <h4 class="mb-3">بانک اطلاعاتی آزمون‌ها</h4>
             <div class="row g-3">
-                <div class="col-md-3">
+                <div class="col-12 col-md-4">
                     <button class="btn btn-upload w-100" id="uploadWrittenBtn">
                         آپلود آزمون‌های کتبی
                     </button>
                 </div>
-                <div class="col-md-3">
+                <div class="col-12 col-md-4">
                     <button class="btn btn-upload w-100" id="uploadElectronicBtn">
                         آپلود آزمون‌های الکترونیکی
                     </button>
                 </div>
-                <div class="col-md-3">
+                <div class="col-12 col-md-4">
                     <button class="btn btn-upload w-100" id="updateDBBtn">
                         به‌روزرسانی پایگاه داده
-                    </button>
-                </div>
-                <div class="col-md-3">
-                    <button class="btn btn-upload w-100" id="proctorBtn">
-                        عوامل برگزاری آزمون
                     </button>
                 </div>
             </div>

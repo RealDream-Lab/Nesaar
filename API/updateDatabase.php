@@ -13,7 +13,13 @@ require_once __DIR__ . '/../includes/rate_limit.php';
 require_once __DIR__ . '/db_init.php';
 
 // Enforce CSRF first
-try { csrf_enforce(); } catch (Throwable $e) { exit; }
+$proctorsCleared = false;
+
+try {
+    csrf_enforce();
+} catch (Throwable $e) {
+    exit;
+}
 // Enforce license with optional soft bypass (consistent with import endpoints)
 $__lic = license_guard_validate(false);
 if ($__lic['valid'] !== true) {
@@ -22,10 +28,11 @@ if ($__lic['valid'] !== true) {
         if (isset($pdo) && $pdo instanceof PDO) {
             $st = $pdo->prepare("SELECT ConfigValue FROM Config WHERE ConfigName='AllowImportOnInvalidLicense'");
             $st->execute();
-            $val = strtoupper(trim((string)($st->fetchColumn() ?? '')));
+            $val         = strtoupper(trim((string)($st->fetchColumn() ?? '')));
             $allowBypass = ($val === 'YES');
         }
-    } catch (Throwable $e) { /* ignore */ }
+    } catch (Throwable $e) { /* ignore */
+    }
     if (!$allowBypass) {
         license_guard_respond_forbidden($__lic['message'] ?? 'License validation failed');
     }
@@ -41,7 +48,8 @@ rate_limit_enforce($pdo, $rateLimitKey, 50, 600);
 // Progress file utilities (re-use the same reader on client via getProcessProgress.php?filename=update)
 $progressFile = __DIR__ . '/../database/progress_update.json';
 
-function write_progress(string $stage, string $message, int $percent): void {
+function write_progress(string $stage, string $message, int $percent): void
+{
     global $progressFile;
     // Model it like other progress files: totalRows = 100, processedRows = percent
     @file_put_contents($progressFile, json_encode([
@@ -53,29 +61,33 @@ function write_progress(string $stage, string $message, int $percent): void {
 }
 
 // Helper: build UNION ALL from available temp tables
-function build_union_from_temp(PDO $pdo): array {
+function build_union_from_temp(PDO $pdo): array
+{
     // Returns [sql, sources] where sources is array of table names included
     $sources = [];
-    $parts = [];
-    $dbName = '';
+    $parts   = [];
+    $dbName  = '';
     try {
-        $stmt = $pdo->query('SELECT DATABASE() AS db');
+        $stmt   = $pdo->query('SELECT DATABASE() AS db');
         $dbName = $stmt ? ($stmt->fetch()['db'] ?? '') : '';
-    } catch (Throwable $e) {}
+    } catch (Throwable $e) {
+    }
 
-    $checkExists = function(string $table) use ($pdo, $dbName): bool {
+    $checkExists = function (string $table) use ($pdo, $dbName): bool {
         try {
             $q = $pdo->prepare('SELECT COUNT(*) AS cnt FROM information_schema.TABLES WHERE TABLE_SCHEMA = ? AND TABLE_NAME = ?');
             $q->execute([$dbName, $table]);
             return ((int)($q->fetch()['cnt'] ?? 0)) > 0;
-        } catch (Throwable $e) { return false; }
+        } catch (Throwable $e) {
+            return false;
+        }
     };
 
     foreach (['e-exams', 'k-exams'] as $t) {
         if ($checkExists($t)) {
             $sources[] = $t;
-            $safe = str_replace('`', '``', $t);
-            $parts[] = "SELECT `شماره دانشجويي`,`شماره شناسنامه`,`مرکز مبدا`,`مرکز مقصد`,`نام`,`نام خانوادگي`,`مدرک`,`کد درس`,`نام درس`,`تاريخ آزمون`,`ساعت آزمون`,`شماره صندلي`,`نوع آزمون`,`نوع درس`,`ساختمان`,`کلاس`,`ردیف` FROM `{$safe}`";
+            $safe      = str_replace('`', '``', $t);
+            $parts[]   = "SELECT `شماره دانشجويي`,`شماره شناسنامه`,`مرکز مبدا`,`مرکز مقصد`,`نام`,`نام خانوادگي`,`مدرک`,`کد درس`,`نام درس`,`تاريخ آزمون`,`ساعت آزمون`,`شماره صندلي`,`نوع آزمون`,`نوع درس`,`ساختمان`,`کلاس`,`ردیف` FROM `{$safe}`";
         }
     }
 
@@ -83,18 +95,37 @@ function build_union_from_temp(PDO $pdo): array {
 }
 
 // SQL helpers for digit normalization (Persian/Arabic to ASCII)
-function norm_digits_sql(string $col): string {
+function norm_digits_sql(string $col): string
+{
     // Compose nested REPLACE chain
-    $rep = [
-        '۰' => '0','۱' => '1','۲' => '2','۳' => '3','۴' => '4','۵' => '5','۶' => '6','۷' => '7','۸' => '8','۹' => '9',
-        '٠' => '0','١' => '1','٢' => '2','٣' => '3','٤' => '4','٥' => '5','٦' => '6','٧' => '7','٨' => '8','٩' => '9'
+    $rep  = [
+        '۰' => '0',
+        '۱' => '1',
+        '۲' => '2',
+        '۳' => '3',
+        '۴' => '4',
+        '۵' => '5',
+        '۶' => '6',
+        '۷' => '7',
+        '۸' => '8',
+        '۹' => '9',
+        '٠' => '0',
+        '١' => '1',
+        '٢' => '2',
+        '٣' => '3',
+        '٤' => '4',
+        '٥' => '5',
+        '٦' => '6',
+        '٧' => '7',
+        '٨' => '8',
+        '٩' => '9'
     ];
     $expr = $col;
     foreach ($rep as $from => $to) {
         // escape single quotes and backslashes in $from/$to if any (not expected here)
         $fromEsc = str_replace("'", "''", $from);
-        $toEsc = str_replace("'", "''", $to);
-        $expr = "REPLACE(" . $expr . ", '{$fromEsc}', '{$toEsc}')";
+        $toEsc   = str_replace("'", "''", $to);
+        $expr    = "REPLACE(" . $expr . ", '{$fromEsc}', '{$toEsc}')";
     }
     return "TRIM(" . $expr . ")";
 }
@@ -114,8 +145,14 @@ try {
 
     // Begin transaction for atomicity (use DELETE instead of TRUNCATE to avoid implicit commit)
     // Drop tables if they exist before creating anything (DDL may cause implicit commit)
-    try { $pdo->exec('DROP TABLE IF EXISTS `ExamsDetil`'); } catch (Throwable $e) { /* ignore */ }
-    try { $pdo->exec('DROP TABLE IF EXISTS `locations`'); } catch (Throwable $e) { /* ignore */ }
+    try {
+        $pdo->exec('DROP TABLE IF EXISTS `ExamsDetil`');
+    } catch (Throwable $e) { /* ignore */
+    }
+    try {
+        $pdo->exec('DROP TABLE IF EXISTS `locations`');
+    } catch (Throwable $e) { /* ignore */
+    }
 
     // Ensure `locations` table exists before starting transaction (CREATE TABLE is DDL and may cause implicit commit)
     $createLocations = "CREATE TABLE IF NOT EXISTS `locations` (
@@ -134,6 +171,12 @@ try {
     $pdo->exec('DELETE FROM exam_seats');
     $pdo->exec('DELETE FROM courses');
     $pdo->exec('DELETE FROM students');
+    try {
+        $pdo->exec('DELETE FROM Proctors');
+        $proctorsCleared = true;
+    } catch (Throwable $e) {
+        $proctorsCleared = false;
+    }
 
     // Common derived table
     $derived = "( {$unionSql} ) AS t";
@@ -141,7 +184,7 @@ try {
     // Stage 3: insert courses
     write_progress('courses', 'در حال درج دروس...', 35);
     $course_code = norm_digits_sql('t.`کد درس`');
-    $sqlCourses = "INSERT INTO courses (course_code, course_name, exam_date, exam_time, course_type)\n"
+    $sqlCourses  = "INSERT INTO courses (course_code, course_name, exam_date, exam_time, course_type)\n"
         . "SELECT DISTINCT\n"
         . "  {$course_code} AS course_code,\n"
         . "  TRIM(t.`نام درس`) AS course_name,\n"
@@ -155,7 +198,7 @@ try {
 
     // Stage 4: insert students
     write_progress('students', 'در حال درج دانشجویان...', 60);
-    $student_id = norm_digits_sql('t.`شماره دانشجويي`');
+    $student_id  = norm_digits_sql('t.`شماره دانشجويي`');
     $national_id = norm_digits_sql('t.`شماره شناسنامه`');
     $src_center  = norm_digits_sql('t.`مرکز مبدا`');
     $dst_center  = norm_digits_sql('t.`مرکز مقصد`');
@@ -181,7 +224,7 @@ try {
     $rnorm = norm_digits_sql('u.`ردیف`');
 
     $unionAlias = "( {$unionSql} ) AS u";
-    $sqlSeats = "INSERT INTO exam_seats (student_id, course_code, seat_number, building, class_name, seat_row, exam_type)\n"
+    $sqlSeats   = "INSERT INTO exam_seats (student_id, course_code, seat_number, building, class_name, seat_row, exam_type)\n"
         . "SELECT\n"
         . "  {$sid} AS student_id,\n"
         . "  {$ccode} AS course_code,\n"
@@ -224,8 +267,8 @@ try {
     try {
         // Remove uploaded files created by uploadDatabase.php (E.* and K.* with common extensions)
         $uploadDir = __DIR__ . '/../database/';
-        $types = ['E', 'K'];
-        $exts = ['xlsx', 'xls'];
+        $types     = ['E', 'K'];
+        $exts      = ['xlsx', 'xls'];
         foreach ($types as $t) {
             foreach ($exts as $ext) {
                 $f = $uploadDir . $t . '.' . $ext;
@@ -259,12 +302,18 @@ try {
             'students' => (int)$insertedStudents,
             'exam_seats' => (int)$insertedSeats,
             'locations' => (int)($insertedLocations ?? 0)
-        ]
+        ],
+        'proctorsCleared' => $proctorsCleared
     ], JSON_UNESCAPED_UNICODE);
 } catch (Throwable $e) {
     // Rollback if in transaction
     if ($pdo instanceof PDO) {
-        try { if ($pdo->inTransaction()) { $pdo->rollBack(); } } catch (Throwable $e2) {}
+        try {
+            if ($pdo->inTransaction()) {
+                $pdo->rollBack();
+            }
+        } catch (Throwable $e2) {
+        }
     }
     write_progress('error', 'خطا در به‌روزرسانی پایگاه داده: ' . $e->getMessage(), 0);
     http_response_code(500);
