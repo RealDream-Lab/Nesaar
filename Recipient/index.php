@@ -1,5 +1,4 @@
 <?php
-// Start session before any output
 if (session_status() === PHP_SESSION_NONE) {
     session_start();
 }
@@ -24,7 +23,7 @@ if ($licenseStatus['valid'] !== true) {
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="theme-color" content="#2196F3">
     <?php echo csrf_meta_tag(); ?>
-    <title>پنل مدیریت - نسار</title>
+    <title>پنل گزارش‌گیری - نسار</title>
 
     <!-- Favicons -->
     <link rel="icon" type="image/png" href="../assets/app/logo.png" />
@@ -54,7 +53,7 @@ if ($licenseStatus['valid'] !== true) {
                     <div class="d-flex align-items-center">
                         <button id="dashboardHomeBtn" class="btn btn-icon p-0" type="button" title="بازگشت به داشبورد"
                             style="background:transparent;border:none;margin-inline-end:8px;padding:0;"
-                            onclick="window.location.href='/dashboard';">
+                            onclick="window.location.href='/Recipient';">
                             <img src="/dashboard/home.png" alt="بازگشت به داشبورد"
                                 style="width:40px;height:40px;object-fit:contain;display:block;">
                         </button>
@@ -63,22 +62,11 @@ if ($licenseStatus['valid'] !== true) {
                             <img src="/dashboard/statices.png" alt="اطلاعات و آمار"
                                 style="width:40px;height:40px;object-fit:contain;display:block;padding: 2px;">
                         </button>
-                        <button id="recipientAccessBtn" class="btn btn-icon p-0" type="button" title="کاربر Recipient"
-                            style="background:transparent;border:none;margin-inline-end:8px;padding:0;">
-                            <img src="/assets/app/recipient.png" alt="کاربر Recipient"
-                                style="width:40px;height:40px;object-fit:contain;display:block;">
-                        </button>
                         <button id="proctorNoticeBtn" class="btn btn-icon p-0" type="button" title="ابلاغ مراقبین"
                             style="background:transparent;border:none;margin-inline-end:8px;padding:0;">
                             <img src="/dashboard/observers/calendar.png" alt="ابلاغ مراقبین"
                                 style="width:40px;height:40px;object-fit:contain;display:block; margin-top: 3px !important;">
                         </button>
-                        <button id="editRolesBtn" class="btn btn-icon p-0" type="button" title="ویرایش نقش‌ها"
-                            style="background:transparent;border:none;margin-inline-end:8px;padding:0;">
-                            <img src="/dashboard/config.png" alt="ویرایش نقش‌ها" class="rotating-icon"
-                                style="width:40px;height:40px;object-fit:contain;display:block;">
-                        </button>
-
                         <button class="btn btn-logout" id="logoutBtn" type="button" title="خروج"
                             style="background:transparent;border:none;margin-inline-start:0;padding:0;">
                             <img src="/dashboard/logout.png" alt="خروج"
@@ -86,7 +74,8 @@ if ($licenseStatus['valid'] !== true) {
                         </button>
                     </div>
                 </div>
-            </div> <!-- Stats -->
+            </div>
+            <!-- Stats -->
             <div class="row">
                 <div class="col-md-3">
                     <div class="dashboard-card stat-card" style="cursor: pointer;" onclick="showStudentReport()">
@@ -123,10 +112,6 @@ if ($licenseStatus['valid'] !== true) {
             </div>
         </div>
 
-        <!-- Converted custom cards into three full-width red buttons (side-by-side) -->
-        <!-- Buttons are placed under the main reports chart below so they together span the full width -->
-        <!-- The IDs are preserved for compatibility with any JS hooks (customCardOne/Two/Three) -->
-
         <!-- Latest Request Report -->
         <div class="dashboard-card no-hover" id="reportCard" style="display: none;">
             <h4 class="mb-3">آخرین گزارش درخواستی</h4>
@@ -136,45 +121,14 @@ if ($licenseStatus['valid'] !== true) {
             </div>
         </div>
 
-        <!-- Reports Chart Card (empty title by design) -->
+        <!-- Reports Chart Card -->
         <div class="dashboard-card no-hover" id="reportsChartCard">
             <div class="reports-overview">
                 <div class="chart-wrapper">
                     <canvas id="reportsChart" aria-label="نمودار جلسات آینده" role="img"></canvas>
                 </div>
             </div>
-
         </div>
-
-
-
-        <!-- Database Update (moved here to bottom-most section) -->
-        <div class="dashboard-card no-hover">
-            <h4 class="mb-3">ابزار</h4>
-            <div class="row g-3">
-                <div class="col-md-3">
-                    <button class="btn btn-upload w-100" id="uploadWrittenBtn">
-                        آپلود آزمون‌های کتبی
-                    </button>
-                </div>
-                <div class="col-md-3">
-                    <button class="btn btn-upload w-100" id="uploadElectronicBtn">
-                        آپلود آزمون‌های الکترونیکی
-                    </button>
-                </div>
-                <div class="col-md-3">
-                    <button class="btn btn-upload w-100" id="updateDBBtn">
-                        به‌روزرسانی پایگاه داده
-                    </button>
-                </div>
-                <div class="col-md-3">
-                    <button class="btn btn-upload w-100" id="proctorBtn">
-                        عوامل برگزاری آزمون
-                    </button>
-                </div>
-            </div>
-        </div>
-    </div>
     </div>
 
     <!-- Fixed Footer -->
@@ -204,13 +158,9 @@ if ($licenseStatus['valid'] !== true) {
     <script src="../assets/bootstrap/bootstrap.bundle.min.js"></script>
     <script src="../assets/sweetalert2/sweetalert2.min.js"></script>
     <script src="../assets/app/version.js"></script>
-    <!-- Local Chart.js (UMD) - load synchronously so window.Chart is available -->
     <script src="../assets/vendor/chartjs/chart.min.js"></script>
-    <!-- Device check and SweetAlert moved to dashboard.js -->
-    <script>
-        window.DASHBOARD_CONTEXT = { role: 'admin' };
-    </script>
     <script src="dashboard.js"></script>
+    <script src="../dashboard/dashboard.js"></script>
 </body>
 
 </html>

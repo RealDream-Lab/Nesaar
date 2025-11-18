@@ -6,7 +6,7 @@ if (session_status() === PHP_SESSION_NONE) {
 
 require_once __DIR__ . '/../includes/license_guard.php';
 require_once __DIR__ . '/../includes/csrf_protection.php';
-require_once __DIR__ . '/../includes/admin_session.php';
+require_once __DIR__ . '/../includes/privileged_session.php';
 require_once __DIR__ . '/db_init.php';
 
 header('Content-Type: application/json; charset=utf-8');
@@ -22,7 +22,7 @@ if ($licenseStatus['valid'] !== true) {
     exit;
 }
 
-$session = admin_session_require($pdo);
+$session = privileged_session_require($pdo);
 
 // Get course code from query parameter
 $courseCode = $_GET['course_code'] ?? '';
@@ -40,14 +40,14 @@ try {
         FROM courses 
         WHERE course_code = ?
     ");
-        $stmt->execute([$courseCode]);
-        $course = $stmt->fetch(PDO::FETCH_ASSOC);
-    
+    $stmt->execute([$courseCode]);
+    $course = $stmt->fetch(PDO::FETCH_ASSOC);
+
     if (!$course) {
         echo json_encode(['error' => 'درسی با این کد یافت نشد'], JSON_UNESCAPED_UNICODE);
         exit;
     }
-    
+
     // Get students enrolled in this course with seat info
     $stmt = $pdo->prepare("
         SELECT 
@@ -71,18 +71,18 @@ try {
     $stmt->execute([$courseCode]);
     $students = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-        // Derive course-level exam_type from seats (if any)
-        $etypeStmt = $pdo->prepare("SELECT MAX(exam_type) as exam_type FROM exam_seats WHERE course_code = ?");
-        $etypeStmt->execute([$courseCode]);
-        $etypeRow = $etypeStmt->fetch(PDO::FETCH_ASSOC);
-        $course['exam_type'] = $etypeRow['exam_type'] ?? '';
-    
+    // Derive course-level exam_type from seats (if any)
+    $etypeStmt = $pdo->prepare("SELECT MAX(exam_type) as exam_type FROM exam_seats WHERE course_code = ?");
+    $etypeStmt->execute([$courseCode]);
+    $etypeRow            = $etypeStmt->fetch(PDO::FETCH_ASSOC);
+    $course['exam_type'] = $etypeRow['exam_type'] ?? '';
+
     echo json_encode([
         'success' => true,
         'course' => $course,
         'students' => $students
     ], JSON_UNESCAPED_UNICODE);
-    
+
 } catch (PDOException $e) {
     http_response_code(500);
     echo json_encode(['error' => 'خطا در دریافت اطلاعات: ' . $e->getMessage()], JSON_UNESCAPED_UNICODE);

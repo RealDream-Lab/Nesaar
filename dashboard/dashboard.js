@@ -57,6 +57,25 @@ async function copyToClipboard(text) {
   }
 }
 
+const DASHBOARD_CONTEXT =
+  typeof window !== "undefined" && window.DASHBOARD_CONTEXT
+    ? window.DASHBOARD_CONTEXT
+    : {};
+const DASHBOARD_ROLE =
+  typeof DASHBOARD_CONTEXT.role === "string"
+    ? DASHBOARD_CONTEXT.role.toLowerCase()
+    : "admin";
+const isRecipientView = DASHBOARD_ROLE === "recipient";
+const SESSION_ENDPOINT = isRecipientView
+  ? "../API/recipientSession.php"
+  : "../API/adminSession.php";
+const LOGOUT_ENDPOINT = isRecipientView
+  ? "../API/recipientLogout.php"
+  : "../API/adminLogout.php";
+const DEFAULT_DASHBOARD_NAME = isRecipientView
+  ? "کاربر گزارش‌گیری"
+  : "مدیر سیستم";
+
 try {
   window.addEventListener(
     "afterprint",
@@ -819,14 +838,15 @@ async function guardedFetch(resource, options = {}) {
 
 async function checkAuth() {
   try {
-    const response = await guardedFetch("../API/adminSession.php", {
+    const response = await guardedFetch(SESSION_ENDPOINT, {
       cache: "no-store",
     });
     if (!response.ok) {
       throw new Error("unauthorized");
     }
     const session = await response.json();
-    const username = session.displayName || session.username || "مدیر سیستم";
+    const username =
+      session.displayName || session.username || DEFAULT_DASHBOARD_NAME;
     const usernameTarget = document.getElementById("adminUsername");
     if (usernameTarget) {
       usernameTarget.textContent = username;
@@ -857,7 +877,7 @@ document.getElementById("logoutBtn").addEventListener("click", async () => {
 
   if (result.isConfirmed) {
     try {
-      await guardedFetch("../API/adminLogout.php", { method: "POST" });
+      await guardedFetch(LOGOUT_ENDPOINT, { method: "POST" });
     } catch (logoutError) {
       console.warn("Admin logout request failed:", logoutError);
     }
@@ -1021,8 +1041,10 @@ try {
           // Update displayed admin name if changed
           if (values.AdminNickName) {
             try {
-              document.getElementById("adminUsername").textContent =
-                values.AdminNickName;
+              const usernameEl = document.getElementById("adminUsername");
+              if (usernameEl) {
+                usernameEl.textContent = values.AdminNickName;
+              }
             } catch (e) {}
           }
           // Update global config for immediate effect
@@ -1466,60 +1488,61 @@ try {
   console.warn("Failed to init info stats button", e);
 }
 
-try {
-  const recipientBtn = document.getElementById("recipientAccessBtn");
-  if (recipientBtn) {
-    recipientBtn.addEventListener("click", async () => {
-      try {
-        Swal.fire({
-          title: "در حال آماده‌سازی...",
-          html: "لطفاً صبر کنید",
-          showConfirmButton: false,
-          allowOutsideClick: false,
-          customClass: { popup: "swal2-rtl swal2-glass" },
-          didOpen: () => {
-            Swal.showLoading();
-          },
-        });
+if (!isRecipientView) {
+  try {
+    const recipientBtn = document.getElementById("recipientAccessBtn");
+    if (recipientBtn) {
+      recipientBtn.addEventListener("click", async () => {
+        try {
+          Swal.fire({
+            title: "در حال آماده‌سازی...",
+            html: "لطفاً صبر کنید",
+            showConfirmButton: false,
+            allowOutsideClick: false,
+            customClass: { popup: "swal2-rtl swal2-glass" },
+            didOpen: () => {
+              Swal.showLoading();
+            },
+          });
 
-        const response = await guardedFetch(
-          "../API/getRecipientCredentials.php",
-          {
-            cache: "no-store",
+          const response = await guardedFetch(
+            "../API/getRecipientCredentials.php",
+            {
+              cache: "no-store",
+            }
+          );
+          const data = await response.json();
+
+          if (!response.ok || data.success !== true) {
+            throw new Error(
+              data && data.error
+                ? data.error
+                : "امکان دریافت رمز کاربر Recipient وجود ندارد"
+            );
           }
-        );
-        const data = await response.json();
 
-        if (!response.ok || data.success !== true) {
-          throw new Error(
-            data && data.error
-              ? data.error
-              : "امکان دریافت رمز کاربر Recipient وجود ندارد"
-          );
-        }
+          Swal.close();
 
-        Swal.close();
+          const username = data.username || "Recipient";
+          const password = data.password || "";
+          if (!password) {
+            throw new Error("رمز عبور معتبر از سمت سرور دریافت نشد");
+          }
 
-        const username = data.username || "Recipient";
-        const password = data.password || "";
-        if (!password) {
-          throw new Error("رمز عبور معتبر از سمت سرور دریافت نشد");
-        }
+          const escapeAttr = (value) =>
+            String(value ?? "").replace(
+              /["'&<>]/g,
+              (ch) =>
+                ({
+                  '"': "&quot;",
+                  "'": "&#39;",
+                  "&": "&amp;",
+                  "<": "&lt;",
+                  ">": "&gt;",
+                }[ch] || ch)
+            );
 
-        const escapeAttr = (value) =>
-          String(value ?? "").replace(
-            /["'&<>]/g,
-            (ch) =>
-              ({
-                '"': "&quot;",
-                "'": "&#39;",
-                "&": "&amp;",
-                "<": "&lt;",
-                ">": "&gt;",
-              }[ch] || ch)
-          );
-
-        const modalHtml = `
+          const modalHtml = `
           <div class="recipient-credential-card">
             <div class="recipient-credential-heading">
               <img src="/assets/app/recipient.png" alt="Recipient">
@@ -1547,95 +1570,96 @@ try {
           </div>
         `;
 
-        await Swal.fire({
-          title: "دسترسی کاربر گزارش‌گیری",
-          html: modalHtml,
-          focusConfirm: false,
-          confirmButtonText: "بستن",
-          customClass: {
-            popup: "swal2-rtl swal2-glass recipient-modal",
-            confirmButton: "btn btn-primary",
-          },
-          didOpen: (popup) => {
-            try {
-              const passwordEl = popup.querySelector(
-                ".recipient-password-value"
-              );
-              if (!passwordEl) return;
-              const feedbackEl = popup.querySelector(
-                ".recipient-password-feedback"
-              );
-              const passwordValue =
-                passwordEl.getAttribute("data-password") || "";
-              if (!passwordValue) return;
+          await Swal.fire({
+            title: "دسترسی کاربر گزارش‌گیری",
+            html: modalHtml,
+            focusConfirm: false,
+            confirmButtonText: "بستن",
+            customClass: {
+              popup: "swal2-rtl swal2-glass recipient-modal",
+              confirmButton: "btn btn-primary",
+            },
+            didOpen: (popup) => {
+              try {
+                const passwordEl = popup.querySelector(
+                  ".recipient-password-value"
+                );
+                if (!passwordEl) return;
+                const feedbackEl = popup.querySelector(
+                  ".recipient-password-feedback"
+                );
+                const passwordValue =
+                  passwordEl.getAttribute("data-password") || "";
+                if (!passwordValue) return;
 
-              // Ensure initial focus stays on the confirm button so the password stays blurred
-              const confirmBtn = Swal.getConfirmButton();
-              if (confirmBtn) {
-                confirmBtn.focus({ preventScroll: true });
+                // Ensure initial focus stays on the confirm button so the password stays blurred
+                const confirmBtn = Swal.getConfirmButton();
+                if (confirmBtn) {
+                  confirmBtn.focus({ preventScroll: true });
+                }
+                passwordEl.blur();
+
+                const updateFeedback = (state, message) => {
+                  if (!feedbackEl) return;
+                  feedbackEl.textContent = message;
+                  feedbackEl.classList.remove("success", "error");
+                  if (state) feedbackEl.classList.add(state);
+                };
+
+                const resetFeedback = () => updateFeedback("", "");
+
+                const handleCopy = async () => {
+                  const ok = await copyToClipboard(passwordValue);
+                  if (ok) {
+                    passwordEl.setAttribute("data-copied", "true");
+                    updateFeedback("success", "رمز در کلیپ‌بورد کپی شد.");
+                    setTimeout(() => {
+                      passwordEl.removeAttribute("data-copied");
+                      resetFeedback();
+                    }, 1800);
+                  } else {
+                    updateFeedback("error", "کپی خودکار انجام نشد.");
+                    setTimeout(resetFeedback, 1800);
+                  }
+                };
+
+                passwordEl.addEventListener("click", handleCopy);
+                passwordEl.addEventListener("keypress", (evt) => {
+                  if (evt.key === "Enter" || evt.key === " ") {
+                    evt.preventDefault();
+                    handleCopy();
+                  }
+                });
+              } catch (err) {
+                console.warn("Recipient password popup init failed", err);
               }
-              passwordEl.blur();
-
-              const updateFeedback = (state, message) => {
-                if (!feedbackEl) return;
-                feedbackEl.textContent = message;
-                feedbackEl.classList.remove("success", "error");
-                if (state) feedbackEl.classList.add(state);
-              };
-
-              const resetFeedback = () => updateFeedback("", "");
-
-              const handleCopy = async () => {
-                const ok = await copyToClipboard(passwordValue);
-                if (ok) {
-                  passwordEl.setAttribute("data-copied", "true");
-                  updateFeedback("success", "رمز در کلیپ‌بورد کپی شد.");
-                  setTimeout(() => {
-                    passwordEl.removeAttribute("data-copied");
-                    resetFeedback();
-                  }, 1800);
-                } else {
-                  updateFeedback("error", "کپی خودکار انجام نشد.");
-                  setTimeout(resetFeedback, 1800);
-                }
-              };
-
-              passwordEl.addEventListener("click", handleCopy);
-              passwordEl.addEventListener("keypress", (evt) => {
-                if (evt.key === "Enter" || evt.key === " ") {
-                  evt.preventDefault();
-                  handleCopy();
-                }
-              });
-            } catch (err) {
-              console.warn("Recipient password popup init failed", err);
-            }
-          },
-        });
-      } catch (err) {
-        Swal.close();
-        if (err && err.isLicenseError) {
-          return;
+            },
+          });
+        } catch (err) {
+          Swal.close();
+          if (err && err.isLicenseError) {
+            return;
+          }
+          console.error("Failed to show recipient credentials", err);
+          Swal.fire({
+            icon: "error",
+            title: "خطا",
+            text:
+              err && err.message
+                ? err.message
+                : "خطا در دریافت اطلاعات Recipient",
+            confirmButtonText: "باشه",
+            customClass: {
+              popup: "swal2-rtl swal2-glass",
+              confirmButton: "btn btn-primary",
+            },
+          });
         }
-        console.error("Failed to show recipient credentials", err);
-        Swal.fire({
-          icon: "error",
-          title: "خطا",
-          text:
-            err && err.message
-              ? err.message
-              : "خطا در دریافت اطلاعات Recipient",
-          confirmButtonText: "باشه",
-          customClass: {
-            popup: "swal2-rtl swal2-glass",
-            confirmButton: "btn btn-primary",
-          },
-        });
-      }
-    });
+      });
+    }
+  } catch (e) {
+    console.warn("Failed to init recipient credential modal", e);
   }
-} catch (e) {
-  console.warn("Failed to init recipient credential modal", e);
 }
 
 try {
@@ -1881,8 +1905,10 @@ async function loadDashboardData() {
     const config = await configResponse.json();
 
     if (config.AdminNickName) {
-      document.getElementById("adminUsername").textContent =
-        config.AdminNickName;
+      const usernameEl = document.getElementById("adminUsername");
+      if (usernameEl) {
+        usernameEl.textContent = config.AdminNickName;
+      }
     }
 
     // Store config globally for use in reports
@@ -3339,13 +3365,19 @@ function showAllStudents() {
 }
 
 // Add event listeners to upload buttons
-document.getElementById("uploadWrittenBtn").addEventListener("click", () => {
-  showUploadModal("K");
-});
+const uploadWrittenBtn = document.getElementById("uploadWrittenBtn");
+if (uploadWrittenBtn) {
+  uploadWrittenBtn.addEventListener("click", () => {
+    showUploadModal("K");
+  });
+}
 
-document.getElementById("uploadElectronicBtn").addEventListener("click", () => {
-  showUploadModal("E");
-});
+const uploadElectronicBtn = document.getElementById("uploadElectronicBtn");
+if (uploadElectronicBtn) {
+  uploadElectronicBtn.addEventListener("click", () => {
+    showUploadModal("E");
+  });
+}
 
 function scrollReportCardIntoView() {
   const reportCard = document.getElementById("reportCard");

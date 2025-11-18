@@ -1156,6 +1156,13 @@ document.addEventListener("DOMContentLoaded", () => {
           return;
         }
 
+        const actor = String(result.actor || "admin").toLowerCase();
+
+        if (actor === "recipient") {
+          window.location.href = "Recipient/";
+          return;
+        }
+
         try {
           appConfig = await loadConfig();
         } catch (configError) {

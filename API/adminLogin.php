@@ -6,6 +6,7 @@ header('Content-Type: application/json; charset=utf-8');
 require_once __DIR__ . '/../includes/license_guard.php';
 require_once __DIR__ . '/../includes/csrf_protection.php';
 require_once __DIR__ . '/../includes/admin_session.php';
+require_once __DIR__ . '/../includes/recipient_session.php';
 require_once __DIR__ . '/../includes/audit_log.php';
 require_once 'db_init.php';
 
@@ -95,10 +96,19 @@ if (session_status() !== PHP_SESSION_ACTIVE) {
 }
 session_regenerate_id(true);
 
-admin_session_set($pdo, [
-    'username' => $canonicalUsername,
-    'actor' => $isAdminAttempt ? 'admin' : 'recipient',
-]);
+if ($isAdminAttempt) {
+    recipient_session_clear();
+    admin_session_set($pdo, [
+        'username' => $canonicalUsername,
+        'actor' => 'admin',
+    ]);
+} else {
+    admin_session_clear();
+    recipient_session_set($pdo, [
+        'username' => $canonicalUsername,
+        'actor' => 'recipient',
+    ]);
+}
 
 $missing = [];
 if ($isAdminAttempt) {
@@ -118,6 +128,7 @@ echo json_encode([
     'success' => true,
     'username' => $canonicalUsername,
     'displayName' => $displayName,
+    'actor' => $isAdminAttempt ? 'admin' : 'recipient',
     'missingFields' => $missing,
     'ttlSeconds' => ADMIN_SESSION_TTL,
 ], JSON_UNESCAPED_UNICODE);

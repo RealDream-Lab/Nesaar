@@ -6,7 +6,7 @@ if (session_status() === PHP_SESSION_NONE) {
 
 require_once __DIR__ . '/../includes/license_guard.php';
 require_once __DIR__ . '/../includes/csrf_protection.php';
-require_once __DIR__ . '/../includes/admin_session.php';
+require_once __DIR__ . '/../includes/privileged_session.php';
 require_once __DIR__ . '/db_init.php';
 
 header('Content-Type: application/json; charset=utf-8');
@@ -22,7 +22,7 @@ if ($licenseStatus['valid'] !== true) {
     exit;
 }
 
-$session = admin_session_require($pdo);
+$session = privileged_session_require($pdo);
 
 // Get exam date and time from query parameters
 $examDate = $_GET['exam_date'] ?? '';
@@ -35,9 +35,9 @@ if (empty($examDate) || empty($examTime)) {
 
 try {
     // Get all courses with this date and time with student count
-        // Get all courses with this date and time with student count
-        // exam_type is now stored per-seat in exam_seats; derive a course-level value from seats (if any)
-        $stmt = $pdo->prepare("
+    // Get all courses with this date and time with student count
+    // exam_type is now stored per-seat in exam_seats; derive a course-level value from seats (if any)
+    $stmt = $pdo->prepare("
             SELECT 
                 c.course_code, 
                 c.course_name, 
@@ -52,7 +52,7 @@ try {
             GROUP BY c.course_code, c.course_name, c.exam_date, c.exam_time, c.course_type
             ORDER BY c.course_code
         ");
-        $stmt = $pdo->prepare("
+    $stmt = $pdo->prepare("
             SELECT 
                 c.course_code, 
                 c.course_name, 
@@ -69,16 +69,16 @@ try {
         ");
     $stmt->execute([$examDate, $examTime]);
     $courses = $stmt->fetchAll(PDO::FETCH_ASSOC);
-    
+
     if (empty($courses)) {
         echo json_encode(['error' => 'آزمونی با این تاریخ و ساعت یافت نشد'], JSON_UNESCAPED_UNICODE);
         exit;
     }
-    
+
     // Get all course codes for this exam time
-    $courseCodes = array_column($courses, 'course_code');
+    $courseCodes  = array_column($courses, 'course_code');
     $placeholders = str_repeat('?,', count($courseCodes) - 1) . '?';
-    
+
     // Get all students for these courses with seat info
     $stmt = $pdo->prepare("
         SELECT 
@@ -103,7 +103,7 @@ try {
     ");
     $stmt->execute($courseCodes);
     $students = $stmt->fetchAll(PDO::FETCH_ASSOC);
-    
+
     // Compute counts grouped by course_type for the header breakdown
     $courseTypeCounts = [];
     try {
@@ -111,7 +111,7 @@ try {
         $ctStmt->execute([$examDate, $examTime]);
         $rows = $ctStmt->fetchAll(PDO::FETCH_ASSOC);
         foreach ($rows as $r) {
-            $type = trim($r['course_type']) ?: 'نامشخص';
+            $type                    = trim($r['course_type']) ?: 'نامشخص';
             $courseTypeCounts[$type] = (int)$r['cnt'];
         }
     } catch (Exception $e) {
@@ -126,7 +126,7 @@ try {
         $etStmt->execute([$examDate, $examTime]);
         $erows = $etStmt->fetchAll(PDO::FETCH_ASSOC);
         foreach ($erows as $r) {
-            $type = trim($r['exam_type']) ?: 'نامشخص';
+            $type                  = trim($r['exam_type']) ?: 'نامشخص';
             $examTypeCounts[$type] = (int)$r['cnt'];
         }
     } catch (Exception $e) {
@@ -142,7 +142,7 @@ try {
         'courseTypeCounts' => $courseTypeCounts,
         'examTypeCounts' => $examTypeCounts
     ], JSON_UNESCAPED_UNICODE);
-    
+
 } catch (PDOException $e) {
     http_response_code(500);
     echo json_encode(['error' => 'خطا در دریافت اطلاعات: ' . $e->getMessage()], JSON_UNESCAPED_UNICODE);

@@ -21,9 +21,9 @@ if ($license['valid'] !== true) {
     license_guard_respond_forbidden($license['message'] ?? 'License validation failed');
 }
 
-$session = admin_session_get($pdo);
+$session = recipient_session_get($pdo);
 if ($session) {
-    audit_log_auth($pdo, 'admin_logout', true, (string)($session['username'] ?? 'admin'));
+    audit_log_auth($pdo, 'recipient_logout', true, (string)($session['username'] ?? 'Recipient'));
 }
 
 if (session_status() !== PHP_SESSION_ACTIVE) {
@@ -33,7 +33,7 @@ $_SESSION = [];
 session_regenerate_id(true);
 session_destroy();
 
-admin_session_clear();
 recipient_session_clear();
+admin_session_clear();
 
 echo json_encode(['success' => true], JSON_UNESCAPED_UNICODE);

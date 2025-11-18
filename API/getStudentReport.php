@@ -6,7 +6,7 @@ if (session_status() === PHP_SESSION_NONE) {
 
 require_once __DIR__ . '/../includes/license_guard.php';
 require_once __DIR__ . '/../includes/csrf_protection.php';
-require_once __DIR__ . '/../includes/admin_session.php';
+require_once __DIR__ . '/../includes/privileged_session.php';
 require_once __DIR__ . '/db_init.php';
 
 header('Content-Type: application/json; charset=utf-8');
@@ -22,7 +22,7 @@ if ($licenseStatus['valid'] !== true) {
     exit;
 }
 
-$session = admin_session_require($pdo);
+$session = privileged_session_require($pdo);
 
 // Get student ID from query parameter
 $studentId = $_GET['student_id'] ?? '';
@@ -42,12 +42,12 @@ try {
     ");
     $stmt->execute([$studentId]);
     $student = $stmt->fetch(PDO::FETCH_ASSOC);
-    
+
     if (!$student) {
         echo json_encode(['error' => 'دانشجویی با این شماره یافت نشد'], JSON_UNESCAPED_UNICODE);
         exit;
     }
-    
+
     // Get student exams with seat and course info
     $stmt = $pdo->prepare("
         SELECT 
@@ -68,13 +68,13 @@ try {
     ");
     $stmt->execute([$studentId]);
     $exams = $stmt->fetchAll(PDO::FETCH_ASSOC);
-    
+
     echo json_encode([
         'success' => true,
         'student' => $student,
         'exams' => $exams
     ], JSON_UNESCAPED_UNICODE);
-    
+
 } catch (PDOException $e) {
     http_response_code(500);
     echo json_encode(['error' => 'خطا در دریافت اطلاعات: ' . $e->getMessage()], JSON_UNESCAPED_UNICODE);
