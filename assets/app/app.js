@@ -66,6 +66,11 @@ document.addEventListener("DOMContentLoaded", () => {
   const nationalIdInput = document.getElementById("nationalId");
   const loginRow = document.getElementById("loginRow");
   const loginSection = document.getElementById("loginSection");
+  const staffRadioWrapper = document.querySelector('[data-role="staff-radio"]');
+  const captchaContainer = document.getElementById("captchaContainer");
+  const captchaQuestion = document.getElementById("captchaQuestion");
+  const captchaAnswerInput = document.getElementById("captchaAnswer");
+  const captchaTokenInput = document.getElementById("captchaToken");
   const footerClock = document.getElementById("footerClock");
   const footerSpacer = document.querySelector(".footer-spacer");
   const REFRESH_INTERVAL_MS = 60000;
@@ -92,6 +97,8 @@ document.addEventListener("DOMContentLoaded", () => {
   let coworkerStats = null;
   let coworkerProfile = null;
   let coworkerCredentials = null;
+  let staffRadioHidden = false;
+  let suppressUserTypePersistence = false;
 
   async function handleLicenseGuardResponse(response) {
     if (response.status !== 403) return;
@@ -345,6 +352,7 @@ document.addEventListener("DOMContentLoaded", () => {
   function handleUserTypeChange() {
     studentIdInput.value = "";
     nationalIdInput.value = "";
+    const persistChanges = !suppressUserTypePersistence;
 
     if (studentTypeRadio.checked) {
       firstFieldLabel.textContent = "شماره دانشجویی";
@@ -357,7 +365,9 @@ document.addEventListener("DOMContentLoaded", () => {
       nationalIdInput.type = "tel";
       nationalIdInput.inputMode = "numeric";
       nationalIdInput.autocomplete = "off";
-      localStorage.setItem("userType", "student");
+      if (persistChanges) {
+        localStorage.setItem("userType", "student");
+      }
     } else if (staffTypeRadio?.checked) {
       firstFieldLabel.textContent = "نام کاربری";
       secondFieldLabel.textContent = "رمز عبور";
@@ -369,7 +379,9 @@ document.addEventListener("DOMContentLoaded", () => {
       nationalIdInput.type = "password";
       nationalIdInput.inputMode = "text";
       nationalIdInput.autocomplete = "current-password";
-      localStorage.setItem("userType", "staff");
+      if (persistChanges) {
+        localStorage.setItem("userType", "staff");
+      }
     } else if (coworkerTypeRadio?.checked) {
       firstFieldLabel.textContent = "نام کاربری";
       secondFieldLabel.textContent = "رمز عبور";
@@ -381,8 +393,50 @@ document.addEventListener("DOMContentLoaded", () => {
       nationalIdInput.type = "password";
       nationalIdInput.inputMode = "text";
       nationalIdInput.autocomplete = "current-password";
-      localStorage.setItem("userType", "coworker");
+      if (persistChanges) {
+        localStorage.setItem("userType", "coworker");
+      }
     }
+
+    if (!staffTypeRadio?.checked) {
+      hideCaptchaChallenge();
+    }
+
+    suppressUserTypePersistence = false;
+  }
+
+  function shouldHideStaffRadio() {
+    const ua = (navigator.userAgent || "").toLowerCase();
+    const mobileUA = /android|iphone|ipad|ipod|mobile/.test(ua);
+    const coarsePointer = window.matchMedia("(pointer: coarse)").matches;
+    const narrowViewport = window.matchMedia("(max-width: 991px)").matches;
+    const desktopViewport = window.matchMedia("(min-width: 992px)").matches;
+    return !desktopViewport && (mobileUA || coarsePointer || narrowViewport);
+  }
+
+  function enforceStaffOptionVisibility() {
+    const previousState = staffRadioHidden;
+    const hide = shouldHideStaffRadio();
+    staffRadioHidden = hide;
+
+    if (hide) {
+      if (staffRadioWrapper) {
+        staffRadioWrapper.classList.add("d-none");
+      }
+      if (staffTypeRadio) {
+        staffTypeRadio.checked = false;
+        staffTypeRadio.disabled = true;
+      }
+    } else {
+      if (staffRadioWrapper) {
+        staffRadioWrapper.classList.remove("d-none");
+      }
+      if (staffTypeRadio) {
+        staffTypeRadio.disabled = false;
+      }
+    }
+
+    return previousState !== hide;
   }
 
   studentTypeRadio.addEventListener("change", handleUserTypeChange);
@@ -393,9 +447,16 @@ document.addEventListener("DOMContentLoaded", () => {
     coworkerTypeRadio.addEventListener("change", handleUserTypeChange);
   }
 
+  enforceStaffOptionVisibility();
+
   const savedUserType = localStorage.getItem("userType");
-  if (savedUserType === "staff" && staffTypeRadio) {
-    staffTypeRadio.checked = true;
+  if (savedUserType === "staff") {
+    if (staffTypeRadio && !staffRadioHidden) {
+      staffTypeRadio.checked = true;
+    } else {
+      suppressUserTypePersistence = true;
+      studentTypeRadio.checked = true;
+    }
   } else if (savedUserType === "coworker" && coworkerTypeRadio) {
     coworkerTypeRadio.checked = true;
   } else {
@@ -403,6 +464,25 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   handleUserTypeChange();
+
+  window.addEventListener("resize", () => {
+    if (enforceStaffOptionVisibility()) {
+      if (staffRadioHidden) {
+        suppressUserTypePersistence = true;
+        studentTypeRadio.checked = true;
+      } else {
+        const activePreference = localStorage.getItem("userType");
+        if (activePreference === "staff" && staffTypeRadio) {
+          staffTypeRadio.checked = true;
+        } else if (activePreference === "coworker" && coworkerTypeRadio) {
+          coworkerTypeRadio.checked = true;
+        } else {
+          studentTypeRadio.checked = true;
+        }
+      }
+      handleUserTypeChange();
+    }
+  });
 
   updateServerClock().then(() => {
     try {
@@ -1107,6 +1187,46 @@ document.addEventListener("DOMContentLoaded", () => {
     document.body.classList.add("login-active");
   }
 
+  function showCaptchaChallenge(challenge) {
+    if (!captchaContainer || !challenge) {
+      return;
+    }
+    captchaContainer.classList.remove("d-none");
+    if (captchaQuestion) {
+      captchaQuestion.textContent = challenge.question || "؟";
+    }
+    if (captchaTokenInput) {
+      captchaTokenInput.value = challenge.token || "";
+    }
+    if (captchaAnswerInput) {
+      captchaAnswerInput.value = "";
+      captchaAnswerInput.focus({ preventScroll: true });
+    }
+  }
+
+  function hideCaptchaChallenge() {
+    if (captchaContainer) {
+      captchaContainer.classList.add("d-none");
+    }
+    if (captchaQuestion) {
+      captchaQuestion.textContent = "";
+    }
+    if (captchaTokenInput) {
+      captchaTokenInput.value = "";
+    }
+    if (captchaAnswerInput) {
+      captchaAnswerInput.value = "";
+    }
+  }
+
+  function handleCaptchaFromResponse(result) {
+    if (result?.captchaRequired && result?.captcha) {
+      showCaptchaChallenge(result.captcha);
+    } else if (!result?.captchaRequired) {
+      hideCaptchaChallenge();
+    }
+  }
+
   function clearResults() {
     if (examCards) examCards.textContent = "";
     lastPayload = [];
@@ -1142,20 +1262,32 @@ document.addEventListener("DOMContentLoaded", () => {
         return;
       }
 
+      const captchaPayload = {
+        captchaToken: captchaTokenInput?.value || "",
+        captchaAnswer: toEnglishDigits(captchaAnswerInput?.value || "").trim(),
+      };
+
       try {
         const response = await secureFetch("API/adminLogin.php", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ username, password }),
+          body: JSON.stringify({
+            username,
+            password,
+            captchaToken: captchaPayload.captchaToken,
+            captchaAnswer: captchaPayload.captchaAnswer,
+          }),
         });
 
         const result = await response.json();
+        handleCaptchaFromResponse(result);
         if (!response.ok || !result.success) {
           const message = result?.error || "نام کاربری یا رمز عبور اشتباه است.";
           showAlert("error", "ورود ناموفق", message);
           return;
         }
 
+        hideCaptchaChallenge();
         const actor = String(result.actor || "admin").toLowerCase();
 
         if (actor === "recipient") {

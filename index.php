@@ -71,7 +71,7 @@ if ($licenseStatus['valid'] !== true) {
                       <input class="form-check-input" type="radio" name="userType" id="studentType" value="student"
                         checked>
                     </div>
-                    <div class="form-check form-check-inline">
+                    <div class="form-check form-check-inline" data-role="staff-radio">
                       <label class="form-check-label" for="staffType">
                         همکار
                       </label>
@@ -94,6 +94,16 @@ if ($licenseStatus['valid'] !== true) {
                     <label for="nationalId" class="form-label" id="secondFieldLabel">کد ملی / شماره شناسنامه</label>
                     <input type="tel" class="form-control form-control-lg text-center" id="nationalId"
                       placeholder="مثال: 3781985569" inputmode="numeric" />
+                  </div>
+                  <div class="mb-4 d-none" id="captchaContainer" aria-live="polite">
+                    <label for="captchaAnswer" class="form-label mb-2">تأیید امنیتی</label>
+                    <div class="captcha-challenge-box mb-2">
+                      <span id="captchaQuestion">؟</span>
+                    </div>
+                    <input type="text" class="form-control form-control-lg text-center" id="captchaAnswer"
+                      placeholder="عدد حاصل را بنویسید" inputmode="numeric" autocomplete="off" />
+                    <input type="hidden" id="captchaToken" />
+                    <small class="d-block mt-2">برای ادامه نتیجه جمع نمایش داده شده را وارد کنید.</small>
                   </div>
                   <div class="d-grid">
                     <button type="submit" class="btn btn-primary btn-lg" id="searchBtn">

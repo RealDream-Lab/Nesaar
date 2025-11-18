@@ -247,7 +247,7 @@ try {
 
                     <div class="row g-2" style="margin-top:0.8rem;">
                         <div class="col-12 col-md-4">
-                            <button id="assignScatteredBtn" class="btn btn-upload w-100">چینش خودکار مراقبین و عوامل
+                            <button id="assignScatteredBtn" class="btn btn-upload w-100">چینش خودکار عوامل
                                 اجرائی به صورت
                                 پراکنده</button>
                         </div>

@@ -48,7 +48,7 @@ if ($licenseStatus['valid'] !== true) {
                         <div class="admin-info" style="margin-right:24px;">
                             <div>
                                 <h5 class="mb-0">خوش آمدید</h5>
-                                   <small class="text-muted" id="adminUsername">مدیر سیستم</small>
+                                <small class="text-muted" id="adminUsername">مدیر سیستم</small>
                             </div>
                         </div>
                     </div>
