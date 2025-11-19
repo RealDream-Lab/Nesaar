@@ -6714,6 +6714,12 @@ function renderInsightCards(stats) {
     `;
 
     card.addEventListener("click", () => {
+      // Scroll to report card
+      const reportCard = document.getElementById("reportCard");
+      if (reportCard) {
+        reportCard.scrollIntoView({ behavior: "smooth", block: "start" });
+      }
+
       const type = def.category;
       const matches = entry.matches || [];
 
