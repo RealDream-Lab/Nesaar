@@ -17,11 +17,20 @@ if (!$input || !is_array($input)) {
 
 // Allow only specific config keys to be written via this endpoint
 // Note: GroupByCourse is a YES/NO toggle used for report grouping preferences
-$allowed = ['AdminNickName', 'BossNickName', 'HeadOfEDU', 'Chairman', 'GroupByCourse', 'PaperSaving'];
+$allowed = [
+    'AdminNickName',
+    'BossNickName',
+    'HeadOfEDU',
+    'Chairman',
+    'GroupByCourse',
+    'PaperSaving',
+    'ObserversLastCard'
+];
 
 $toSave = [];
 foreach ($allowed as $k) {
-    if (!array_key_exists($k, $input)) continue; // skip keys not provided
+    if (!array_key_exists($k, $input))
+        continue; // skip keys not provided
 
     if ($k === 'GroupByCourse' || $k === 'PaperSaving') {
         // Normalize any value to strict YES/NO (default NO)
@@ -31,6 +40,25 @@ foreach ($allowed as $k) {
             $val = 'NO';
         }
         $toSave[$k] = $val; // always save toggle even if NO
+        continue;
+    }
+
+    if ($k === 'ObserversLastCard') {
+        $raw = is_string($input[$k]) ? trim($input[$k]) : '';
+        if ($raw === '') {
+            continue;
+        }
+        $allowedCards = [
+            'sessionStatsCard',
+            'locationsCard',
+            'examsDetailCard',
+            'proctorsCard',
+            'assignmentCard'
+        ];
+        if (!in_array($raw, $allowedCards, true)) {
+            continue;
+        }
+        $toSave[$k] = $raw;
         continue;
     }
 

@@ -65,7 +65,8 @@ if ($licenseStatus['valid'] !== true) {
                                 style="width:40px;height:40px;object-fit:contain;display:block;padding: 2px;">
                         </button>
 
-                        <button id="proctorProfilesBtn" class="btn btn-icon p-0" type="button" title="مشخصات مراقبین"
+                        <button id="proctorProfilesBtn" class="btn btn-icon p-0" type="button"
+                            title="ماژول مراقبین و عوامل اجرائی"
                             style="background:transparent;border:none;margin-inline-end:8px;padding:0;">
                             <img src="/dashboard/observers/users.png" alt="مشخصات مراقبین"
                                 style="width:40px;height:40px;object-fit:contain;display:block;margin-bottom: 5px;">

@@ -61,6 +61,92 @@
     return window.fetch(input, opts);
   }
 
+  const OBSERVERS_CARD_IDS = new Set([
+    "sessionStatsCard",
+    "locationsCard",
+    "examsDetailCard",
+    "proctorsCard",
+    "assignmentCard",
+  ]);
+  let observersStoredCardPreference = null;
+  let observersPreferenceApplied = false;
+  let observersCurrentVisibleCard = null;
+  let observersPersistedCardId = null;
+  let observersCardPersistTimer = null;
+  let observersCardPendingValue = null;
+
+  function normalizeObserversCardId(cardId) {
+    if (typeof cardId !== "string") return "";
+    const trimmed = cardId.trim();
+    if (!trimmed) return "";
+    return OBSERVERS_CARD_IDS.has(trimmed) ? trimmed : "";
+  }
+
+  function primeObserversCardPreference(cardId) {
+    const normalized = normalizeObserversCardId(cardId);
+    if (!normalized) return;
+    observersStoredCardPreference = normalized;
+    observersPersistedCardId = normalized;
+    observersPreferenceApplied = false;
+  }
+
+  function getObserversCardPreference() {
+    return observersStoredCardPreference;
+  }
+
+  function hasAppliedObserversCardPreference() {
+    return observersPreferenceApplied;
+  }
+
+  function markObserversCardPreferenceApplied() {
+    observersPreferenceApplied = true;
+  }
+
+  function handleCardVisibilityChange(cardId) {
+    const normalized = normalizeObserversCardId(cardId);
+    if (!normalized || observersCurrentVisibleCard === normalized) {
+      return;
+    }
+    observersCurrentVisibleCard = normalized;
+    scheduleObserversCardPersist(normalized);
+  }
+
+  function scheduleObserversCardPersist(cardId) {
+    if (!cardId) return;
+    if (observersPersistedCardId === cardId) return;
+    observersCardPendingValue = cardId;
+    if (observersCardPersistTimer) {
+      clearTimeout(observersCardPersistTimer);
+    }
+    observersCardPersistTimer = window.setTimeout(() => {
+      observersCardPersistTimer = null;
+      flushObserversCardPersist();
+    }, 800);
+  }
+
+  async function flushObserversCardPersist() {
+    const pending = normalizeObserversCardId(observersCardPendingValue);
+    observersCardPendingValue = null;
+    if (!pending || observersPersistedCardId === pending) {
+      return;
+    }
+    try {
+      const resp = await csrfFetch("/API/saveConfig.php", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json; charset=utf-8",
+        },
+        body: JSON.stringify({ ObserversLastCard: pending }),
+      });
+      const json = await resp.json().catch(() => ({}));
+      if (resp && resp.ok && json && json.success) {
+        observersPersistedCardId = pending;
+      }
+    } catch (err) {
+      console.warn("Failed to persist observers last card", err);
+    }
+  }
+
   const PROCTOR_CHIP_STYLE_ID = "ns-proctor-chip-style";
 
   function ensureProctorChipStyles() {
@@ -371,6 +457,9 @@
           if (cfg && cfg.University) {
             const ft = document.getElementById("footerText");
             if (ft) ft.textContent = `نسار - ${cfg.University}`;
+          }
+          if (cfg && cfg.ObserversLastCard) {
+            primeObserversCardPreference(cfg.ObserversLastCard);
           }
         }
       } catch (configErr) {
@@ -960,8 +1049,62 @@
   }
 
   document.addEventListener("DOMContentLoaded", function () {
+    async function loadCardDataFor(cardId) {
+      try {
+        switch (cardId) {
+          case "locationsCard":
+            if (typeof loadLocations === "function") {
+              await loadLocations();
+            }
+            break;
+          case "examsDetailCard":
+            if (typeof loadExamsDetail === "function") {
+              await loadExamsDetail();
+            }
+            break;
+          case "proctorsCard":
+            if (typeof loadProctors === "function") {
+              await loadProctors();
+            }
+            break;
+          case "assignmentCard":
+            if (typeof loadAssignmentSummary === "function") {
+              await loadAssignmentSummary();
+            }
+            break;
+          case "sessionStatsCard":
+            if (typeof renderSessionStatsCard === "function") {
+              await renderSessionStatsCard();
+            }
+            break;
+          default:
+            break;
+        }
+      } catch (err) {
+        console.warn("loadCardDataFor failed", cardId, err);
+      }
+    }
+
+    async function applyStoredObserversCardPreferenceIfAvailable() {
+      if (hasAppliedObserversCardPreference()) return false;
+      const desired = normalizeObserversCardId(getObserversCardPreference());
+      if (!desired) return false;
+      const card = document.getElementById(desired);
+      if (!card) return false;
+      showOnlyCard(desired);
+      await loadCardDataFor(desired);
+      try {
+        card.scrollIntoView({ behavior: "smooth", block: "start" });
+      } catch (e) {
+        /* ignore */
+      }
+      markObserversCardPreferenceApplied();
+      return true;
+    }
+
     checkAuthAndRedirect().then((ok) => {
       if (ok) {
+        applyStoredObserversCardPreferenceIfAvailable().catch(() => {});
         // after auth, check locations table
         (async function checkLocations() {
           try {
@@ -1727,6 +1870,7 @@
           document.querySelectorAll(".dashboard-card.module-card")
         );
         let anyVisible = false;
+        let finalCardId = null;
         cards.forEach((c) => {
           try {
             if (!cardId) {
@@ -1750,6 +1894,7 @@
                 /* ignore */
               }
               anyVisible = true;
+              finalCardId = cardId;
             } else {
               // hide other cards
               try {
@@ -1780,6 +1925,7 @@
               } catch (e) {
                 /* ignore */
               }
+              finalCardId = "sessionStatsCard";
             }
           } catch (e) {
             /* ignore */
@@ -1788,6 +1934,11 @@
 
         if (cardId === "proctorsCard" && anyVisible) {
           ensureProctorsChangeWarning();
+        }
+
+        const resolvedCardId = normalizeObserversCardId(finalCardId);
+        if (resolvedCardId) {
+          handleCardVisibilityChange(resolvedCardId);
         }
       } catch (e) {
         /* ignore */
