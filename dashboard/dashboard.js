@@ -1468,9 +1468,14 @@ try {
                 await renderReportsChart();
                 // Scroll to top of stats cards after chart refresh
                 setTimeout(() => {
-                  const statsRow = document.querySelector('.dashboard-container .row');
+                  const statsRow = document.querySelector(
+                    ".dashboard-container .row"
+                  );
                   if (statsRow) {
-                    statsRow.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                    statsRow.scrollIntoView({
+                      behavior: "smooth",
+                      block: "start",
+                    });
                   }
                 }, 500);
               } catch (e) {
