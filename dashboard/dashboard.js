@@ -6614,6 +6614,18 @@ async function printEssentialsTest() {
   }
 }
 
+function scrollToReportCardWithRetry(maxRetries = 10) {
+  const reportCard = document.getElementById("reportCard");
+  if (
+    reportCard &&
+    (reportCard.offsetHeight > 0 || reportCard.style.display !== "none")
+  ) {
+    reportCard.scrollIntoView({ behavior: "smooth", block: "start" });
+  } else if (maxRetries > 0) {
+    setTimeout(() => scrollToReportCardWithRetry(maxRetries - 1), 100);
+  }
+}
+
 function renderInsightCards(stats) {
   const insightContainer = document.getElementById("insightCardsContainer");
   if (!insightContainer || !stats.quickInsights) return;
@@ -6714,11 +6726,8 @@ function renderInsightCards(stats) {
     `;
 
     card.addEventListener("click", () => {
-      // Scroll to report card
-      const reportCard = document.getElementById("reportCard");
-      if (reportCard) {
-        reportCard.scrollIntoView({ behavior: "smooth", block: "start" });
-      }
+      // Scroll to report card with retry for slow networks
+      scrollToReportCardWithRetry();
 
       const type = def.category;
       const matches = entry.matches || [];

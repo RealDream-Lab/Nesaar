@@ -57,11 +57,6 @@ if ($licenseStatus['valid'] !== true) {
                             <img src="/dashboard/home.png" alt="بازگشت به داشبورد"
                                 style="width:40px;height:40px;object-fit:contain;display:block;">
                         </button>
-                        <button id="infoStatsBtn" class="btn btn-icon p-0" type="button" title="اطلاعات و آمار"
-                            style="background:transparent;border:none;margin-inline-end:8px;padding:0;">
-                            <img src="/dashboard/statices.png" alt="اطلاعات و آمار"
-                                style="width:40px;height:40px;object-fit:contain;display:block;padding: 2px;">
-                        </button>
                         <button id="proctorNoticeBtn" class="btn btn-icon p-0" type="button" title="ابلاغ مراقبین"
                             style="background:transparent;border:none;margin-inline-end:8px;padding:0;">
                             <img src="/dashboard/observers/calendar.png" alt="ابلاغ مراقبین"
@@ -129,6 +124,10 @@ if ($licenseStatus['valid'] !== true) {
                 </div>
             </div>
         </div>
+
+        <!-- Insight Cards -->
+        <div class="row" id="insightCardsContainer"></div>
+
     </div>
 
     <!-- Fixed Footer -->
