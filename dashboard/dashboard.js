@@ -1466,18 +1466,11 @@ try {
               // Ensure chart is refreshed
               try {
                 await renderReportsChart();
-                // Scroll to top of stats cards (below header) after chart refresh
+                // Scroll to top of stats cards after chart refresh
                 setTimeout(() => {
-                  const statCard = document.querySelector(".stat-card");
-                  if (statCard) {
-                    const row = statCard.closest(".row");
-                    if (row) {
-                      const rect = row.getBoundingClientRect();
-                      const scrollTop =
-                        window.pageYOffset || document.documentElement.scrollTop;
-                      const targetTop = rect.top + scrollTop - 10;
-                      window.scrollTo({ top: targetTop, behavior: "smooth" });
-                    }
+                  const statsRow = document.querySelector('.dashboard-container .row');
+                  if (statsRow) {
+                    statsRow.scrollIntoView({ behavior: 'smooth', block: 'start' });
                   }
                 }, 500);
               } catch (e) {
