@@ -1465,6 +1465,13 @@ try {
               // Ensure chart is refreshed
               try {
                 await renderReportsChart();
+                // Scroll to top below header after chart refresh
+                setTimeout(() => {
+                  const header = document.querySelector(".dashboard-header");
+                  const headerHeight = header ? Math.ceil(header.getBoundingClientRect().height) : 0;
+                  const extraGap = 12;
+                  window.scrollTo({ top: headerHeight + extraGap, behavior: 'smooth' });
+                }, 100);
               } catch (e) {
                 console.error("Chart refresh failed after update:", e);
               }
