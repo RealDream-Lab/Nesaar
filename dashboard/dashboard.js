@@ -1134,14 +1134,7 @@ try {
           valueKey: "student_count",
           unit: "نفر",
         },
-        {
-          key: "maxElectronic",
-          label: "بیشترین تعداد الکترونیکی",
-          category: "session",
-          variant: "insight-electronic",
-          valueKey: "student_count",
-          unit: "نفر",
-        },
+        // 'maxElectronic' card removed as requested
       ];
 
       try {
