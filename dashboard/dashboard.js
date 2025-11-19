@@ -6598,7 +6598,7 @@ async function printEssentialsTest() {
   }
 }
 
-function scrollToReportCardWithRetry(maxRetries = 10) {
+function scrollToReportCardWithRetry(maxRetries = 20) {
   const reportCard = document.getElementById("reportCard");
   if (
     reportCard &&
@@ -6636,7 +6636,7 @@ function renderInsightCards(stats) {
     {
       key: "maxCourseFrequency",
       label: "بیشترین تعداد درس در جلسه",
-      category: "session",
+      category: "course",
       variant: "insight-course",
       valueKey: "course_count",
       unit: "درس",
@@ -6726,9 +6726,9 @@ function renderInsightCards(stats) {
           });
         }
         if (typeof showNextExamReport === "function") showNextExamReport();
-      } else if (type === "course" && entry.course_code) {
+      } else if (type === "course" && (entry.course_code || entry.sample_course_code)) {
         if (typeof loadCourseReportByCode === "function")
-          loadCourseReportByCode(entry.course_code, { showErrors: true });
+          loadCourseReportByCode(entry.course_code || entry.sample_course_code, { showErrors: true });
       }
     });
 
