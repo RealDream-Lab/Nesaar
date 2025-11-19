@@ -175,6 +175,34 @@
     }
   }
 
+  async function persistObserversLastCardImmediate(cardId) {
+    const normalized = normalizeObserversCardId(cardId);
+    if (!normalized) return false;
+    try {
+      window.localStorage.setItem(OBSERVERS_LOCAL_PREF_KEY, normalized);
+    } catch (err) {
+      /* ignore localStorage issues */
+    }
+    observersStoredCardPreference = normalized;
+    try {
+      const resp = await csrfFetch("/API/saveConfig.php", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json; charset=utf-8",
+        },
+        body: JSON.stringify({ ObserversLastCard: normalized }),
+      });
+      const json = await resp.json().catch(() => ({}));
+      if (resp && resp.ok && json && json.success) {
+        observersPersistedCardId = normalized;
+        return true;
+      }
+    } catch (err) {
+      console.warn("persistObserversLastCardImmediate failed", err);
+    }
+    return false;
+  }
+
   const PROCTOR_CHIP_STYLE_ID = "ns-proctor-chip-style";
 
   function ensureProctorChipStyles() {
@@ -448,39 +476,18 @@
         }
       } catch (e) {}
       spinner.style.display = "flex";
-      // safety: hide spinner after a longer timeout if something goes wrong
-      // also provide a visible inline hint and try to close any lingering Swal
+      // safety: hide spinner after 8s if something goes wrong
       sessionStatsSpinnerTimeout = setTimeout(() => {
         try {
           if (spinner && spinner.style.display !== "none") {
             spinner.style.display = "none";
             console.warn("sessionStatsChart spinner hidden by safety timeout");
           }
-          try {
-            const cont = document.getElementById("sessionStatsContent");
-            if (cont) {
-              cont.innerHTML =
-                '<div style="padding:1rem;color:var(--text-muted);direction:rtl;text-align:right">بارگذاری طولانی شد — لطفاً صفحه را مجدداً بارگذاری کنید یا کنسول مرورگر را برای جزئیات خطا بررسی کنید.</div>';
-            }
-          } catch (ie) {
-            /* ignore inline hint errors */
-          }
-          try {
-            if (
-              typeof Swal !== "undefined" &&
-              Swal &&
-              typeof Swal.close === "function"
-            ) {
-              Swal.close();
-            }
-          } catch (se) {
-            /* ignore Swal close errors */
-          }
         } catch (e) {
           /* ignore */
         }
         sessionStatsSpinnerTimeout = null;
-      }, 20000);
+      }, 8000);
     }
     try {
       const sessionResp = await csrfFetch("/API/adminSession.php", {
@@ -871,6 +878,7 @@
           });
           return;
         }
+        const allSessionsFilled = !j2.unfilled_count;
         // success — refresh assignment summary UI
         await Swal.fire({
           icon: "success",
@@ -882,6 +890,15 @@
             : "تمام جلسات تخصیص داده شدند.",
           customClass: { popup: "swal2-rtl swal2-glass" },
         });
+        if (allSessionsFilled) {
+          try {
+            await persistObserversLastCardImmediate("sessionStatsCard");
+          } catch (persistErr) {
+            /* best effort */
+          }
+          window.location.href = "/dashboard";
+          return;
+        }
         try {
           if (typeof loadAssignmentSummary === "function")
             await loadAssignmentSummary();
@@ -889,9 +906,6 @@
           /* ignore */
         }
         try {
-          // Always show session stats after a successful apply so the user
-          // sees the updated overall state. renderSessionStatsCard handles
-          // failures gracefully and will show an inline hint on error.
           await focusSessionStatsCard();
         } catch (err) {
           /* ignore focus errors */
@@ -1073,6 +1087,7 @@
           });
           return;
         }
+        const allSessionsFilled = !j2.unfilled_count;
         await Swal.fire({
           icon: "success",
           title: "اعمال شد",
@@ -1083,6 +1098,15 @@
             : "تمام جلسات تخصیص داده شدند.",
           customClass: { popup: "swal2-rtl swal2-glass" },
         });
+        if (allSessionsFilled) {
+          try {
+            await persistObserversLastCardImmediate("sessionStatsCard");
+          } catch (persistErr) {
+            /* ignore */
+          }
+          window.location.href = "/dashboard";
+          return;
+        }
         try {
           if (typeof loadAssignmentSummary === "function")
             await loadAssignmentSummary();
@@ -1090,7 +1114,6 @@
           /* ignore */
         }
         try {
-          // Always focus the session stats card after successful apply.
           await focusSessionStatsCard();
         } catch (err) {
           /* ignore focus errors */
@@ -1196,15 +1219,6 @@
 
     checkAuthAndRedirect().then((ok) => {
       if (ok) {
-        // Hide the spinner and clear timeout since auth succeeded
-        const spinner = document.getElementById("sessionChartSpinner");
-        if (spinner) {
-          spinner.style.display = "none";
-        }
-        if (sessionStatsSpinnerTimeout) {
-          clearTimeout(sessionStatsSpinnerTimeout);
-          sessionStatsSpinnerTimeout = null;
-        }
         const appliedPromise =
           applyStoredObserversCardPreferenceIfAvailable().catch(() => {});
         appliedPromise.finally(() => {
@@ -3280,38 +3294,18 @@
         }
       } catch (e) {}
       spinner.style.display = "flex";
-      // safety: hide spinner after a longer timeout if something goes wrong while fetching many sessions
-      // show a helpful inline message and try to close any lingering Swal
+      // safety: hide spinner after 8s if something goes wrong while fetching many sessions
       sessionStatsSpinnerTimeout = setTimeout(() => {
         try {
           if (spinner && spinner.style.display !== "none") {
             spinner.style.display = "none";
             console.warn("sessionStatsChart spinner hidden by safety timeout");
           }
-          try {
-            if (container) {
-              container.innerHTML =
-                '<div style="padding:1rem;color:var(--text-muted);direction:rtl;text-align:right">بارگذاری طولانی شد — لطفاً صفحه را مجدداً بارگذاری کنید یا کنسول مرورگر را برای جزئیات خطا بررسی کنید.</div>';
-            }
-          } catch (ie) {
-            /* ignore inline hint errors */
-          }
-          try {
-            if (
-              typeof Swal !== "undefined" &&
-              Swal &&
-              typeof Swal.close === "function"
-            ) {
-              Swal.close();
-            }
-          } catch (se) {
-            /* ignore Swal close errors */
-          }
         } catch (e) {
           /* ignore */
         }
         sessionStatsSpinnerTimeout = null;
-      }, 20000);
+      }, 8000);
     }
 
     try {
