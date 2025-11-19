@@ -1157,9 +1157,11 @@ try {
 
             // sort donors by most over-assigned, recipients by most under-assigned
             usort($donors, function ($a, $b) use (&$assignedCount, &$targetCount) {
-                return ($assignedCount[$b] - $targetCount[$b]) <=> ($assignedCount[$a] - $targetCount[$a]); });
+                return ($assignedCount[$b] - $targetCount[$b]) <=> ($assignedCount[$a] - $targetCount[$a]);
+            });
             usort($recips, function ($a, $b) use (&$assignedCount, &$targetCount) {
-                return ($assignedCount[$a] - $targetCount[$a]) <=> ($assignedCount[$b] - $targetCount[$b]); });
+                return ($assignedCount[$a] - $targetCount[$a]) <=> ($assignedCount[$b] - $targetCount[$b]);
+            });
 
             $moved = false;
             foreach ($donors as $don) {
@@ -1168,7 +1170,8 @@ try {
                         continue;
                     // try donor's assignments, prefer morning slots to reduce afternoon disruption
                     usort($proctorAssignments[$don], function ($x, $y) use (&$assignmentsForOutput, &$isAfternoon) {
-                        return ($isAfternoon($assignmentsForOutput[$y]['exam_time']) ? 1 : 0) <=> ($isAfternoon($assignmentsForOutput[$x]['exam_time']) ? 1 : 0); });
+                        return ($isAfternoon($assignmentsForOutput[$y]['exam_time']) ? 1 : 0) <=> ($isAfternoon($assignmentsForOutput[$x]['exam_time']) ? 1 : 0);
+                    });
                     foreach ($proctorAssignments[$don] as $kidx => $ai) {
                         $a   = $assignmentsForOutput[$ai];
                         $key = $a['exam_date'] . '|' . $a['exam_time'];
