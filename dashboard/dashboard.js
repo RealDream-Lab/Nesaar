@@ -3142,7 +3142,7 @@ async function showStudentReport() {
       const reportCard = document.getElementById("reportCard");
       reportCard.style.display = "block";
       reportCard.classList.add("fade-in-up");
-      requestAnimationFrame(() => scrollToReportCardWithRetry());
+      setTimeout(() => scrollToReportCardWithRetry(), 500);
     } catch (error) {
       console.error("Error:", error);
       if (!error?.isLicenseError) {
@@ -3287,7 +3287,7 @@ async function loadCourseReportByCode(courseCode, options = {}) {
     const reportCard = document.getElementById("reportCard");
     reportCard.style.display = "block";
     reportCard.classList.add("fade-in-up");
-    requestAnimationFrame(() => scrollToReportCardWithRetry());
+    setTimeout(() => scrollToReportCardWithRetry(), 500);
     return true;
   } catch (error) {
     console.error("Error:", error);
@@ -3630,7 +3630,7 @@ async function showNextExamReport() {
     const reportCard = document.getElementById("reportCard");
     reportCard.style.display = "block";
     reportCard.classList.add("fade-in-up");
-    requestAnimationFrame(() => scrollToReportCardWithRetry());
+    setTimeout(() => scrollToReportCardWithRetry(), 100);
     // Render mini pies for this report
     try {
       renderMiniPiesFromReport(data);
