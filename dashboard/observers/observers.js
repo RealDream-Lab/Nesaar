@@ -867,6 +867,11 @@
         } catch (e) {
           /* ignore */
         }
+        try {
+          await focusSessionStatsCard();
+        } catch (err) {
+          /* ignore focus errors */
+        }
       } catch (e) {
         Swal.close();
         await Swal.fire({
@@ -1059,6 +1064,11 @@
             await loadAssignmentSummary();
         } catch (e) {
           /* ignore */
+        }
+        try {
+          await focusSessionStatsCard();
+        } catch (err) {
+          /* ignore focus errors */
         }
       } catch (e) {
         Swal.close();
@@ -2008,6 +2018,25 @@
         }
       } catch (e) {
         /* ignore */
+      }
+    }
+
+    async function focusSessionStatsCard(options = {}) {
+      const opts = { scroll: true, ...(options || {}) };
+      try {
+        showOnlyCard("sessionStatsCard");
+        await renderSessionStatsCard();
+        if (opts.scroll) {
+          try {
+            const target = document.getElementById("sessionStatsCard");
+            if (target)
+              target.scrollIntoView({ behavior: "smooth", block: "start" });
+          } catch (scrollErr) {
+            console.warn("focusSessionStatsCard scroll failed", scrollErr);
+          }
+        }
+      } catch (err) {
+        console.warn("focusSessionStatsCard failed", err);
       }
     }
 
