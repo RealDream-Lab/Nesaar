@@ -1982,6 +1982,13 @@ async function loadDashboardData() {
       }
     }
 
+    // Render insight cards
+    try {
+      if (typeof renderInsightCards === "function") renderInsightCards(stats);
+    } catch (e) {
+      console.warn("Insight cards render failed", e);
+    }
+
     try {
       renderReportsChart();
     } catch (e) {
@@ -7001,4 +7008,128 @@ async function printEssentialsTest() {
       },
     });
   }
+}
+
+function renderInsightCards(stats) {
+  const insightContainer = document.getElementById("insightCardsContainer");
+  if (!insightContainer || !stats.quickInsights) return;
+
+  insightContainer.innerHTML = "";
+  const insights = stats.quickInsights;
+  const definitions = [
+    {
+      key: "busiestSession",
+      label: "شلوغ‌ترین جلسه آزمون",
+      category: "session",
+      variant: "insight-busy",
+      valueKey: "student_count",
+      unit: "نفر",
+    },
+    {
+      key: "quietestSession",
+      label: "خلوت‌ترین جلسه آزمون",
+      category: "session",
+      variant: "insight-quiet",
+      valueKey: "student_count",
+      unit: "نفر",
+    },
+    {
+      key: "maxCourseFrequency",
+      label: "بیشترین تعداد درس در جلسه",
+      category: "session",
+      variant: "insight-course",
+      valueKey: "course_count",
+      unit: "درس",
+    },
+    {
+      key: "maxWritten",
+      label: "بیشترین تعداد کتبی",
+      category: "session",
+      variant: "insight-written",
+      valueKey: "student_count",
+      unit: "نفر",
+    },
+  ];
+
+  definitions.forEach((def) => {
+    const entry = insights[def.key];
+    if (!entry) return;
+
+    const rawValue = def.valueKey
+      ? entry[def.valueKey]
+      : entry.student_count ?? entry.count ?? entry.value ?? 0;
+    const count = Number(rawValue ?? 0);
+    if (!Number.isFinite(count) || count < 0) return;
+
+    const unitText = def.unit || (def.category === "session" ? "نفر" : "");
+    const displayCount = unitText
+      ? `${toPersianDigits(count)} ${unitText}`
+      : toPersianDigits(count);
+
+    const rawTime = entry.exam_time || "";
+    const rawDate = entry.exam_date || "";
+    const line2Parts = [];
+    if (rawTime) line2Parts.push(rawTime);
+    if (rawDate) line2Parts.push(rawDate);
+    const displayLine2 = line2Parts.length
+      ? toPersianDigits(line2Parts.join(" | "))
+      : "بدون تاریخ";
+
+    let displayLabelText = def.label;
+    const tieCount = Number(entry.tie_count || 0);
+    if (tieCount > 1) {
+      displayLabelText = `${displayLabelText} (x${tieCount})`;
+    }
+
+    const col = document.createElement("div");
+    col.className = "col-md-3 mb-3";
+
+    const card = document.createElement("div");
+    card.className = `session-mini-card insight-card ${def.variant}`;
+    card.style.height = "100%";
+    card.style.display = "flex";
+    card.style.flexDirection = "column";
+    card.style.justifyContent = "center";
+
+    card.setAttribute("data-insight-type", def.category);
+    card.setAttribute("data-label", displayLabelText);
+    card.setAttribute("data-label-base", def.label);
+    card.setAttribute("data-display-line2", displayLine2);
+    if (rawDate) card.setAttribute("data-exam-date", rawDate);
+    if (rawTime) card.setAttribute("data-exam-time", rawTime);
+    if (entry.course_code)
+      card.setAttribute("data-course-code", entry.course_code);
+    card.setAttribute("data-tie-count", tieCount);
+    if (entry.matches)
+      card.setAttribute("data-matches", JSON.stringify(entry.matches));
+
+    card.innerHTML = `
+      <div class="line1">${escapeHtml(displayCount)}</div>
+      <div class="line2">${escapeHtml(displayLine2)}</div>
+      <div class="line3">${escapeHtml(displayLabelText)}</div>
+    `;
+
+    card.addEventListener("click", () => {
+      const type = def.category;
+      const matches = entry.matches || [];
+
+      if (type === "session" && tieCount > 1 && matches.length) {
+        if (typeof openTieModal === "function")
+          openTieModal(displayLabelText, def.label, matches);
+      } else if (type === "session" && rawDate && rawTime) {
+        if (typeof applyNextExamOverride === "function") {
+          applyNextExamOverride(rawDate, rawTime, {
+            customTitle: `${displayLabelText} (${displayLine2})`,
+          });
+        }
+        if (typeof showNextExamReport === "function") showNextExamReport();
+      } else if (type === "course" && entry.course_code) {
+        if (typeof loadCourseReportByCode === "function")
+          loadCourseReportByCode(entry.course_code, { showErrors: true });
+      }
+    });
+
+    col.appendChild(card);
+    insightContainer.appendChild(col);
+  });
 }

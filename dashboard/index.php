@@ -129,6 +129,10 @@ if ($licenseStatus['valid'] !== true) {
                     </div>
                 </div>
             </div>
+
+            <!-- Insight Cards Row -->
+            <div class="row mt-4" id="insightCardsContainer"></div>
+
         </div>
 
         <!-- Converted custom cards into three full-width red buttons (side-by-side) -->
