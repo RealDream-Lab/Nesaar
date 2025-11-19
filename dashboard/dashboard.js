@@ -2874,7 +2874,7 @@ async function filterStudentsByCourse(courseCode) {
         window.scrollTo({ top: targetTop, behavior: "smooth" });
       } else {
         try {
-          scrollReportCardIntoView();
+          scrollToReportCardWithRetry();
         } catch (e) {
           /* ignore */
         }
@@ -2960,7 +2960,7 @@ function showAllStudents() {
       window.scrollTo({ top: targetTop, behavior: "smooth" });
     } else {
       try {
-        scrollReportCardIntoView();
+        scrollToReportCardWithRetry();
       } catch (e) {
         /* ignore */
       }
@@ -2990,7 +2990,7 @@ function scrollReportCardIntoView() {
   if (!reportCard) return;
 
   reportCard.scrollIntoView({ behavior: "smooth", block: "start" });
-// Report functions
+}
 function clearReport() {
   document.getElementById("reportCard").style.display = "none";
   document.getElementById("reportContent").innerHTML = "";
