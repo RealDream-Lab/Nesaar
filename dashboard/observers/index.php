@@ -214,10 +214,9 @@ try {
                     <!-- Table section -->
                     <div id="proctorsList" style="margin-top:0.8rem;"></div>
                     <div style="margin-top:0.9rem;text-align:center;">
-                        <button id="finishProctorsBtn" class="btn btn-success" style="width:280px;display:none;"
-                            disabled>پایان عملیات مراقبین و عوامل اجرائی</button>
-                        <button id="noChangeBtn" class="btn btn-outline-secondary"
-                            style="width:220px; margin-inline-start:8px;">تغییر ایجاد نکردم</button>
+                        <button id="finishProctorsBtn" class="btn btn-success" style="width:280px;">
+                            پایان عملیات مراقبین و عوامل اجرائی
+                        </button>
                     </div>
                 </div>
                 <!-- کارت چینش مراقبین و عوامل اجرائی -->

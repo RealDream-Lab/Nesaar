@@ -68,6 +68,7 @@
     "proctorsCard",
     "assignmentCard",
   ]);
+  const OBSERVERS_LOCAL_PREF_KEY = "ns_observers_last_card";
   let observersStoredCardPreference = null;
   let observersPreferenceApplied = false;
   let observersCurrentVisibleCard = null;
@@ -82,11 +83,17 @@
     return OBSERVERS_CARD_IDS.has(trimmed) ? trimmed : "";
   }
 
-  function primeObserversCardPreference(cardId) {
+  function primeObserversCardPreference(cardId, options = {}) {
     const normalized = normalizeObserversCardId(cardId);
     if (!normalized) return;
+    const overwrite = options.overwrite === true;
+    if (!overwrite && observersStoredCardPreference) {
+      return;
+    }
     observersStoredCardPreference = normalized;
-    observersPersistedCardId = normalized;
+    if (options.markPersisted) {
+      observersPersistedCardId = normalized;
+    }
     observersPreferenceApplied = false;
   }
 
@@ -102,6 +109,22 @@
     observersPreferenceApplied = true;
   }
 
+  function hasPendingObserversPreference() {
+    const pref = normalizeObserversCardId(getObserversCardPreference());
+    return !!pref && !hasAppliedObserversCardPreference();
+  }
+
+  function hydrateObserversCardPreferenceFromLocalStorage() {
+    try {
+      const stored = window.localStorage.getItem(OBSERVERS_LOCAL_PREF_KEY);
+      if (stored) {
+        primeObserversCardPreference(stored, { overwrite: true });
+      }
+    } catch (err) {
+      /* ignore localStorage access issues */
+    }
+  }
+
   function handleCardVisibilityChange(cardId) {
     const normalized = normalizeObserversCardId(cardId);
     if (!normalized || observersCurrentVisibleCard === normalized) {
@@ -114,6 +137,11 @@
   function scheduleObserversCardPersist(cardId) {
     if (!cardId) return;
     if (observersPersistedCardId === cardId) return;
+    try {
+      window.localStorage.setItem(OBSERVERS_LOCAL_PREF_KEY, cardId);
+    } catch (err) {
+      /* ignore localStorage errors */
+    }
     observersCardPendingValue = cardId;
     if (observersCardPersistTimer) {
       clearTimeout(observersCardPersistTimer);
@@ -459,7 +487,10 @@
             if (ft) ft.textContent = `نسار - ${cfg.University}`;
           }
           if (cfg && cfg.ObserversLastCard) {
-            primeObserversCardPreference(cfg.ObserversLastCard);
+            primeObserversCardPreference(cfg.ObserversLastCard, {
+              markPersisted: true,
+              overwrite: true,
+            });
           }
         }
       } catch (configErr) {
@@ -1049,6 +1080,32 @@
   }
 
   document.addEventListener("DOMContentLoaded", function () {
+    hydrateObserversCardPreferenceFromLocalStorage();
+
+    function ensureAtLeastOneCardVisible() {
+      try {
+        const cards = Array.from(
+          document.querySelectorAll(".dashboard-card.module-card")
+        );
+        const anyVisible = cards.some((c) => {
+          try {
+            return window.getComputedStyle(c).display !== "none";
+          } catch (e) {
+            return false;
+          }
+        });
+        if (!anyVisible) {
+          showOnlyCard("sessionStatsCard");
+          try {
+            renderSessionStatsCard().catch(() => {});
+          } catch (e) {
+            /* ignore */
+          }
+        }
+      } catch (e) {
+        /* ignore */
+      }
+    }
     async function loadCardDataFor(cardId) {
       try {
         switch (cardId) {
@@ -1104,7 +1161,16 @@
 
     checkAuthAndRedirect().then((ok) => {
       if (ok) {
-        applyStoredObserversCardPreferenceIfAvailable().catch(() => {});
+        const appliedPromise =
+          applyStoredObserversCardPreferenceIfAvailable().catch(() => {});
+        appliedPromise.finally(() => {
+          if (hasPendingObserversPreference()) return;
+          window.setTimeout(() => {
+            if (!hasPendingObserversPreference()) {
+              ensureAtLeastOneCardVisible();
+            }
+          }, 200);
+        });
         // after auth, check locations table
         (async function checkLocations() {
           try {
@@ -2085,23 +2151,6 @@
       });
     }
 
-    const noChangeBtn = document.getElementById("noChangeBtn");
-    if (noChangeBtn) {
-      noChangeBtn.addEventListener("click", (e) => {
-        try {
-          if (e && typeof e.preventDefault === "function") e.preventDefault();
-        } catch (err) {
-          /* ignore */
-        }
-        showOnlyCard(null); // hide proctors card and show the first dashboard view again
-        try {
-          window.scrollTo({ top: 0, behavior: "smooth" });
-        } catch (scrollErr) {
-          /* ignore */
-        }
-      });
-    }
-
     // Header button for reports (placeholder modal)
     const showReportBtn = document.getElementById("showReportBtn");
     if (showReportBtn) {
@@ -2149,7 +2198,6 @@
 
     // Finish introduction button: open assignment card when enough proctors
     const finishProctorsBtn = document.getElementById("finishProctorsBtn");
-    hideFinishProctorsBtn();
     if (finishProctorsBtn) {
       finishProctorsBtn.addEventListener("click", async (e) => {
         try {
@@ -2370,37 +2418,6 @@
           }
         }, 120);
       }
-    } catch (e) {
-      /* ignore */
-    }
-
-    // Ensure the page is never empty: if no module-card is visible, show the stats card by default.
-    try {
-      setTimeout(() => {
-        try {
-          const cards = Array.from(
-            document.querySelectorAll(".dashboard-card.module-card")
-          );
-          const anyVisible = cards.some((c) => {
-            try {
-              return window.getComputedStyle(c).display !== "none";
-            } catch (e) {
-              return false;
-            }
-          });
-          if (!anyVisible) {
-            // show stats card to avoid an empty page
-            showOnlyCard("sessionStatsCard");
-            try {
-              renderSessionStatsCard().catch(() => {});
-            } catch (e) {
-              /* ignore */
-            }
-          }
-        } catch (e) {
-          /* ignore */
-        }
-      }, 180);
     } catch (e) {
       /* ignore */
     }
@@ -4211,58 +4228,8 @@
     }
   }
 
-  // Track "no change" button visibility so we can hide it globally when any proctor data changes
-  let proctorsNoChangeHidden = false;
-  function hideNoChangeBtn() {
-    if (proctorsNoChangeHidden) return;
-    try {
-      const btn = document.getElementById("noChangeBtn");
-      if (btn) {
-        btn.style.display = "none";
-        proctorsNoChangeHidden = true;
-      }
-    } catch (e) {
-      /* ignore */
-    }
-  }
-
-  let finishProctorsBtnShown = false;
-  function hideFinishProctorsBtn() {
-    try {
-      const btn = document.getElementById("finishProctorsBtn");
-      if (btn) {
-        btn.style.display = "none";
-        finishProctorsBtnShown = false;
-      }
-    } catch (e) {
-      /* ignore */
-    }
-  }
-
-  function showFinishProctorsBtn() {
-    if (finishProctorsBtnShown) return;
-    try {
-      const btn = document.getElementById("finishProctorsBtn");
-      if (btn) {
-        btn.style.display = "";
-        finishProctorsBtnShown = true;
-      }
-    } catch (e) {
-      /* ignore */
-    }
-  }
-
   function markProctorsChanged() {
-    try {
-      hideNoChangeBtn();
-    } catch (e) {
-      /* ignore */
-    }
-    try {
-      showFinishProctorsBtn();
-    } catch (e) {
-      /* ignore */
-    }
+    // No-op placeholder retained for future hooks
   }
 
   // Proctors management
