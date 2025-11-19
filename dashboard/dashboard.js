@@ -3630,7 +3630,7 @@ async function showNextExamReport() {
     const reportCard = document.getElementById("reportCard");
     reportCard.style.display = "block";
     reportCard.classList.add("fade-in-up");
-    setTimeout(() => scrollToReportCardWithRetry(), 100);
+    requestAnimationFrame(() => scrollToReportCardWithRetry());
     // Render mini pies for this report
     try {
       renderMiniPiesFromReport(data);
