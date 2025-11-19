@@ -1454,6 +1454,7 @@ try {
               width: "60rem",
               html: `به‌روزرسانی با موفقیت انجام شد<br>دروس: <b>${c}</b> | دانشجویان: <b>${s}</b> | صندلی‌ها: <b>${es}</b> | مکان‌ها: <b>${l}</b>${proctorResetHtml}`,
               confirmButtonText: "باشه",
+              returnFocus: false, // Prevent scrolling back to the button
               customClass: {
                 popup: "swal2-rtl swal2-glass",
                 confirmButton: "btn btn-primary",
@@ -1468,9 +1469,14 @@ try {
                 // Scroll to top below header after chart refresh
                 setTimeout(() => {
                   const header = document.querySelector(".dashboard-header");
-                  const headerHeight = header ? Math.ceil(header.getBoundingClientRect().height) : 0;
+                  const headerHeight = header
+                    ? Math.ceil(header.getBoundingClientRect().height)
+                    : 0;
                   const extraGap = 12;
-                  window.scrollTo({ top: headerHeight + extraGap, behavior: 'smooth' });
+                  window.scrollTo({
+                    top: headerHeight + extraGap,
+                    behavior: "smooth",
+                  });
                 }, 500);
               } catch (e) {
                 console.error("Chart refresh failed after update:", e);
