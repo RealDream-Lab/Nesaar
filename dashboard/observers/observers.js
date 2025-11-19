@@ -448,18 +448,39 @@
         }
       } catch (e) {}
       spinner.style.display = "flex";
-      // safety: hide spinner after 8s if something goes wrong
+      // safety: hide spinner after a longer timeout if something goes wrong
+      // also provide a visible inline hint and try to close any lingering Swal
       sessionStatsSpinnerTimeout = setTimeout(() => {
         try {
           if (spinner && spinner.style.display !== "none") {
             spinner.style.display = "none";
             console.warn("sessionStatsChart spinner hidden by safety timeout");
           }
+          try {
+            const cont = document.getElementById("sessionStatsContent");
+            if (cont) {
+              cont.innerHTML =
+                '<div style="padding:1rem;color:var(--text-muted);direction:rtl;text-align:right">بارگذاری طولانی شد — لطفاً صفحه را مجدداً بارگذاری کنید یا کنسول مرورگر را برای جزئیات خطا بررسی کنید.</div>';
+            }
+          } catch (ie) {
+            /* ignore inline hint errors */
+          }
+          try {
+            if (
+              typeof Swal !== "undefined" &&
+              Swal &&
+              typeof Swal.close === "function"
+            ) {
+              Swal.close();
+            }
+          } catch (se) {
+            /* ignore Swal close errors */
+          }
         } catch (e) {
           /* ignore */
         }
         sessionStatsSpinnerTimeout = null;
-      }, 8000);
+      }, 20000);
     }
     try {
       const sessionResp = await csrfFetch("/API/adminSession.php", {
@@ -868,9 +889,10 @@
           /* ignore */
         }
         try {
-          if (!j2.unfilled_count) {
-            await focusSessionStatsCard();
-          }
+          // Always show session stats after a successful apply so the user
+          // sees the updated overall state. renderSessionStatsCard handles
+          // failures gracefully and will show an inline hint on error.
+          await focusSessionStatsCard();
         } catch (err) {
           /* ignore focus errors */
         }
@@ -1068,9 +1090,8 @@
           /* ignore */
         }
         try {
-          if (!j2.unfilled_count) {
-            await focusSessionStatsCard();
-          }
+          // Always focus the session stats card after successful apply.
+          await focusSessionStatsCard();
         } catch (err) {
           /* ignore focus errors */
         }
@@ -1175,6 +1196,15 @@
 
     checkAuthAndRedirect().then((ok) => {
       if (ok) {
+        // Hide the spinner and clear timeout since auth succeeded
+        const spinner = document.getElementById("sessionChartSpinner");
+        if (spinner) {
+          spinner.style.display = "none";
+        }
+        if (sessionStatsSpinnerTimeout) {
+          clearTimeout(sessionStatsSpinnerTimeout);
+          sessionStatsSpinnerTimeout = null;
+        }
         const appliedPromise =
           applyStoredObserversCardPreferenceIfAvailable().catch(() => {});
         appliedPromise.finally(() => {
@@ -3250,18 +3280,38 @@
         }
       } catch (e) {}
       spinner.style.display = "flex";
-      // safety: hide spinner after 8s if something goes wrong while fetching many sessions
+      // safety: hide spinner after a longer timeout if something goes wrong while fetching many sessions
+      // show a helpful inline message and try to close any lingering Swal
       sessionStatsSpinnerTimeout = setTimeout(() => {
         try {
           if (spinner && spinner.style.display !== "none") {
             spinner.style.display = "none";
             console.warn("sessionStatsChart spinner hidden by safety timeout");
           }
+          try {
+            if (container) {
+              container.innerHTML =
+                '<div style="padding:1rem;color:var(--text-muted);direction:rtl;text-align:right">بارگذاری طولانی شد — لطفاً صفحه را مجدداً بارگذاری کنید یا کنسول مرورگر را برای جزئیات خطا بررسی کنید.</div>';
+            }
+          } catch (ie) {
+            /* ignore inline hint errors */
+          }
+          try {
+            if (
+              typeof Swal !== "undefined" &&
+              Swal &&
+              typeof Swal.close === "function"
+            ) {
+              Swal.close();
+            }
+          } catch (se) {
+            /* ignore Swal close errors */
+          }
         } catch (e) {
           /* ignore */
         }
         sessionStatsSpinnerTimeout = null;
-      }, 8000);
+      }, 20000);
     }
 
     try {
