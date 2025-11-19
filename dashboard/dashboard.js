@@ -1471,7 +1471,7 @@ try {
                   const headerHeight = header ? Math.ceil(header.getBoundingClientRect().height) : 0;
                   const extraGap = 12;
                   window.scrollTo({ top: headerHeight + extraGap, behavior: 'smooth' });
-                }, 100);
+                }, 500);
               } catch (e) {
                 console.error("Chart refresh failed after update:", e);
               }
