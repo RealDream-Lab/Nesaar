@@ -1462,6 +1462,12 @@ try {
             // Refresh dashboard stats
             try {
               await loadDashboardData();
+              // Ensure chart is refreshed
+              try {
+                await renderReportsChart();
+              } catch (e) {
+                console.error("Chart refresh failed after update:", e);
+              }
             } catch (e) {
               /* ignore */
             }
