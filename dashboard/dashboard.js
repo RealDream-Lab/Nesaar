@@ -2989,23 +2989,7 @@ function scrollReportCardIntoView() {
   const reportCard = document.getElementById("reportCard");
   if (!reportCard) return;
 
-  // Use requestAnimationFrame to ensure calculations happen after the element is rendered.
-  requestAnimationFrame(() => {
-    const header = document.querySelector(".dashboard-header");
-    const headerHeight = header
-      ? Math.ceil(header.getBoundingClientRect().height)
-      : 0;
-    const extraGap = 12; // reduce gap to minimum for tight alignment
-
-    const rect = reportCard.getBoundingClientRect();
-    const docTop =
-      window.pageYOffset || document.documentElement.scrollTop || 0;
-    const targetTop = Math.max(0, rect.top + docTop - headerHeight - extraGap);
-
-    window.scrollTo({ top: targetTop, behavior: "smooth" });
-  });
-}
-
+  reportCard.scrollIntoView({ behavior: "smooth", block: "start" });
 // Report functions
 function clearReport() {
   document.getElementById("reportCard").style.display = "none";
@@ -3158,7 +3142,7 @@ async function showStudentReport() {
       const reportCard = document.getElementById("reportCard");
       reportCard.style.display = "block";
       reportCard.classList.add("fade-in-up");
-      setTimeout(scrollReportCardIntoView, 100);
+      setTimeout(() => scrollToReportCardWithRetry(), 100);
     } catch (error) {
       console.error("Error:", error);
       if (!error?.isLicenseError) {
@@ -3303,7 +3287,7 @@ async function loadCourseReportByCode(courseCode, options = {}) {
     const reportCard = document.getElementById("reportCard");
     reportCard.style.display = "block";
     reportCard.classList.add("fade-in-up");
-    setTimeout(scrollReportCardIntoView, 100);
+    setTimeout(() => scrollToReportCardWithRetry(), 100);
     return true;
   } catch (error) {
     console.error("Error:", error);
@@ -3646,7 +3630,7 @@ async function showNextExamReport() {
     const reportCard = document.getElementById("reportCard");
     reportCard.style.display = "block";
     reportCard.classList.add("fade-in-up");
-    setTimeout(scrollReportCardIntoView, 100);
+    setTimeout(() => scrollToReportCardWithRetry(), 100);
     // Render mini pies for this report
     try {
       renderMiniPiesFromReport(data);
