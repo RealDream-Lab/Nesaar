@@ -229,8 +229,7 @@ try {
             c.exam_date,
             c.exam_time,
             COUNT(DISTINCT c.course_code) AS course_count,
-            COUNT(es.student_id) AS student_count,
-            MIN(c.course_code) AS sample_course_code
+            COUNT(es.student_id) AS student_count
         FROM courses c
         INNER JOIN exam_seats es ON c.course_code = es.course_code
         GROUP BY c.exam_date, c.exam_time");

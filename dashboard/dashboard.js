@@ -3142,7 +3142,7 @@ async function showStudentReport() {
       const reportCard = document.getElementById("reportCard");
       reportCard.style.display = "block";
       reportCard.classList.add("fade-in-up");
-      setTimeout(() => scrollToReportCardWithRetry(), 100);
+      requestAnimationFrame(() => scrollToReportCardWithRetry());
     } catch (error) {
       console.error("Error:", error);
       if (!error?.isLicenseError) {
@@ -3287,7 +3287,7 @@ async function loadCourseReportByCode(courseCode, options = {}) {
     const reportCard = document.getElementById("reportCard");
     reportCard.style.display = "block";
     reportCard.classList.add("fade-in-up");
-    setTimeout(() => scrollToReportCardWithRetry(), 100);
+    requestAnimationFrame(() => scrollToReportCardWithRetry());
     return true;
   } catch (error) {
     console.error("Error:", error);
@@ -6598,7 +6598,7 @@ async function printEssentialsTest() {
   }
 }
 
-function scrollToReportCardWithRetry(maxRetries = 20) {
+function scrollToReportCardWithRetry(maxRetries = 10) {
   const reportCard = document.getElementById("reportCard");
   if (
     reportCard &&
@@ -6636,7 +6636,7 @@ function renderInsightCards(stats) {
     {
       key: "maxCourseFrequency",
       label: "بیشترین تعداد درس در جلسه",
-      category: "course",
+      category: "session",
       variant: "insight-course",
       valueKey: "course_count",
       unit: "درس",
@@ -6726,9 +6726,9 @@ function renderInsightCards(stats) {
           });
         }
         if (typeof showNextExamReport === "function") showNextExamReport();
-      } else if (type === "course" && (entry.course_code || entry.sample_course_code)) {
+      } else if (type === "course" && entry.course_code) {
         if (typeof loadCourseReportByCode === "function")
-          loadCourseReportByCode(entry.course_code || entry.sample_course_code, { showErrors: true });
+          loadCourseReportByCode(entry.course_code, { showErrors: true });
       }
     });
 
