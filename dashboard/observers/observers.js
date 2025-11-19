@@ -2709,7 +2709,7 @@
             await Swal.fire({
               icon: "success",
               title: "اطلاعات آزمون‌ها ذخیره شد",
-              html: `<div style="direction:rtl;text-align:right">اطلاعات تعداد مراقبین و عوامل اجرائی هر جلسه با موفقیت در بانک اطلاعاتی ذخیره شد. (${
+              html: `<div style="direction:rtl;text-align:justify">اطلاعات تعداد مراقبین و عوامل اجرائی هر جلسه با موفقیت در بانک اطلاعاتی ذخیره شد. (${
                 sj.inserted || 0
               } رکورد)</div>`,
               confirmButtonText: "باشه",
