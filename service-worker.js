@@ -1,5 +1,5 @@
-const CACHE_NAME = "exam-seat-v0.7.5";
-const VERSION = "0.7.5";
+const CACHE_NAME = "exam-seat-v0.8.0";
+const VERSION = "0.8.0";
 const urlsToCache = [
   "/",
   "/index.php",
@@ -86,7 +86,7 @@ self.addEventListener("activate", (event) => {
               type: "sw-update",
               version: CACHE_NAME,
               tagVersion: `نسخه ${VERSION}`,
-              changes: ["ادغام کامل پنل عوامل اجرائی با کارت‌های واحد"],
+              changes: ["بهبود عملکرد ماژول مراقبین"],
             });
           });
         });
