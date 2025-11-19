@@ -130,8 +130,7 @@ if ($licenseStatus['valid'] !== true) {
                 </div>
             </div>
 
-            <!-- Insight Cards Row -->
-            <div class="row mt-4" id="insightCardsContainer"></div>
+
 
         </div>
 
@@ -158,7 +157,8 @@ if ($licenseStatus['valid'] !== true) {
 
         </div>
 
-
+        <!-- Insight Cards Row -->
+        <div class="row mt-4" id="insightCardsContainer"></div>
 
         <!-- Database Update (moved here to bottom-most section) -->
         <div class="dashboard-card no-hover">
