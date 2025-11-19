@@ -481,9 +481,11 @@ try {
 
         // sort: largest surplus first; largest deficit (lowest afternoon) first
         usort($surpluses, function ($a, $b) use (&$afternoonCount) {
-            return $afternoonCount[$b] <=> $afternoonCount[$a]; });
+            return $afternoonCount[$b] <=> $afternoonCount[$a];
+        });
         usort($deficits, function ($a, $b) use (&$afternoonCount) {
-            return $afternoonCount[$a] <=> $afternoonCount[$b]; });
+            return $afternoonCount[$a] <=> $afternoonCount[$b];
+        });
 
         $progress = false;
         foreach ($deficits as $rcvPid) {
@@ -608,7 +610,7 @@ try {
         $proctorDayTimes[intval($p['id'])] = [];
     }
     foreach ($assignmentsForOutput as $ai => $a) {
-        $pid  = $a['proctor_id'];
+        $pid = $a['proctor_id'];
         if ($pid === null)
             continue;
         $date = $a['exam_date'];
@@ -813,8 +815,8 @@ try {
         $assignedCount[$pid]++;
         if ($isAfternoon($a['exam_time']))
             $afternoonCount[$pid]++;
-        $date                                = $a['exam_date'];
-        $time                                = $a['exam_time'];
+        $date = $a['exam_date'];
+        $time = $a['exam_time'];
         if (!isset($proctorDayTimes[$pid][$date]))
             $proctorDayTimes[$pid][$date] = [];
         $proctorDayTimes[$pid][$date][$time] = true;
@@ -823,7 +825,7 @@ try {
     // Build helper: all sessions per date
     $allDaySessions = [];
     foreach ($orderedDays as $d) {
-        $tlist                      = [];
+        $tlist = [];
         foreach ($d['sessions'] as $s) {
             $tlist[] = $s['time'];
         }
@@ -849,9 +851,11 @@ try {
             break;
         // Order: largest surplus first, largest deficit first
         usort($above, function ($a, $b) use (&$assignedCount) {
-            return $assignedCount[$b] <=> $assignedCount[$a]; });
+            return $assignedCount[$b] <=> $assignedCount[$a];
+        });
         usort($below, function ($a, $b) use (&$assignedCount) {
-            return $assignedCount[$a] <=> $assignedCount[$b]; });
+            return $assignedCount[$a] <=> $assignedCount[$b];
+        });
 
         foreach ($below as $pidBelow) {
             if ($assignedCount[$pidBelow] >= $floorMean)
@@ -1004,7 +1008,7 @@ try {
         foreach ($proctorAssignments[$pidMax] as $ai) {
             $a = $assignmentsForOutput[$ai];
             if ($isAfternoon($a['exam_time'])) {
-                $k           = $a['exam_date'] . '|' . $a['exam_time'];
+                $k = $a['exam_date'] . '|' . $a['exam_time'];
                 if (isset($sessionHasProctor[$k][$pidMin]))
                     continue;
                 if (isset($restrictions[$pidMin]) && isset($restrictions[$pidMin][$k]))
@@ -1017,7 +1021,7 @@ try {
         foreach ($proctorAssignments[$pidMin] as $ai) {
             $a = $assignmentsForOutput[$ai];
             if (!$isAfternoon($a['exam_time'])) {
-                $k         = $a['exam_date'] . '|' . $a['exam_time'];
+                $k = $a['exam_date'] . '|' . $a['exam_time'];
                 if (isset($sessionHasProctor[$k][$pidMax]))
                     continue;
                 if (isset($restrictions[$pidMax]) && isset($restrictions[$pidMax][$k]))
@@ -1030,10 +1034,10 @@ try {
             break; // cannot improve
 
         // perform swap
-        $aAf                              =& $assignmentsForOutput[$afternoonAi];
-        $aMo                              =& $assignmentsForOutput[$morningAi];
-        $kAf                              = $aAf['exam_date'] . '|' . $aAf['exam_time'];
-        $kMo                              = $aMo['exam_date'] . '|' . $aMo['exam_time'];
+        $aAf =& $assignmentsForOutput[$afternoonAi];
+        $aMo =& $assignmentsForOutput[$morningAi];
+        $kAf = $aAf['exam_date'] . '|' . $aAf['exam_time'];
+        $kMo = $aMo['exam_date'] . '|' . $aMo['exam_time'];
         unset($sessionHasProctor[$kAf][$pidMax]);
         $sessionHasProctor[$kAf][$pidMin] = true;
         unset($sessionHasProctor[$kMo][$pidMin]);
@@ -1089,41 +1093,50 @@ try {
     if ($totalSlots > 0 && $numProctors > 0) {
         // compute desired number of ceil holders
         $desiredCeilHolders = $totalSlots - ($floorMean * $numProctors);
-        if ($desiredCeilHolders < 0) $desiredCeilHolders = 0;
-        if ($desiredCeilHolders > $numProctors) $desiredCeilHolders = $numProctors;
+        if ($desiredCeilHolders < 0)
+            $desiredCeilHolders = 0;
+        if ($desiredCeilHolders > $numProctors)
+            $desiredCeilHolders = $numProctors;
 
         // rebuild counts and assignment indexes
-        $assignedCount = [];
-        $afternoonCount = [];
+        $assignedCount      = [];
+        $afternoonCount     = [];
         $proctorAssignments = [];
-        $sessionHasProctor = [];
+        $sessionHasProctor  = [];
         foreach ($proctors as $p) {
-            $pid = intval($p['id']);
-            $assignedCount[$pid] = 0;
-            $afternoonCount[$pid] = 0;
+            $pid                      = intval($p['id']);
+            $assignedCount[$pid]      = 0;
+            $afternoonCount[$pid]     = 0;
             $proctorAssignments[$pid] = [];
         }
         foreach ($assignmentsForOutput as $ai => $a) {
             $pid = $a['proctor_id'];
-            if ($pid === null) continue;
+            if ($pid === null)
+                continue;
             $assignedCount[$pid]++;
-            if ($isAfternoon($a['exam_time'])) $afternoonCount[$pid]++;
+            if ($isAfternoon($a['exam_time']))
+                $afternoonCount[$pid]++;
             $proctorAssignments[$pid][] = $ai;
-            $k = $a['exam_date'] . '|' . $a['exam_time'];
-            if (!isset($sessionHasProctor[$k])) $sessionHasProctor[$k] = [];
+            $k                          = $a['exam_date'] . '|' . $a['exam_time'];
+            if (!isset($sessionHasProctor[$k]))
+                $sessionHasProctor[$k] = [];
             $sessionHasProctor[$k][$pid] = true;
         }
 
         // Choose which proctors will hold ceilMean: prefer those currently highest
         $ordering = array_keys($assignedCount);
-        usort($ordering, function($a,$b) use(&$assignedCount,&$afternoonCount){
-            if ($assignedCount[$a] === $assignedCount[$b]) return $afternoonCount[$a] <=> $afternoonCount[$b];
+        usort($ordering, function ($a, $b) use (&$assignedCount, &$afternoonCount) {
+            if ($assignedCount[$a] === $assignedCount[$b])
+                return $afternoonCount[$a] <=> $afternoonCount[$b];
             return $assignedCount[$b] <=> $assignedCount[$a];
         });
         $targetCount = [];
-        $i = 0;
+        $i           = 0;
         foreach ($ordering as $pid) {
-            if ($i < $desiredCeilHolders) $targetCount[$pid] = $ceilMean; else $targetCount[$pid] = $floorMean;
+            if ($i < $desiredCeilHolders)
+                $targetCount[$pid] = $ceilMean;
+            else
+                $targetCount[$pid] = $floorMean;
             $i++;
         }
 
@@ -1134,46 +1147,66 @@ try {
             $recips = [];
             foreach ($targetCount as $pid => $t) {
                 $cur = $assignedCount[$pid] ?? 0;
-                if ($cur > $t) $donors[] = $pid;
-                elseif ($cur < $t) $recips[] = $pid;
+                if ($cur > $t)
+                    $donors[] = $pid;
+                elseif ($cur < $t)
+                    $recips[] = $pid;
             }
-            if (empty($donors) || empty($recips)) break;
+            if (empty($donors) || empty($recips))
+                break;
 
             // sort donors by most over-assigned, recipients by most under-assigned
-            usort($donors, function($a,$b) use(&$assignedCount,&$targetCount){ return ($assignedCount[$b]-$targetCount[$b]) <=> ($assignedCount[$a]-$targetCount[$a]); });
-            usort($recips, function($a,$b) use(&$assignedCount,&$targetCount){ return ($assignedCount[$a]-$targetCount[$a]) <=> ($assignedCount[$b]-$targetCount[$b]); });
+            usort($donors, function ($a, $b) use (&$assignedCount, &$targetCount) {
+                return ($assignedCount[$b] - $targetCount[$b]) <=> ($assignedCount[$a] - $targetCount[$a]); });
+            usort($recips, function ($a, $b) use (&$assignedCount, &$targetCount) {
+                return ($assignedCount[$a] - $targetCount[$a]) <=> ($assignedCount[$b] - $targetCount[$b]); });
 
             $moved = false;
             foreach ($donors as $don) {
                 foreach ($recips as $rcv) {
-                    if ($don === $rcv) continue;
+                    if ($don === $rcv)
+                        continue;
                     // try donor's assignments, prefer morning slots to reduce afternoon disruption
-                    usort($proctorAssignments[$don], function($x,$y) use(&$assignmentsForOutput,&$isAfternoon){ return ($isAfternoon($assignmentsForOutput[$y]['exam_time'])?1:0) <=> ($isAfternoon($assignmentsForOutput[$x]['exam_time'])?1:0); });
+                    usort($proctorAssignments[$don], function ($x, $y) use (&$assignmentsForOutput, &$isAfternoon) {
+                        return ($isAfternoon($assignmentsForOutput[$y]['exam_time']) ? 1 : 0) <=> ($isAfternoon($assignmentsForOutput[$x]['exam_time']) ? 1 : 0); });
                     foreach ($proctorAssignments[$don] as $kidx => $ai) {
-                        $a = $assignmentsForOutput[$ai];
+                        $a   = $assignmentsForOutput[$ai];
                         $key = $a['exam_date'] . '|' . $a['exam_time'];
-                        if (isset($restrictions[$rcv]) && isset($restrictions[$rcv][$key])) continue;
-                        if (isset($sessionHasProctor[$key][$rcv])) continue;
+                        if (isset($restrictions[$rcv]) && isset($restrictions[$rcv][$key]))
+                            continue;
+                        if (isset($sessionHasProctor[$key][$rcv]))
+                            continue;
                         // perform transfer
-                        $assignmentsForOutput[$ai]['proctor_id'] = $rcv;
+                        $assignmentsForOutput[$ai]['proctor_id']   = $rcv;
                         $assignmentsForOutput[$ai]['proctor_name'] = $proctorMap[$rcv] ?? '';
                         unset($sessionHasProctor[$key][$don]);
                         $sessionHasProctor[$key][$rcv] = true;
                         // remove from donor list
-                        foreach ($proctorAssignments[$don] as $kk => $vv) { if ($vv === $ai) { unset($proctorAssignments[$don][$kk]); break; } }
+                        foreach ($proctorAssignments[$don] as $kk => $vv) {
+                            if ($vv === $ai) {
+                                unset($proctorAssignments[$don][$kk]);
+                                break;
+                            }
+                        }
                         $proctorAssignments[$don] = array_values($proctorAssignments[$don]);
                         // add to recipient
-                        if (!isset($proctorAssignments[$rcv])) $proctorAssignments[$rcv] = [];
+                        if (!isset($proctorAssignments[$rcv]))
+                            $proctorAssignments[$rcv] = [];
                         $proctorAssignments[$rcv][] = $ai;
                         // update counts
-                        $assignedCount[$don]--; $assignedCount[$rcv]++;
-                        if ($isAfternoon($a['exam_time'])) { $afternoonCount[$don]--; $afternoonCount[$rcv]++; }
+                        $assignedCount[$don]--;
+                        $assignedCount[$rcv]++;
+                        if ($isAfternoon($a['exam_time'])) {
+                            $afternoonCount[$don]--;
+                            $afternoonCount[$rcv]++;
+                        }
                         $moved = true;
                         break 3;
                     }
                 }
             }
-            if (!$moved) break;
+            if (!$moved)
+                break;
         }
     }
 
