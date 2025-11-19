@@ -868,7 +868,9 @@
           /* ignore */
         }
         try {
-          await focusSessionStatsCard();
+          if (!j2.unfilled_count) {
+            await focusSessionStatsCard();
+          }
         } catch (err) {
           /* ignore focus errors */
         }
@@ -1066,7 +1068,9 @@
           /* ignore */
         }
         try {
-          await focusSessionStatsCard();
+          if (!j2.unfilled_count) {
+            await focusSessionStatsCard();
+          }
         } catch (err) {
           /* ignore focus errors */
         }
