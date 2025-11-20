@@ -2,9 +2,6 @@
 (function () {
   "use strict";
 
-  let globalTotalRequired = 0;
-  let globalRegisteredProctors = 0;
-
   function toEnglishDigits(value) {
     const persian = "۰۱۲۳۴۵۶۷۸۹";
     const arabic = "٠١٢٣٤٥٦٧٨٩";
@@ -705,16 +702,6 @@
     }
 
     if (registeredEl) registeredEl.textContent = toPersian(registered);
-
-    // Store globally for restrictions button visibility
-    globalTotalRequired = totalRequired;
-    globalRegisteredProctors = registered;
-    console.log(
-      "Updated globals: totalRequired=",
-      globalTotalRequired,
-      "registered=",
-      globalRegisteredProctors
-    );
 
     if (perProctorEl) {
       if (registered > 0 && totalRequired > 0)
@@ -3233,11 +3220,6 @@
 
       if (registeredEl) registeredEl.textContent = toPersian(registered);
 
-      // Store globally for restrictions button visibility
-      globalTotalRequired = totalRequired;
-      globalRegisteredProctors = registered;
-      console.log('Updated globals: totalRequired=', globalTotalRequired, 'registered=', globalRegisteredProctors);
-
       let per = "-";
       if (registered > 0 && totalRequired > 0) {
         per = Math.ceil(totalRequired / registered);
@@ -4334,15 +4316,34 @@
     try {
       container.innerHTML =
         '<div style="text-align:center;padding:1rem;color:var(--text-muted)">در حال بارگذاری...</div>';
-      // Ensure assignment summary is loaded for restrictions visibility
-      await loadAssignmentSummary();
       const resp = await csrfFetch("/API/getProctors.php", {
         cache: "no-store",
       });
       if (!resp.ok) throw new Error("failed");
       const j = await resp.json();
       const proctors = Array.isArray(j.proctors) ? j.proctors : [];
-      renderProctors(proctors);
+
+      // Determine if restrictions button should be shown (only if proctors >= maxRequired)
+      let showRestrictions = true;
+      try {
+        const edResp = await csrfFetch("/API/getExamsDetail.php", {
+          cache: "no-store",
+        });
+        if (edResp.ok) {
+          const edj = await edResp.json();
+          const exams = Array.isArray(edj.exams) ? edj.exams : [];
+          const maxRequired = exams.length
+            ? Math.max(...exams.map((e) => Number(e.required_proctors || 0)))
+            : 0;
+          if (maxRequired > 0 && proctors.length < maxRequired) {
+            showRestrictions = false;
+          }
+        }
+      } catch (e) {
+        /* ignore */
+      }
+
+      renderProctors(proctors, showRestrictions);
       updateProctorsStats();
     } catch (e) {
       console.warn("loadProctors failed", e);
@@ -4351,7 +4352,7 @@
     }
   }
 
-  function renderProctors(proctors) {
+  function renderProctors(proctors, showRestrictions = true) {
     const container = document.getElementById("proctorsList");
     if (!container) return;
     if (!proctors.length) {
@@ -4386,12 +4387,9 @@
       const last = escapeHtml(p.last_name || "");
       const nationalId = escapeHtml(toPersianDigits(p.national_id || ""));
       const phone = escapeHtml(toPersianDigits(p.phone || ""));
-      console.log(
-        "Rendering proctor",
-        id,
-        "disabled?",
-        globalTotalRequired > globalRegisteredProctors
-      );
+      const restrictionsBtn = showRestrictions
+        ? `<button class="btn btn-sm btn-success edit-restrictions" data-id="${id}">محدودیت‌ها</button>`
+        : "";
       html += `<tr data-id="${id}" style="cursor:pointer;">
                 <td style="vertical-align:middle;text-align:center;width:5%">${
                   idx + 1
@@ -4403,9 +4401,7 @@
                 }</td>
                 <td style="vertical-align:middle;width:15%">${phone || "—"}</td>
                 <td style="vertical-align:middle;width:20%;white-space:nowrap">
-                    <button class="btn btn-sm btn-success edit-restrictions" data-id="${id}" ${
-        globalTotalRequired > globalRegisteredProctors ? "disabled" : ""
-      }>محدودیت‌ها</button>
+                    ${restrictionsBtn}
                     <button class="btn btn-sm btn-danger delete-proctor" data-id="${id}" style="margin-inline-start:6px">حذف</button>
                 </td>
             </tr>`;
