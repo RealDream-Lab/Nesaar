@@ -4387,9 +4387,9 @@
       const last = escapeHtml(p.last_name || "");
       const nationalId = escapeHtml(toPersianDigits(p.national_id || ""));
       const phone = escapeHtml(toPersianDigits(p.phone || ""));
-      const restrictionsBtn = showRestrictions
-        ? `<button class="btn btn-sm btn-success edit-restrictions" data-id="${id}">محدودیت‌ها</button>`
-        : "";
+      const restrictionsBtn = `<button class="btn btn-sm btn-success edit-restrictions" data-id="${id}" ${
+        showRestrictions ? "" : "disabled"
+      }>محدودیت‌ها</button>`;
       html += `<tr data-id="${id}" style="cursor:pointer;">
                 <td style="vertical-align:middle;text-align:center;width:5%">${
                   idx + 1
