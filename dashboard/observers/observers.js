@@ -2,6 +2,9 @@
 (function () {
   "use strict";
 
+  let globalTotalRequired = 0;
+  let globalRegisteredProctors = 0;
+
   function toEnglishDigits(value) {
     const persian = "۰۱۲۳۴۵۶۷۸۹";
     const arabic = "٠١٢٣٤٥٦٧٨٩";
@@ -702,6 +705,10 @@
     }
 
     if (registeredEl) registeredEl.textContent = toPersian(registered);
+
+    // Store globally for restrictions button visibility
+    globalTotalRequired = totalRequired;
+    globalRegisteredProctors = registered;
 
     if (perProctorEl) {
       if (registered > 0 && totalRequired > 0)
@@ -4316,6 +4323,8 @@
     try {
       container.innerHTML =
         '<div style="text-align:center;padding:1rem;color:var(--text-muted)">در حال بارگذاری...</div>';
+      // Ensure assignment summary is loaded for restrictions visibility
+      await loadAssignmentSummary();
       const resp = await csrfFetch("/API/getProctors.php", {
         cache: "no-store",
       });
@@ -4377,7 +4386,11 @@
                 }</td>
                 <td style="vertical-align:middle;width:15%">${phone || "—"}</td>
                 <td style="vertical-align:middle;width:20%;white-space:nowrap">
-                    <button class="btn btn-sm btn-success edit-restrictions" data-id="${id}">محدودیت‌ها</button>
+                    ${
+                      globalTotalRequired <= globalRegisteredProctors
+                        ? `<button class="btn btn-sm btn-success edit-restrictions" data-id="${id}">محدودیت‌ها</button>`
+                        : ""
+                    }
                     <button class="btn btn-sm btn-danger delete-proctor" data-id="${id}" style="margin-inline-start:6px">حذف</button>
                 </td>
             </tr>`;
