@@ -709,7 +709,12 @@
     // Store globally for restrictions button visibility
     globalTotalRequired = totalRequired;
     globalRegisteredProctors = registered;
-    console.log('Updated globals: totalRequired=', globalTotalRequired, 'registered=', globalRegisteredProctors);
+    console.log(
+      "Updated globals: totalRequired=",
+      globalTotalRequired,
+      "registered=",
+      globalRegisteredProctors
+    );
 
     if (perProctorEl) {
       if (registered > 0 && totalRequired > 0)
@@ -3228,6 +3233,11 @@
 
       if (registeredEl) registeredEl.textContent = toPersian(registered);
 
+      // Store globally for restrictions button visibility
+      globalTotalRequired = totalRequired;
+      globalRegisteredProctors = registered;
+      console.log('Updated globals: totalRequired=', globalTotalRequired, 'registered=', globalRegisteredProctors);
+
       let per = "-";
       if (registered > 0 && totalRequired > 0) {
         per = Math.ceil(totalRequired / registered);
@@ -4376,7 +4386,12 @@
       const last = escapeHtml(p.last_name || "");
       const nationalId = escapeHtml(toPersianDigits(p.national_id || ""));
       const phone = escapeHtml(toPersianDigits(p.phone || ""));
-      console.log('Rendering proctor', id, 'disabled?', globalTotalRequired > globalRegisteredProctors);
+      console.log(
+        "Rendering proctor",
+        id,
+        "disabled?",
+        globalTotalRequired > globalRegisteredProctors
+      );
       html += `<tr data-id="${id}" style="cursor:pointer;">
                 <td style="vertical-align:middle;text-align:center;width:5%">${
                   idx + 1
@@ -4389,8 +4404,8 @@
                 <td style="vertical-align:middle;width:15%">${phone || "—"}</td>
                 <td style="vertical-align:middle;width:20%;white-space:nowrap">
                     <button class="btn btn-sm btn-success edit-restrictions" data-id="${id}" ${
-                      globalTotalRequired > globalRegisteredProctors ? "disabled" : ""
-                    }>محدودیت‌ها</button>
+        globalTotalRequired > globalRegisteredProctors ? "disabled" : ""
+      }>محدودیت‌ها</button>
                     <button class="btn btn-sm btn-danger delete-proctor" data-id="${id}" style="margin-inline-start:6px">حذف</button>
                 </td>
             </tr>`;
