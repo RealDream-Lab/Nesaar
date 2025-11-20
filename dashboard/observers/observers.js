@@ -709,6 +709,7 @@
     // Store globally for restrictions button visibility
     globalTotalRequired = totalRequired;
     globalRegisteredProctors = registered;
+    console.log('Updated globals: totalRequired=', globalTotalRequired, 'registered=', globalRegisteredProctors);
 
     if (perProctorEl) {
       if (registered > 0 && totalRequired > 0)
@@ -4375,6 +4376,7 @@
       const last = escapeHtml(p.last_name || "");
       const nationalId = escapeHtml(toPersianDigits(p.national_id || ""));
       const phone = escapeHtml(toPersianDigits(p.phone || ""));
+      console.log('Rendering proctor', id, 'disabled?', globalTotalRequired > globalRegisteredProctors);
       html += `<tr data-id="${id}" style="cursor:pointer;">
                 <td style="vertical-align:middle;text-align:center;width:5%">${
                   idx + 1
