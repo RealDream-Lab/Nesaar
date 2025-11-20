@@ -4386,11 +4386,9 @@
                 }</td>
                 <td style="vertical-align:middle;width:15%">${phone || "—"}</td>
                 <td style="vertical-align:middle;width:20%;white-space:nowrap">
-                    ${
-                      globalTotalRequired <= globalRegisteredProctors
-                        ? `<button class="btn btn-sm btn-success edit-restrictions" data-id="${id}">محدودیت‌ها</button>`
-                        : ""
-                    }
+                    <button class="btn btn-sm btn-success edit-restrictions" data-id="${id}" ${
+                      globalTotalRequired > globalRegisteredProctors ? "disabled" : ""
+                    }>محدودیت‌ها</button>
                     <button class="btn btn-sm btn-danger delete-proctor" data-id="${id}" style="margin-inline-start:6px">حذف</button>
                 </td>
             </tr>`;
