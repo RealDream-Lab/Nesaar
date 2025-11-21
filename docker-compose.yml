@@ -2,7 +2,7 @@ version: "3.9"
 
 services:
   web:
-    image: ghcr.io/RealDream-Lab/nesaar:latest
+    image: ghcr.io/realdream-lab/nesaar:latest
     container_name: NesaarWeb
     ports:
       - "18080:80"
