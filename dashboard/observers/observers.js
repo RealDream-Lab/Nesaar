@@ -3294,7 +3294,7 @@
         }
       } catch (e) {}
       spinner.style.display = "flex";
-      // safety: hide spinner after 8s if something goes wrong while fetching many sessions
+      // safety: hide spinner after 15s if something goes wrong while fetching many sessions
       sessionStatsSpinnerTimeout = setTimeout(() => {
         try {
           if (spinner && spinner.style.display !== "none") {
@@ -3305,8 +3305,28 @@
           /* ignore */
         }
         sessionStatsSpinnerTimeout = null;
-      }, 8000);
+      }, 15000);
     }
+
+    // Show skeleton loading placeholder
+    try {
+      if (container) {
+        container.innerHTML = `
+          <div class="skeleton-loading" id="sessionStatsSkeleton">
+            <!-- Skeleton for proctor cards section -->
+            <div class="skeleton-proctors-section">
+              <div class="skeleton-proctor-card"></div>
+              <div class="skeleton-proctor-card"></div>
+              <div class="skeleton-proctor-card"></div>
+            </div>
+            <!-- Skeleton for chart -->
+            <div class="skeleton-chart"></div>
+          </div>
+        `;
+        container.style.opacity = "1";
+        container.style.visibility = "visible";
+      }
+    } catch (e) {}
 
     try {
       // Prefer persisted per-session proctor data from ExamsDetil when available
@@ -4166,15 +4186,13 @@
             }
           }
 
-          // Initial render
+          // Initial render - await for completion before showing content
           try {
             console.log(
               "renderSessionStatsCard: initial renderSessionPage offset=",
               _sessionListOffset
             );
-            renderSessionPage(_sessionListOffset).catch((err) => {
-              console.warn("renderSessionPage error", err);
-            });
+            await renderSessionPage(_sessionListOffset);
           } catch (e) {
             console.warn("initial renderSessionPage failed", e);
           }
@@ -4207,6 +4225,18 @@
         }
       }
 
+      // Remove skeleton and show actual content after all data is loaded
+      try {
+        const skeleton = document.getElementById("sessionStatsSkeleton");
+        if (skeleton && skeleton.parentNode) {
+          skeleton.parentNode.removeChild(skeleton);
+        }
+        if (container) {
+          container.style.opacity = "1";
+          container.style.visibility = "visible";
+        }
+      } catch (e) {}
+
       // hide spinner after rendering and post-processing
       if (spinner) {
         try {
@@ -4229,9 +4259,12 @@
       }
       // Show a small inline hint so the user doesn't see a completely blank area
       try {
-        if (container)
+        if (container) {
           container.innerHTML =
             '<div style="padding:1rem;color:var(--text-muted);direction:rtl;text-align:right">خطا در بارگذاری نمودار — لطفاً کنسول مرورگر را برای جزئیات بررسی کنید.</div>';
+          container.style.opacity = "1";
+          container.style.visibility = "visible";
+        }
       } catch (err) {
         /* ignore */
       }

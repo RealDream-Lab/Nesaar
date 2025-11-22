@@ -1938,3 +1938,144 @@ body.swal2-toast-shown {
   transform: translateY(-2px);
   opacity: 0.85;
 }
+
+/* Session stats card content loading state */
+#sessionStatsContent {
+  transition: opacity 0.3s ease-in, visibility 0.3s ease-in;
+}
+
+/* Loading state for observers cards */
+.observers-loading {
+  opacity: 0;
+  visibility: hidden;
+}
+
+/* Skeleton Loading Styles (Telegram/WhatsApp style) */
+.skeleton-loading {
+  width: 100%;
+  padding: 1rem 0;
+  direction: rtl;
+}
+
+.skeleton-proctors-section {
+  display: flex;
+  gap: 12px;
+  margin-bottom: 20px;
+  justify-content: stretch;
+  align-items: flex-start;
+}
+
+.skeleton-proctor-card {
+  flex: 1;
+  min-width: 0;
+  height: 180px;
+  background: linear-gradient(
+    90deg,
+    rgba(255, 255, 255, 0.08) 0%,
+    rgba(255, 255, 255, 0.12) 50%,
+    rgba(255, 255, 255, 0.08) 100%
+  );
+  background-size: 200% 100%;
+  border-radius: 12px;
+  animation: shimmer 1.5s infinite;
+  position: relative;
+  overflow: hidden;
+}
+
+.skeleton-proctor-card::before {
+  content: "";
+  position: absolute;
+  top: 12px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 60%;
+  height: 16px;
+  background: rgba(255, 255, 255, 0.15);
+  border-radius: 4px;
+}
+
+.skeleton-proctor-card::after {
+  content: "";
+  position: absolute;
+  top: 40px;
+  left: 10px;
+  right: 10px;
+  bottom: 10px;
+  background: linear-gradient(
+    180deg,
+    rgba(255, 255, 255, 0.05) 0%,
+    transparent 100%
+  );
+  border-radius: 8px;
+}
+
+.skeleton-chart {
+  width: 100%;
+  height: 520px;
+  background: linear-gradient(
+    90deg,
+    rgba(255, 255, 255, 0.06) 0%,
+    rgba(255, 255, 255, 0.1) 50%,
+    rgba(255, 255, 255, 0.06) 100%
+  );
+  background-size: 200% 100%;
+  border-radius: 12px;
+  animation: shimmer 1.5s infinite;
+  position: relative;
+  overflow: hidden;
+}
+
+.skeleton-chart::before {
+  content: "";
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 80%;
+  background: linear-gradient(
+    0deg,
+    transparent 0%,
+    rgba(255, 255, 255, 0.03) 20%,
+    rgba(255, 255, 255, 0.05) 40%,
+    rgba(255, 255, 255, 0.03) 60%,
+    transparent 80%
+  );
+}
+
+@keyframes shimmer {
+  0% {
+    background-position: -200% 0;
+  }
+  100% {
+    background-position: 200% 0;
+  }
+}
+
+/* Dark theme skeleton adjustments */
+@media (prefers-color-scheme: dark) {
+  .skeleton-proctor-card,
+  .skeleton-chart {
+    background: linear-gradient(
+      90deg,
+      rgba(255, 255, 255, 0.05) 0%,
+      rgba(255, 255, 255, 0.09) 50%,
+      rgba(255, 255, 255, 0.05) 100%
+    );
+    background-size: 200% 100%;
+  }
+}
+
+/* Responsive skeleton for smaller screens */
+@media (max-width: 768px) {
+  .skeleton-proctors-section {
+    flex-direction: column;
+  }
+
+  .skeleton-proctor-card {
+    height: 120px;
+  }
+
+  .skeleton-chart {
+    height: 350px;
+  }
+}
