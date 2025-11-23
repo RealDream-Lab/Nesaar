@@ -26,7 +26,10 @@ function escapeHtml(value) {
   try {
     function patch() {
       try {
-        if (typeof Swal === "undefined" || Swal._ns_info_toast_patched_dashboard)
+        if (
+          typeof Swal === "undefined" ||
+          Swal._ns_info_toast_patched_dashboard
+        )
           return;
         const _orig = Swal.fire.bind(Swal);
         Swal.fire = function (opts) {
@@ -41,12 +44,15 @@ function escapeHtml(value) {
                 const toastOpts = Object.assign({}, opts, {
                   toast: true,
                   position: opts.position || "top-end",
-                  timer: typeof opts.timer === "number" ? opts.timer : 5000,
+                  timer: typeof opts.timer === "number" ? opts.timer : 3000,
                   showConfirmButton: false,
                   allowOutsideClick: true,
                 });
                 if (toastOpts.customClass) {
-                  toastOpts.customClass = Object.assign({}, toastOpts.customClass);
+                  toastOpts.customClass = Object.assign(
+                    {},
+                    toastOpts.customClass
+                  );
                   toastOpts.customClass.popup =
                     toastOpts.customClass.popup || "swal2-rtl swal2-toast";
                 } else {
@@ -62,11 +68,11 @@ function escapeHtml(value) {
         Swal._ns_info_toast_patched_dashboard = true;
       } catch (e) {}
     }
-    if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", patch);
+    if (document.readyState === "loading")
+      document.addEventListener("DOMContentLoaded", patch);
     else patch();
   } catch (e) {}
 })();
-
 
 async function copyToClipboard(text) {
   if (typeof text !== "string" || !text) {
@@ -1439,6 +1445,20 @@ try {
         typeof toPersianDigits === "function" ? toPersianDigits(v) : String(v);
       const eTxt = eCount === null ? "نامشخص" : toPd(eCount);
       const kTxt = kCount === null ? "نامشخص" : toPd(kCount);
+
+      if (eCount === 0 && kCount === 0) {
+        await Swal.fire({
+          icon: "info",
+          title: "اطلاعات",
+          text: "ابتدا اطلاعات آزمون‌ها را در قالب فایل اکسل آپلود کنید",
+          confirmButtonText: "باشه",
+          customClass: {
+            popup: "swal2-rtl swal2-glass",
+            confirmButton: "btn btn-primary",
+          },
+        });
+        return;
+      }
 
       const warningHtml = `
                 <div style="text-align:justify;line-height:2">
