@@ -1,4 +1,58 @@
 document.addEventListener("DOMContentLoaded", () => {
+  // Global wrapper: convert simple informational Swal modals into 5s toasts
+  (function wrapSwalInfoToasts() {
+    try {
+      function patch() {
+        try {
+          if (typeof Swal === "undefined" || Swal._ns_info_toast_patched) return;
+          const _orig = Swal.fire.bind(Swal);
+          Swal.fire = function (opts) {
+            try {
+              // Only intercept plain object-style calls (common usage across project)
+              if (typeof opts === "object" && opts !== null) {
+                const isSimpleInfo =
+                  (opts.icon === "info" || opts.icon === "success") &&
+                  !opts.input &&
+                  !opts.html &&
+                  !opts.showCancelButton &&
+                  // if explicitly asking user to confirm (showConfirmButton=true) we still convert
+                  // because toasts are intended for non-blocking notifications
+                  true;
+                if (isSimpleInfo) {
+                  const toastOpts = Object.assign({}, opts, {
+                    toast: true,
+                    position: opts.position || "top-end",
+                    timer: typeof opts.timer === "number" ? opts.timer : 5000,
+                    showConfirmButton: false,
+                    allowOutsideClick: true,
+                  });
+                  // ensure RTL toast class is preserved
+                  if (toastOpts.customClass) {
+                    toastOpts.customClass = Object.assign({}, toastOpts.customClass);
+                    toastOpts.customClass.popup =
+                      toastOpts.customClass.popup || "swal2-rtl swal2-toast";
+                  } else {
+                    toastOpts.customClass = { popup: "swal2-rtl swal2-toast" };
+                  }
+                  _orig(toastOpts);
+                  // return resolved promise to preserve callsites expecting a Promise
+                  return Promise.resolve({ isConfirmed: true });
+                }
+              }
+            } catch (e) {
+              // fallthrough to original
+            }
+            return _orig.apply(Swal, arguments);
+          };
+          Swal._ns_info_toast_patched = true;
+        } catch (e) {}
+      }
+      if (document.readyState === "loading")
+        document.addEventListener("DOMContentLoaded", patch);
+      else patch();
+    } catch (e) {}
+  })();
+
   const VERSION = window.APP_VERSION;
 
   function getCsrfToken() {

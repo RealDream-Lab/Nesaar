@@ -21,6 +21,53 @@ function escapeHtml(value) {
     .replace(/'/g, "&#39;");
 }
 
+// Ensure simple informational Swal modals are shown as toasts (5s) to avoid blocking clicks
+(function wrapSwalInfoToastsDashboard() {
+  try {
+    function patch() {
+      try {
+        if (typeof Swal === "undefined" || Swal._ns_info_toast_patched_dashboard)
+          return;
+        const _orig = Swal.fire.bind(Swal);
+        Swal.fire = function (opts) {
+          try {
+            if (typeof opts === "object" && opts !== null) {
+              const isSimpleInfo =
+                (opts.icon === "info" || opts.icon === "success") &&
+                !opts.input &&
+                !opts.html &&
+                !opts.showCancelButton;
+              if (isSimpleInfo) {
+                const toastOpts = Object.assign({}, opts, {
+                  toast: true,
+                  position: opts.position || "top-end",
+                  timer: typeof opts.timer === "number" ? opts.timer : 5000,
+                  showConfirmButton: false,
+                  allowOutsideClick: true,
+                });
+                if (toastOpts.customClass) {
+                  toastOpts.customClass = Object.assign({}, toastOpts.customClass);
+                  toastOpts.customClass.popup =
+                    toastOpts.customClass.popup || "swal2-rtl swal2-toast";
+                } else {
+                  toastOpts.customClass = { popup: "swal2-rtl swal2-toast" };
+                }
+                _orig(toastOpts);
+                return Promise.resolve({ isConfirmed: true });
+              }
+            }
+          } catch (e) {}
+          return _orig.apply(Swal, arguments);
+        };
+        Swal._ns_info_toast_patched_dashboard = true;
+      } catch (e) {}
+    }
+    if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", patch);
+    else patch();
+  } catch (e) {}
+})();
+
+
 async function copyToClipboard(text) {
   if (typeof text !== "string" || !text) {
     return false;
