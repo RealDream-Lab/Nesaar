@@ -3,10 +3,7 @@
   try {
     function patch() {
       try {
-        if (
-          typeof Swal === "undefined" ||
-          Swal._ns_info_toast_patched_coworker
-        )
+        if (typeof Swal === "undefined" || Swal._ns_info_toast_patched_coworker)
           return;
         const _orig = Swal.fire.bind(Swal);
         Swal.fire = function (opts) {
@@ -21,7 +18,7 @@
                 const toastOpts = Object.assign({}, opts, {
                   toast: true,
                   position: opts.position || "top-end",
-                  timer: typeof opts.timer === "number" ? opts.timer : 5000,
+                  timer: typeof opts.timer === "number" ? opts.timer : 3000,
                   showConfirmButton: false,
                   allowOutsideClick: true,
                 });

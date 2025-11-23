@@ -4,7 +4,8 @@ document.addEventListener("DOMContentLoaded", () => {
     try {
       function patch() {
         try {
-          if (typeof Swal === "undefined" || Swal._ns_info_toast_patched) return;
+          if (typeof Swal === "undefined" || Swal._ns_info_toast_patched)
+            return;
           const _orig = Swal.fire.bind(Swal);
           Swal.fire = function (opts) {
             try {
@@ -22,13 +23,16 @@ document.addEventListener("DOMContentLoaded", () => {
                   const toastOpts = Object.assign({}, opts, {
                     toast: true,
                     position: opts.position || "top-end",
-                    timer: typeof opts.timer === "number" ? opts.timer : 5000,
+                    timer: typeof opts.timer === "number" ? opts.timer : 3000,
                     showConfirmButton: false,
                     allowOutsideClick: true,
                   });
                   // ensure RTL toast class is preserved
                   if (toastOpts.customClass) {
-                    toastOpts.customClass = Object.assign({}, toastOpts.customClass);
+                    toastOpts.customClass = Object.assign(
+                      {},
+                      toastOpts.customClass
+                    );
                     toastOpts.customClass.popup =
                       toastOpts.customClass.popup || "swal2-rtl swal2-toast";
                   } else {
