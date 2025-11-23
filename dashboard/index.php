@@ -76,14 +76,10 @@ if ($licenseStatus['valid'] !== true) {
                             <img src="/assets/app/recipient.png" alt="کاربر Recipient"
                                 style="width:40px;height:40px;object-fit:contain;display:block;">
                         </button>
-                        <button id="smsSettingsBtn" class="btn btn-icon p-0" type="button" title="تنظیمات پیام کوتاه"
+                        <button id="editRolesBtn" class="btn btn-icon p-0" type="button"
+                            title="پیکربندی و ویرایش نقش‌ها"
                             style="background:transparent;border:none;margin-inline-end:8px;padding:0;">
-                            <img src="/dashboard/sms.png" alt="تنظیمات پیام کوتاه"
-                                style="width:40px;height:40px;object-fit:contain;display:block;padding-top: 2px;padding-bottom: 2px;">
-                        </button>
-                        <button id="editRolesBtn" class="btn btn-icon p-0" type="button" title="ویرایش نقش‌ها"
-                            style="background:transparent;border:none;margin-inline-end:8px;padding:0;">
-                            <img src="/dashboard/config.png" alt="ویرایش نقش‌ها" class="rotating-icon"
+                            <img src="/dashboard/config.png" alt="پیکربندی و ویرایش نقش‌ها" class="rotating-icon"
                                 style="width:40px;height:40px;object-fit:contain;display:block;">
                         </button>
 

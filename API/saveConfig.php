@@ -24,7 +24,10 @@ $allowed = [
     'Chairman',
     'GroupByCourse',
     'PaperSaving',
-    'ObserversLastCard'
+    'ObserversLastCard',
+    // Add SendSMS toggle (YES/NO) and SmsApiKey to allow storing SMS provider key
+    'SendSMS',
+    'SmsApiKey'
 ];
 
 $toSave = [];
@@ -40,6 +43,17 @@ foreach ($allowed as $k) {
             $val = 'NO';
         }
         $toSave[$k] = $val; // always save toggle even if NO
+        continue;
+    }
+
+    if ($k === 'SendSMS') {
+        // Normalize to strict YES/NO
+        $raw = is_string($input[$k]) ? $input[$k] : '';
+        $val = strtoupper(trim($raw));
+        if ($val !== 'YES' && $val !== 'NO') {
+            $val = 'NO';
+        }
+        $toSave[$k] = $val;
         continue;
     }
 

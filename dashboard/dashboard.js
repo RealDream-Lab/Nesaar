@@ -836,6 +836,40 @@ async function guardedFetch(resource, options = {}) {
   return response;
 }
 
+async function fetchSmsCreditValue() {
+  try {
+    const response = await guardedFetch("../API/getSmsCredit.php", {
+      cache: "no-store",
+    });
+    if (!response.ok) {
+      return null;
+    }
+    const payload = await response.json();
+    if (payload && payload.success) {
+      if (payload.credit !== undefined && payload.credit !== null) {
+        return payload.credit;
+      }
+      if (payload.raw && payload.raw.Data !== undefined) {
+        return payload.raw.Data;
+      }
+    }
+  } catch (err) {
+    console.warn("fetchSmsCreditValue failed", err);
+  }
+  return null;
+}
+
+function formatSmsCreditDisplay(value) {
+  if (value === null || value === undefined || value === "") {
+    return "نامشخص";
+  }
+  const num = Number(value);
+  if (Number.isFinite(num)) {
+    return toPersianDigits(num.toLocaleString("en-US"));
+  }
+  return toPersianDigits(String(value));
+}
+
 async function checkAuth() {
   try {
     const response = await guardedFetch(SESSION_ENDPOINT, {
@@ -928,45 +962,80 @@ try {
         String(cfg.GroupByCourse || "").toUpperCase() === "YES";
       const paperSavingChecked =
         String(cfg.PaperSaving || "").toUpperCase() === "YES";
+      const sendSmsChecked = String(cfg.SendSMS || "").toUpperCase() === "YES";
 
-      // Form HTML: use SweetAlert's glass popup background (don't add a bright inner background)
-      // Inputs use transparent background and subtle borders so the modal looks like the existing glass theme
+      let smsCreditValue = null;
+      try {
+        smsCreditValue = await fetchSmsCreditValue();
+      } catch (e) {
+        /* already logged */
+      }
+      const smsCreditDisplay = formatSmsCreditDisplay(smsCreditValue);
+      const smsCreditParenthetical =
+        smsCreditDisplay === "نامشخص"
+          ? "اعتبار: نامشخص"
+          : `اعتبار: ${smsCreditDisplay} پیامک`;
+
+      // Form HTML: two-column rows for text inputs, toggles under a divider
+      const sharedInputStyle =
+        "margin-bottom:6px;border:1px solid rgba(255,255,255,0.12);background:transparent;color:inherit;box-shadow:none;";
+      const fieldWrapperStyle =
+        "flex:1;min-width:220px;display:flex;flex-direction:column;gap:4px;";
       const formHtml = `
                 <div style="text-align: right; direction: rtl;">
                     <div style="padding:8px; border-radius:6px;">
-                        <div style="margin-bottom:8px; font-weight:700; color:inherit;">ویرایش نقش‌ها و نام‌های امضا‌کننده</div>
-
-                        <label style="display:block;font-size:0.92rem;margin-top:6px;color:inherit;">نام نمایشی کاربر (نمایش در هدر)</label>
-                        <input id="er_admin" class="swal2-input" placeholder="نام نمایشی کاربر" style="margin-bottom:6px;border:1px solid rgba(255,255,255,0.08);background:transparent;color:inherit;box-shadow:none;" value="${escapeHtml(
-                          adminVal
-                        )}">
-
-                        <label style="display:block;font-size:0.92rem;margin-top:6px;color:inherit;">نام و نام خانوادگی رئیس مرکز</label>
-                        <input id="er_boss" class="swal2-input" placeholder="رئیس مرکز" style="margin-bottom:6px;border:1px solid rgba(255,255,255,0.08);background:transparent;color:inherit;box-shadow:none;" value="${escapeHtml(
-                          bossVal
-                        )}">
-
-                        <label style="display:block;font-size:0.92rem;margin-top:6px;color:inherit;">نام و نام خانوادگی رئیس اداره آموزش</label>
-                        <input id="er_head" class="swal2-input" placeholder="رئیس اداره آموزش" style="margin-bottom:6px;border:1px solid rgba(255,255,255,0.08);background:transparent;color:inherit;box-shadow:none;" value="${escapeHtml(
-                          headVal
-                        )}">
-
-                        <label style="display:block;font-size:0.92rem;margin-top:6px;color:inherit;">نام و نام خانوادگی مسئول جلسه</label>
-                        <input id="er_chair" class="swal2-input" placeholder="مسئول جلسه" style="margin-bottom:6px;border:1px solid rgba(255,255,255,0.08);background:transparent;color:inherit;box-shadow:none;" value="${escapeHtml(
-                          chairVal
-                        )}">
-
-                        <div style="margin-top:10px; display:flex; align-items:center; gap:8px;">
-                            <input id="er_groupByCourse" type="checkbox" ${
-                              groupByCourseChecked ? "checked" : ""
-                            } style="width:1.15rem;height:1.15rem;">
-                            <label for="er_groupByCourse" style="margin:0;cursor:pointer;">مرتب‌سازی صندلی‌ها براساس درس</label>
+                        <div style="margin-bottom:10px; font-weight:700; color:inherit;">ویرایش نقش‌ها و نام‌های امضا‌کننده</div>
+                        <div style="display:flex;gap:12px;flex-wrap:wrap;">
+                            <div style="${fieldWrapperStyle}">
+                                <label style="font-size:0.92rem;color:inherit;">نام نمایشی کاربر (نمایش در هدر)</label>
+                                <input id="er_admin" class="swal2-input" placeholder="نام نمایشی کاربر" style="${sharedInputStyle}" value="${escapeHtml(
+        adminVal
+      )}">
+                            </div>
+                            <div style="${fieldWrapperStyle}">
+                                <label style="font-size:0.92rem;color:inherit;">نام و نام خانوادگی رئیس مرکز</label>
+                                <input id="er_boss" class="swal2-input" placeholder="رئیس مرکز" style="${sharedInputStyle}" value="${escapeHtml(
+        bossVal
+      )}">
+                            </div>
                         </div>
-                        <div style="margin-top:8px; display:flex; align-items:center; gap:8px;">
-                            <input id="er_paperSaving" type="checkbox" ${
-                              paperSavingChecked ? "checked" : ""
-                            } style="width:1.15rem;height:1.15rem;">
-                            <label for="er_paperSaving" style="margin:0;cursor:pointer;">صرفه‌جویی در مصرف کاغذ</label>
+                        <div style="display:flex;gap:12px;flex-wrap:wrap;margin-top:8px;">
+                            <div style="${fieldWrapperStyle}">
+                                <label style="font-size:0.92rem;color:inherit;">نام و نام خانوادگی رئیس اداره آموزش</label>
+                                <input id="er_head" class="swal2-input" placeholder="رئیس اداره آموزش" style="${sharedInputStyle}" value="${escapeHtml(
+        headVal
+      )}">
+                            </div>
+                            <div style="${fieldWrapperStyle}">
+                                <label style="font-size:0.92rem;color:inherit;">نام و نام خانوادگی مسئول جلسه</label>
+                                <input id="er_chair" class="swal2-input" placeholder="مسئول جلسه" style="${sharedInputStyle}" value="${escapeHtml(
+        chairVal
+      )}">
+                            </div>
+                        </div>
+                        <hr style="border:0;border-top:1px solid rgba(255,255,255,0.15);margin:14px 0;">
+                        <div style="display:flex;flex-direction:column;gap:10px;">
+                            <div style="display:flex;align-items:center;gap:10px;">
+                                <input id="er_groupByCourse" type="checkbox" ${
+                                  groupByCourseChecked ? "checked" : ""
+                                } style="width:1.15rem;height:1.15rem;">
+                                <label for="er_groupByCourse" style="margin:0;cursor:pointer;">مرتب‌سازی صندلی‌ها براساس درس</label>
+                            </div>
+                            <div style="display:flex;align-items:center;gap:10px;">
+                                <input id="er_paperSaving" type="checkbox" ${
+                                  paperSavingChecked ? "checked" : ""
+                                } style="width:1.15rem;height:1.15rem;">
+                                <label for="er_paperSaving" style="margin:0;cursor:pointer;">صرفه‌جویی در مصرف کاغذ</label>
+                            </div>
+                            <div style="display:flex;align-items:center;gap:10px;">
+                                <input id="er_sendSms" type="checkbox" ${
+                                  sendSmsChecked ? "checked" : ""
+                                } style="width:1.15rem;height:1.15rem;">
+                                <label for="er_sendSms" style="margin:0;cursor:pointer;display:flex;flex-wrap:wrap;gap:6px;align-items:center;">
+                                    <span>فعال‌سازی ارسال پیامک برای عوامل اجرائی</span>
+                                    <span style="font-size:0.85rem;color:#ffffff;">(${smsCreditParenthetical})</span>
+                                </label>
+                            </div>
                         </div>
                     </div>
                 </div>`;
@@ -974,6 +1043,7 @@ try {
       const modalResult = await Swal.fire({
         title: "ویرایش نقش‌ها و تنظیمات",
         html: formHtml,
+        width: 720,
         showCancelButton: true,
         confirmButtonText: "ذخیره",
         cancelButtonText: "انصراف",
@@ -996,6 +1066,9 @@ try {
           const paperSaving = document.getElementById("er_paperSaving")?.checked
             ? "YES"
             : "NO";
+          const sendSms = document.getElementById("er_sendSms")?.checked
+            ? "YES"
+            : "NO";
           // return values to then handle save confirmation
           return {
             AdminNickName: admin.trim(),
@@ -1004,6 +1077,7 @@ try {
             Chairman: chair.trim(),
             GroupByCourse: groupByCourse,
             PaperSaving: paperSaving,
+            SendSMS: sendSms,
           };
         },
       });
@@ -1048,8 +1122,7 @@ try {
             } catch (e) {}
           }
           // Update global config for immediate effect
-          window.appConfig.GroupByCourse = values.GroupByCourse;
-          window.appConfig.PaperSaving = values.PaperSaving;
+          window.appConfig = { ...(window.appConfig || {}), ...values };
           await Swal.fire({
             icon: "success",
             title: "ذخیره شد",
@@ -1079,6 +1152,14 @@ try {
         });
       }
     });
+
+    const smsSettingsBtn = document.getElementById("smsSettingsBtn");
+    if (smsSettingsBtn) {
+      smsSettingsBtn.addEventListener("click", (ev) => {
+        ev.preventDefault();
+        editBtn.click();
+      });
+    }
   }
 } catch (e) {
   console.warn("Edit roles handler attach failed", e);
