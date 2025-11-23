@@ -177,6 +177,11 @@ try {
     } catch (Throwable $e) {
         $proctorsCleared = false;
     }
+    try {
+        $pdo->exec('DELETE FROM ExamAssignments');
+    } catch (Throwable $e) {
+        // ignore if table doesn't exist
+    }
 
     // Common derived table
     $derived = "( {$unionSql} ) AS t";
