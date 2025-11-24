@@ -1,5 +1,6 @@
 {
     "require": {
-        "openspout/openspout": "^4.32"
+        "openspout/openspout": "^4.32",
+        "mpdf/mpdf": "^8.2"
     }
 }
