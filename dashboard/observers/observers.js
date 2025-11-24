@@ -4771,7 +4771,7 @@
         title: `ویرایش محدودیت‌ها  (${escapeHtml(proctorName || "")})`,
         html: html,
         showCancelButton: true,
-        confirmButtonText: "اتمام",
+        confirmButtonText: "ذخیره و بستن",
         cancelButtonText: "لغو",
         customClass: {
           popup: "swal2-rtl swal2-glass proctor-restrictions-modal",
