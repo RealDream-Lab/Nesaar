@@ -13,7 +13,8 @@ require_once __DIR__ . '/../includes/rate_limit.php';
 require_once __DIR__ . '/db_init.php';
 
 // Enforce CSRF first
-$proctorsCleared = false;
+$proctorsCleared            = false;
+$proctorRestrictionsCleared = false;
 
 try {
     csrf_enforce();
@@ -178,6 +179,12 @@ try {
         $proctorsCleared = false;
     }
     try {
+        $pdo->exec('DELETE FROM ProctorRestrictions');
+        $proctorRestrictionsCleared = true;
+    } catch (Throwable $e) {
+        $proctorRestrictionsCleared = false;
+    }
+    try {
         $pdo->exec('DELETE FROM ExamAssignments');
     } catch (Throwable $e) {
         // ignore if table doesn't exist
@@ -308,7 +315,8 @@ try {
             'exam_seats' => (int)$insertedSeats,
             'locations' => (int)($insertedLocations ?? 0)
         ],
-        'proctorsCleared' => $proctorsCleared
+        'proctorsCleared' => $proctorsCleared,
+        'proctorRestrictionsCleared' => $proctorRestrictionsCleared
     ], JSON_UNESCAPED_UNICODE);
 } catch (Throwable $e) {
     // Rollback if in transaction

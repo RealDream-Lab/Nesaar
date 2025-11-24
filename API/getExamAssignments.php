@@ -1,7 +1,8 @@
 <?php
 // Return proctors assigned for a given exam_date & exam_time from ExamAssignments
 header('Content-Type: application/json; charset=utf-8');
-if (session_status() === PHP_SESSION_NONE) session_start();
+if (session_status() === PHP_SESSION_NONE)
+    session_start();
 require_once __DIR__ . '/../includes/license_guard.php';
 require_once __DIR__ . '/../includes/csrf_protection.php';
 require_once __DIR__ . '/../includes/admin_session.php';
@@ -27,7 +28,7 @@ try {
     // Ensure table exists
     $stmt = $pdo->prepare('SELECT proctor_id, proctor_name FROM `ExamAssignments` WHERE exam_date = ? AND exam_time = ? AND TRIM(IFNULL(proctor_name, "")) != "" ORDER BY proctor_name');
     $stmt->execute([$examDate, $examTime]);
-    $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
+    $rows     = $stmt->fetchAll(PDO::FETCH_ASSOC);
     $proctors = [];
     foreach ($rows as $r) {
         $proctors[] = ['proctor_id' => $r['proctor_id'], 'proctor_name' => $r['proctor_name']];
@@ -46,13 +47,41 @@ try {
         error_log('getExamAssignments: failed to compute required proctor total: ' . $sumErr->getMessage());
     }
 
+    // Calculate total proctors and restricted proctors for this session
+    $totalProctors   = 0;
+    $restrictedCount = 0;
+    try {
+        // Total proctors
+        $tpStmt        = $pdo->query('SELECT COUNT(*) FROM `Proctors`');
+        $totalProctors = (int)$tpStmt->fetchColumn();
+
+        // Restricted proctors for this session
+        // Ensure table exists first (lazy check)
+        $pdo->exec("CREATE TABLE IF NOT EXISTS `ProctorRestrictions` (
+            `id` INT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
+            `proctor_id` INT UNSIGNED NOT NULL,
+            `exam_date` VARCHAR(10) NOT NULL,
+            `exam_time` VARCHAR(5) NOT NULL,
+            `created_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            UNIQUE KEY `ux_proctor_date_time` (`proctor_id`,`exam_date`,`exam_time`)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
+
+        $rcStmt = $pdo->prepare('SELECT COUNT(*) FROM `ProctorRestrictions` WHERE exam_date = ? AND exam_time = ?');
+        $rcStmt->execute([$examDate, $examTime]);
+        $restrictedCount = (int)$rcStmt->fetchColumn();
+    } catch (Throwable $e) {
+        // Ignore errors, default to 0
+    }
+
     echo json_encode([
         'success' => true,
         'exam_date' => $examDate,
         'exam_time' => $examTime,
         'proctors' => $proctors,
         'assigned_total' => $assignedTotal,
-        'required_total' => $requiredTotal
+        'required_total' => $requiredTotal,
+        'total_proctors' => $totalProctors,
+        'restricted_count' => $restrictedCount
     ], JSON_UNESCAPED_UNICODE);
 } catch (PDOException $e) {
     http_response_code(500);

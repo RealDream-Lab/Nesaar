@@ -4841,15 +4841,24 @@
               }
               const requiredTotal = Number(snapshot.required_total || 0);
               if (requiredTotal <= 0) return { ok: true };
-              const assignedTotal = Number(snapshot.assigned_total || 0);
-              const assignedList = Array.isArray(snapshot.proctors)
-                ? snapshot.proctors
-                : [];
-              const isAssignedHere = assignedList.some(
-                (item) => Number(item.proctor_id || 0) === proctorNumericId
-              );
-              if (!isAssignedHere) return { ok: true };
-              if (assignedTotal - 1 < requiredTotal) {
+
+              // Check if this proctor is already restricted for this session
+              // We don't have the list of restricted IDs here, but we can infer:
+              // If we are calling this, it's because the user clicked a cell.
+              // If the cell was NOT selected (not restricted), we are adding a restriction.
+              // If the cell WAS selected (restricted), we are removing it (always allowed).
+              // The caller (click handler) checks `currentlySelected` before calling this.
+              // So we assume we are ADDING a restriction here.
+
+              const totalProctors = Number(snapshot.total_proctors || 0);
+              const restrictedCount = Number(snapshot.restricted_count || 0);
+
+              // Available proctors BEFORE adding this restriction = Total - Restricted
+              // Available proctors AFTER adding this restriction = Total - Restricted - 1
+
+              const availableAfter = totalProctors - restrictedCount - 1;
+
+              if (availableAfter < requiredTotal) {
                 return {
                   ok: false,
                   message:
