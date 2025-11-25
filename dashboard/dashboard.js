@@ -21,6 +21,16 @@ function escapeHtml(value) {
     .replace(/'/g, "&#39;");
 }
 
+// Configure SweetAlert2 globally to prevent layout shifts
+try {
+  if (typeof Swal !== "undefined") {
+    window.Swal = Swal.mixin({
+      scrollbarPadding: false,
+      heightAuto: false,
+    });
+  }
+} catch (e) {}
+
 // Ensure simple informational Swal modals are shown as toasts (5s) to avoid blocking clicks
 (function wrapSwalInfoToastsDashboard() {
   try {
@@ -225,6 +235,17 @@ function showReportModal(url, title) {
     window.appConfig && window.appConfig.rptDownload === "YES";
   if (rptDownload) {
     window.open(url, "_blank");
+    // If we opened a new tab, we might want to reopen the menu immediately or not at all.
+    // Since the modal didn't open, the previous modal (essentials menu) is already closed by the button click?
+    // Actually, the button click in examEssentialsHandler doesn't close the modal automatically unless we do it.
+    // But startEssentialsPrint is called, which calls printX, which calls showReportModal.
+    // If showReportModal opens a new Swal, the old one closes.
+    // If we open a new tab, we don't open a new Swal, so the old one might stay open?
+    // No, SweetAlert usually stays open unless closed.
+    // But if we want to be safe, we can check if we need to reopen it.
+    // However, the user specifically asked about "when the report modal is closed".
+    // So this applies to the iframe modal case.
+    reopenEssentialsMenuIfRequested();
   } else {
     Swal.fire({
       title: title || "پیش‌نمایش گزارش",
@@ -235,6 +256,9 @@ function showReportModal(url, title) {
       showConfirmButton: false,
       customClass: {
         popup: "swal2-rtl swal2-glass",
+      },
+      didClose: () => {
+        reopenEssentialsMenuIfRequested();
       },
     });
   }
@@ -1585,8 +1609,12 @@ try {
         title: "در حال به‌روزرسانی",
         html: `
                     <div style="text-align: center; padding: 1rem;">
-                        <div id="updateProgressDisplay" style="font-size: 3rem; font-weight: bold; color: white; margin-bottom: 1rem;">1%</div>
-                        <p id="updateProgressText" style="color: white; font-size: 1.1rem;">در حال بررسی جداول موقت...</p>
+                        <style>
+                        /* Make progress digits monospaced/tabular for consistent width */
+                        .tabular-digits { font-variant-numeric: tabular-nums; font-family: Vazir, 'DejaVu Sans Mono', monospace; letter-spacing: 0.01em; }
+                        </style>
+                        <div id="updateProgressDisplay" class="tabular-digits" style="font-size: 3rem; font-weight: bold; color: white; margin-bottom: 1rem;">۱٪</div>
+                        <p id="updateProgressText" style="color: white; font-size: 1.1rem; margin:0;">در حال بررسی جداول موقت...</p>
                     </div>
                 `,
         allowOutsideClick: false,
@@ -1605,9 +1633,14 @@ try {
         if (updServerProgress) return;
         updProgress += Math.random() * 3 + 0.5;
         if (updProgress > 95) updProgress = 95;
-        if (updDisp)
-          updDisp.textContent =
-            updProgress >= 10 ? Math.round(updProgress) + "%" : "شروع...";
+        if (updDisp) {
+          const val = Math.round(updProgress);
+          const pers =
+            typeof toPersianDigits === "function"
+              ? toPersianDigits(val)
+              : String(val);
+          updDisp.textContent = pers + "٪";
+        }
         if (updText) {
           if (updProgress < 30)
             updText.textContent = "در حال بررسی جداول موقت...";
@@ -1637,12 +1670,20 @@ try {
               99,
               Math.round((payload.processedRows / payload.totalRows) * 100)
             );
-            if (updDisp) updDisp.textContent = percent + "%";
+            const pers =
+              typeof toPersianDigits === "function"
+                ? toPersianDigits(percent)
+                : String(percent);
+            if (updDisp) updDisp.textContent = pers + "٪";
             if (updText)
               updText.textContent = payload.message || "در حال به‌روزرسانی...";
           } else if (payload.stage === "error") {
             updServerProgress = true;
-            if (updDisp) updDisp.textContent = "0%";
+            if (updDisp)
+              updDisp.textContent =
+                (typeof toPersianDigits === "function"
+                  ? toPersianDigits(0)
+                  : "0") + "٪";
             if (updText)
               updText.textContent = payload.message || "خطا در به‌روزرسانی";
           }
@@ -1682,7 +1723,11 @@ try {
 
         const result = await response.json();
         if (result && result.success) {
-          if (updDisp) updDisp.textContent = "100%";
+          if (updDisp)
+            updDisp.textContent =
+              (typeof toPersianDigits === "function"
+                ? toPersianDigits(100)
+                : "100") + "٪";
           if (updText) updText.textContent = "به‌روزرسانی کامل شد!";
           setTimeout(async () => {
             Swal.close();
@@ -2850,8 +2895,12 @@ async function processUploadedExcel(examType, examTypeName, filename) {
     title: "در حال پردازش",
     html: `
             <div style="text-align: center; padding: 1rem;">
+                <style>
+                /* Make progress digits monospaced/tabular for consistent width */
+                .tabular-digits { font-variant-numeric: tabular-nums; font-family: Vazir, 'DejaVu Sans Mono', monospace; letter-spacing: 0.01em; }
+                </style>
                 <div id="processProgressDisplay" class="tabular-digits" style="font-size: 3rem; font-weight: bold; color: white; margin-bottom: 1rem;">۰٪</div>
-                <p id="processProgressText" style="color: white; font-size: 1.1rem;">در حال خواندن فایل اکسل...</p>
+                <p id="processProgressText" style="color: white; font-size: 1.1rem; margin:0;">در حال خواندن فایل اکسل...</p>
             </div>
         `,
     allowOutsideClick: false,
@@ -3013,7 +3062,10 @@ async function processUploadedExcel(examType, examTypeName, filename) {
     if (result.success) {
       // Set to 100%
       if (progressDisplay) {
-        progressDisplay.textContent = "100%";
+        progressDisplay.textContent =
+          (typeof toPersianDigits === "function"
+            ? toPersianDigits(100)
+            : "100") + "٪";
       }
       if (progressText) {
         progressText.textContent = "پردازش کامل شد!";
@@ -5052,10 +5104,46 @@ async function printSeatNumbersReport_OLD() {
 
 async function printProctorNotices() {
   try {
+    // Check if there are any proctor assignments first
+    const response = await guardedFetch("../API/getProctorNotifications.php", {
+      cache: "no-store",
+    });
+    const payload = await response.json();
+
+    if (!response.ok || !payload || payload.success !== true) {
+      throw new Error(
+        payload?.message || payload?.error || "خطا در دریافت اطلاعات"
+      );
+    }
+
+    const proctors = Array.isArray(payload.proctors) ? payload.proctors : [];
+    if (!proctors.length) {
+      return Swal.fire({
+        icon: "info",
+        title: "اطلاعات",
+        text: "هنوز هیچ ابلاغی برای مراقبین صادر نشده است.",
+        confirmButtonText: "باشه",
+        customClass: {
+          popup: "swal2-rtl swal2-glass",
+          confirmButton: "btn btn-primary",
+        },
+      });
+    }
+
     const url = `../API/generatePDF.php?report_type=proctor_notice&_t=${new Date().getTime()}`;
     showReportModal(url, "ابلاغ مراقبین");
   } catch (e) {
     console.error(e);
+    Swal.fire({
+      icon: "error",
+      title: "خطا",
+      text: e.message || "خطا در دریافت اطلاعات",
+      confirmButtonText: "باشه",
+      customClass: {
+        popup: "swal2-rtl swal2-glass",
+        confirmButton: "btn btn-primary",
+      },
+    });
   }
 }
 
@@ -5548,6 +5636,8 @@ async function examEssentialsHandler() {
 }
 
 function startEssentialsPrint(kind) {
+  // Flag to reopen the menu after the report modal closes
+  window._reopenEssentialsMenu = true;
   setTimeout(() => {
     try {
       if (kind === "secretary") printEssentialsSecretary();
@@ -6621,6 +6711,43 @@ async function printEssentialsDescriptive() {
     if (examDate && examTime) {
       examDate = toEnglishDigits(String(examDate)).replace(/-/g, "/");
       examTime = toEnglishDigits(String(examTime));
+
+      // Check for essay exams first
+      try {
+        const checkResp = await guardedFetch(
+          `../API/getNextExamReport.php?exam_date=${encodeURIComponent(
+            examDate
+          )}&exam_time=${encodeURIComponent(examTime)}`,
+          { cache: "no-store" }
+        );
+        const checkData = await checkResp.json();
+
+        if (checkData && !checkData.error) {
+          const courses = Array.isArray(checkData.courses)
+            ? checkData.courses
+            : [];
+          // Filter for descriptive (essay) exams
+          const hasEssay = courses.some(
+            (c) => c.course_type && c.course_type.includes("تشریحی")
+          );
+
+          if (!hasEssay) {
+            return Swal.fire({
+              icon: "info",
+              title: "اطلاعات",
+              text: "هیچ درس تشریحی برای این آزمون یافت نشد.",
+              confirmButtonText: "باشه",
+              customClass: {
+                popup: "swal2-rtl swal2-glass",
+                confirmButton: "btn btn-primary",
+              },
+            });
+          }
+        }
+      } catch (e) {
+        console.warn("Failed to pre-check essay exams:", e);
+      }
+
       const url = `../API/generatePDF.php?report_type=descriptive&exam_date=${encodeURIComponent(
         examDate
       )}&exam_time=${encodeURIComponent(examTime)}&_t=${new Date().getTime()}`;
