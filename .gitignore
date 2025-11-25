@@ -22,3 +22,7 @@ OBFUSCATION.md
 
 # Ignore backup directory for obfuscation
 backup/
+
+# Ignore temporary mPDF/font data and runtime caches
+temp/
+temp/**
