@@ -56,7 +56,7 @@ try {
                   position: opts.position || "top-end",
                   timer: typeof opts.timer === "number" ? opts.timer : 3000,
                   showConfirmButton: false,
-                  allowOutsideClick: true,
+                  // Note: allowOutsideClick is incompatible with toasts, so we don't set it
                 });
                 if (toastOpts.customClass) {
                   toastOpts.customClass = Object.assign(
@@ -4012,10 +4012,10 @@ async function examEssentialsHandler() {
     html: `
             <div style="display:flex;flex-direction:column;gap:12px;margin-top:1rem;">
                 <!-- Quick print shortcuts that reuse existing handlers -->
-                <button id="essentialsPrintSessionBtn" class="btn btn-primary w-100" style="padding:12px;font-size:1rem;font-weight:600;" onclick="try{ setTimeout(()=>{ printSessionReport(); }, 80); }catch(e){ console.error(e); }">
+                <button id="essentialsPrintSessionBtn" class="btn btn-primary w-100" style="padding:12px;font-size:1rem;font-weight:600;" onclick="try{ startEssentialsPrint('session'); }catch(e){ console.error(e); }">
                     صورتجلسه آزمون
                 </button>
-                <button id="essentialsPrintSeatBtn" class="btn btn-primary w-100" style="padding:12px;font-size:1rem;font-weight:600;" onclick="try{ setTimeout(()=>{ printSeatNumbersReport(); }, 80); }catch(e){ console.error(e); }">
+                <button id="essentialsPrintSeatBtn" class="btn btn-primary w-100" style="padding:12px;font-size:1rem;font-weight:600;" onclick="try{ startEssentialsPrint('seat'); }catch(e){ console.error(e); }">
                      شماره‌ صندلی‌آزمون
                 </button>
 
@@ -4046,7 +4046,9 @@ function startEssentialsPrint(kind) {
   window._reopenEssentialsMenu = true;
   setTimeout(() => {
     try {
-      if (kind === "secretary") printEssentialsSecretary();
+      if (kind === "session") printSessionReport();
+      else if (kind === "seat") printSeatNumbersReport();
+      else if (kind === "secretary") printEssentialsSecretary();
       else if (kind === "proctorNotice") printProctorNotices();
       else if (kind === "reproduction") printEssentialsReproduction();
       else if (kind === "descriptive") printEssentialsDescriptive();

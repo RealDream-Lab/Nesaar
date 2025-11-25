@@ -74,8 +74,11 @@ FROM php:8.3-apache AS final
 
 # Install system dependencies, PHP extensions, and Composer
 RUN apt-get update \
-    && apt-get install -y --no-install-recommends libzip-dev libonig-dev libxml2-dev unzip mc curl \
-    && docker-php-ext-install bcmath mbstring pdo_mysql xml zip \
+    && apt-get install -y --no-install-recommends \
+       libzip-dev libonig-dev libxml2-dev unzip mc curl \
+       libpng-dev libjpeg-dev libfreetype6-dev \
+    && docker-php-ext-configure gd --with-freetype --with-jpeg \
+    && docker-php-ext-install bcmath mbstring pdo_mysql xml zip gd \
     && a2enmod rewrite headers \
     && curl -sS https://getcomposer.org/installer | php -- --install-dir=/usr/local/bin --filename=composer \
     && rm -rf /var/lib/apt/lists/*
