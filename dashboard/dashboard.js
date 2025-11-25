@@ -204,7 +204,7 @@ function safePrintIframe(iframe, cw) {
   }
 }
 
-function safePrintWindow(win) {
+function safePrintWindow_OLD(win) {
   try {
     const idoc = win && win.document ? win.document : null;
     (async () => {
@@ -2877,7 +2877,7 @@ if (uploadElectronicBtn) {
   });
 }
 
-function scrollReportCardIntoView() {
+function scrollReportCardIntoView_OLD() {
   const reportCard = document.getElementById("reportCard");
   if (!reportCard) return;
 

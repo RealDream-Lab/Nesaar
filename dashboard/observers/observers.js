@@ -18,7 +18,7 @@
     return String(num).replace(/\d/g, (d) => persianDigits[d]);
   }
 
-  function toEnglishDigits(value) {
+  function toEnglishDigits_OLD(value) {
     const persian = "۰۱۲۳۴۵۶۷۸۹";
     const arabic = "٠١٢٣٤٥٦٧٨٩";
     return value
@@ -3073,7 +3073,7 @@
     }
 
     // Load and render the Assignment summary (top of the assignmentCard)
-    async function loadAssignmentSummary() {
+    async function loadAssignmentSummary_OLD() {
       const daysEl = document.getElementById("assignmentDays");
       const sessionsEl = document.getElementById("assignmentSessions");
       const totalEl = document.getElementById("assignmentTotalRequired");

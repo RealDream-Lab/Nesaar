@@ -705,7 +705,7 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   }
 
-  function decryptData(encryptedData) {
+  function decryptData_OLD(encryptedData) {
     try {
       const decoded = decodeURIComponent(escape(atob(encryptedData)));
       return JSON.parse(decoded);
