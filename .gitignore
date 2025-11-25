@@ -25,11 +25,7 @@ backup/
 
 # --- TEMP DIRECTORY RULES ---
 # Ignore all files inside temp and its subfolders
-/temp/**
-# But keep all directories
-!/temp/
-/temp/**/
-/temp/**/.gitkeep
-
-# Keep placeholder at root of temp
+temp/**
+# Allow `.gitkeep` placeholders so empty folders can be preserved on GitHub
 !/temp/.gitkeep
+!/temp/**/.gitkeep
