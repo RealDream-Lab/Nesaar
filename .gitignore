@@ -23,6 +23,13 @@ OBFUSCATION.md
 # Ignore backup directory for obfuscation
 backup/
 
-# Ignore contents of temp but keep the directory
-/temp/*
+# --- TEMP DIRECTORY RULES ---
+# Ignore all files inside temp and its subfolders
+/temp/**
+# But keep all directories
+!/temp/
+/temp/**/
+/temp/**/.gitkeep
+
+# Keep placeholder at root of temp
 !/temp/.gitkeep
