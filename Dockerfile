@@ -105,6 +105,9 @@ COPY --from=builder /out/ /var/www/html/
 # Installing at build time keeps vendor inside the image; adjust if you prefer multi-stage composer
 RUN composer require openspout/openspout --no-interaction --prefer-dist || true
 
+# Install mPDF library
+RUN composer require mpdf/mpdf --no-interaction --prefer-dist || true
+
 # Ensure correct permissions for Apache
 RUN chown -R www-data:www-data /var/www/html
 
