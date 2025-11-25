@@ -24,8 +24,9 @@ OBFUSCATION.md
 backup/
 
 # --- TEMP DIRECTORY RULES ---
-# Ignore all files inside temp and its subfolders
-temp/**
-# Allow `.gitkeep` placeholders so empty folders can be preserved on GitHub
-!/temp/.gitkeep
+# Ignore everything inside temp
+/temp/**
+# Un-ignore all subdirectories so git can recurse into them
+!/temp/**/
+# Un-ignore .gitkeep files so they can be tracked
 !/temp/**/.gitkeep
