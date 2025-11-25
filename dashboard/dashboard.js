@@ -220,6 +220,26 @@ function safePrintWindow(win) {
   }
 }
 
+function showReportModal(url, title) {
+  const rptDownload =
+    window.appConfig && window.appConfig.rptDownload === "YES";
+  if (rptDownload) {
+    window.open(url, "_blank");
+  } else {
+    Swal.fire({
+      title: title || "پیش‌نمایش گزارش",
+      html: `<iframe src="${url}" style="width:100%; height:85vh; border:none;"></iframe>`,
+      width: "95%",
+      padding: "0",
+      showCloseButton: true,
+      showConfirmButton: false,
+      customClass: {
+        popup: "swal2-rtl swal2-glass",
+      },
+    });
+  }
+}
+
 function reopenEssentialsMenuIfRequested() {
   try {
     if (window._reopenEssentialsMenu) {
@@ -334,6 +354,64 @@ try {
 }
 
 async function printSessionReport() {
+  try {
+    let context =
+      window._overrideExamContext && window._overrideExamContext.active
+        ? window._overrideExamContext
+        : window._lastExamContext;
+    let examDate = context?.exam_date;
+    let examTime = context?.exam_time;
+
+    if (!examDate || !examTime) {
+      const nextExamDateTimeText =
+        document.getElementById("nextExamDateTime")?.textContent || "";
+      if (
+        !nextExamDateTimeText ||
+        nextExamDateTimeText === "بارگذاری..." ||
+        nextExamDateTimeText === "آزمونی یافت نشد"
+      ) {
+        return Swal.fire({
+          icon: "info",
+          title: "اطلاعات",
+          text: "آزمون بعدی یافت نشد",
+          confirmButtonText: "باشه",
+          customClass: {
+            popup: "swal2-rtl swal2-glass",
+            confirmButton: "btn btn-primary",
+          },
+        });
+      }
+      const parts = nextExamDateTimeText.split("|").map((s) => s.trim());
+      if (parts.length !== 2) {
+        return Swal.fire({
+          icon: "error",
+          title: "خطا",
+          text: "فرمت تاریخ و ساعت نامعتبر است",
+          confirmButtonText: "باشه",
+          customClass: {
+            popup: "swal2-rtl swal2-glass",
+            confirmButton: "btn btn-primary",
+          },
+        });
+      }
+      examTime = toEnglishDigits(parts[0]);
+      examDate = toEnglishDigits(parts[1]).replace(/-/g, "/");
+      setLastExamContext(examDate, examTime);
+    } else {
+      examTime = toEnglishDigits(examTime);
+      examDate = toEnglishDigits(examDate).replace(/-/g, "/");
+      setLastExamContext(examDate, examTime);
+    }
+    const url = `../API/generatePDF.php?report_type=session&exam_date=${encodeURIComponent(
+      examDate
+    )}&exam_time=${encodeURIComponent(examTime)}&_t=${new Date().getTime()}`;
+    showReportModal(url, "صورتجلسه آزمون");
+  } catch (e) {
+    console.error(e);
+  }
+}
+
+async function printSessionReport_OLD() {
   try {
     let context =
       window._overrideExamContext && window._overrideExamContext.active
@@ -1016,6 +1094,7 @@ try {
       const paperSavingChecked =
         String(cfg.PaperSaving || "").toUpperCase() === "YES";
       const sendSmsChecked = String(cfg.SendSMS || "").toUpperCase() === "YES";
+      const rptDownloadVal = String(cfg.rptDownload || "").toUpperCase();
 
       let smsCreditValue = null;
       try {
@@ -1089,6 +1168,21 @@ try {
                                     <span style="font-size:0.85rem;color:#ffffff;">(${smsCreditParenthetical})</span>
                                 </label>
                             </div>
+                            <div style="display:flex;align-items:center;gap:15px;margin-top:8px;">
+                                <span style="font-size:0.92rem;color:inherit;">نحوه دریافت گزارشات:</span>
+                                <div style="display:flex;align-items:center;gap:5px;">
+                                    <input type="radio" id="er_rptView" name="er_rptDownload" value="NO" ${
+                                      rptDownloadVal !== "YES" ? "checked" : ""
+                                    } style="cursor:pointer;">
+                                    <label for="er_rptView" style="margin:0;cursor:pointer;font-size:0.9rem;">مشاهده</label>
+                                </div>
+                                <div style="display:flex;align-items:center;gap:5px;">
+                                    <input type="radio" id="er_rptDownload" name="er_rptDownload" value="YES" ${
+                                      rptDownloadVal === "YES" ? "checked" : ""
+                                    } style="cursor:pointer;">
+                                    <label for="er_rptDownload" style="margin:0;cursor:pointer;font-size:0.9rem;">دانلود</label>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>`;
@@ -1122,6 +1216,9 @@ try {
           const sendSms = document.getElementById("er_sendSms")?.checked
             ? "YES"
             : "NO";
+          const rptDownload =
+            document.querySelector('input[name="er_rptDownload"]:checked')
+              ?.value || "NO";
           // return values to then handle save confirmation
           return {
             AdminNickName: admin.trim(),
@@ -1131,6 +1228,7 @@ try {
             GroupByCourse: groupByCourse,
             PaperSaving: paperSaving,
             SendSMS: sendSms,
+            rptDownload: rptDownload,
           };
         },
       });
@@ -2597,11 +2695,9 @@ async function uploadDatabaseFile(file, examType, examTypeName) {
                 <style>
                 /* Make progress digits monospaced/tabular for consistent width */
                 .tabular-digits { font-variant-numeric: tabular-nums; font-family: Vazir, 'DejaVu Sans Mono', monospace; letter-spacing: 0.01em; }
-                .upload-progress-wrap { background: #e0e0e0; border-radius: 10px; overflow: hidden; height: 36px; margin-bottom: 0.85rem; }
-                .upload-progress-bar { background: linear-gradient(90deg, #1a6fa6, #127ead); height: 100%; width: 0%; transition: width 0.25s; display: flex; align-items: center; justify-content: center; color: white; font-weight: bold; font-size: 1.05rem; }
                 </style>
-                <div class="upload-progress-wrap"><div id="uploadProgressBar" class="upload-progress-bar tabular-digits">۰٪</div></div>
-                <p id="uploadProgressText" style="color: white; font-size: 1.05rem; margin:0;">در حال آپلود فایل...</p>
+                <div id="uploadProgressDisplay" class="tabular-digits" style="font-size: 3rem; font-weight: bold; color: white; margin-bottom: 1rem;">۰٪</div>
+                <p id="uploadProgressText" style="color: white; font-size: 1.1rem; margin:0;">در حال آپلود فایل...</p>
 			</div>
 		`,
     allowOutsideClick: false,
@@ -2623,7 +2719,9 @@ async function uploadDatabaseFile(file, examType, examTypeName) {
     xhr.upload.addEventListener("progress", (e) => {
       if (e.lengthComputable) {
         const percentComplete = Math.round((e.loaded / e.total) * 100);
-        const progressBar = document.getElementById("uploadProgressBar");
+        const progressDisplay = document.getElementById(
+          "uploadProgressDisplay"
+        );
         const progressText = document.getElementById("uploadProgressText");
 
         const pers =
@@ -2631,13 +2729,12 @@ async function uploadDatabaseFile(file, examType, examTypeName) {
             ? toPersianDigits(percentComplete)
             : String(percentComplete);
 
-        if (progressBar) {
-          progressBar.style.width = percentComplete + "%";
-          progressBar.textContent = pers + "٪";
+        if (progressDisplay) {
+          progressDisplay.textContent = pers + "٪";
         }
 
         if (progressText) {
-          progressText.textContent = `در حال آپلود ${pers}٪`;
+          progressText.textContent = `در حال آپلود...`;
         }
       }
     });
@@ -4200,6 +4297,48 @@ async function printSeatNumbersReport() {
       toEnglishDigits(String(value || "")).replace(/-/g, "/");
     const normalizeTime = (value) => toEnglishDigits(String(value || ""));
 
+    let examDate = context?.exam_date;
+    let examTime = context?.exam_time;
+
+    if (!examDate || !examTime) {
+      const nextExamDateTimeText =
+        document.getElementById("nextExamDateTime")?.textContent || "";
+      const parts = nextExamDateTimeText.split("|").map((s) => s.trim());
+      if (parts.length === 2) {
+        examTime = toEnglishDigits(parts[0]);
+        examDate = toEnglishDigits(parts[1]).replace(/-/g, "/");
+      }
+    }
+
+    if (examDate && examTime) {
+      const url = `../API/generatePDF.php?report_type=seat&exam_date=${encodeURIComponent(
+        examDate
+      )}&exam_time=${encodeURIComponent(examTime)}&_t=${new Date().getTime()}`;
+      showReportModal(url, "شماره صندلی آزمون");
+    } else {
+      Swal.fire({
+        icon: "error",
+        title: "خطا",
+        text: "اطلاعات آزمون یافت نشد",
+        confirmButtonText: "باشه",
+        customClass: {
+          popup: "swal2-rtl swal2-glass",
+          confirmButton: "btn btn-primary",
+        },
+      });
+    }
+  } catch (e) {
+    console.error(e);
+  }
+}
+
+async function printSeatNumbersReport_OLD() {
+  try {
+    const context = window._lastExamContext || null;
+    const normalizeDate = (value) =>
+      toEnglishDigits(String(value || "")).replace(/-/g, "/");
+    const normalizeTime = (value) => toEnglishDigits(String(value || ""));
+
     async function getReportForContext(examDate, examTime) {
       const response = await guardedFetch(
         `../API/getNextExamReport.php?exam_date=${encodeURIComponent(
@@ -4913,6 +5052,15 @@ async function printSeatNumbersReport() {
 
 async function printProctorNotices() {
   try {
+    const url = `../API/generatePDF.php?report_type=proctor_notice&_t=${new Date().getTime()}`;
+    showReportModal(url, "ابلاغ مراقبین");
+  } catch (e) {
+    console.error(e);
+  }
+}
+
+async function printProctorNotices_OLD() {
+  try {
     Swal.fire({
       title: "در حال ساخت ابلاغ مراقبین",
       html: "لطفاً منتظر بمانید...",
@@ -5370,10 +5518,10 @@ async function examEssentialsHandler() {
     html: `
             <div style="display:flex;flex-direction:column;gap:12px;margin-top:1rem;">
                 <!-- Quick print shortcuts that reuse existing handlers -->
-                <button id="essentialsPrintSessionBtn" class="btn btn-primary w-100" style="padding:12px;font-size:1rem;font-weight:600;" onclick="try{ window._reopenEssentialsMenu=true; Swal.close(); setTimeout(()=>{ printSessionReport(); }, 80); }catch(e){ console.error(e); }">
+                <button id="essentialsPrintSessionBtn" class="btn btn-primary w-100" style="padding:12px;font-size:1rem;font-weight:600;" onclick="try{ setTimeout(()=>{ printSessionReport(); }, 80); }catch(e){ console.error(e); }">
                     صورتجلسه آزمون
                 </button>
-                <button id="essentialsPrintSeatBtn" class="btn btn-primary w-100" style="padding:12px;font-size:1rem;font-weight:600;" onclick="try{ window._reopenEssentialsMenu=true; Swal.close(); setTimeout(()=>{ printSeatNumbersReport(); }, 80); }catch(e){ console.error(e); }">
+                <button id="essentialsPrintSeatBtn" class="btn btn-primary w-100" style="padding:12px;font-size:1rem;font-weight:600;" onclick="try{ setTimeout(()=>{ printSeatNumbersReport(); }, 80); }catch(e){ console.error(e); }">
                      شماره‌ صندلی‌آزمون
                 </button>
 
@@ -5400,15 +5548,6 @@ async function examEssentialsHandler() {
 }
 
 function startEssentialsPrint(kind) {
-  try {
-    window._reopenEssentialsMenu = true;
-  } catch (e) {
-    window._reopenEssentialsMenu = true;
-  }
-  try {
-    Swal.close();
-  } catch (e) {}
-
   setTimeout(() => {
     try {
       if (kind === "secretary") printEssentialsSecretary();
@@ -5423,6 +5562,36 @@ function startEssentialsPrint(kind) {
 }
 
 async function printEssentialsSecretary() {
+  try {
+    const context = window._lastExamContext || null;
+    let examDate = context?.exam_date;
+    let examTime = context?.exam_time;
+
+    if (examDate && examTime) {
+      examDate = toEnglishDigits(String(examDate)).replace(/-/g, "/");
+      examTime = toEnglishDigits(String(examTime));
+      const url = `../API/generatePDF.php?report_type=secretary&exam_date=${encodeURIComponent(
+        examDate
+      )}&exam_time=${encodeURIComponent(examTime)}&_t=${new Date().getTime()}`;
+      showReportModal(url, "ملزومات منشی جلسه");
+    } else {
+      Swal.fire({
+        icon: "error",
+        title: "خطا",
+        text: "اطلاعات آزمون یافت نشد",
+        confirmButtonText: "باشه",
+        customClass: {
+          popup: "swal2-rtl swal2-glass",
+          confirmButton: "btn btn-primary",
+        },
+      });
+    }
+  } catch (e) {
+    console.error(e);
+  }
+}
+
+async function printEssentialsSecretary_OLD() {
   try {
     Swal.fire({
       title: "در حال ساخت گزارش",
@@ -6001,6 +6170,36 @@ async function printEssentialsSecretary() {
 
 async function printEssentialsReproduction() {
   try {
+    const context = window._lastExamContext || null;
+    let examDate = context?.exam_date;
+    let examTime = context?.exam_time;
+
+    if (examDate && examTime) {
+      examDate = toEnglishDigits(String(examDate)).replace(/-/g, "/");
+      examTime = toEnglishDigits(String(examTime));
+      const url = `../API/generatePDF.php?report_type=reproduction&exam_date=${encodeURIComponent(
+        examDate
+      )}&exam_time=${encodeURIComponent(examTime)}&_t=${new Date().getTime()}`;
+      showReportModal(url, "ملزومات اتاق تکثیر");
+    } else {
+      Swal.fire({
+        icon: "error",
+        title: "خطا",
+        text: "اطلاعات آزمون یافت نشد",
+        confirmButtonText: "باشه",
+        customClass: {
+          popup: "swal2-rtl swal2-glass",
+          confirmButton: "btn btn-primary",
+        },
+      });
+    }
+  } catch (e) {
+    console.error(e);
+  }
+}
+
+async function printEssentialsReproduction_OLD() {
+  try {
     Swal.fire({
       title: "در حال ساخت گزارش",
       html: "لطفاً منتظر بمانید...",
@@ -6414,6 +6613,36 @@ async function printEssentialsReproduction() {
 }
 
 async function printEssentialsDescriptive() {
+  try {
+    const context = window._lastExamContext || null;
+    let examDate = context?.exam_date;
+    let examTime = context?.exam_time;
+
+    if (examDate && examTime) {
+      examDate = toEnglishDigits(String(examDate)).replace(/-/g, "/");
+      examTime = toEnglishDigits(String(examTime));
+      const url = `../API/generatePDF.php?report_type=descriptive&exam_date=${encodeURIComponent(
+        examDate
+      )}&exam_time=${encodeURIComponent(examTime)}&_t=${new Date().getTime()}`;
+      showReportModal(url, "برچسب پاکت‌های تشریحی");
+    } else {
+      Swal.fire({
+        icon: "error",
+        title: "خطا",
+        text: "اطلاعات آزمون یافت نشد",
+        confirmButtonText: "باشه",
+        customClass: {
+          popup: "swal2-rtl swal2-glass",
+          confirmButton: "btn btn-primary",
+        },
+      });
+    }
+  } catch (e) {
+    console.error(e);
+  }
+}
+
+async function printEssentialsDescriptive_OLD() {
   try {
     Swal.fire({
       title: "در حال ساخت گزارش",

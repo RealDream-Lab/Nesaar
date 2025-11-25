@@ -27,7 +27,8 @@ $allowed = [
     'ObserversLastCard',
     // Add SendSMS toggle (YES/NO) and SmsApiKey to allow storing SMS provider key
     'SendSMS',
-    'SmsApiKey'
+    'SmsApiKey',
+    'rptDownload'
 ];
 
 $toSave = [];
@@ -35,7 +36,7 @@ foreach ($allowed as $k) {
     if (!array_key_exists($k, $input))
         continue; // skip keys not provided
 
-    if ($k === 'GroupByCourse' || $k === 'PaperSaving') {
+    if ($k === 'GroupByCourse' || $k === 'PaperSaving' || $k === 'rptDownload') {
         // Normalize any value to strict YES/NO (default NO)
         $raw = is_string($input[$k]) ? $input[$k] : '';
         $val = strtoupper(trim($raw));
