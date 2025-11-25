@@ -111,6 +111,10 @@ RUN composer require openspout/openspout --no-interaction --prefer-dist || true
 # Install mPDF library
 RUN composer require mpdf/mpdf --no-interaction --prefer-dist || true
 
+# Create temp directory for mPDF font cache with proper permissions
+RUN mkdir -p /var/www/html/temp/mpdf/ttfontdata \
+    && chown -R www-data:www-data /var/www/html/temp
+
 # Ensure correct permissions for Apache
 RUN chown -R www-data:www-data /var/www/html
 
