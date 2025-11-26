@@ -570,6 +570,14 @@
               overwrite: true,
             });
           }
+          // Apply WavesAnimation setting
+          const wavesAnimationEnabled =
+            String(cfg.WavesAnimation || "YES").toUpperCase() === "YES";
+          if (wavesAnimationEnabled) {
+            document.body.classList.remove("no-waves-animation");
+          } else {
+            document.body.classList.add("no-waves-animation");
+          }
         }
       } catch (configErr) {
         console.debug("Config fetch failed, using session defaults", configErr);

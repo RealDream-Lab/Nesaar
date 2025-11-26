@@ -19,17 +19,28 @@ if ($licenseStatus['valid'] !== true) {
 <?php
 // Server-side check: if there are any locations with required_proctors = 0,
 // show the locations card automatically on page load.
+$showLocationsCard      = false;
+$wavesAnimationDisabled = false;
 try {
     require_once __DIR__ . '/../../API/db_init.php';
     if (isset($pdo)) {
         $stmt              = $pdo->query("SELECT COUNT(*) AS c FROM `locations` WHERE required_proctors = 0");
         $row               = $stmt ? $stmt->fetch(PDO::FETCH_ASSOC) : null;
         $showLocationsCard = ($row && intval($row['c'] ?? 0) > 0) ? true : false;
+
+        // Read WavesAnimation config
+        $stmtWaves = $pdo->prepare("SELECT ConfigValue FROM Config WHERE ConfigName = 'WavesAnimation'");
+        $stmtWaves->execute();
+        $rowWaves = $stmtWaves->fetch();
+        if ($rowWaves && strtoupper($rowWaves['ConfigValue']) === 'NO') {
+            $wavesAnimationDisabled = true;
+        }
     }
 } catch (Exception $e) {
     // ignore DB errors here; default to not showing the card
     $showLocationsCard = false;
 }
+$bodyClass = $wavesAnimationDisabled ? 'class="no-waves-animation"' : '';
 ?>
 <!DOCTYPE html>
 <html lang="fa" dir="rtl">
@@ -47,7 +58,7 @@ try {
     <!-- observers page uses global dashboard styles from /assets/app/style.css -->
 </head>
 
-<body>
+<body <?php echo $bodyClass; ?>>
     <div class="dashboard-wrapper">
         <div class="dashboard-container">
             <!-- Header: reuse dashboard style, but logout becomes back-to-dashboard -->

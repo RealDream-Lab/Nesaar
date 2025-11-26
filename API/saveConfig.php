@@ -28,7 +28,9 @@ $allowed = [
     // Add SendSMS toggle (YES/NO) and SmsApiKey to allow storing SMS provider key
     'SendSMS',
     'SmsApiKey',
-    'rptDownload'
+    'rptDownload',
+    // WavesAnimation toggle (YES/NO) to enable/disable background waves animation
+    'WavesAnimation'
 ];
 
 $toSave = [];
@@ -36,12 +38,12 @@ foreach ($allowed as $k) {
     if (!array_key_exists($k, $input))
         continue; // skip keys not provided
 
-    if ($k === 'GroupByCourse' || $k === 'PaperSaving' || $k === 'rptDownload') {
-        // Normalize any value to strict YES/NO (default NO)
+    if ($k === 'GroupByCourse' || $k === 'PaperSaving' || $k === 'WavesAnimation') {
+        // Normalize any value to strict YES/NO (default NO for most, YES for WavesAnimation)
         $raw = is_string($input[$k]) ? $input[$k] : '';
         $val = strtoupper(trim($raw));
         if ($val !== 'YES' && $val !== 'NO') {
-            $val = 'NO';
+            $val = ($k === 'WavesAnimation') ? 'YES' : 'NO';
         }
         $toSave[$k] = $val; // always save toggle even if NO
         continue;

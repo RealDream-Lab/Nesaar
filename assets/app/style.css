@@ -128,6 +128,12 @@ body::after {
   }
 }
 
+/* Disable waves animation via config toggle - show static frame instead of hiding */
+body.no-waves-animation .parallax > use {
+  animation: none !important;
+  transform: translate3d(0, 0, 0) !important;
+}
+
 @media (max-width: 768px) {
   .waves-header {
     height: 45vh;

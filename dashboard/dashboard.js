@@ -702,6 +702,8 @@ try {
         String(cfg.PaperSaving || "").toUpperCase() === "YES";
       const sendSmsChecked = String(cfg.SendSMS || "").toUpperCase() === "YES";
       const rptDownloadVal = String(cfg.rptDownload || "").toUpperCase();
+      const wavesAnimationChecked =
+        String(cfg.WavesAnimation || "YES").toUpperCase() !== "NO";
 
       let smsCreditValue = null;
       try {
@@ -775,6 +777,12 @@ try {
                                     <span style="font-size:0.85rem;color:#ffffff;">(${smsCreditParenthetical})</span>
                                 </label>
                             </div>
+                            <div style="display:flex;align-items:center;gap:10px;margin-top:8px;">
+                                <input id="er_wavesAnimation" type="checkbox" ${
+                                  wavesAnimationChecked ? "checked" : ""
+                                } style="width:1.15rem;height:1.15rem;">
+                                <label for="er_wavesAnimation" style="margin:0;cursor:pointer;">نمایش انیمیشن پس‌زمینه</label>
+                            </div>
                             <div style="display:flex;align-items:center;gap:15px;margin-top:8px;">
                                 <span style="font-size:0.92rem;color:inherit;">نحوه دریافت گزارشات:</span>
                                 <div style="display:flex;align-items:center;gap:5px;">
@@ -790,6 +798,7 @@ try {
                                     <label for="er_rptDownload" style="margin:0;cursor:pointer;font-size:0.9rem;">دانلود</label>
                                 </div>
                             </div>
+
                         </div>
                     </div>
                 </div>`;
@@ -826,6 +835,10 @@ try {
           const rptDownload =
             document.querySelector('input[name="er_rptDownload"]:checked')
               ?.value || "NO";
+          const wavesAnimation = document.getElementById("er_wavesAnimation")
+            ?.checked
+            ? "YES"
+            : "NO";
           // return values to then handle save confirmation
           return {
             AdminNickName: admin.trim(),
@@ -836,6 +849,7 @@ try {
             PaperSaving: paperSaving,
             SendSMS: sendSms,
             rptDownload: rptDownload,
+            WavesAnimation: wavesAnimation,
           };
         },
       });
@@ -881,6 +895,12 @@ try {
           }
           // Update global config for immediate effect
           window.appConfig = { ...(window.appConfig || {}), ...values };
+          // Apply waves animation setting immediately
+          if (values.WavesAnimation === "NO") {
+            document.body.classList.add("no-waves-animation");
+          } else {
+            document.body.classList.remove("no-waves-animation");
+          }
           await Swal.fire({
             icon: "success",
             title: "ذخیره شد",
@@ -1405,6 +1425,15 @@ async function loadDashboardData() {
 
     // Store config globally for use in reports
     window.appConfig = config;
+
+    // Apply WavesAnimation setting on page load
+    const wavesAnimationEnabled =
+      String(config.WavesAnimation || "YES").toUpperCase() === "YES";
+    if (wavesAnimationEnabled) {
+      document.body.classList.remove("no-waves-animation");
+    } else {
+      document.body.classList.add("no-waves-animation");
+    }
 
     const statsResponse = await guardedFetch("../API/getStatistics.php", {
       cache: "no-store",

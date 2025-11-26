@@ -1,5 +1,5 @@
-const CACHE_NAME = "exam-seat-v0.9.5";
-const VERSION = "0.9.5";
+const CACHE_NAME = "exam-seat-v0.9.6";
+const VERSION = "0.9.6";
 const urlsToCache = [
   "/",
   "/index.php",
@@ -86,7 +86,7 @@ self.addEventListener("activate", (event) => {
               type: "sw-update",
               version: CACHE_NAME,
               tagVersion: `نسخه ${VERSION}`,
-              changes: ["افزودن موتور Tulip PDF به بخش گزارشات"],
+              changes: ["بهبود عملکرد نرم‌افزار", "رفع اشکالات جزئی"],
             });
           });
         });
