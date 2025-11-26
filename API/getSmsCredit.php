@@ -13,8 +13,16 @@ license_guard_enforce_api();
 $session = admin_session_require($pdo);
 
 try {
-    // API key is embedded in code as requested
-    $apiKey = 'OqWNSN8PzlWCjHMW9rQq37PUHq4Eb7zTn0g7T5Qdpi6ahgH8';
+    // Fetch SMS API key from database Config table
+    $stmt = $pdo->prepare("SELECT ConfigValue FROM Config WHERE ConfigName = 'SmsApiKey' LIMIT 1");
+    $stmt->execute();
+    $apiKey = trim((string)($stmt->fetchColumn() ?: ''));
+    
+    if ($apiKey === '') {
+        http_response_code(400);
+        echo json_encode(['success' => false, 'error' => 'کلید API پیامک تنظیم نشده است. از تنظیمات اقدام کنید.'], JSON_UNESCAPED_UNICODE);
+        exit;
+    }
 
     $url = 'https://api.sms.ir/v1/credit';
     $ch  = curl_init();
