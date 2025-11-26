@@ -22,12 +22,12 @@ function escapeHtml(value) {
 }
 
 // Configure SweetAlert2 globally to prevent layout shifts
+// Note: scrollbarPadding and heightAuto are NOT set in mixin because they're incompatible with toasts
+// Instead, they should be set individually on non-toast modals if needed
 try {
   if (typeof Swal !== "undefined") {
-    window.Swal = Swal.mixin({
-      scrollbarPadding: false,
-      heightAuto: false,
-    });
+    // Keep original Swal reference without problematic global defaults
+    window.Swal = Swal;
   }
 } catch (e) {}
 
@@ -56,8 +56,15 @@ try {
                   position: opts.position || "top-end",
                   timer: typeof opts.timer === "number" ? opts.timer : 3000,
                   showConfirmButton: false,
-                  // Note: allowOutsideClick is incompatible with toasts, so we don't set it
+                  // Remove incompatible toast parameters
+                  scrollbarPadding: undefined,
+                  heightAuto: undefined,
+                  allowOutsideClick: undefined,
                 });
+                // Clean up undefined values
+                delete toastOpts.scrollbarPadding;
+                delete toastOpts.heightAuto;
+                delete toastOpts.allowOutsideClick;
                 if (toastOpts.customClass) {
                   toastOpts.customClass = Object.assign(
                     {},
@@ -2318,7 +2325,6 @@ async function uploadDatabaseFile(file, examType, examTypeName) {
                 .tabular-digits { font-variant-numeric: tabular-nums; font-family: Vazir, 'DejaVu Sans Mono', monospace; letter-spacing: 0.01em; }
                 </style>
                 <div id="uploadProgressDisplay" class="tabular-digits" style="font-size: 3rem; font-weight: bold; color: white; margin-bottom: 1rem;">۰٪</div>
-                <p id="uploadProgressText" style="color: white; font-size: 1.1rem; margin:0;">در حال آپلود فایل...</p>
 			</div>
 		`,
     allowOutsideClick: false,
@@ -2354,9 +2360,9 @@ async function uploadDatabaseFile(file, examType, examTypeName) {
           progressDisplay.textContent = pers + "٪";
         }
 
-        if (progressText) {
-          progressText.textContent = `در حال آپلود...`;
-        }
+        //if (progressText) {
+        // progressText.textContent = `در حال آپلود...`;
+        // }
       }
     });
 

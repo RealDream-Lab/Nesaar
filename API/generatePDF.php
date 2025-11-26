@@ -700,22 +700,27 @@ function generateSecretaryReport($pdo, $mpdf, $examDate, $examTime, $config)
             if (empty($groups)) {
                 $html .= '<tr><td colspan="5">بدون اطلاعات کروکی</td></tr>';
             } else {
-                uasort($groups, function ($a, $b) {
-                    return strcmp($a['building'], $b['building']) ?: strcmp($a['class_name'], $b['class_name']);
-                });
-                foreach ($groups as $g) {
+                // Prepare data with min seat for sorting
+                $sortedGroups = [];
+                foreach ($groups as $key => $g) {
                     $uniq = array_unique($g['nums']);
                     sort($uniq, SORT_NUMERIC);
                     if (empty($uniq))
                         continue;
-                    $start = $uniq[0];
-                    $end   = end($uniq);
-                    $count = count($uniq);
-
+                    $g['min_seat']      = $uniq[0];
+                    $g['max_seat']      = end($uniq);
+                    $g['count']         = count($uniq);
+                    $sortedGroups[$key] = $g;
+                }
+                // Sort by minimum seat number
+                uasort($sortedGroups, function ($a, $b) {
+                    return $a['min_seat'] - $b['min_seat'];
+                });
+                foreach ($sortedGroups as $g) {
                     $html .= '<tr>
-                        <td>' . toPersianDigits($start) . '</td>
-                        <td>' . toPersianDigits($end) . '</td>
-                        <td>' . toPersianDigits($count) . '</td>
+                        <td>' . toPersianDigits($g['min_seat']) . '</td>
+                        <td>' . toPersianDigits($g['max_seat']) . '</td>
+                        <td>' . toPersianDigits($g['count']) . '</td>
                         <td style="text-align: right;">' . $g['building'] . '</td>
                         <td style="text-align: right;">' . $g['class_name'] . '</td>
                     </tr>';
@@ -942,17 +947,26 @@ function generateReproductionReport($pdo, $mpdf, $examDate, $examTime, $config)
             if (empty($groups)) {
                 $html .= '<tr><td colspan="5">بدون اطلاعات کروکی</td></tr>';
             } else {
-                uasort($groups, function ($a, $b) {
-                    return strcmp($a['building'], $b['building']) ?: strcmp($a['class_name'], $b['class_name']);
-                });
-                foreach ($groups as $g) {
+                // Prepare data with min seat for sorting
+                $sortedGroups = [];
+                foreach ($groups as $key => $g) {
                     $uniq = array_unique($g['nums']);
                     sort($uniq, SORT_NUMERIC);
                     if (empty($uniq))
                         continue;
-                    $start = $uniq[0];
-                    $end   = end($uniq);
-                    $count = count($uniq);
+                    $g['min_seat']      = $uniq[0];
+                    $g['max_seat']      = end($uniq);
+                    $g['count']         = count($uniq);
+                    $sortedGroups[$key] = $g;
+                }
+                // Sort by minimum seat number
+                uasort($sortedGroups, function ($a, $b) {
+                    return $a['min_seat'] - $b['min_seat'];
+                });
+                foreach ($sortedGroups as $g) {
+                    $start = $g['min_seat'];
+                    $end   = $g['max_seat'];
+                    $count = $g['count'];
 
                     $html .= '<tr>
                         <td>' . toPersianDigits($start) . '</td>
