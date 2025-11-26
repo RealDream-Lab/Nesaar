@@ -173,15 +173,15 @@ $bodyClass = $wavesAnimationDisabled ? 'class="no-waves-animation"' : '';
 
         <!-- Push Notification Management Card -->
         <div class="dashboard-card no-hover" id="pushNotificationCard">
-            <h4 class="mb-3">ارسال اعلان (Push Notification) نسخه آزمایشی </h4>
+            <h4 class="mb-3">ارسال اعلان (پوش نوتیفیکیشن) نسخه آزمایشی </h4>
             <p style="color:#666; margin-bottom:1rem;">ارسال پیام به دانشجویان و مراقبین ثبت‌نام شده در سیستم اعلان</p>
             <div class="row g-3">
-                <div class="col-12 col-md-9">
+                <div class="col-12 col-md-8">
                     <label class="form-label">عنوان پیام</label>
                     <input type="text" class="form-control" id="pushTitle" placeholder="مثال: اطلاعیه مهم"
                         maxlength="100">
                 </div>
-                <div class="col-12 col-md-3">
+                <div class="col-12 col-md-4">
                     <label class="form-label">گیرندگان</label>
                     <div class="d-flex gap-3 mt-2">
                         <div class="form-check">

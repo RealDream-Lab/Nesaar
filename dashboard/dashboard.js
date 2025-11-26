@@ -4489,6 +4489,42 @@ function renderInsightCards(stats) {
     return; // Not on admin dashboard
   }
 
+  // Fetch subscriber counts
+  (async function fetchSubscriberCounts() {
+    try {
+      const response = await guardedFetch(
+        "../API/getPushSubscribersCount.php",
+        {
+          cache: "no-store",
+        }
+      );
+      if (response.ok) {
+        const data = await response.json();
+        if (data.success) {
+          const studentLabel = document.querySelector(
+            'label[for="pushStudents"]'
+          );
+          const proctorLabel = document.querySelector(
+            'label[for="pushProctors"]'
+          );
+
+          if (studentLabel) {
+            studentLabel.textContent = `دانشجویان (${toPersianDigits(
+              data.students || 0
+            )})`;
+          }
+          if (proctorLabel) {
+            proctorLabel.textContent = `مراقبین (${toPersianDigits(
+              data.proctors || 0
+            )})`;
+          }
+        }
+      }
+    } catch (e) {
+      console.warn("Failed to fetch push subscriber counts", e);
+    }
+  })();
+
   sendBtn.addEventListener("click", async () => {
     const title = titleInput.value.trim();
     const body = bodyInput.value.trim();
