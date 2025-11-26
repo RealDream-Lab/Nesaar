@@ -122,7 +122,7 @@ document.addEventListener("DOMContentLoaded", () => {
         const { title, body } = event.data;
 
         // Build HTML content
-        const htmlContent = `<div style="text-align:right;direction:rtl;line-height:1.8;color:#fff;">${
+        const htmlContent = `<div style="text-align:justify;direction:rtl;line-height:1.8;color:#fff;">${
           body || ""
         }</div>`;
 
@@ -140,6 +140,12 @@ document.addEventListener("DOMContentLoaded", () => {
             confirmButton: "btn btn-primary",
           },
           buttonsStyling: false,
+          didOpen: () => {
+            const titleEl = Swal.getTitle();
+            if (titleEl) {
+              titleEl.style.color = "#ffc107"; // Yellow
+            }
+          },
         });
       }
     });
@@ -2693,13 +2699,13 @@ document.addEventListener("DOMContentLoaded", () => {
         title: "اعلان یادآوری آزمون",
         html: '<div style="text-align:right;">آیا می‌خواهید ۳۰ دقیقه قبل از هر آزمون یادآوری دریافت کنید؟</div>',
         showCancelButton: true,
-        confirmButtonText: "بله، فعال کن",
-        cancelButtonText: "بعداً",
+        confirmButtonText: "بله",
+        cancelButtonText: "خیر",
         reverseButtons: true,
         customClass: {
           popup: "swal2-rtl swal2-glass",
-          confirmButton: "btn btn-primary mx-2",
-          cancelButton: "btn btn-cancel mx-2",
+          confirmButton: "btn btn-primary m-2",
+          cancelButton: "btn btn-cancel m-2",
         },
         buttonsStyling: false,
       });
@@ -2787,13 +2793,13 @@ document.addEventListener("DOMContentLoaded", () => {
         title: "اعلان یادآوری مراقبت",
         html: '<div style="text-align:right;">آیا می‌خواهید ۳۰ دقیقه قبل از هر شیفت مراقبت یادآوری دریافت کنید؟</div>',
         showCancelButton: true,
-        confirmButtonText: "بله، فعال کن",
-        cancelButtonText: "بعداً",
+        confirmButtonText: "بله",
+        cancelButtonText: "خیر",
         reverseButtons: true,
         customClass: {
           popup: "swal2-rtl swal2-glass",
-          confirmButton: "btn btn-primary mx-2",
-          cancelButton: "btn btn-cancel mx-2",
+          confirmButton: "btn btn-primary m-2",
+          cancelButton: "btn btn-cancel m-2",
         },
         buttonsStyling: false,
       });
