@@ -234,14 +234,32 @@ try {
             ];
         }
 
-        // sort by (deltaAfternoon ASC, assignedCount ASC) with random tie-break
-        usort($cands, function ($a, $b) use (&$assignedCount) {
-            if ($a['deltaAfternoon'] === $b['deltaAfternoon']) {
-                if ($assignedCount[$a['pid']] === $assignedCount[$b['pid']])
-                    return mt_rand(-1, 1);
-                return $assignedCount[$a['pid']] <=> $assignedCount[$b['pid']];
+        // Improved sorting for fairness:
+        // 1. Proctors with fewer total assignments get priority
+        // 2. Among those, proctors with fewer afternoon assignments get priority for afternoon-heavy days
+        // 3. But if a proctor already has LOW total assignments, they should GET more afternoon sessions
+        usort($cands, function ($a, $b) use (&$assignedCount, &$afternoonCount, $targetMin, $ceilMean) {
+            $pidA = $a['pid'];
+            $pidB = $b['pid'];
+            
+            $totalA = $assignedCount[$pidA];
+            $totalB = $assignedCount[$pidB];
+            $afA = $afternoonCount[$pidA];
+            $afB = $afternoonCount[$pidB];
+            
+            // Priority 1: Those with fewer total assignments should get packages first
+            if ($totalA !== $totalB) {
+                return $totalA <=> $totalB;
             }
-            return $a['deltaAfternoon'] <=> $b['deltaAfternoon'];
+            
+            // Priority 2: Among equal totals, those with fewer afternoon sessions
+            // should get afternoon-containing packages
+            if ($afA !== $afB) {
+                return $afA <=> $afB;
+            }
+            
+            // Tie-break: random
+            return mt_rand(-1, 1);
         });
 
         return $cands;
@@ -1211,6 +1229,167 @@ try {
             if (!$moved)
                 break;
         }
+    }
+
+    // ------------------------------------------------------------------
+    // Fairness Compensation Pass: Ensure proctors with fewer total sessions
+    // get compensated with more afternoon sessions (higher-value slots).
+    // Rule: If a proctor has total < floorMean, they should have MORE
+    // afternoon sessions than average, not less.
+    // ------------------------------------------------------------------
+    // Rebuild counts and assignments
+    $assignedCount      = [];
+    $afternoonCount     = [];
+    $proctorAssignments = [];
+    $sessionHasProctor  = [];
+    foreach ($proctors as $p) {
+        $pid                      = intval($p['id']);
+        $assignedCount[$pid]      = 0;
+        $afternoonCount[$pid]     = 0;
+        $proctorAssignments[$pid] = [];
+    }
+    foreach ($assignmentsForOutput as $ai => $a) {
+        $pid = $a['proctor_id'];
+        if ($pid === null)
+            continue;
+        $assignedCount[$pid]++;
+        if ($isAfternoon($a['exam_time']))
+            $afternoonCount[$pid]++;
+        $proctorAssignments[$pid][] = $ai;
+        $k                          = $a['exam_date'] . '|' . $a['exam_time'];
+        if (!isset($sessionHasProctor[$k]))
+            $sessionHasProctor[$k] = [];
+        $sessionHasProctor[$k][$pid] = true;
+    }
+
+    // Calculate afternoon mean for comparison
+    $afternoonMean  = $afternoonTotalSlots / max(1, $numProctors);
+    $afternoonFloor = (int)floor($afternoonMean);
+    $afternoonCeil  = (int)ceil($afternoonMean);
+
+    // Find proctors who are disadvantaged (fewer total AND fewer afternoon)
+    $compensationLoop = 0;
+    while ($compensationLoop < 300) {
+        $compensationLoop++;
+        $progress = false;
+        
+        // Find disadvantaged proctors: those with total < floorMean AND afternoon < afternoonFloor
+        $disadvantaged = [];
+        $advantaged = [];
+        foreach ($proctors as $p) {
+            $pid = intval($p['id']);
+            $total = $assignedCount[$pid] ?? 0;
+            $afCount = $afternoonCount[$pid] ?? 0;
+            
+            // Disadvantaged: has fewer total sessions AND fewer afternoon sessions
+            if ($total < $floorMean && $afCount < $afternoonFloor) {
+                $disadvantaged[] = $pid;
+            }
+            // Advantaged: has equal or more total sessions AND more afternoon sessions
+            if ($total >= $floorMean && $afCount > $afternoonCeil) {
+                $advantaged[] = $pid;
+            }
+        }
+        
+        if (empty($disadvantaged) || empty($advantaged))
+            break;
+        
+        // Sort: most disadvantaged first, most advantaged first
+        usort($disadvantaged, function ($a, $b) use (&$afternoonCount) {
+            return $afternoonCount[$a] <=> $afternoonCount[$b];
+        });
+        usort($advantaged, function ($a, $b) use (&$afternoonCount) {
+            return $afternoonCount[$b] <=> $afternoonCount[$a];
+        });
+        
+        // Try to swap: give afternoon from advantaged to disadvantaged
+        foreach ($disadvantaged as $rcvPid) {
+            if ($afternoonCount[$rcvPid] >= $afternoonFloor)
+                continue;
+            
+            foreach ($advantaged as $donPid) {
+                if ($afternoonCount[$donPid] <= $afternoonCeil)
+                    continue;
+                
+                // Find donor's afternoon assignment
+                $donAfternoonAi = null;
+                foreach ($proctorAssignments[$donPid] as $ai) {
+                    $a = $assignmentsForOutput[$ai];
+                    if (!$isAfternoon($a['exam_time']))
+                        continue;
+                    $k = $a['exam_date'] . '|' . $a['exam_time'];
+                    if (isset($sessionHasProctor[$k][$rcvPid]))
+                        continue;
+                    if (isset($restrictions[$rcvPid]) && isset($restrictions[$rcvPid][$k]))
+                        continue;
+                    $donAfternoonAi = $ai;
+                    break;
+                }
+                if ($donAfternoonAi === null)
+                    continue;
+                
+                // Find recipient's morning assignment to swap
+                $rcvMorningAi = null;
+                foreach ($proctorAssignments[$rcvPid] as $ai) {
+                    $a = $assignmentsForOutput[$ai];
+                    if ($isAfternoon($a['exam_time']))
+                        continue;
+                    $k = $a['exam_date'] . '|' . $a['exam_time'];
+                    if (isset($sessionHasProctor[$k][$donPid]))
+                        continue;
+                    if (isset($restrictions[$donPid]) && isset($restrictions[$donPid][$k]))
+                        continue;
+                    $rcvMorningAi = $ai;
+                    break;
+                }
+                if ($rcvMorningAi === null)
+                    continue;
+                
+                // Perform the swap
+                $aDon =& $assignmentsForOutput[$donAfternoonAi];
+                $aRcv =& $assignmentsForOutput[$rcvMorningAi];
+                $kAf = $aDon['exam_date'] . '|' . $aDon['exam_time'];
+                $kMo = $aRcv['exam_date'] . '|' . $aRcv['exam_time'];
+                
+                unset($sessionHasProctor[$kAf][$donPid]);
+                $sessionHasProctor[$kAf][$rcvPid] = true;
+                unset($sessionHasProctor[$kMo][$rcvPid]);
+                $sessionHasProctor[$kMo][$donPid] = true;
+                
+                $aDon['proctor_id']   = $rcvPid;
+                $aDon['proctor_name'] = $proctorMap[$rcvPid] ?? '';
+                $aRcv['proctor_id']   = $donPid;
+                $aRcv['proctor_name'] = $proctorMap[$donPid] ?? '';
+                
+                $afternoonCount[$donPid]--;
+                $afternoonCount[$rcvPid]++;
+                
+                // Update assignment lists
+                foreach ($proctorAssignments[$donPid] as $k => $v) {
+                    if ($v === $donAfternoonAi) {
+                        unset($proctorAssignments[$donPid][$k]);
+                        break;
+                    }
+                }
+                foreach ($proctorAssignments[$rcvPid] as $k => $v) {
+                    if ($v === $rcvMorningAi) {
+                        unset($proctorAssignments[$rcvPid][$k]);
+                        break;
+                    }
+                }
+                $proctorAssignments[$donPid]   = array_values($proctorAssignments[$donPid]);
+                $proctorAssignments[$rcvPid]   = array_values($proctorAssignments[$rcvPid]);
+                $proctorAssignments[$donPid][] = $rcvMorningAi;
+                $proctorAssignments[$rcvPid][] = $donAfternoonAi;
+                
+                unset($aDon, $aRcv);
+                $progress = true;
+                break 2;
+            }
+        }
+        
+        if (!$progress)
+            break;
     }
 
     // Recalculate final counts one last time for reporting integrity
