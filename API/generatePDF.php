@@ -1092,6 +1092,31 @@ function generateDescriptiveLabels($pdo, $mpdf, $examDate, $examTime, $config)
 
 function generateProctorNotices($pdo, $mpdf, $config)
 {
+    // Helper function to get Persian weekday name from Jalali date
+    $getWeekday = function ($jalaliDate) {
+        $asciiDate = toEnglishDigits($jalaliDate);
+        $parts     = preg_split('/[\/\-]/u', $asciiDate);
+        if (count($parts) < 3)
+            return '';
+
+        $jy = (int)($parts[0] ?? 0);
+        $jm = (int)($parts[1] ?? 0);
+        $jd = (int)($parts[2] ?? 0);
+        if ($jy === 0 || $jm === 0 || $jd === 0)
+            return '';
+
+        try {
+            $greg = jalali_to_gregorian($jy, $jm, $jd);
+            if (!is_array($greg) || count($greg) < 3)
+                return '';
+
+            $ts = mktime(12, 0, 0, (int)$greg[1], (int)$greg[2], (int)$greg[0]);
+            return jdate('l', $ts); // 'l' returns full weekday name in Persian
+        } catch (Throwable $e) {
+            return '';
+        }
+    };
+
     // Fetch Gender Map
     $genderMap = [];
     try {
@@ -1246,18 +1271,23 @@ function generateProctorNotices($pdo, $mpdf, $config)
         $html  = '<div class="greeting">' . $prefix . ' ' . $p['name'] . '</div>';
         $html .= '<div class="term-line">بدینوسیله برنامه حضور شما در جلسات امتحانی (' . $termPhrase . ') به شرح ذیل اعلام می‌گردد ' . toPersianDigits($countsText) . ':</div>';
 
-        // Build Matrix Table
-        $html .= '<table class="schedule-table"><thead><tr><th style="width:10%">#</th><th style="width:25%">تاریخ</th>';
+        // Build Matrix Table - added weekday column, reduced time column widths
+        $timeColCount = count($globalTimes);
+        $timeColWidth = $timeColCount > 0 ? floor(50 / $timeColCount) : 15; // Distribute 50% among time columns
+
+        $html .= '<table class="schedule-table"><thead><tr><th style="width:8%">#</th><th style="width:20%">تاریخ</th><th style="width:22%">روز</th>';
         foreach ($globalTimes as $t) {
-            $html .= '<th>' . toPersianDigits($t) . '</th>';
+            $html .= '<th style="width:' . $timeColWidth . '%">' . toPersianDigits($t) . '</th>';
         }
         $html .= '</tr></thead><tbody>';
 
         $idx = 1;
         foreach ($dates as $d) {
-            $html .= '<tr>';
-            $html .= '<td>' . toPersianDigits($idx++) . '</td>';
-            $html .= '<td>' . toPersianDigits($d) . '</td>';
+            $weekday  = $getWeekday($d);
+            $html    .= '<tr>';
+            $html    .= '<td>' . toPersianDigits($idx++) . '</td>';
+            $html    .= '<td>' . toPersianDigits($d) . '</td>';
+            $html    .= '<td>' . $weekday . '</td>';
             foreach ($globalTimes as $t) {
                 $key   = $d . '|' . $t;
                 $mark  = isset($p['sessions'][$key]) ? $checkImg : '';
