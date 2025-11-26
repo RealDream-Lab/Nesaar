@@ -61,9 +61,7 @@ try {
     // Sort days and sessions
     $orderedDates = array_keys($days);
     sort($orderedDates, SORT_STRING);
-    $dayIndexForDate = [];
-    $orderedDays     = [];
-    $idx             = 0;
+    $orderedDays = [];
     foreach ($orderedDates as $d) {
         // sort sessions in this day by time
         $sessionsAssoc = $days[$d]['sessions'];
@@ -71,7 +69,6 @@ try {
         $sessions             = array_values($sessionsAssoc);
         $days[$d]['sessions'] = $sessions;
         $orderedDays[]        = $days[$d];
-        $dayIndexForDate[$d]  = $idx++;
     }
 
     // Counters
@@ -132,14 +129,12 @@ try {
     $assignedCount        = [];
     $afternoonCount       = [];
     $lastAssignedDayIndex = [];
-    $assignedInDay        = [];
     $proctorMap           = [];
     foreach ($proctors as $p) {
         $pid                        = intval($p['id']);
         $assignedCount[$pid]        = 0;
         $afternoonCount[$pid]       = 0;
         $lastAssignedDayIndex[$pid] = null;
-        $assignedInDay[$pid]        = [];
         $proctorMap[$pid]           = trim(($p['first_name'] ?? '') . ' ' . ($p['last_name'] ?? ''));
     }
 

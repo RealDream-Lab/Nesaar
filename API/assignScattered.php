@@ -1,7 +1,8 @@
 <?php
 // Scattered assignment algorithm (dry-run preview + optional apply)
 header('Content-Type: application/json; charset=utf-8');
-if (session_status() === PHP_SESSION_NONE) session_start();
+if (session_status() === PHP_SESSION_NONE)
+    session_start();
 
 require_once __DIR__ . '/../includes/license_guard.php';
 require_once __DIR__ . '/../includes/csrf_protection.php';
@@ -25,7 +26,8 @@ try {
         $dryRun = filter_var($_POST['dry_run'], FILTER_VALIDATE_BOOLEAN);
     }
     // default true as requested by user
-    if (!isset($_POST['dry_run'])) $dryRun = true;
+    if (!isset($_POST['dry_run']))
+        $dryRun = true;
 
     $apply = false;
     if (isset($_POST['apply'])) {
@@ -38,26 +40,21 @@ try {
         $afternoonThreshold = intval($_POST['afternoon_threshold']);
     }
 
-    // real randomness per user request. Accept optional seed (ignored when not provided)
-    $useSeed = false;
-    $seed = null;
+    // optional randomness seed
     if (isset($_POST['seed']) && $_POST['seed'] !== '') {
-        // user requested real randomness; seed is optional (for deterministic testing)
-        $useSeed = true;
-        $seed = intval($_POST['seed']);
-        mt_srand($seed);
+        mt_srand(intval($_POST['seed']));
     } else {
         // ensure randomness
         mt_srand();
     }
 
     // Fetch exams grouped by date+time
-    $stmt = $pdo->query("SELECT id, exam_date, exam_time, required_proctors FROM `ExamsDetil` ORDER BY exam_date ASC, exam_time ASC");
+    $stmt  = $pdo->query("SELECT id, exam_date, exam_time, required_proctors FROM `ExamsDetil` ORDER BY exam_date ASC, exam_time ASC");
     $exams = $stmt ? $stmt->fetchAll(PDO::FETCH_ASSOC) : [];
 
     // Build session groups (unique date|time keys)
-    $groups = [];
-    $totalSlots = 0;
+    $groups              = [];
+    $totalSlots          = 0;
     $afternoonTotalSlots = 0;
     foreach ($exams as $ex) {
         $key = $ex['exam_date'] . '|' . $ex['exam_time'];
@@ -71,16 +68,17 @@ try {
             // If duplicate rows exist, sum required_proctors
             $groups[$key]['required_proctors'] += intval($ex['required_proctors']);
         }
-        $rp = intval($ex['required_proctors']);
+        $rp          = intval($ex['required_proctors']);
         $totalSlots += $rp;
-        $parts = explode(':', ($ex['exam_time'] ?? '00:00'));
-        $h = intval($parts[0] ?? 0);
-        if ($h >= $afternoonThreshold) $afternoonTotalSlots += $rp;
+        $parts       = explode(':', ($ex['exam_time'] ?? '00:00'));
+        $h           = intval($parts[0] ?? 0);
+        if ($h >= $afternoonThreshold)
+            $afternoonTotalSlots += $rp;
     }
 
     // Fetch proctors
-    $pstmt = $pdo->query('SELECT id, first_name, last_name FROM `Proctors` ORDER BY id');
-    $proctors = $pstmt ? $pstmt->fetchAll(PDO::FETCH_ASSOC) : [];
+    $pstmt       = $pdo->query('SELECT id, first_name, last_name FROM `Proctors` ORDER BY id');
+    $proctors    = $pstmt ? $pstmt->fetchAll(PDO::FETCH_ASSOC) : [];
     $numProctors = count($proctors);
     if ($numProctors <= 0) {
         echo json_encode(['success' => false, 'error' => 'no_proctors']);
@@ -104,7 +102,7 @@ try {
     // Fetch ProctorRestrictions (tolerate missing table)
     $restrs = [];
     try {
-        $rstmt = $pdo->query('SELECT proctor_id, exam_date, exam_time FROM `ProctorRestrictions`');
+        $rstmt  = $pdo->query('SELECT proctor_id, exam_date, exam_time FROM `ProctorRestrictions`');
         $restrs = $rstmt ? $rstmt->fetchAll(PDO::FETCH_ASSOC) : [];
     } catch (Throwable $e) {
         $restrs = [];
@@ -112,37 +110,38 @@ try {
     $restrictions = [];
     foreach ($restrs as $r) {
         $pid = intval($r['proctor_id']);
-        $k = $r['exam_date'] . '|' . $r['exam_time'];
-        if (!isset($restrictions[$pid])) $restrictions[$pid] = [];
+        $k   = $r['exam_date'] . '|' . $r['exam_time'];
+        if (!isset($restrictions[$pid]))
+            $restrictions[$pid] = [];
         $restrictions[$pid][$k] = true;
     }
 
     // Prepare proctor stats
-    $assignedCount = [];
-    $afternoonCount = [];
+    $assignedCount            = [];
+    $afternoonCount           = [];
     $lastAssignedSessionIndex = [];
-    $proctorMap = [];
+    $proctorMap               = [];
     // Track if a proctor already has an assignment within a session group (date|time)
     // keyed by [pid][groupIndex] => true
     $assignedInGroup = [];
     foreach ($proctors as $p) {
-        $pid = intval($p['id']);
-        $assignedCount[$pid] = 0;
-        $afternoonCount[$pid] = 0;
+        $pid                            = intval($p['id']);
+        $assignedCount[$pid]            = 0;
+        $afternoonCount[$pid]           = 0;
         $lastAssignedSessionIndex[$pid] = null;
-        $proctorMap[$pid] = $p['first_name'] . ' ' . $p['last_name'];
+        $proctorMap[$pid]               = $p['first_name'] . ' ' . $p['last_name'];
         // diagnostic counters
-        $eligibleSlotsCount[$pid] = 0;
+        $eligibleSlotsCount[$pid]    = 0;
         $excludedByRestriction[$pid] = 0;
-        $excludedByMax[$pid] = 0;
+        $excludedByMax[$pid]         = 0;
         $excludedByConsecutive[$pid] = 0;
-        $assignedInGroup[$pid] = [];
+        $assignedInGroup[$pid]       = [];
     }
 
     // Compute mean targets
-    $mean = $totalSlots / max(1, $numProctors);
+    $mean      = $totalSlots / max(1, $numProctors);
     $floorMean = (int)floor($mean);
-    $ceilMean = (int)ceil($mean); // user asked to round up when fractional
+    $ceilMean  = (int)ceil($mean); // user asked to round up when fractional
     $targetMax = $ceilMean;
     $targetMin = $floorMean;
 
@@ -150,10 +149,10 @@ try {
     $groupKeys = array_keys($groups);
     sort($groupKeys, SORT_STRING);
     $sessionIndexForKey = [];
-    $orderedGroups = [];
-    $si = 0;
+    $orderedGroups      = [];
+    $si                 = 0;
     foreach ($groupKeys as $k) {
-        $orderedGroups[] = $groups[$k];
+        $orderedGroups[]        = $groups[$k];
         $sessionIndexForKey[$k] = $si;
         $si++;
     }
@@ -173,19 +172,21 @@ try {
     }
 
     // Helper: is afternoon
-    $isAfternoon = function($time) use ($afternoonThreshold) {
+    $isAfternoon = function ($time) use ($afternoonThreshold) {
         // time format expected HH:MM; handle gracefully
         $parts = explode(':', $time);
-        $hour = intval($parts[0] ?? 0);
+        $hour  = intval($parts[0] ?? 0);
         return $hour >= $afternoonThreshold;
     };
 
     // Helper: shuffle with mt_rand
-    $shuffleWithRand = function(&$arr) {
+    $shuffleWithRand = function (&$arr) {
         $n = count($arr);
         for ($i = $n - 1; $i > 0; $i--) {
-            $j = mt_rand(0, $i);
-            $tmp = $arr[$i]; $arr[$i] = $arr[$j]; $arr[$j] = $tmp;
+            $j       = mt_rand(0, $i);
+            $tmp     = $arr[$i];
+            $arr[$i] = $arr[$j];
+            $arr[$j] = $tmp;
         }
     };
 
@@ -194,47 +195,61 @@ try {
     $slotIndicesByGroup = [];
     foreach ($slots as $idx => $s) {
         $gk = $s['groupIndex'];
-        if (!isset($slotIndicesByGroup[$gk])) $slotIndicesByGroup[$gk] = [];
+        if (!isset($slotIndicesByGroup[$gk]))
+            $slotIndicesByGroup[$gk] = [];
         $slotIndicesByGroup[$gk][] = $idx;
     }
 
     $afternoonSlotIndices = [];
-    $otherSlotIndices = [];
+    $otherSlotIndices     = [];
     foreach ($orderedGroups as $gIndex => $g) {
-        $k = $g['exam_date'] . '|' . $g['exam_time'];
-        $isAf = $isAfternoon($g['exam_time']);
+        $k       = $g['exam_date'] . '|' . $g['exam_time'];
+        $isAf    = $isAfternoon($g['exam_time']);
         $indices = $slotIndicesByGroup[$gIndex] ?? [];
         if ($isAf) {
-            foreach ($indices as $siidx) $afternoonSlotIndices[] = $siidx;
+            foreach ($indices as $siidx)
+                $afternoonSlotIndices[] = $siidx;
         } else {
-            foreach ($indices as $siidx) $otherSlotIndices[] = $siidx;
+            foreach ($indices as $siidx)
+                $otherSlotIndices[] = $siidx;
         }
     }
 
     // Helper: find eligible proctors for a slot
-    $findEligible = function($slot, $allowRelaxes = []) use (&$assignedCount, &$afternoonCount, &$lastAssignedSessionIndex, &$restrictions, &$proctors, &$proctorMap, $targetMax, $targetMin, $orderedGroups, $sessionIndexForKey, $isAfternoon, &$eligibleSlotsCount, &$excludedByRestriction, &$excludedByMax, &$excludedByConsecutive, &$assignedInGroup) {
-        $candidates = [];
-        $gIndex = $slot['groupIndex'];
-        $date = $slot['exam_date'];
-        $time = $slot['exam_time'];
-        $key = $date . '|' . $time;
+    $findEligible = function ($slot, $allowRelaxes = []) use (&$assignedCount, &$afternoonCount, &$lastAssignedSessionIndex, &$restrictions, &$proctors, &$proctorMap, $targetMax, $targetMin, $orderedGroups, $sessionIndexForKey, $isAfternoon, &$eligibleSlotsCount, &$excludedByRestriction, &$excludedByMax, &$excludedByConsecutive, &$assignedInGroup) {
+        $candidates       = [];
+        $gIndex           = $slot['groupIndex'];
+        $date             = $slot['exam_date'];
+        $time             = $slot['exam_time'];
+        $key              = $date . '|' . $time;
         $prevSessionIndex = $gIndex - 1;
 
         $skipConsecutiveCheck = in_array('allow_consecutive', $allowRelaxes, true);
-        $ignoreMax = in_array('ignore_max', $allowRelaxes, true);
+        $ignoreMax            = in_array('ignore_max', $allowRelaxes, true);
 
         foreach ($proctors as $p) {
             $pid = intval($p['id']);
             // restriction check
-            if (isset($restrictions[$pid]) && isset($restrictions[$pid][$key])) { $excludedByRestriction[$pid]++; continue; }
+            if (isset($restrictions[$pid]) && isset($restrictions[$pid][$key])) {
+                $excludedByRestriction[$pid]++;
+                continue;
+            }
             // prevent multiple assignments for the same (date|time) session
-            if (isset($assignedInGroup[$pid][$gIndex]) && $assignedInGroup[$pid][$gIndex] === true) { continue; }
+            if (isset($assignedInGroup[$pid][$gIndex]) && $assignedInGroup[$pid][$gIndex] === true) {
+                continue;
+            }
             // max limit (unless we're forcing fill with ignore_max)
-            if (!$ignoreMax && $assignedCount[$pid] >= $targetMax) { $excludedByMax[$pid]++; continue; }
+            if (!$ignoreMax && $assignedCount[$pid] >= $targetMax) {
+                $excludedByMax[$pid]++;
+                continue;
+            }
             // consecutive avoidance: if allowed, skip those with lastAssignedSessionIndex == prevSessionIndex
             if (!$skipConsecutiveCheck) {
                 $hasEnoughAssignments = ($assignedCount[$pid] >= $targetMin);
-                if ($hasEnoughAssignments && $lastAssignedSessionIndex[$pid] === $prevSessionIndex) { $excludedByConsecutive[$pid]++; continue; }
+                if ($hasEnoughAssignments && $lastAssignedSessionIndex[$pid] === $prevSessionIndex) {
+                    $excludedByConsecutive[$pid]++;
+                    continue;
+                }
             }
             $eligibleSlotsCount[$pid]++;
             $candidates[] = $pid;
@@ -243,27 +258,32 @@ try {
     };
 
     // Core pick function: choose best candidate by (afternoonCount, assignedCount) ascending and random tie-break
-    $pickCandidate = function($candidates) use (&$assignedCount, &$afternoonCount) {
-        if (!$candidates) return null;
+    $pickCandidate = function ($candidates) use (&$assignedCount, &$afternoonCount) {
+        if (!$candidates)
+            return null;
         // sort by afternoonCount then assignedCount
-        usort($candidates, function($a, $b) use (&$assignedCount, &$afternoonCount) {
-            if ($afternoonCount[$a] < $afternoonCount[$b]) return -1;
-            if ($afternoonCount[$a] > $afternoonCount[$b]) return 1;
-            if ($assignedCount[$a] < $assignedCount[$b]) return -1;
-            if ($assignedCount[$a] > $assignedCount[$b]) return 1;
+        usort($candidates, function ($a, $b) use (&$assignedCount, &$afternoonCount) {
+            if ($afternoonCount[$a] < $afternoonCount[$b])
+                return -1;
+            if ($afternoonCount[$a] > $afternoonCount[$b])
+                return 1;
+            if ($assignedCount[$a] < $assignedCount[$b])
+                return -1;
+            if ($assignedCount[$a] > $assignedCount[$b])
+                return 1;
             // else random tie
-            return mt_rand(-1,1);
+            return mt_rand(-1, 1);
         });
         return $candidates[0];
     };
 
     // Assign helper that enforces relaxations progressively
-    $assignSlot = function($slotIndex) use (&$slots, &$findEligible, &$pickCandidate, &$assignedCount, &$afternoonCount, &$lastAssignedSessionIndex, $orderedGroups, $isAfternoon, &$assignedInGroup) {
-        $slot = &$slots[$slotIndex];
+    $assignSlot = function ($slotIndex) use (&$slots, &$findEligible, &$pickCandidate, &$assignedCount, &$afternoonCount, &$lastAssignedSessionIndex, $orderedGroups, $isAfternoon, &$assignedInGroup) {
+        $slot   = &$slots[$slotIndex];
         $gIndex = $slot['groupIndex'];
-        $date = $slot['exam_date'];
-        $time = $slot['exam_time'];
-        $key = $date . '|' . $time;
+        $date   = $slot['exam_date'];
+        $time   = $slot['exam_time'];
+        $key    = $date . '|' . $time;
         // Try 1: strict (no consecutive)
         $cands = $findEligible($slot, []);
         // Try 2: allow consecutive if none
@@ -279,11 +299,13 @@ try {
             return null;
         }
         $pid = $pickCandidate($cands);
-        if ($pid === null) return null;
+        if ($pid === null)
+            return null;
         // assign
         $slots[$slotIndex]['assigned'] = $pid;
         $assignedCount[$pid]++;
-        if ($isAfternoon($time)) $afternoonCount[$pid]++;
+        if ($isAfternoon($time))
+            $afternoonCount[$pid]++;
         $lastAssignedSessionIndex[$pid] = $gIndex;
         // mark that this proctor now has an assignment in this session group
         $assignedInGroup[$pid][$gIndex] = true;
@@ -303,31 +325,35 @@ try {
     $allRemaining = array_merge($otherSlotIndices, []);
     // add any unfilled afternoon slots that remain
     foreach ($afternoonSlotIndices as $sidx) {
-        if ($slots[$sidx]['assigned'] === null) $allRemaining[] = $sidx;
+        if ($slots[$sidx]['assigned'] === null)
+            $allRemaining[] = $sidx;
     }
     // randomize order a bit but keep chronological bias: we'll process grouped by groupIndex ascending
-    usort($allRemaining, function($a, $b) use ($slots) {
-        if ($slots[$a]['groupIndex'] === $slots[$b]['groupIndex']) return $a - $b;
+    usort($allRemaining, function ($a, $b) use ($slots) {
+        if ($slots[$a]['groupIndex'] === $slots[$b]['groupIndex'])
+            return $a - $b;
         return $slots[$a]['groupIndex'] - $slots[$b]['groupIndex'];
     });
 
     foreach ($allRemaining as $sidx) {
-        if ($slots[$sidx]['assigned'] !== null) continue;
+        if ($slots[$sidx]['assigned'] !== null)
+            continue;
         $assignSlot($sidx);
     }
 
     // Build assignment maps for rebalancing
     $proctorAssignments = [];
-    $proctorHasGroup = [];
+    $proctorHasGroup    = [];
     foreach ($proctors as $p) {
-        $pid = intval($p['id']);
+        $pid                      = intval($p['id']);
         $proctorAssignments[$pid] = [];
-        $proctorHasGroup[$pid] = [];
+        $proctorHasGroup[$pid]    = [];
     }
     foreach ($slots as $idx => $slot) {
         $pid = $slot['assigned'];
-        if ($pid === null) continue;
-        $proctorAssignments[$pid][] = $idx;
+        if ($pid === null)
+            continue;
+        $proctorAssignments[$pid][]                 = $idx;
         $proctorHasGroup[$pid][$slot['groupIndex']] = true;
     }
 
@@ -344,18 +370,27 @@ try {
     $findSlotToReassign = function ($targetPid, $allowConsecutive, $requireAfternoon = null, $ownerFilter = null) use (&$slots, &$assignedCount, $targetMin, $targetMax, &$restrictions, &$proctorHasGroup, $isAfternoon, &$afternoonCount) {
         foreach ($slots as $idx => $slot) {
             $currentPid = $slot['assigned'];
-            if ($currentPid === null) continue;
-            if ($currentPid === $targetPid) continue;
-            if ($ownerFilter !== null && !$ownerFilter($currentPid)) continue;
-            if ($assignedCount[$targetPid] >= $targetMax) continue;
+            if ($currentPid === null)
+                continue;
+            if ($currentPid === $targetPid)
+                continue;
+            if ($ownerFilter !== null && !$ownerFilter($currentPid))
+                continue;
+            if ($assignedCount[$targetPid] >= $targetMax)
+                continue;
             $isAf = $isAfternoon($slot['exam_time']);
-            if ($requireAfternoon === true && !$isAf) continue;
-            if ($requireAfternoon === false && $isAf) continue;
-            if ($assignedCount[$currentPid] <= $targetMin) continue;
+            if ($requireAfternoon === true && !$isAf)
+                continue;
+            if ($requireAfternoon === false && $isAf)
+                continue;
+            if ($assignedCount[$currentPid] <= $targetMin)
+                continue;
             $groupIndex = $slot['groupIndex'];
-            if (isset($proctorHasGroup[$targetPid][$groupIndex])) continue;
+            if (isset($proctorHasGroup[$targetPid][$groupIndex]))
+                continue;
             $key = $slot['exam_date'] . '|' . $slot['exam_time'];
-            if (isset($restrictions[$targetPid]) && isset($restrictions[$targetPid][$key])) continue;
+            if (isset($restrictions[$targetPid]) && isset($restrictions[$targetPid][$key]))
+                continue;
             if (!$allowConsecutive) {
                 if (isset($proctorHasGroup[$targetPid][$groupIndex - 1]) || isset($proctorHasGroup[$targetPid][$groupIndex + 1])) {
                     continue;
@@ -373,8 +408,8 @@ try {
         }
 
         $groupIndex = $slots[$slotIdx]['groupIndex'];
-        $time = $slots[$slotIdx]['exam_time'];
-        $isAf = $isAfternoon($time);
+        $time       = $slots[$slotIdx]['exam_time'];
+        $isAf       = $isAfternoon($time);
 
         $assignedCount[$currentPid] = max(0, $assignedCount[$currentPid] - 1);
         if ($isAf && $afternoonCount[$currentPid] > 0) {
@@ -390,7 +425,7 @@ try {
         if ($isAf) {
             $afternoonCount[$targetPid]++;
         }
-        $proctorAssignments[$targetPid][] = $slotIdx;
+        $proctorAssignments[$targetPid][]         = $slotIdx;
         $proctorHasGroup[$targetPid][$groupIndex] = true;
 
         return $currentPid;
@@ -407,7 +442,8 @@ try {
 
     if (!empty($shortageProctors)) {
         usort($shortageProctors, function ($a, $b) use (&$assignedCount) {
-            if ($assignedCount[$a] === $assignedCount[$b]) return $a <=> $b;
+            if ($assignedCount[$a] === $assignedCount[$b])
+                return $a <=> $b;
             return $assignedCount[$a] <=> $assignedCount[$b];
         });
 
@@ -419,7 +455,8 @@ try {
                 if ($slotIdx === null) {
                     $slotIdx = $findSlotToReassign($pid, true, null, null);
                 }
-                if ($slotIdx === null) break;
+                if ($slotIdx === null)
+                    break;
 
                 $applyReassignment($slotIdx, $pid);
             }
@@ -427,26 +464,29 @@ try {
     }
 
     // Balancing pass 2: swap morning/afternoon slots to tighten afternoon distribution
-    $afternoonMean = $afternoonTotalSlots / max(1, $numProctors);
+    $afternoonMean  = $afternoonTotalSlots / max(1, $numProctors);
     $afternoonFloor = (int)floor($afternoonMean);
-    $afternoonCeil = (int)ceil($afternoonMean);
+    $afternoonCeil  = (int)ceil($afternoonMean);
 
     $canAssignForSwap = function ($pid, $slotIdx, $allowConsecutive, $groupOverride = null) use (&$slots, &$proctorHasGroup, &$restrictions) {
         $slot = $slots[$slotIdx];
-        $key = $slot['exam_date'] . '|' . $slot['exam_time'];
-        if (isset($restrictions[$pid]) && isset($restrictions[$pid][$key])) return false;
-        $groupIndex = $slot['groupIndex'];
+        $key  = $slot['exam_date'] . '|' . $slot['exam_time'];
+        if (isset($restrictions[$pid]) && isset($restrictions[$pid][$key]))
+            return false;
+        $groupIndex     = $slot['groupIndex'];
         $assignedGroups = $groupOverride ?? ($proctorHasGroup[$pid] ?? []);
-        if (isset($assignedGroups[$groupIndex])) return false;
+        if (isset($assignedGroups[$groupIndex]))
+            return false;
         if (!$allowConsecutive) {
-            if (isset($assignedGroups[$groupIndex - 1]) || isset($assignedGroups[$groupIndex + 1])) return false;
+            if (isset($assignedGroups[$groupIndex - 1]) || isset($assignedGroups[$groupIndex + 1]))
+                return false;
         }
         return true;
     };
 
     $performSwap = function ($targetPid, $donorPid, $afternoonSlotIdx, $morningSlotIdx) use (&$slots, &$proctorAssignments, &$proctorHasGroup, &$afternoonCount, $isAfternoon, $removeAssignmentIndex) {
         $afternoonGroupIndex = $slots[$afternoonSlotIdx]['groupIndex'];
-        $morningGroupIndex = $slots[$morningSlotIdx]['groupIndex'];
+        $morningGroupIndex   = $slots[$morningSlotIdx]['groupIndex'];
 
         if (isset($proctorAssignments[$donorPid])) {
             $removeAssignmentIndex($proctorAssignments[$donorPid], $afternoonSlotIdx);
@@ -456,10 +496,10 @@ try {
         }
 
         $slots[$afternoonSlotIdx]['assigned'] = $targetPid;
-        $slots[$morningSlotIdx]['assigned'] = $donorPid;
+        $slots[$morningSlotIdx]['assigned']   = $donorPid;
 
         $proctorAssignments[$targetPid][] = $afternoonSlotIdx;
-        $proctorAssignments[$donorPid][] = $morningSlotIdx;
+        $proctorAssignments[$donorPid][]  = $morningSlotIdx;
 
         unset($proctorHasGroup[$donorPid][$afternoonGroupIndex]);
         $proctorHasGroup[$targetPid][$afternoonGroupIndex] = true;
@@ -483,7 +523,8 @@ try {
 
     if (!empty($afternoonDeficits) && $afternoonCeil > 0) {
         usort($afternoonDeficits, function ($a, $b) use (&$afternoonCount) {
-            if ($afternoonCount[$a] === $afternoonCount[$b]) return $a <=> $b;
+            if ($afternoonCount[$a] === $afternoonCount[$b])
+                return $a <=> $b;
             return $afternoonCount[$a] <=> $afternoonCount[$b];
         });
 
@@ -514,7 +555,8 @@ try {
                 $swapDone = false;
                 foreach ($attemptCombos as $combo) {
                     foreach ($surplusProctors as $donorPid) {
-                        if ($afternoonCount[$donorPid] <= $afternoonCeil) continue;
+                        if ($afternoonCount[$donorPid] <= $afternoonCeil)
+                            continue;
 
                         $donorAfternoonSlots = [];
                         foreach ($proctorAssignments[$donorPid] as $slotIdx) {
@@ -522,7 +564,8 @@ try {
                                 $donorAfternoonSlots[] = $slotIdx;
                             }
                         }
-                        if (empty($donorAfternoonSlots)) continue;
+                        if (empty($donorAfternoonSlots))
+                            continue;
 
                         $targetMorningSlots = [];
                         foreach ($proctorAssignments[$targetPid] as $slotIdx) {
@@ -536,7 +579,7 @@ try {
 
                         foreach ($donorAfternoonSlots as $afSlotIdx) {
                             $donorGroupOverride = $proctorHasGroup[$donorPid] ?? [];
-                            $afGroupIndex = $slots[$afSlotIdx]['groupIndex'];
+                            $afGroupIndex       = $slots[$afSlotIdx]['groupIndex'];
                             unset($donorGroupOverride[$afGroupIndex]);
 
                             if (!$canAssignForSwap($targetPid, $afSlotIdx, $combo['target'])) {
@@ -572,17 +615,26 @@ try {
     // at 28, eliminating counts of 30 without creating new shortages.
     // ------------------------------------------------------------------
     $desiredCeilHolders = $totalSlots - ($floorMean * $numProctors); // X
-    if ($desiredCeilHolders < 0) $desiredCeilHolders = 0;
-    if ($desiredCeilHolders > $numProctors) $desiredCeilHolders = $numProctors;
+    if ($desiredCeilHolders < 0)
+        $desiredCeilHolders = 0;
+    if ($desiredCeilHolders > $numProctors)
+        $desiredCeilHolders = $numProctors;
 
     // Current classification
-    $aboveMax = []; // > ceilMean
-    $atCeil = [];   // == ceilMean
-    $atFloor = [];  // == floorMean
+    $aboveMax   = []; // > ceilMean
+    $atCeil     = [];   // == ceilMean
+    $atFloor    = [];  // == floorMean
     $belowFloor = []; // < floorMean (should not typically occur now)
     foreach ($proctors as $p) {
         $pid = intval($p['id']);
-        if ($assignedCount[$pid] > $ceilMean) $aboveMax[] = $pid; elseif ($assignedCount[$pid] === $ceilMean) $atCeil[] = $pid; elseif ($assignedCount[$pid] === $floorMean) $atFloor[] = $pid; else $belowFloor[] = $pid;
+        if ($assignedCount[$pid] > $ceilMean)
+            $aboveMax[] = $pid;
+        elseif ($assignedCount[$pid] === $ceilMean)
+            $atCeil[] = $pid;
+        elseif ($assignedCount[$pid] === $floorMean)
+            $atFloor[] = $pid;
+        else
+            $belowFloor[] = $pid;
     }
 
     // We only act if there are proctors above ceil OR we have too many at ceil compared to desiredCeilHolders.
@@ -593,57 +645,68 @@ try {
         // Sort donors (aboveMax first then, if over target desiredCeilHolders, some of the atCeil)
         // Donor ordering: higher assignedCount first, then higher afternoonCount (we prefer moving MORNING slots to keep afternoon distribution stable).
         $potentialDonors = [];
-        foreach ($aboveMax as $pid) $potentialDonors[] = $pid;
+        foreach ($aboveMax as $pid)
+            $potentialDonors[] = $pid;
         if ($currentCeilCount > $desiredCeilHolders) {
             // We have excess ceil holders; select some of the atCeil as donors to reduce.
             $excess = $currentCeilCount - $desiredCeilHolders;
             // Sort atCeil by (assignedCount, afternoonCount) descending to pick those easiest to trim.
-            usort($atCeil, function($a,$b) use (&$assignedCount,&$afternoonCount){
+            usort($atCeil, function ($a, $b) use (&$assignedCount, &$afternoonCount) {
                 if ($assignedCount[$a] === $assignedCount[$b]) {
-                    if ($afternoonCount[$a] === $afternoonCount[$b]) return $b <=> $a; // stable tie
+                    if ($afternoonCount[$a] === $afternoonCount[$b])
+                        return $b <=> $a; // stable tie
                     return $afternoonCount[$b] <=> $afternoonCount[$a];
                 }
                 return $assignedCount[$b] <=> $assignedCount[$a];
             });
             foreach ($atCeil as $pid) {
-                if ($excess <= 0) break;
-                $potentialDonors[] = $pid; $excess--;
+                if ($excess <= 0)
+                    break;
+                $potentialDonors[] = $pid;
+                $excess--;
             }
         }
         // Sort donors
-        usort($potentialDonors, function($a,$b) use (&$assignedCount,&$afternoonCount){
+        usort($potentialDonors, function ($a, $b) use (&$assignedCount, &$afternoonCount) {
             if ($assignedCount[$a] === $assignedCount[$b]) {
-                if ($afternoonCount[$a] === $afternoonCount[$b]) return $b <=> $a;
+                if ($afternoonCount[$a] === $afternoonCount[$b])
+                    return $b <=> $a;
                 return $afternoonCount[$b] <=> $afternoonCount[$a];
             }
             return $assignedCount[$b] <=> $assignedCount[$a];
         });
 
         // Sort recipients: lower assignedCount first, then lower afternoonCount (so they can absorb morning slots if possible)
-        usort($canReceive, function($a,$b) use (&$assignedCount,&$afternoonCount){
+        usort($canReceive, function ($a, $b) use (&$assignedCount, &$afternoonCount) {
             if ($assignedCount[$a] === $assignedCount[$b]) {
-                if ($afternoonCount[$a] === $afternoonCount[$b]) return $a <=> $b;
+                if ($afternoonCount[$a] === $afternoonCount[$b])
+                    return $a <=> $b;
                 return $afternoonCount[$a] <=> $afternoonCount[$b];
             }
             return $assignedCount[$a] <=> $assignedCount[$b];
         });
 
         // Helper to attempt moving one slot from donor to recipient
-        $tryTransfer = function($donorPid, $recipientPid) use (&$slots,&$proctorAssignments,&$proctorHasGroup,&$assignedCount,&$afternoonCount,$isAfternoon,$targetMin,$ceilMean,$floorMean,&$assignedInGroup,&$restrictions) {
-            if ($assignedCount[$donorPid] <= $floorMean) return false; // donor too low
-            if ($assignedCount[$recipientPid] >= $ceilMean) return false; // recipient already at or above ceil
+        $tryTransfer = function ($donorPid, $recipientPid) use (&$slots, &$proctorAssignments, &$proctorHasGroup, &$assignedCount, &$afternoonCount, $isAfternoon, $targetMin, $ceilMean, $floorMean, &$assignedInGroup, &$restrictions) {
+            if ($assignedCount[$donorPid] <= $floorMean)
+                return false; // donor too low
+            if ($assignedCount[$recipientPid] >= $ceilMean)
+                return false; // recipient already at or above ceil
             // Candidate slots: donor's morning slots first, then afternoon if necessary.
-            $candidateSlotIdxsMorning = [];
+            $candidateSlotIdxsMorning   = [];
             $candidateSlotIdxsAfternoon = [];
             foreach ($proctorAssignments[$donorPid] as $sidx) {
                 $groupIndex = $slots[$sidx]['groupIndex'];
                 // Ensure recipient not in same group (session) already
-                if (isset($proctorHasGroup[$recipientPid][$groupIndex])) continue;
+                if (isset($proctorHasGroup[$recipientPid][$groupIndex]))
+                    continue;
                 // Avoid consecutive sessions for recipient (respect the adjacency constraint like other passes)
-                if (isset($proctorHasGroup[$recipientPid][$groupIndex - 1]) || isset($proctorHasGroup[$recipientPid][$groupIndex + 1])) continue;
+                if (isset($proctorHasGroup[$recipientPid][$groupIndex - 1]) || isset($proctorHasGroup[$recipientPid][$groupIndex + 1]))
+                    continue;
                 // Respect explicit restrictions for recipient on this slot
                 $key = $slots[$sidx]['exam_date'] . '|' . $slots[$sidx]['exam_time'];
-                if (isset($restrictions[$recipientPid]) && isset($restrictions[$recipientPid][$key])) continue;
+                if (isset($restrictions[$recipientPid]) && isset($restrictions[$recipientPid][$key]))
+                    continue;
                 $time = $slots[$sidx]['exam_time'];
                 if ($isAfternoon($time)) {
                     $candidateSlotIdxsAfternoon[] = $sidx; // store but prefer morning
@@ -657,18 +720,26 @@ try {
                 // Perform reassignment
                 $oldAfternoon = $isAfternoon($slots[$slotIdx]['exam_time']);
                 // Remove from donor
-                $assignedCount[$donorPid] = max(0, $assignedCount[$donorPid]-1);
-                if ($oldAfternoon && $afternoonCount[$donorPid] > 0) $afternoonCount[$donorPid]--;
+                $assignedCount[$donorPid] = max(0, $assignedCount[$donorPid] - 1);
+                if ($oldAfternoon && $afternoonCount[$donorPid] > 0)
+                    $afternoonCount[$donorPid]--;
                 // Remove mapping
-                foreach ($proctorAssignments[$donorPid] as $k=>$v) { if ($v === $slotIdx) { unset($proctorAssignments[$donorPid][$k]); break; } }
+                foreach ($proctorAssignments[$donorPid] as $k => $v) {
+                    if ($v === $slotIdx) {
+                        unset($proctorAssignments[$donorPid][$k]);
+                        break;
+                    }
+                }
                 $proctorAssignments[$donorPid] = array_values($proctorAssignments[$donorPid]);
                 unset($proctorHasGroup[$donorPid][$groupIndex]);
-                if (isset($assignedInGroup[$donorPid][$groupIndex])) unset($assignedInGroup[$donorPid][$groupIndex]);
+                if (isset($assignedInGroup[$donorPid][$groupIndex]))
+                    unset($assignedInGroup[$donorPid][$groupIndex]);
                 // Assign to recipient
                 $slots[$slotIdx]['assigned'] = $recipientPid;
                 $assignedCount[$recipientPid]++;
-                if ($oldAfternoon) $afternoonCount[$recipientPid]++;
-                $proctorAssignments[$recipientPid][] = $slotIdx;
+                if ($oldAfternoon)
+                    $afternoonCount[$recipientPid]++;
+                $proctorAssignments[$recipientPid][]         = $slotIdx;
                 $proctorHasGroup[$recipientPid][$groupIndex] = true;
                 $assignedInGroup[$recipientPid][$groupIndex] = true; // maintain per-session tracker
                 return true;
@@ -683,18 +754,25 @@ try {
             $aboveCountExists = false;
             foreach ($proctors as $p) {
                 $pid = intval($p['id']);
-                if ($assignedCount[$pid] > $ceilMean) { $aboveCountExists = true; $currentCeilCount++; }
-                elseif ($assignedCount[$pid] === $ceilMean) { $currentCeilCount++; }
+                if ($assignedCount[$pid] > $ceilMean) {
+                    $aboveCountExists = true;
+                    $currentCeilCount++;
+                } elseif ($assignedCount[$pid] === $ceilMean) {
+                    $currentCeilCount++;
+                }
             }
-            if (!$aboveCountExists && $currentCeilCount <= $desiredCeilHolders) break; // target reached
+            if (!$aboveCountExists && $currentCeilCount <= $desiredCeilHolders)
+                break; // target reached
             // Attempt transfer to recipients in priority order
             foreach ($canReceive as $recIdx => $rec) {
-                if ($assignedCount[$rec] >= $ceilMean) continue; // already at ceil
+                if ($assignedCount[$rec] >= $ceilMean)
+                    continue; // already at ceil
                 if ($tryTransfer($donor, $rec)) {
                     // Resort recipients after change for fairness
-                    usort($canReceive, function($a,$b) use (&$assignedCount,&$afternoonCount){
+                    usort($canReceive, function ($a, $b) use (&$assignedCount, &$afternoonCount) {
                         if ($assignedCount[$a] === $assignedCount[$b]) {
-                            if ($afternoonCount[$a] === $afternoonCount[$b]) return $a <=> $b;
+                            if ($afternoonCount[$a] === $afternoonCount[$b])
+                                return $a <=> $b;
                             return $afternoonCount[$a] <=> $afternoonCount[$b];
                         }
                         return $assignedCount[$a] <=> $assignedCount[$b];
@@ -708,7 +786,7 @@ try {
     // Build report
     $perProctor = [];
     foreach ($proctors as $p) {
-        $pid = intval($p['id']);
+        $pid              = intval($p['id']);
         $perProctor[$pid] = [
             'id' => $pid,
             'name' => $proctorMap[$pid],
@@ -717,23 +795,25 @@ try {
         ];
     }
 
-    $unfilledSlots = [];
+    $unfilledSlots        = [];
     $assignmentsForOutput = [];
     foreach ($slots as $slot) {
         if ($slot['assigned'] === null) {
             // compute candidate diagnostic for this unfilled slot
-            $k = $slot['exam_date'] . '|' . $slot['exam_time'];
+            $k     = $slot['exam_date'] . '|' . $slot['exam_time'];
             $cands = [];
             foreach ($proctors as $p) {
                 $pid = intval($p['id']);
-                if (isset($restrictions[$pid]) && isset($restrictions[$pid][$k])) continue;
-                if ($assignedCount[$pid] >= $targetMax) continue;
+                if (isset($restrictions[$pid]) && isset($restrictions[$pid][$k]))
+                    continue;
+                if ($assignedCount[$pid] >= $targetMax)
+                    continue;
                 $cands[] = $pid;
             }
-            $unfilledSlots[] = ['exam_date' => $slot['exam_date'], 'exam_time' => $slot['exam_time'], 'candidate_count' => count($cands), 'candidates' => $cands];
+            $unfilledSlots[]        = ['exam_date' => $slot['exam_date'], 'exam_time' => $slot['exam_time'], 'candidate_count' => count($cands), 'candidates' => $cands];
             $assignmentsForOutput[] = ['exam_date' => $slot['exam_date'], 'exam_time' => $slot['exam_time'], 'proctor_id' => null, 'proctor_name' => '', 'candidate_count' => count($cands)];
         } else {
-            $pid = $slot['assigned'];
+            $pid                    = $slot['assigned'];
             $assignmentsForOutput[] = ['exam_date' => $slot['exam_date'], 'exam_time' => $slot['exam_time'], 'proctor_id' => $pid, 'proctor_name' => $proctorMap[$pid]];
         }
     }
@@ -755,7 +835,7 @@ try {
     // Diagnostics: per-proctor eligible/exclusion counters to help debugging
     $diagPerProctor = [];
     foreach ($proctors as $p) {
-        $pid = intval($p['id']);
+        $pid                  = intval($p['id']);
         $diagPerProctor[$pid] = [
             'id' => $pid,
             'name' => $proctorMap[$pid],
@@ -796,11 +876,12 @@ try {
             // Ensure unique constraint to prevent duplicate assignments of the same proctor within the same session
             try {
                 $idxStmt = $pdo->query("SHOW INDEX FROM `ExamAssignments` WHERE Key_name='uniq_session_proctor'");
-                $hasIdx = $idxStmt && $idxStmt->fetch(PDO::FETCH_ASSOC);
+                $hasIdx  = $idxStmt && $idxStmt->fetch(PDO::FETCH_ASSOC);
                 if (!$hasIdx) {
                     $pdo->exec("ALTER TABLE `ExamAssignments` ADD UNIQUE KEY `uniq_session_proctor` (`exam_date`,`exam_time`,`proctor_id`)");
                 }
-            } catch (Throwable $e) { /* ignore if index already exists or cannot be created */ }
+            } catch (Throwable $e) { /* ignore if index already exists or cannot be created */
+            }
 
             $pdo->beginTransaction();
             $pdo->exec("DELETE FROM `ExamAssignments`");
@@ -814,7 +895,10 @@ try {
             $report['applied'] = true;
         } catch (Throwable $e) {
             if ($pdo->inTransaction()) {
-                try { $pdo->rollBack(); } catch (Throwable $rollbackError) { /* swallow rollback errors */ }
+                try {
+                    $pdo->rollBack();
+                } catch (Throwable $rollbackError) { /* swallow rollback errors */
+                }
             }
             http_response_code(500);
             echo json_encode(['success' => false, 'error' => 'db_write_failed', 'message' => $e->getMessage()], JSON_UNESCAPED_UNICODE);
@@ -826,7 +910,7 @@ try {
 
     // If there are unfilled slots, include a note
     if (!empty($unfilledSlots)) {
-        $report['note'] = 'unfilled_slots_exist';
+        $report['note']           = 'unfilled_slots_exist';
         $report['unfilled_count'] = count($unfilledSlots);
     }
 
