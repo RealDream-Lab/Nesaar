@@ -278,14 +278,16 @@ try {
     // Post-success cleanup: remove uploaded Excel files and drop temporary tables so no leftover data remains.
     try {
         // Remove uploaded files created by uploadDatabase.php (E.* and K.* with common extensions)
-        $uploadDir = __DIR__ . '/../database/';
+        $uploadDir = realpath(__DIR__ . '/../database') . '/';
         $types     = ['E', 'K'];
         $exts      = ['xlsx', 'xls'];
         foreach ($types as $t) {
             foreach ($exts as $ext) {
                 $f = $uploadDir . $t . '.' . $ext;
                 if (file_exists($f)) {
-                    @unlink($f);
+                    if (!unlink($f)) {
+                        error_log("Failed to delete Excel file: {$f}");
+                    }
                 }
             }
         }

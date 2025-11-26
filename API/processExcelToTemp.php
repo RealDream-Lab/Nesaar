@@ -8,10 +8,10 @@ if (session_status() === PHP_SESSION_NONE) {
 ini_set('display_errors', '0');
 ini_set('log_errors', '1');
 ini_set('error_log', __DIR__ . '/../database/api_errors.log');
-set_error_handler(function($errno, $errstr, $errfile, $errline) {
+set_error_handler(function ($errno, $errstr, $errfile, $errline) {
     throw new ErrorException($errstr, 0, $errno, $errfile, $errline);
 });
-set_exception_handler(function($e) {
+set_exception_handler(function ($e) {
     http_response_code(500);
     error_log((string)$e);
     header('Content-Type: application/json; charset=utf-8');
@@ -41,10 +41,11 @@ if ($__lic['valid'] !== true) {
         if (isset($pdo) && $pdo instanceof PDO) {
             $st = $pdo->prepare("SELECT ConfigValue FROM Config WHERE ConfigName = 'AllowImportOnInvalidLicense'");
             $st->execute();
-            $val = strtoupper(trim((string)($st->fetchColumn() ?? '')));
+            $val         = strtoupper(trim((string)($st->fetchColumn() ?? '')));
             $allowBypass = ($val === 'YES');
         }
-    } catch (Throwable $e) { /* ignore and deny bypass */ }
+    } catch (Throwable $e) { /* ignore and deny bypass */
+    }
     if (!$allowBypass) {
         license_guard_respond_forbidden($__lic['message'] ?? 'License validation failed');
     }
@@ -99,11 +100,11 @@ try {
         throw new Exception('Unsupported file type');
     }
     $reader->open($filePath);
-    
+
     $rows = [];
     foreach ($reader->getSheetIterator() as $sheet) {
         foreach ($sheet->getRowIterator() as $row) {
-            $cells = $row->getCells();
+            $cells   = $row->getCells();
             $rowData = [];
             foreach ($cells as $cell) {
                 $rowData[] = $cell->getValue();
@@ -113,13 +114,13 @@ try {
         break; // Only first sheet
     }
     $reader->close();
-    
+
     if (empty($rows)) {
         http_response_code(400);
         echo json_encode(['error' => 'فایل اکسل خالی است یا قابل خواندن نیست']);
         exit;
     }
-    
+
     // Fixed columns for temp table
     $columns = [
         'شماره دانشجويي' => 'VARCHAR(9)',
@@ -140,7 +141,7 @@ try {
         'کلاس' => 'VARCHAR(50)',
         'ردیف' => 'VARCHAR(50)'
     ];
-    
+
     // Progress file path (per-upload)
     $progressFile = __DIR__ . '/../database/progress_' . basename($filename) . '.json';
     // Initialize progress file
@@ -150,14 +151,15 @@ try {
         'processedRows' => 0,
         'message' => 'در حال خواندن فایل'
     ], JSON_UNESCAPED_UNICODE));
-    
+
     // Connect to database
 
     // Validate header (first row) and build mapping from expected columns to actual indexes
     $headerRow = $rows[0];
     // Normalization helper
-    $normalize = function($s) {
-        if ($s === null) return '';
+    $normalize = function ($s) {
+        if ($s === null)
+            return '';
         $s = trim((string)$s);
         // Convert Arabic chars to Persian
         $s = str_replace(['ك', 'ي'], ['ک', 'ی'], $s);
@@ -169,7 +171,7 @@ try {
     };
 
     $expected = array_map($normalize, array_keys($columns));
-    $actual = array_map($normalize, $headerRow);
+    $actual   = array_map($normalize, $headerRow);
 
     // Build mapping: expected index -> actual column index
     $mapping = [];
@@ -178,7 +180,7 @@ try {
         foreach ($actual as $actIdx => $actName) {
             if ($expName === $actName) {
                 $mapping[$expIdx] = $actIdx;
-                $found = true;
+                $found            = true;
                 break;
             }
         }
@@ -198,24 +200,24 @@ try {
 
     // Drop target table if exists
     $pdo->query("DROP TABLE IF EXISTS `" . $targetTable . "`");
-    
+
     // Create target table with fixed schema
-    $createSql = "CREATE TABLE `" . $targetTable . "` (";
+    $createSql  = "CREATE TABLE `" . $targetTable . "` (";
     $columnDefs = [];
     foreach ($columns as $name => $type) {
         $columnDefs[] = "`" . str_replace('`', '``', $name) . "` " . $type . " CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NULL DEFAULT NULL";
     }
     $createSql .= implode(', ', $columnDefs) . ") ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci";
-    
+
     if (!$pdo->query($createSql)) {
         throw new Exception('خطا در ایجاد جدول موقت: ' . $pdo->error);
     }
 
     // Prepare insert into target table
     $insertedRows = 0;
-    $columnNames = array_keys($columns);
+    $columnNames  = array_keys($columns);
     $placeholders = implode(',', array_fill(0, count($columnNames), '?'));
-    $stmt = $pdo->prepare("INSERT INTO `" . $targetTable . "` (" . implode(',', array_map(fn($n) => "`" . str_replace('`', '``', $n) . "`", $columnNames)) . ") VALUES (" . $placeholders . ")");
+    $stmt         = $pdo->prepare("INSERT INTO `" . $targetTable . "` (" . implode(',', array_map(fn($n) => "`" . str_replace('`', '``', $n) . "`", $columnNames)) . ") VALUES (" . $placeholders . ")");
 
     // Set total rows for progress (exclude header)
     $totalDataRows = max(0, count($rows) - 1);
@@ -223,12 +225,13 @@ try {
 
     $lastProgressWrite = microtime(true);
     foreach ($rows as $rowIndex => $row) {
-        if ($rowIndex == 0) continue; // Skip header
+        if ($rowIndex == 0)
+            continue; // Skip header
 
         $values = [];
         for ($i = 0; $i < count($columnNames); $i++) {
             $colIdx = $mapping[$i] ?? null;
-            $value = ($colIdx !== null) ? ($row[$colIdx] ?? null) : null;
+            $value  = ($colIdx !== null) ? ($row[$colIdx] ?? null) : null;
             if ($value === null || $value === '') {
                 $values[] = null;
             } elseif ($value instanceof \DateTimeInterface) {
@@ -261,15 +264,15 @@ try {
             $lastProgressWrite = microtime(true);
         }
     }
-    
+
     // Finalize progress file
     file_put_contents($progressFile, json_encode(['stage' => 'done', 'totalRows' => $totalDataRows, 'processedRows' => $insertedRows, 'message' => 'پردازش کامل شد', 'success' => true], JSON_UNESCAPED_UNICODE));
 
     // Log the processing
     $logMessage = date('Y-m-d H:i:s') . " - Excel processed to table {$targetTable}: {$insertedRows} rows, " . count($columns) . " columns by " . ($session['username'] ?? 'Unknown') . "\n";
-    $logFile = __DIR__ . '/../database/excel_log.txt';
+    $logFile    = __DIR__ . '/../database/excel_log.txt';
     file_put_contents($logFile, $logMessage, FILE_APPEND);
-    
+
     // Return success response
     echo json_encode([
         'success' => true,
@@ -278,11 +281,20 @@ try {
         'columns' => count($columns),
         'examType' => $examType === 'K' ? 'کتبی' : 'الکترونیکی'
     ]);
+
+    // Remove the processed Excel file immediately after successful import to temp table
+    // Data is now in database, no need to keep the file
+    if (isset($filePath) && file_exists($filePath)) {
+        if (!unlink($filePath)) {
+            error_log("Failed to delete processed Excel file: {$filePath}");
+        }
+    }
+
     // Remove progress file after successful processing to avoid leaving temporary files
     if (isset($progressFile) && file_exists($progressFile)) {
         @unlink($progressFile);
     }
-    
+
 } catch (Exception $e) {
     // Write error to progress file if available
     if (isset($progressFile)) {

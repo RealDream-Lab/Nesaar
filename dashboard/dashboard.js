@@ -4155,16 +4155,25 @@ async function printEssentialsDescriptive() {
           );
 
           if (!hasEssay) {
-            return Swal.fire({
+            await Swal.fire({
               icon: "info",
               title: "اطلاعات",
               text: "هیچ درس تشریحی برای این آزمون یافت نشد.",
               confirmButtonText: "باشه",
+              timer: 3000,
+              timerProgressBar: true,
               customClass: {
                 popup: "swal2-rtl swal2-glass",
                 confirmButton: "btn btn-primary",
               },
             });
+            // Reopen essentials menu after message closes
+            setTimeout(() => {
+              try {
+                examEssentialsHandler();
+              } catch (e) {}
+            }, 3000);
+            return;
           }
         }
       } catch (e) {
