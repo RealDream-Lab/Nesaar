@@ -295,6 +295,16 @@ body.no-waves-animation .parallax > use {
   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
 }
 
+/* Dark labels for dashboard-card forms */
+.dashboard-card.no-hover .form-label {
+  color: #1e293b;
+  font-weight: 600;
+}
+
+.dashboard-card.no-hover p {
+  color: #475569;
+}
+
 .dashboard-card h4 {
   font-size: 1.5rem;
   color: #1a6fa6;
@@ -693,6 +703,22 @@ body.no-waves-animation .parallax > use {
 
 .btn-upload:hover {
   background: #218838;
+  color: white;
+}
+
+/* Blue push notification button */
+.btn-upload-blue {
+  background: #2196f3;
+  color: white;
+  border: none;
+  padding: 0.5rem 1.5rem;
+  border-radius: 8px;
+  transition: background 0.3s ease;
+  font-size: 1rem;
+}
+
+.btn-upload-blue:hover {
+  background: #1976d2;
   color: white;
 }
 
@@ -1457,7 +1483,6 @@ body.login-active #loginRow {
     border-color 0.18s ease;
   position: relative;
   overflow: hidden;
-  cursor: pointer;
   border: 1px solid rgba(255, 255, 255, 0.16);
   backdrop-filter: blur(18px);
 }
@@ -2084,4 +2109,19 @@ body.swal2-toast-shown {
   .skeleton-chart {
     height: 350px;
   }
+}
+
+/* Push Notification SweetAlert Styling */
+.swal2-popup.swal2-notification-alert .swal2-title,
+.swal2-popup.swal2-notification-alert.swal2-notification-title {
+  color: #ffc107 !important;
+  font-weight: 700;
+  font-size: 1.4rem;
+}
+
+.swal2-popup.swal2-notification-alert .swal2-html-container,
+.swal2-popup.swal2-notification-alert .swal2-notification-body {
+  color: #ffffff !important;
+  font-size: 1.05rem;
+  line-height: 1.9;
 }

@@ -4462,3 +4462,181 @@ function renderInsightCards(stats) {
     insightContainer.appendChild(col);
   });
 }
+
+// =====================================================
+// Push Notification Management for Admin Dashboard
+// =====================================================
+(function initPushNotificationAdmin() {
+  const sendBtn = document.getElementById("sendPushBtn");
+  const titleInput = document.getElementById("pushTitle");
+  const bodyInput = document.getElementById("pushBody");
+  const studentsCheckbox = document.getElementById("pushStudents");
+  const proctorsCheckbox = document.getElementById("pushProctors");
+  const resultDiv = document.getElementById("pushResult");
+
+  if (
+    !sendBtn ||
+    !titleInput ||
+    !bodyInput ||
+    !studentsCheckbox ||
+    !proctorsCheckbox
+  ) {
+    return; // Not on admin dashboard
+  }
+
+  sendBtn.addEventListener("click", async () => {
+    const title = titleInput.value.trim();
+    const body = bodyInput.value.trim();
+    const sendToStudents = studentsCheckbox.checked;
+    const sendToProctors = proctorsCheckbox.checked;
+
+    if (!title) {
+      showPushResult("danger", "لطفاً عنوان پیام را وارد کنید.");
+      return;
+    }
+
+    if (!body) {
+      showPushResult("danger", "لطفاً متن پیام را وارد کنید.");
+      return;
+    }
+
+    if (!sendToStudents && !sendToProctors) {
+      showPushResult("danger", "لطفاً حداقل یک گروه گیرنده را انتخاب کنید.");
+      return;
+    }
+
+    // Determine recipients text and type
+    let recipientsText = "";
+    let userTypes = [];
+    if (sendToStudents && sendToProctors) {
+      recipientsText = "همه (دانشجویان + مراقبین)";
+      userTypes = ["student", "proctor"];
+    } else if (sendToStudents) {
+      recipientsText = "فقط دانشجویان";
+      userTypes = ["student"];
+    } else {
+      recipientsText = "فقط مراقبین";
+      userTypes = ["proctor"];
+    }
+
+    // Confirm before sending
+    const confirmation = await Swal.fire({
+      icon: "question",
+      title: "ارسال اعلان؟",
+      html: `<div style="text-align:right;direction:rtl;">
+        <p><strong>عنوان:</strong> ${escapeHtml(title)}</p>
+        <p><strong>متن:</strong> ${escapeHtml(body)}</p>
+        <p><strong>گیرندگان:</strong> ${recipientsText}</p>
+      </div>`,
+      showCancelButton: true,
+      confirmButtonText: "بله، ارسال کن",
+      cancelButtonText: "انصراف",
+      reverseButtons: true,
+      customClass: {
+        popup: "swal2-rtl swal2-glass",
+        confirmButton: "btn btn-primary mx-2",
+        cancelButton: "btn btn-cancel mx-2",
+      },
+      buttonsStyling: false,
+    });
+
+    if (!confirmation.isConfirmed) {
+      return;
+    }
+
+    // Show loading state
+    const spinner = sendBtn.querySelector(".spinner-border");
+    sendBtn.disabled = true;
+    if (spinner) spinner.classList.remove("d-none");
+
+    try {
+      let totalSent = 0;
+      let totalFailed = 0;
+      let totalExpired = 0;
+
+      // Send to each user type
+      for (const userType of userTypes) {
+        const payload = {
+          title: title,
+          body: body,
+          icon: "/pwa-icons/icon-192.png",
+          tag: "admin-broadcast-" + Date.now(),
+          user_type: userType,
+        };
+
+        const response = await guardedFetch("/API/push/send.php", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
+        });
+
+        const result = await response.json();
+
+        if (result.success) {
+          totalSent += result.sent || 0;
+          totalFailed += result.failed || 0;
+          totalExpired += result.expired || 0;
+        }
+      }
+
+      showPushResult(
+        "success",
+        `اعلان با موفقیت ارسال شد! ارسال: ${totalSent}، ناموفق: ${totalFailed}، منقضی: ${totalExpired}`
+      );
+      // Clear form
+      titleInput.value = "";
+      bodyInput.value = "";
+    } catch (error) {
+      console.error("Push send error:", error);
+      showPushResult("danger", "خطا در ارتباط با سرور");
+    } finally {
+      sendBtn.disabled = false;
+      if (spinner) spinner.classList.add("d-none");
+    }
+  });
+
+  function showPushResult(type, message) {
+    if (!resultDiv) return;
+    resultDiv.className = `alert alert-${type}`;
+    resultDiv.textContent = message;
+    resultDiv.classList.remove("d-none");
+
+    // Auto-hide after 5 seconds
+    setTimeout(() => {
+      resultDiv.classList.add("d-none");
+    }, 5000);
+  }
+})();
+
+// =====================================================
+// Service Worker Message Handler for Push Notifications
+// =====================================================
+if (navigator.serviceWorker) {
+  navigator.serviceWorker.addEventListener("message", (event) => {
+    // Handle notification click - show SweetAlert with notification content
+    if (event.data?.type === "show-notification-alert") {
+      const { title, body } = event.data;
+
+      // Build HTML content
+      const htmlContent = `<div style="text-align:right;direction:rtl;line-height:1.8;color:#fff;">${
+        body || ""
+      }</div>`;
+
+      Swal.fire({
+        title: title || "اعلان نسار",
+        html: htmlContent,
+        icon: null,
+        showConfirmButton: true,
+        confirmButtonText: "متوجه شدم",
+        allowOutsideClick: true,
+        customClass: {
+          popup: "swal2-rtl swal2-glass swal2-notification-alert",
+          title: "swal2-notification-title",
+          htmlContainer: "swal2-notification-body",
+          confirmButton: "btn btn-primary",
+        },
+        buttonsStyling: false,
+      });
+    }
+  });
+}

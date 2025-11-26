@@ -1,6 +1,7 @@
 {
     "require": {
         "openspout/openspout": "^4.32",
-        "mpdf/mpdf": "^8.2"
+        "mpdf/mpdf": "^8.2",
+        "minishlink/web-push": "^9.0"
     }
 }

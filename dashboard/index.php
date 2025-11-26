@@ -171,6 +171,48 @@ $bodyClass = $wavesAnimationDisabled ? 'class="no-waves-animation"' : '';
         <!-- Insight Cards Row -->
         <div class="row mt-4" id="insightCardsContainer"></div>
 
+        <!-- Push Notification Management Card -->
+        <div class="dashboard-card no-hover" id="pushNotificationCard">
+            <h4 class="mb-3">ارسال اعلان (Push Notification)</h4>
+            <p style="color:#666; margin-bottom:1rem;">ارسال پیام به دانشجویان و مراقبین ثبت‌نام شده در سیستم اعلان</p>
+            <div class="row g-3">
+                <div class="col-12 col-md-9">
+                    <label class="form-label">عنوان پیام</label>
+                    <input type="text" class="form-control" id="pushTitle" placeholder="مثال: اطلاعیه مهم"
+                        maxlength="100">
+                </div>
+                <div class="col-12 col-md-3">
+                    <label class="form-label">گیرندگان</label>
+                    <div class="d-flex gap-3 mt-2">
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" id="pushStudents" checked>
+                            <label class="form-check-label" for="pushStudents"
+                                style="color:#1e293b;font-weight:600;">دانشجویان</label>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" id="pushProctors" checked>
+                            <label class="form-check-label" for="pushProctors"
+                                style="color:#1e293b;font-weight:600;">مراقبین</label>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-12">
+                    <label class="form-label">متن پیام</label>
+                    <textarea class="form-control" id="pushBody" rows="3" placeholder="متن پیام را وارد کنید..."
+                        maxlength="500"></textarea>
+                </div>
+                <div class="col-12 col-md-12">
+                    <button class="btn btn-upload-blue w-100" id="sendPushBtn">
+                        <span class="spinner-border spinner-border-sm d-none" role="status"></span>
+                        ارسال اعلان
+                    </button>
+                </div>
+                <div class="col-12">
+                    <div id="pushResult" class="alert d-none" role="alert"></div>
+                </div>
+            </div>
+        </div>
+
         <!-- Database Update (moved here to bottom-most section) -->
         <div class="dashboard-card no-hover">
             <h4 class="mb-3">بانک اطلاعاتی آزمون‌ها</h4>
@@ -191,6 +233,7 @@ $bodyClass = $wavesAnimationDisabled ? 'class="no-waves-animation"' : '';
                     </button>
                 </div>
             </div>
+
         </div>
     </div>
     </div>

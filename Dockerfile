@@ -11,6 +11,7 @@ RUN npm install -g javascript-obfuscator@4
 # Copy only the JS files we need to obfuscate from the build context
 # (these paths should match your repo layout)
 COPY assets/app/app.js assets/app/app.js
+COPY assets/app/push-notifications.js assets/app/push-notifications.js
 COPY dashboard/dashboard.js dashboard/dashboard.js
 COPY dashboard/observers/observers.js dashboard/observers/observers.js
 
@@ -65,6 +66,22 @@ RUN javascript-obfuscator dashboard/observers/observers.js \
     --transform-object-keys true \
     --unicode-escape-sequence false
 
+RUN javascript-obfuscator assets/app/push-notifications.js \
+    --output /out/assets/app/push-notifications.js \
+    --compact true \
+    --control-flow-flattening true \
+    --control-flow-flattening-threshold 0.75 \
+    --dead-code-injection false \
+    --disable-console-output false \
+    --identifier-names-generator hexadecimal \
+    --rename-globals false \
+    --self-defending true \
+    --string-array true \
+    --string-array-encoding base64 \
+    --string-array-threshold 0.75 \
+    --transform-object-keys true \
+    --unicode-escape-sequence false
+
 # NOTE: service-worker.js is intentionally excluded from obfuscation to preserve exact
 # caching behavior and signatures. We keep the original file in the final image.
 
@@ -72,13 +89,14 @@ RUN javascript-obfuscator dashboard/observers/observers.js \
 # Stage: final - base PHP image with app files; we'll remove originals and copy obfuscated outputs
 FROM php:8.3-apache AS final
 
-# Install system dependencies, PHP extensions, and Composer
+# Install system dependencies, PHP extensions, Composer, and cron
 RUN apt-get update \
     && apt-get install -y --no-install-recommends \
        libzip-dev libonig-dev libxml2-dev unzip mc curl \
        libpng-dev libjpeg-dev libfreetype6-dev \
+       libgmp-dev cron \
     && docker-php-ext-configure gd --with-freetype --with-jpeg \
-    && docker-php-ext-install bcmath mbstring pdo_mysql xml zip gd \
+    && docker-php-ext-install bcmath mbstring pdo_mysql xml zip gd gmp \
     && a2enmod rewrite headers \
     && curl -sS https://getcomposer.org/installer | php -- --install-dir=/usr/local/bin --filename=composer \
     && rm -rf /var/lib/apt/lists/*
@@ -86,7 +104,7 @@ RUN apt-get update \
 # Configure PHP upload and post limits
 RUN echo "upload_max_filesize = 128M" > /usr/local/etc/php/conf.d/uploads.ini \
     && echo "post_max_size = 128M" >> /usr/local/etc/php/conf.d/uploads.ini \
-    && echo "memory_limit = 128M" >> /usr/local/etc/php/conf.d/uploads.ini \
+    && echo "memory_limit = 256M" >> /usr/local/etc/php/conf.d/uploads.ini \
     && echo "max_execution_time = 300" >> /usr/local/etc/php/conf.d/uploads.ini \
     && echo "max_input_time = 300" >> /usr/local/etc/php/conf.d/uploads.ini
 
@@ -98,26 +116,37 @@ WORKDIR /var/www/html
 # Remove original JS files from the final image so only obfuscated versions remain
 # NOTE: do NOT remove service-worker.js here — we want the original service-worker preserved
 RUN rm -f /var/www/html/assets/app/app.js \
+    /var/www/html/assets/app/push-notifications.js \
     /var/www/html/dashboard/dashboard.js \
     /var/www/html/dashboard/observers/observers.js || true
 
 # Copy obfuscated outputs produced in builder stage into their final locations
 COPY --from=builder /out/ /var/www/html/
 
-# Ensure Composer dependencies are installed (including OpenSpout)
-# Installing at build time keeps vendor inside the image; adjust if you prefer multi-stage composer
-RUN composer require openspout/openspout --no-interaction --prefer-dist || true
+# Ensure Composer dependencies are installed
+RUN composer require openspout/openspout --no-interaction --prefer-dist || true \
+    && composer require mpdf/mpdf --no-interaction --prefer-dist || true \
+    && composer require minishlink/web-push --no-interaction --prefer-dist || true
 
-# Install mPDF library
-RUN composer require mpdf/mpdf --no-interaction --prefer-dist || true
-
-# Create temp directory for mPDF font cache with proper permissions
+# Create temp directories with proper permissions
 RUN mkdir -p /var/www/html/temp/mpdf/ttfontdata \
-    && chown -R www-data:www-data /var/www/html/temp
+    && mkdir -p /var/www/html/database \
+    && chown -R www-data:www-data /var/www/html/temp \
+    && chown -R www-data:www-data /var/www/html/database \
+    && chmod -R 777 /var/www/html/temp \
+    && chmod -R 777 /var/www/html/database
+
+# Setup cron job for push notifications (every minute)
+RUN echo "* * * * * www-data php /var/www/html/scripts/cron_push_notifications.php >> /var/log/push_cron.log 2>&1" > /etc/cron.d/push-notifications \
+    && chmod 0644 /etc/cron.d/push-notifications \
+    && crontab -u www-data /etc/cron.d/push-notifications \
+    && touch /var/log/push_cron.log \
+    && chown www-data:www-data /var/log/push_cron.log
 
 # Ensure correct permissions for Apache
 RUN chown -R www-data:www-data /var/www/html
 
 EXPOSE 80
 
-CMD ["apache2-foreground"]
+# Start cron and Apache
+CMD service cron start && apache2-foreground

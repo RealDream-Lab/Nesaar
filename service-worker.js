@@ -1,5 +1,5 @@
-const CACHE_NAME = "exam-seat-v0.9.6";
-const VERSION = "0.9.6";
+const CACHE_NAME = "exam-seat-v0.9.20";
+const VERSION = "0.9.20";
 const urlsToCache = [
   "/",
   "/index.php",
@@ -16,6 +16,7 @@ const urlsToCache = [
   "/assets/crypto-js.min.js",
   "/assets/app/app.js",
   "/assets/app/version.js",
+  "/assets/app/push-notifications.js",
   "/assets/vendor/chartjs/chart.min.js",
   "/dashboard/dashboard.js",
   "/assets/app/logo.png",
@@ -86,7 +87,7 @@ self.addEventListener("activate", (event) => {
               type: "sw-update",
               version: CACHE_NAME,
               tagVersion: `نسخه ${VERSION}`,
-              changes: ["بهبود عملکرد نرم‌افزار", "رفع اشکالات جزئی"],
+              changes: ["فعال‌سازی سرویس پوش نوتیفیکیشن"],
             });
           });
         });
@@ -175,3 +176,146 @@ async function purgeAllCaches() {
   const keys = await caches.keys();
   await Promise.all(keys.map((key) => caches.delete(key)));
 }
+
+// =====================================================
+// Push Notification Handlers
+// =====================================================
+
+self.addEventListener("push", (event) => {
+  console.log("[SW] Push received:", event);
+
+  let data = {
+    title: "اطلاع‌رسانی",
+    body: "شما یک پیام جدید دارید",
+    icon: "/pwa-icons/icon-192.png",
+    badge: "/pwa-icons/icon-192.png",
+    data: {},
+  };
+
+  if (event.data) {
+    try {
+      const payload = event.data.json();
+      data = { ...data, ...payload };
+    } catch (e) {
+      console.warn("[SW] Failed to parse push data:", e);
+      data.body = event.data.text();
+    }
+  }
+
+  // Store notification data for showing SweetAlert in clients
+  const alertData = {
+    type: "show-notification-alert",
+    title: data.title,
+    body: data.body,
+    data: data.data,
+  };
+
+  const options = {
+    body: data.body,
+    icon: data.icon,
+    badge: data.badge,
+    vibrate: [200, 100, 200],
+    data: { ...data.data, alertData: alertData },
+    tag: data.tag || "default",
+    requireInteraction: data.requireInteraction || false,
+    actions: data.actions || [],
+  };
+
+  event.waitUntil(
+    (async () => {
+      // Show notification
+      await self.registration.showNotification(data.title, options);
+
+      // Send message to all open clients to show SweetAlert immediately
+      const clientList = await self.clients.matchAll({
+        type: "window",
+        includeUncontrolled: true,
+      });
+
+      console.log("[SW] Found clients:", clientList.length);
+
+      for (const client of clientList) {
+        console.log("[SW] Posting to client:", client.url);
+        client.postMessage(alertData);
+      }
+    })()
+  );
+});
+
+self.addEventListener("notificationclick", (event) => {
+  console.log("[SW] Notification clicked:", event);
+
+  event.notification.close();
+
+  const notificationData = event.notification.data || {};
+  const notificationTitle = event.notification.title || "نسار - اطلاع‌رسانی";
+  const notificationBody = event.notification.body || "";
+
+  event.waitUntil(
+    clients
+      .matchAll({ type: "window", includeUncontrolled: true })
+      .then((clientList) => {
+        // Prepare message for SweetAlert display
+        const alertMessage = {
+          type: "show-notification-alert",
+          title: notificationTitle,
+          body: notificationBody,
+          data: notificationData,
+        };
+
+        // Try to focus existing window and send message
+        for (const client of clientList) {
+          if (client.url.includes(self.location.origin) && "focus" in client) {
+            client.focus();
+            client.postMessage(alertMessage);
+            return;
+          }
+        }
+
+        // Open new window if none exists
+        if (clients.openWindow) {
+          // Store the message to show after window opens
+          return clients.openWindow("/").then((newClient) => {
+            // Wait a bit for the page to load, then send message
+            setTimeout(() => {
+              clients.matchAll({ type: "window" }).then((cls) => {
+                cls.forEach((c) => c.postMessage(alertMessage));
+              });
+            }, 2000);
+          });
+        }
+      })
+  );
+});
+
+self.addEventListener("notificationclose", (event) => {
+  console.log("[SW] Notification closed:", event);
+});
+
+// Handle push subscription change
+self.addEventListener("pushsubscriptionchange", (event) => {
+  console.log("[SW] Push subscription changed:", event);
+
+  event.waitUntil(
+    self.registration.pushManager
+      .subscribe({
+        userVisibleOnly: true,
+        applicationServerKey:
+          event.oldSubscription?.options?.applicationServerKey,
+      })
+      .then((subscription) => {
+        // Notify clients to update subscription on server
+        self.clients.matchAll().then((clients) => {
+          clients.forEach((client) => {
+            client.postMessage({
+              type: "push-subscription-changed",
+              subscription: subscription.toJSON(),
+            });
+          });
+        });
+      })
+      .catch((err) => {
+        console.error("[SW] Failed to resubscribe:", err);
+      })
+  );
+});

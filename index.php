@@ -136,6 +136,7 @@ if ($licenseStatus['valid'] !== true) {
   <script src="assets/sweetalert2/sweetalert2.min.js"></script>
   <script src="assets/crypto-js.min.js"></script>
   <script src="assets/app/version.js"></script>
+  <script src="assets/app/push-notifications.js"></script>
   <script src="assets/app/app.js"></script>
   <script>
     if ('serviceWorker' in navigator) {

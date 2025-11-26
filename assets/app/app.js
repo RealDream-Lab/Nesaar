@@ -110,6 +110,32 @@ document.addEventListener("DOMContentLoaded", () => {
           }
         });
       }
+
+      // Handle notification click - show SweetAlert with notification content
+      if (event.data?.type === "show-notification-alert") {
+        const { title, body } = event.data;
+
+        // Build HTML content
+        const htmlContent = `<div style="text-align:right;direction:rtl;line-height:1.8;color:#fff;">${
+          body || ""
+        }</div>`;
+
+        Swal.fire({
+          title: title || "اعلان نسار",
+          html: htmlContent,
+          icon: null,
+          showConfirmButton: true,
+          confirmButtonText: "متوجه شدم",
+          allowOutsideClick: true,
+          customClass: {
+            popup: "swal2-rtl swal2-glass swal2-notification-alert",
+            title: "swal2-notification-title",
+            htmlContainer: "swal2-notification-body",
+            confirmButton: "btn btn-primary",
+          },
+          buttonsStyling: false,
+        });
+      }
     });
   }
   const form = document.getElementById("examForm");
@@ -1489,6 +1515,9 @@ document.addEventListener("DOMContentLoaded", () => {
           nationalId: coworkerNationalId,
           phone: coworkerPhone,
         });
+
+        // Request push notification subscription for proctor (coworker)
+        initPushNotificationForProctor(coworkerNationalId);
       } catch (error) {
         console.error("Coworker login error:", error);
         const message =
@@ -1556,6 +1585,9 @@ document.addEventListener("DOMContentLoaded", () => {
       renderResults(payload, fullName, studentId);
       lastSnapshot = JSON.stringify(payload || []);
       startAutoRefresh(studentId, nationalId);
+
+      // Request push notification subscription after successful login
+      initPushNotificationForStudent(studentId);
     } catch (error) {
       console.error("Fetch error:", error);
       if (error && error.isLicenseError) {
@@ -1646,6 +1678,9 @@ document.addEventListener("DOMContentLoaded", () => {
       renderResults(payload, fullName, sid);
       lastSnapshot = JSON.stringify(payload || []);
       startAutoRefresh(sid, nid);
+
+      // Request push notification subscription after successful auto-login
+      initPushNotificationForStudent(sid);
     } catch (e) {
       console.warn("Auto-login failed:", e);
       stopAutoRefresh();
@@ -1655,6 +1690,10 @@ document.addEventListener("DOMContentLoaded", () => {
       lastFullName = "";
       if (!e?.isLicenseError) {
         localStorage.removeItem("userSession");
+        // Unsubscribe from push notifications
+        if (window.nesaarPushManager) {
+          window.nesaarPushManager.unsubscribe().catch(() => {});
+        }
         try {
           await secureFetch("API/userLogout.php", { method: "POST" });
         } catch (logoutErr) {
@@ -1840,6 +1879,10 @@ document.addEventListener("DOMContentLoaded", () => {
         lastPayload = [];
         lastFullName = "";
         lastStudentId = "";
+        // Unsubscribe from push notifications
+        if (window.nesaarPushManager) {
+          window.nesaarPushManager.unsubscribe().catch(() => {});
+        }
         try {
           await secureFetch("API/userLogout.php", { method: "POST" });
         } catch (logoutErr) {
@@ -2166,6 +2209,10 @@ document.addEventListener("DOMContentLoaded", () => {
     coworkerStats = null;
     coworkerProfile = null;
     coworkerCredentials = null;
+    // Unsubscribe from push notifications
+    if (window.nesaarPushManager) {
+      window.nesaarPushManager.unsubscribe().catch(() => {});
+    }
     clearResults();
     showLogin();
   }
@@ -2356,6 +2403,9 @@ document.addEventListener("DOMContentLoaded", () => {
         nationalId: stored.national_id,
         phone: stored.phone,
       });
+
+      // Request push notification subscription after successful auto-login
+      initPushNotificationForProctor(stored.national_id);
     } catch (error) {
       console.warn("Coworker auto-login failed", error);
       clearCoworkerSessionStorage();
@@ -2582,5 +2632,193 @@ document.addEventListener("DOMContentLoaded", () => {
       .replace(/>/g, "&gt;")
       .replace(/"/g, "&quot;")
       .replace(/'/g, "&#39;");
+  }
+
+  // =====================================================
+  // Push Notification Integration for Students
+  // =====================================================
+  async function initPushNotificationForStudent(studentId) {
+    console.log(
+      "[Push] initPushNotificationForStudent called with:",
+      studentId
+    );
+
+    // Check if we've already asked this session
+    const pushAsked = sessionStorage.getItem("pushNotificationAsked");
+    if (pushAsked === "true") {
+      console.log("[Push] Already asked this session, skipping");
+      return;
+    }
+
+    // Check if push manager is available
+    if (!window.nesaarPushManager) {
+      console.warn("[Push] PushNotificationManager not available");
+      return;
+    }
+
+    try {
+      console.log("[Push] Initializing push manager...");
+      const initialized = await window.nesaarPushManager.init();
+      if (!initialized) {
+        console.warn("[Push] Failed to initialize");
+        return;
+      }
+      console.log("[Push] Initialized successfully");
+
+      // If already subscribed, just update user info
+      if (window.nesaarPushManager.isSubscribed) {
+        console.log("[Push] Already subscribed");
+        return;
+      }
+
+      // Check permission status
+      const permission = window.nesaarPushManager.getPermissionStatus();
+      if (permission === "denied") {
+        console.log("[Push] Permission denied by user");
+        return;
+      }
+
+      // Mark as asked for this session
+      sessionStorage.setItem("pushNotificationAsked", "true");
+
+      // Show subscription prompt
+      const result = await Swal.fire({
+        icon: "info",
+        title: "اعلان یادآوری آزمون",
+        html: '<div style="text-align:right;">آیا می‌خواهید ۳۰ دقیقه قبل از هر آزمون یادآوری دریافت کنید؟</div>',
+        showCancelButton: true,
+        confirmButtonText: "بله، فعال کن",
+        cancelButtonText: "بعداً",
+        reverseButtons: true,
+        customClass: {
+          popup: "swal2-rtl swal2-glass",
+          confirmButton: "btn btn-primary mx-2",
+          cancelButton: "btn btn-cancel mx-2",
+        },
+        buttonsStyling: false,
+      });
+
+      if (result.isConfirmed) {
+        const subscribed = await window.nesaarPushManager.subscribe(
+          "student",
+          studentId
+        );
+        if (subscribed) {
+          Swal.fire({
+            icon: "success",
+            title: "فعال شد",
+            text: "اعلان یادآوری آزمون فعال شد.",
+            timer: 3000,
+            showConfirmButton: false,
+            customClass: { popup: "swal2-rtl" },
+          });
+        } else {
+          Swal.fire({
+            icon: "warning",
+            title: "خطا",
+            text: "فعال‌سازی اعلان ناموفق بود. لطفاً دسترسی مرورگر را بررسی کنید.",
+            timer: 4000,
+            showConfirmButton: false,
+            customClass: { popup: "swal2-rtl" },
+          });
+        }
+      }
+    } catch (error) {
+      console.error("[Push] Error:", error);
+    }
+  }
+
+  // =====================================================
+  // Push Notification Integration for Proctors (Coworkers)
+  // =====================================================
+  async function initPushNotificationForProctor(proctorNationalId) {
+    console.log(
+      "[Push] initPushNotificationForProctor called with:",
+      proctorNationalId
+    );
+
+    // Check if we've already asked this session
+    const pushAsked = sessionStorage.getItem("pushNotificationAskedProctor");
+    if (pushAsked === "true") {
+      console.log("[Push] Already asked this session (proctor), skipping");
+      return;
+    }
+
+    // Check if push manager is available
+    if (!window.nesaarPushManager) {
+      console.warn("[Push] PushNotificationManager not available");
+      return;
+    }
+
+    try {
+      console.log("[Push] Initializing push manager for proctor...");
+      const initialized = await window.nesaarPushManager.init();
+      if (!initialized) {
+        console.warn("[Push] Failed to initialize");
+        return;
+      }
+      console.log("[Push] Initialized successfully for proctor");
+
+      // If already subscribed, just update user info
+      if (window.nesaarPushManager.isSubscribed) {
+        console.log("[Push] Already subscribed");
+        return;
+      }
+
+      // Check permission status
+      const permission = window.nesaarPushManager.getPermissionStatus();
+      if (permission === "denied") {
+        console.log("[Push] Permission denied by user");
+        return;
+      }
+
+      // Mark as asked for this session
+      sessionStorage.setItem("pushNotificationAskedProctor", "true");
+
+      // Show subscription prompt
+      const result = await Swal.fire({
+        icon: "info",
+        title: "اعلان یادآوری مراقبت",
+        html: '<div style="text-align:right;">آیا می‌خواهید ۳۰ دقیقه قبل از هر شیفت مراقبت یادآوری دریافت کنید؟</div>',
+        showCancelButton: true,
+        confirmButtonText: "بله، فعال کن",
+        cancelButtonText: "بعداً",
+        reverseButtons: true,
+        customClass: {
+          popup: "swal2-rtl swal2-glass",
+          confirmButton: "btn btn-primary mx-2",
+          cancelButton: "btn btn-cancel mx-2",
+        },
+        buttonsStyling: false,
+      });
+
+      if (result.isConfirmed) {
+        const subscribed = await window.nesaarPushManager.subscribe(
+          "proctor",
+          proctorNationalId
+        );
+        if (subscribed) {
+          Swal.fire({
+            icon: "success",
+            title: "فعال شد",
+            text: "اعلان یادآوری مراقبت فعال شد.",
+            timer: 3000,
+            showConfirmButton: false,
+            customClass: { popup: "swal2-rtl" },
+          });
+        } else {
+          Swal.fire({
+            icon: "warning",
+            title: "خطا",
+            text: "فعال‌سازی اعلان ناموفق بود. لطفاً دسترسی مرورگر را بررسی کنید.",
+            timer: 4000,
+            showConfirmButton: false,
+            customClass: { popup: "swal2-rtl" },
+          });
+        }
+      }
+    } catch (error) {
+      console.error("[Push] Error:", error);
+    }
   }
 });
