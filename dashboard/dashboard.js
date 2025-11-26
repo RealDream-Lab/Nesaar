@@ -664,23 +664,6 @@ try {
   const editBtn = document.getElementById("editRolesBtn");
   if (editBtn) {
     editBtn.addEventListener("click", async () => {
-      // First confirmation (warn about changing session-report info)
-      const first = await Swal.fire({
-        title: "تأیید تغییر اطلاعات صورتجلسه",
-        text: "این عمل باعث تغییر اطلاعات صورتجلسه‌ها و گزارشات آزمون خواهد شد. آیا مطمئن هستید که می‌خواهید ادامه دهید؟",
-        icon: "warning",
-        showCancelButton: true,
-        confirmButtonText: "بله، ادامه",
-        cancelButtonText: "لغو",
-        reverseButtons: true,
-        customClass: {
-          popup: "swal2-rtl swal2-glass",
-          confirmButton: "btn btn-danger",
-          cancelButton: "btn btn-cancel",
-        },
-      });
-      if (!first.isConfirmed) return;
-
       // Load current config
       let cfg = {};
       try {
@@ -861,11 +844,11 @@ try {
       // Second confirmation before saving
       const second = await Swal.fire({
         title: "تأیید نهایی",
-        text: "ذخیره تغییرات باعث به‌روز‌رسانی اطلاعات صورتجلسه‌ها و تنظیمات خواهد شد. آیا مطمئن به ذخیره هستید؟",
+        html: '<div style="text-align:justify;line-height:1.8">ذخیره تغییرات باعث به‌روز‌رسانی اطلاعات صورتجلسه‌ها و تنظیمات خواهد شد. آیا مطمئن به ذخیره هستید؟</div>',
         icon: "question",
         showCancelButton: true,
         confirmButtonText: "بله، ذخیره کن",
-        cancelButtonText: "لغو",
+        cancelButtonText: "بازگشت",
         reverseButtons: true,
         customClass: {
           popup: "swal2-rtl swal2-glass",
@@ -873,7 +856,11 @@ try {
           cancelButton: "btn btn-cancel",
         },
       });
-      if (!second.isConfirmed) return;
+      if (!second.isConfirmed) {
+        // Re-open the edit roles modal with the same values
+        editBtn.click();
+        return;
+      }
 
       // Perform save
       try {
