@@ -5211,6 +5211,16 @@
           updateProctorSaveState();
         } else {
           const j = await resp.json();
+          // Highlight the problematic field if specified
+          if (j.field) {
+            if (j.field === "national_id" && nationalIdInput) {
+              nationalIdInput.classList.add("is-invalid");
+              nationalIdInput.focus();
+            } else if (j.field === "phone" && phoneInput) {
+              phoneInput.classList.add("is-invalid");
+              phoneInput.focus();
+            }
+          }
           Swal.fire({
             title: "خطا",
             text: j.error || "ذخیره ناموفق",
