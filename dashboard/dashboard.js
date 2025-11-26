@@ -41,7 +41,13 @@ try {
           Swal._ns_info_toast_patched_dashboard
         )
           return;
-        const _orig = Swal.fire.bind(Swal);
+
+        // Create a mixin with heightAuto: false to fix scroll jumping
+        const SwalNoAutoHeight = Swal.mixin({
+          heightAuto: false,
+        });
+
+        const _orig = SwalNoAutoHeight.fire.bind(SwalNoAutoHeight);
         Swal.fire = function (opts) {
           try {
             if (typeof opts === "object" && opts !== null) {
@@ -58,12 +64,11 @@ try {
                   showConfirmButton: false,
                   // Remove incompatible toast parameters
                   scrollbarPadding: undefined,
-                  heightAuto: undefined,
+                  heightAuto: false, // Explicitly set false for toasts too
                   allowOutsideClick: undefined,
                 });
                 // Clean up undefined values
                 delete toastOpts.scrollbarPadding;
-                delete toastOpts.heightAuto;
                 delete toastOpts.allowOutsideClick;
                 if (toastOpts.customClass) {
                   toastOpts.customClass = Object.assign(
@@ -80,7 +85,7 @@ try {
               }
             }
           } catch (e) {}
-          return _orig.apply(Swal, arguments);
+          return _orig.apply(SwalNoAutoHeight, arguments);
         };
         Swal._ns_info_toast_patched_dashboard = true;
       } catch (e) {}

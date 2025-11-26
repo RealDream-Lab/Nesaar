@@ -6,7 +6,13 @@ document.addEventListener("DOMContentLoaded", () => {
         try {
           if (typeof Swal === "undefined" || Swal._ns_info_toast_patched)
             return;
-          const _orig = Swal.fire.bind(Swal);
+
+          // Create a mixin with heightAuto: false to fix scroll jumping
+          const SwalNoAutoHeight = Swal.mixin({
+            heightAuto: false,
+          });
+
+          const _orig = SwalNoAutoHeight.fire.bind(SwalNoAutoHeight);
           Swal.fire = function (opts) {
             try {
               // Only intercept plain object-style calls (common usage across project)
@@ -46,7 +52,7 @@ document.addEventListener("DOMContentLoaded", () => {
             } catch (e) {
               // fallthrough to original
             }
-            return _orig.apply(Swal, arguments);
+            return _orig.apply(SwalNoAutoHeight, arguments);
           };
           Swal._ns_info_toast_patched = true;
         } catch (e) {}
@@ -471,12 +477,12 @@ document.addEventListener("DOMContentLoaded", () => {
       secondFieldLabel.textContent = "رمز عبور";
       studentIdInput.placeholder = "";
       nationalIdInput.placeholder = "";
-      studentIdInput.type = "text";
-      studentIdInput.inputMode = "text";
-      studentIdInput.autocomplete = "username";
-      nationalIdInput.type = "password";
-      nationalIdInput.inputMode = "text";
-      nationalIdInput.autocomplete = "current-password";
+      studentIdInput.type = "tel";
+      studentIdInput.inputMode = "numeric";
+      studentIdInput.autocomplete = "off";
+      nationalIdInput.type = "tel";
+      nationalIdInput.inputMode = "numeric";
+      nationalIdInput.autocomplete = "off";
       if (persistChanges) {
         localStorage.setItem("userType", "coworker");
       }

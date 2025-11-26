@@ -2,6 +2,26 @@
 (function () {
   "use strict";
 
+  // Global wrapper: Fix scroll jumping by disabling heightAuto
+  (function wrapSwalScrollPreservationObservers() {
+    try {
+      if (typeof Swal === "undefined" || Swal._ns_scroll_patched_observers)
+        return;
+
+      // Create a mixin with heightAuto: false to fix scroll jumping
+      const SwalNoAutoHeight = Swal.mixin({
+        heightAuto: false,
+      });
+
+      const _origFire = SwalNoAutoHeight.fire.bind(SwalNoAutoHeight);
+      Swal.fire = function (opts) {
+        return _origFire.apply(SwalNoAutoHeight, arguments);
+      };
+
+      Swal._ns_scroll_patched_observers = true;
+    } catch (e) {}
+  })();
+
   function toEnglishDigits(value) {
     const persian = "۰۱۲۳۴۵۶۷۸۹";
     const arabic = "٠١٢٣٤٥٦٧٨٩";
