@@ -1528,6 +1528,9 @@ document.addEventListener("DOMContentLoaded", () => {
           phone: coworkerPhone,
         });
 
+        // Start auto refresh for coworker sessions
+        startAutoRefreshCoworker(coworkerNationalId, coworkerPhone);
+
         // Request push notification subscription for proctor (coworker)
         initPushNotificationForProctor(coworkerNationalId);
       } catch (error) {
@@ -2315,6 +2318,102 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 
+  function updateCoworkerCountdowns() {
+    if (!Array.isArray(coworkerSessions) || coworkerSessions.length === 0) return false;
+    let needsReorder = false;
+    const now = Date.now();
+    coworkerSessions.forEach((session, idx) => {
+      const card = examCards?.querySelector(
+        `.exam-card[data-session-origin='${idx}']`
+      );
+      if (!card) return;
+      const target = createExamDateTime(session.exam_date, session.exam_time);
+      const isPast = !target || target.getTime() <= now;
+      
+      // Check if status changed from upcoming to past
+      if (isPast && !card.classList.contains("past")) {
+        needsReorder = true;
+      }
+      
+      if (isPast) {
+        const countdownExisting = card.querySelector(".exam-countdown");
+        if (countdownExisting) countdownExisting.remove();
+        return;
+      }
+
+      const text = getCountdownText(session.exam_date, session.exam_time);
+      let countdown = card.querySelector(".exam-countdown");
+      if (!text) {
+        if (countdown) countdown.remove();
+        return;
+      }
+      if (countdown) {
+        countdown.textContent = text;
+        return;
+      }
+      // Create new countdown element
+      const detail = card.querySelector(".exam-detail");
+      countdown = document.createElement("div");
+      countdown.className = "exam-countdown";
+      countdown.textContent = text;
+      if (detail && detail.parentNode) {
+        detail.parentNode.insertBefore(countdown, detail.nextSibling);
+      } else {
+        card.appendChild(countdown);
+      }
+    });
+    return needsReorder;
+  }
+
+  function startAutoRefreshCoworker(nationalId, phone) {
+    coworkerCredentials = { nationalId, phone };
+    stopAutoRefresh();
+    const scheduleNextRefresh = () => {
+      const now = new Date();
+      const elapsed = now.getSeconds() * 1000 + now.getMilliseconds();
+      const remainder = elapsed % REFRESH_INTERVAL_MS;
+      const delay =
+        remainder === 0 ? REFRESH_INTERVAL_MS : REFRESH_INTERVAL_MS - remainder;
+
+      refreshTimer = setTimeout(async () => {
+        updateServerClock();
+        try {
+          const payload = await fetchCoworkerSessionsPayload(
+            coworkerCredentials.nationalId,
+            coworkerCredentials.phone
+          );
+          const newSessions = Array.isArray(payload.sessions) ? payload.sessions : [];
+          const snapshot = JSON.stringify(newSessions);
+          const oldSnapshot = JSON.stringify(coworkerSessions);
+          
+          if (snapshot === oldSnapshot) {
+            // Data unchanged, just update countdowns
+            const needsReorder = updateCoworkerCountdowns();
+            if (needsReorder) {
+              // Re-render if any session status changed
+              renderCoworkerSessions(payload, coworkerCredentials);
+            }
+          } else {
+            // Data changed, re-render
+            renderCoworkerSessions(payload, coworkerCredentials);
+          }
+        } catch (error) {
+          console.warn("Coworker auto-refresh failed:", error);
+          if (error?.isLicenseError) {
+            stopAutoRefresh();
+            return;
+          }
+        } finally {
+          if (coworkerCredentials) {
+            scheduleNextRefresh();
+          }
+        }
+      }, delay);
+    };
+
+    scheduleNextRefresh();
+  }
+
   function encodeCoworkerPayload(data) {
     try {
       const json = JSON.stringify(data);
@@ -2415,6 +2514,9 @@ document.addEventListener("DOMContentLoaded", () => {
         nationalId: stored.national_id,
         phone: stored.phone,
       });
+
+      // Start auto refresh for coworker sessions
+      startAutoRefreshCoworker(stored.national_id, stored.phone);
 
       // Request push notification subscription after successful auto-login
       initPushNotificationForProctor(stored.national_id);
