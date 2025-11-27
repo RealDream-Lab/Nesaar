@@ -4434,6 +4434,9 @@
       const j = await resp.json();
       const proctors = Array.isArray(j.proctors) ? j.proctors : [];
 
+      // Check if backup exists and show/hide restore button
+      await checkAndShowRestoreButton(proctors.length);
+
       // Determine if restrictions button should be shown (only if proctors >= maxRequired)
       let showRestrictions = true;
       try {
@@ -4462,6 +4465,101 @@
         '<div style="text-align:center;padding:1rem;color:crimson">خطا در بارگذاری مشخصات مراقبین و عوامل اجرائی</div>';
     }
   }
+
+  // Check if backup exists and show restore button
+  async function checkAndShowRestoreButton(currentProctorsCount) {
+    const restoreBtn = document.getElementById("restoreProctorsBtn");
+    if (!restoreBtn) return;
+
+    try {
+      const resp = await csrfFetch("/API/getProctorsBackupStatus.php", {
+        cache: "no-store",
+      });
+      if (resp.ok) {
+        const data = await resp.json();
+        // Show button if backup exists with data
+        if (data.hasBackup && data.count > 0) {
+          restoreBtn.style.display = "inline-block";
+          restoreBtn.textContent = `بازیابی از نسخه پشتیبان (${toPersianDigits(
+            data.count
+          )} نفر)`;
+        } else {
+          restoreBtn.style.display = "none";
+        }
+      } else {
+        restoreBtn.style.display = "none";
+      }
+    } catch (e) {
+      restoreBtn.style.display = "none";
+    }
+  }
+
+  // Handle restore button click
+  (function initRestoreProctorsButton() {
+    const restoreBtn = document.getElementById("restoreProctorsBtn");
+    if (!restoreBtn) return;
+
+    restoreBtn.addEventListener("click", async () => {
+      const confirm = await Swal.fire({
+        title: "بازیابی مراقبین",
+        html: "این عملیات مراقبین نسخه پشتیبان را به لیست فعلی <b>اضافه</b> می‌کند.<br>مراقبین تکراری (بر اساس کد ملی) نادیده گرفته می‌شوند.<br><br>آیا ادامه می‌دهید؟",
+        icon: "question",
+        showCancelButton: true,
+        confirmButtonText: "بله، بازیابی کن",
+        cancelButtonText: "لغو",
+        customClass: {
+          popup: "swal2-rtl swal2-glass",
+          confirmButton: "btn btn-primary",
+          cancelButton: "btn btn-cancel",
+        },
+      });
+
+      if (!confirm.isConfirmed) return;
+
+      try {
+        restoreBtn.disabled = true;
+        restoreBtn.textContent = "در حال بازیابی...";
+
+        const resp = await csrfFetch("/API/restoreProctorsFromBackup.php", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "X-CSRF-Token": getCsrfToken(),
+          },
+        });
+
+        const result = await resp.json();
+
+        if (resp.ok && result.success) {
+          Swal.fire({
+            icon: "success",
+            title: "بازیابی موفق",
+            text: result.message || `${result.restored} مراقب بازیابی شد.`,
+            customClass: { popup: "swal2-rtl swal2-glass" },
+          });
+          // Reload proctors list
+          await loadProctors();
+        } else {
+          Swal.fire({
+            icon: "error",
+            title: "خطا",
+            text: result.message || "بازیابی ناموفق بود.",
+            customClass: { popup: "swal2-rtl swal2-glass" },
+          });
+        }
+      } catch (err) {
+        console.error("Restore failed:", err);
+        Swal.fire({
+          icon: "error",
+          title: "خطا",
+          text: "خطا در ارتباط با سرور",
+          customClass: { popup: "swal2-rtl swal2-glass" },
+        });
+      } finally {
+        restoreBtn.disabled = false;
+      }
+    });
+  })();
 
   function renderProctors(proctors, showRestrictions = true) {
     const container = document.getElementById("proctorsList");

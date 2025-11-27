@@ -42,33 +42,28 @@ try {
         )
           return;
 
-        // Create a mixin with heightAuto: false to fix scroll jumping
-        const SwalNoAutoHeight = Swal.mixin({
-          heightAuto: false,
-        });
-
-        const _orig = SwalNoAutoHeight.fire.bind(SwalNoAutoHeight);
+        const _orig = Swal.fire.bind(Swal);
         Swal.fire = function (opts) {
           try {
             if (typeof opts === "object" && opts !== null) {
+              // Check if it's a toast
+              const isToast = opts.toast === true;
+
               const isSimpleInfo =
                 (opts.icon === "info" || opts.icon === "success") &&
                 !opts.input &&
                 !opts.html &&
                 !opts.showCancelButton;
-              if (isSimpleInfo) {
+              if (isSimpleInfo && !isToast) {
                 const toastOpts = Object.assign({}, opts, {
                   toast: true,
                   position: opts.position || "top-end",
                   timer: typeof opts.timer === "number" ? opts.timer : 3000,
                   showConfirmButton: false,
-                  // Remove incompatible toast parameters
-                  scrollbarPadding: undefined,
-                  heightAuto: false, // Explicitly set false for toasts too
-                  allowOutsideClick: undefined,
                 });
-                // Clean up undefined values
+                // Remove incompatible toast parameters
                 delete toastOpts.scrollbarPadding;
+                delete toastOpts.heightAuto;
                 delete toastOpts.allowOutsideClick;
                 if (toastOpts.customClass) {
                   toastOpts.customClass = Object.assign(
@@ -80,12 +75,22 @@ try {
                 } else {
                   toastOpts.customClass = { popup: "swal2-rtl swal2-toast" };
                 }
-                _orig(toastOpts);
-                return Promise.resolve({ isConfirmed: true });
+                return _orig(toastOpts);
+              }
+
+              // For non-toast modals, add heightAuto: false to prevent scroll jumping
+              if (!isToast && opts.heightAuto === undefined) {
+                opts = Object.assign({}, opts, { heightAuto: false });
+              }
+
+              // For toasts, remove heightAuto if present
+              if (isToast && opts.heightAuto !== undefined) {
+                opts = Object.assign({}, opts);
+                delete opts.heightAuto;
               }
             }
           } catch (e) {}
-          return _orig.apply(SwalNoAutoHeight, arguments);
+          return _orig.apply(Swal, arguments);
         };
         Swal._ns_info_toast_patched_dashboard = true;
       } catch (e) {}
@@ -2393,14 +2398,18 @@ async function uploadDatabaseFile(file, examType, examTypeName) {
         try {
           const response = JSON.parse(xhr.responseText);
           if (response.success) {
-            await Swal.fire({
-              icon: "success",
-              title: "موفق",
-              text: `فایل آزمون‌های ${examTypeName} با موفقیت آپلود شد`,
-              confirmButtonText: "باشه",
+            // Show loading toast with spinner (no button needed)
+            Swal.fire({
+              icon: "info",
+              title: "در حال پردازش",
+              html: `<div style="display:flex;align-items:center;justify-content:center;gap:10px;">
+                <span class="spinner-border spinner-border-sm" role="status"></span>
+                <span>فایل آزمون‌های ${examTypeName} با موفقیت آپلود شد. منتظر باشید...</span>
+              </div>`,
+              showConfirmButton: false,
+              allowOutsideClick: false,
               customClass: {
                 popup: "swal2-rtl swal2-glass",
-                confirmButton: "btn btn-primary",
               },
             });
 

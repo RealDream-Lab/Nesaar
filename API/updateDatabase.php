@@ -165,6 +165,56 @@ try {
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci";
     $pdo->exec($createLocations);
 
+    // Backup/Update ProctorsBackup table BEFORE transaction (DDL commits implicitly)
+    try {
+        // Create backup table if not exists with same structure
+        $pdo->exec("CREATE TABLE IF NOT EXISTS `ProctorsBackup` LIKE `Proctors`");
+
+        // Update existing records or insert new ones based on national_id
+        $proctorsStmt = $pdo->query("SELECT * FROM `Proctors`");
+        $proctors     = $proctorsStmt->fetchAll(PDO::FETCH_ASSOC);
+
+        foreach ($proctors as $proctor) {
+            $nationalId = $proctor['national_id'] ?? '';
+            if (empty($nationalId))
+                continue;
+
+            // Check if this national_id exists in backup
+            $checkStmt = $pdo->prepare("SELECT id FROM `ProctorsBackup` WHERE national_id = ?");
+            $checkStmt->execute([$nationalId]);
+            $existingId = $checkStmt->fetchColumn();
+
+            if ($existingId) {
+                // Update existing record
+                $updateStmt = $pdo->prepare("UPDATE `ProctorsBackup` SET 
+                    gender = ?, first_name = ?, last_name = ?, phone = ? 
+                    WHERE national_id = ?");
+                $updateStmt->execute([
+                    $proctor['gender'] ?? '',
+                    $proctor['first_name'] ?? '',
+                    $proctor['last_name'] ?? '',
+                    $proctor['phone'] ?? '',
+                    $nationalId
+                ]);
+            } else {
+                // Insert new record
+                $insertStmt = $pdo->prepare("INSERT INTO `ProctorsBackup` 
+                    (gender, first_name, last_name, national_id, phone) 
+                    VALUES (?, ?, ?, ?, ?)");
+                $insertStmt->execute([
+                    $proctor['gender'] ?? '',
+                    $proctor['first_name'] ?? '',
+                    $proctor['last_name'] ?? '',
+                    $nationalId,
+                    $proctor['phone'] ?? ''
+                ]);
+            }
+        }
+    } catch (Throwable $e) {
+        // Ignore backup errors, continue with the update
+        error_log('Proctors backup failed: ' . $e->getMessage());
+    }
+
     $pdo->beginTransaction();
 
     // Stage 2: delete existing
@@ -172,6 +222,7 @@ try {
     $pdo->exec('DELETE FROM exam_seats');
     $pdo->exec('DELETE FROM courses');
     $pdo->exec('DELETE FROM students');
+
     try {
         $pdo->exec('DELETE FROM Proctors');
         $proctorsCleared = true;
