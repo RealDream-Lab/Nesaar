@@ -2351,6 +2351,7 @@ async function uploadDatabaseFile(file, examType, examTypeName) {
                 .tabular-digits { font-variant-numeric: tabular-nums; font-family: Vazir, 'DejaVu Sans Mono', monospace; letter-spacing: 0.01em; }
                 </style>
                 <div id="uploadProgressDisplay" class="tabular-digits" style="font-size: 3rem; font-weight: bold; color: white; margin-bottom: 1rem;">۰٪</div>
+                <p id="uploadProgressText" style="color: white; font-size: 1.1rem; margin:0; display:none;">در حال آپلود...</p>
 			</div>
 		`,
     allowOutsideClick: false,
@@ -2398,26 +2399,25 @@ async function uploadDatabaseFile(file, examType, examTypeName) {
         try {
           const response = JSON.parse(xhr.responseText);
           if (response.success) {
-            // Show loading toast with spinner (no button needed)
-            Swal.fire({
-              icon: "info",
-              title: "در حال پردازش",
-              html: `<div style="display:flex;align-items:center;justify-content:center;gap:10px;">
-                <span class="spinner-border spinner-border-sm" role="status"></span>
-                <span>فایل آزمون‌های ${examTypeName} با موفقیت آپلود شد. منتظر باشید...</span>
-              </div>`,
-              showConfirmButton: false,
-              allowOutsideClick: false,
-              customClass: {
-                popup: "swal2-rtl swal2-glass",
-              },
-            });
+            // Update existing modal to show processing status (don't create new Swal)
+            const progressDisplay = document.getElementById(
+              "uploadProgressDisplay"
+            );
+            if (progressDisplay) {
+              progressDisplay.innerHTML = `<span class="spinner-border" style="width:2rem;height:2rem;" role="status"></span>`;
+            }
+            const progressText = document.getElementById("uploadProgressText");
+            if (progressText) {
+              progressText.textContent = "آپلود کامل شد. در حال پردازش فایل...";
+              progressText.style.display = "block";
+            }
 
-            // Now process the uploaded Excel file
+            // Now process the uploaded Excel file (pass true to skip creating new modal)
             await processUploadedExcel(
               examType,
               examTypeName,
-              response.filename
+              response.filename,
+              true // useExistingModal
             );
           } else {
             throw new Error(response.error || "خطای نامشخص");
@@ -2501,11 +2501,17 @@ async function uploadDatabaseFile(file, examType, examTypeName) {
 }
 
 // Process uploaded Excel file to temp table
-async function processUploadedExcel(examType, examTypeName, filename) {
-  // Show processing modal
-  Swal.fire({
-    title: "در حال پردازش",
-    html: `
+async function processUploadedExcel(
+  examType,
+  examTypeName,
+  filename,
+  useExistingModal = false
+) {
+  // Show processing modal only if not using existing one
+  if (!useExistingModal) {
+    Swal.fire({
+      title: "در حال پردازش",
+      html: `
             <div style="text-align: center; padding: 1rem;">
                 <style>
                 /* Make progress digits monospaced/tabular for consistent width */
@@ -2515,13 +2521,22 @@ async function processUploadedExcel(examType, examTypeName, filename) {
                 <p id="processProgressText" style="color: white; font-size: 1.1rem; margin:0;">در حال خواندن فایل اکسل...</p>
             </div>
         `,
-    allowOutsideClick: false,
-    allowEscapeKey: false,
-    showConfirmButton: false,
-    customClass: {
-      popup: "swal2-rtl swal2-glass",
-    },
-  });
+      allowOutsideClick: false,
+      allowEscapeKey: false,
+      showConfirmButton: false,
+      customClass: {
+        popup: "swal2-rtl swal2-glass",
+      },
+    });
+  }
+
+  // Get progress elements (might be from upload modal or process modal)
+  const progressDisplay = useExistingModal
+    ? document.getElementById("uploadProgressDisplay")
+    : document.getElementById("processProgressDisplay");
+  const progressText = useExistingModal
+    ? document.getElementById("uploadProgressText")
+    : document.getElementById("processProgressText");
 
   // Before starting heavy processing, validate header mapping quickly on server
   try {
@@ -2563,8 +2578,6 @@ async function processUploadedExcel(examType, examTypeName, filename) {
   // Animate progress bar and poll server for real progress
   let progress = 1;
   let serverProgressAvailable = false;
-  const progressDisplay = document.getElementById("processProgressDisplay");
-  const progressText = document.getElementById("processProgressText");
 
   const animInterval = setInterval(() => {
     if (serverProgressAvailable) return; // server will drive progress
