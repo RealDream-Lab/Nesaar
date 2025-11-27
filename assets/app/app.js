@@ -2319,7 +2319,8 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   function updateCoworkerCountdowns() {
-    if (!Array.isArray(coworkerSessions) || coworkerSessions.length === 0) return false;
+    if (!Array.isArray(coworkerSessions) || coworkerSessions.length === 0)
+      return false;
     let needsReorder = false;
     const now = Date.now();
     coworkerSessions.forEach((session, idx) => {
@@ -2329,12 +2330,12 @@ document.addEventListener("DOMContentLoaded", () => {
       if (!card) return;
       const target = createExamDateTime(session.exam_date, session.exam_time);
       const isPast = !target || target.getTime() <= now;
-      
+
       // Check if status changed from upcoming to past
       if (isPast && !card.classList.contains("past")) {
         needsReorder = true;
       }
-      
+
       if (isPast) {
         const countdownExisting = card.querySelector(".exam-countdown");
         if (countdownExisting) countdownExisting.remove();
@@ -2382,10 +2383,12 @@ document.addEventListener("DOMContentLoaded", () => {
             coworkerCredentials.nationalId,
             coworkerCredentials.phone
           );
-          const newSessions = Array.isArray(payload.sessions) ? payload.sessions : [];
+          const newSessions = Array.isArray(payload.sessions)
+            ? payload.sessions
+            : [];
           const snapshot = JSON.stringify(newSessions);
           const oldSnapshot = JSON.stringify(coworkerSessions);
-          
+
           if (snapshot === oldSnapshot) {
             // Data unchanged, just update countdowns
             const needsReorder = updateCoworkerCountdowns();
