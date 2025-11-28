@@ -4,7 +4,7 @@ require_once 'jdf.php';
 
 // Load .env file when present so Docker/local configs stay in sync
 (function () {
-    $root = realpath(__DIR__ . '/../');
+    $root    = realpath(__DIR__ . '/../');
     $envFile = $root ? $root . '/.env' : null;
     if (!$envFile || !is_file($envFile)) {
         return;
@@ -23,7 +23,7 @@ require_once 'jdf.php';
             continue;
         }
         [$key, $value] = $parts;
-        $key = trim($key);
+        $key           = trim($key);
         if ($key === '') {
             continue;
         }
@@ -37,20 +37,20 @@ require_once 'jdf.php';
     }
 })();
 
-$host = getenv('DB_HOST') ?: 'localhost';
-$db   = getenv('DB_NAME') ?: 'PnuExamsSeatNumber';
-$user = getenv('DB_USER') ?: 'root';
-$pass = getenv('DB_PASS') ?: '01012556360043214'; // Fallback for legacy dev only
+$host    = getenv('DB_HOST') ?: 'localhost';
+$db      = getenv('DB_NAME') ?: 'PnuExamsSeatNumber';
+$user    = getenv('DB_USER') ?: 'root';
+$pass    = getenv('DB_PASS') ?: '01012556360043214'; // Fallback for legacy dev only
 $charset = 'utf8mb4';
 
 // Set timezone to Iran (UTC+3:30)
 date_default_timezone_set('Asia/Tehran');
 
-$dsn = "mysql:host=$host;dbname=$db;charset=$charset";
+$dsn     = "mysql:host=$host;dbname=$db;charset=$charset";
 $options = [
-    PDO::ATTR_ERRMODE            => PDO::ERRMODE_EXCEPTION,
+    PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
     PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
-    PDO::ATTR_EMULATE_PREPARES   => false,
+    PDO::ATTR_EMULATE_PREPARES => false,
 ];
 try {
     $pdo = new PDO($dsn, $user, $pass, $options);
@@ -59,7 +59,7 @@ try {
 } catch (\PDOException $e) {
     // Log the actual error for debugging (in production, log to file)
     error_log('Database connection failed: ' . $e->getMessage());
-    
+
     // Return generic error message to user
     echo json_encode(['error' => 'خطا در اتصال به پایگاه داده']);
     exit;
@@ -108,42 +108,6 @@ CREATE TABLE exam_seats (
     UNIQUE KEY uniq_student_course (student_id, course_code),
     INDEX idx_building_class (building, class_name)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
-
--- چند رکورد نمونه تستی برای بررسی عملکرد
-INSERT INTO students (student_id, national_id, source_center, destination_center, first_name, last_name, degree)
-VALUES
-('970100001', '1234567890', '1101', '1201', 'مهدی', 'حسنی', 'کارشناسی'),
-('970100002', '2234567890', '1101', '1201', 'سعید', 'مرادی', 'کارشناسی ارشد'),
-('970100003', '3234567890', '1301', '1201', 'سارا', 'احمدی', 'کارشناسی');
-
-INSERT INTO courses (course_code, course_name, exam_date, exam_time, course_type)
-VALUES
-('1100001', 'پایگاه داده‌ها', '1404/08/24', '09:30', 'تستی'),
-('1100002', 'ساختمان داده', '1404/08/23', '19:30', 'تشریحی'),
-('1100003', 'برنامه‌سازی وب', '1404/08/20', '13:30', 'تستی'),
-('1100004', 'ریاضیات عمومی ۱', '1404/08/20', '21:00', 'تستی و تشریحی'),
-('1100005', 'فیزیک ۱', '1404/09/21', '20:00', 'تستی'),
-('1100006', 'زبان تخصصی', '1404/08/24', '12:30', 'تستی'),
-('1100007', 'مدارهای منطقی', '1404/08/23', '08:30', 'تشریحی'),
-('1100008', 'مبانی کامپیوتر و برنامه‌سازی', '1404/08/12', '09:00', 'تستی'),
-('1100009', 'ریاضی گسسته', '1404/08/24', '11:00', 'تشریحی'),
-('1100010', 'سیستم عامل', '1404/08/17', '14:30', 'تستی'),
-('1100011', 'شبکه‌های کامپیوتری', '1404/08/20', '10:30', 'تستی'),
-('1100012', 'مهندسی نرم‌افزار', '1404/08/22', '08:30', 'تستی'),
-('1100013', 'طراحی الگوریتم‌ها', '1404/08/25', '13:00', 'تستی و تشریحی');
-
-INSERT INTO exam_seats (student_id, course_code, seat_number, building, class_name, seat_row, exam_type)
-VALUES
-    ('970100001', '1100001', 15, 'ساختمان A', 'کلاس 203', 2, 'الکترونیکی'),
-    ('970100001', '1100002', 8, 'ساختمان A', 'کلاس 205', 1, 'کتبی'),
-    ('970100001', '1100003', 3, 'ساختمان B', 'کلاس 101', 1, 'الکترونیکی'),
-    ('970100001', '1100004', 5, 'ساختمان A', 'کلاس 201', 1, 'کتبی'),
-    ('970100001', '1100005', 9, 'ساختمان A', 'کلاس 204', 2, 'الکترونیکی'),
-    ('970100001', '1100006', 14, 'ساختمان A', 'کلاس 206', 3, 'کتبی'),
-    ('970100001', '1100007', 3, 'ساختمان A', 'کلاس 202', 1, 'الکترونیکی'),
-    ('970100002', '1100001', 12, 'ساختمان B', 'کلاس 101', 1, 'کتبی'),
-    ('970100001', '1100009', 10, 'ساختمان B', 'کلاس 102', 2, 'الکترونیکی'),
-    ('970100001', '1100011', 11, 'ساختمان C', 'کلاس 302', 2, 'کتبی');
 
 CREATE TABLE Config (
   ID int NOT NULL AUTO_INCREMENT PRIMARY KEY,
