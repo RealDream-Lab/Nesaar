@@ -746,14 +746,14 @@ function generateSecretaryReport($pdo, $mpdf, $examDate, $examTime, $config)
             $mpdf->WriteHTML('<div style="margin-top: 20px; margin-bottom: 20px; border-top: 2px dashed #000;"></div>');
         }
 
-        $html = '<div class="header"><div class="title">لیست مراقبین جلسه</div><div class="meta">' . toPersianDigits($examTime) . ' | ' . toPersianDigits($examDate) . '</div></div>';
+        $html = '<div class="header"><div class="title">لیست عوامل اجرائی جلسه</div><div class="meta">' . toPersianDigits($examTime) . ' | ' . toPersianDigits($examDate) . '</div></div>';
 
         // Columns logic (simple 2 columns for now)
         $chunks       = array_chunk($proctors, ceil(count($proctors) / 2));
         $html        .= '<table style="width: 100%; vertical-align: top; table-layout: fixed;"><tr>';
         $globalIndex  = 1;
         foreach ($chunks as $chunk) {
-            $html .= '<td style="vertical-align: top; padding: 5px; width: 50%;"><table class="proctor-table"><thead><tr><th style="width: 50px;">ردیف</th><th>نام مراقب</th></tr></thead><tbody>';
+            $html .= '<td style="vertical-align: top; padding: 5px; width: 50%;"><table class="proctor-table"><thead><tr><th style="width: 50px;">ردیف</th><th>نام عامل اجرائی</th></tr></thead><tbody>';
             foreach ($chunk as $p) {
                 $html .= '<tr><td style="text-align: center;">' . toPersianDigits($globalIndex++) . '</td><td>' . $p['proctor_name'] . '</td></tr>';
             }
