@@ -16,15 +16,20 @@ if ($licenseStatus['valid'] !== true) {
     exit;
 }
 
-// Read WavesAnimation config to set body class from server-side
+// Read WavesAnimation and University config
 $wavesAnimationDisabled = false;
+$pageTitle              = 'پنل مدیریت نسار';
 try {
     require_once __DIR__ . '/../API/db_init.php';
-    $stmt = $pdo->prepare("SELECT ConfigValue FROM Config WHERE ConfigName = 'WavesAnimation'");
+    $stmt = $pdo->prepare("SELECT ConfigName, ConfigValue FROM Config WHERE ConfigName IN ('WavesAnimation', 'University')");
     $stmt->execute();
-    $row = $stmt->fetch();
-    if ($row && strtoupper($row['ConfigValue']) === 'NO') {
-        $wavesAnimationDisabled = true;
+    while ($row = $stmt->fetch()) {
+        if ($row['ConfigName'] === 'WavesAnimation' && strtoupper($row['ConfigValue']) === 'NO') {
+            $wavesAnimationDisabled = true;
+        }
+        if ($row['ConfigName'] === 'University' && !empty(trim($row['ConfigValue']))) {
+            $pageTitle = 'پنل مدیریت نسار - ' . trim($row['ConfigValue']);
+        }
     }
 } catch (Exception $e) {
     // Ignore - default to animation enabled
@@ -39,7 +44,7 @@ $bodyClass = $wavesAnimationDisabled ? 'class="no-waves-animation"' : '';
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="theme-color" content="#2196F3">
     <?php echo csrf_meta_tag(); ?>
-    <title>پنل مدیریت - نسار</title>
+    <title><?php echo htmlspecialchars($pageTitle, ENT_QUOTES, 'UTF-8'); ?></title>
 
     <!-- Favicons -->
     <link rel="icon" type="image/png" href="../assets/app/logo.png" />

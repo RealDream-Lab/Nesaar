@@ -21,6 +21,7 @@ if ($licenseStatus['valid'] !== true) {
 // show the locations card automatically on page load.
 $showLocationsCard      = false;
 $wavesAnimationDisabled = false;
+$pageTitle              = 'ماژول مراقبین نسار';
 try {
     require_once __DIR__ . '/../../API/db_init.php';
     if (isset($pdo)) {
@@ -28,12 +29,16 @@ try {
         $row               = $stmt ? $stmt->fetch(PDO::FETCH_ASSOC) : null;
         $showLocationsCard = ($row && intval($row['c'] ?? 0) > 0) ? true : false;
 
-        // Read WavesAnimation config
-        $stmtWaves = $pdo->prepare("SELECT ConfigValue FROM Config WHERE ConfigName = 'WavesAnimation'");
-        $stmtWaves->execute();
-        $rowWaves = $stmtWaves->fetch();
-        if ($rowWaves && strtoupper($rowWaves['ConfigValue']) === 'NO') {
-            $wavesAnimationDisabled = true;
+        // Read WavesAnimation and University config
+        $stmtConfig = $pdo->prepare("SELECT ConfigName, ConfigValue FROM Config WHERE ConfigName IN ('WavesAnimation', 'University')");
+        $stmtConfig->execute();
+        while ($rowConfig = $stmtConfig->fetch()) {
+            if ($rowConfig['ConfigName'] === 'WavesAnimation' && strtoupper($rowConfig['ConfigValue']) === 'NO') {
+                $wavesAnimationDisabled = true;
+            }
+            if ($rowConfig['ConfigName'] === 'University' && !empty(trim($rowConfig['ConfigValue']))) {
+                $pageTitle = 'ماژول مراقبین نسار - ' . trim($rowConfig['ConfigValue']);
+            }
         }
     }
 } catch (Exception $e) {
@@ -49,7 +54,7 @@ $bodyClass = $wavesAnimationDisabled ? 'class="no-waves-animation"' : '';
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <?php echo csrf_meta_tag(); ?>
-    <title>ماژول مراقبین و عوامل اجرائی - داشبورد</title>
+    <title><?php echo htmlspecialchars($pageTitle, ENT_QUOTES, 'UTF-8'); ?></title>
     <link rel="icon" type="image/png" href="/assets/app/logo.png" />
     <link rel="stylesheet" href="/assets/bootstrap/bootstrap.min.css">
     <link rel="stylesheet" href="/assets/fonts/vazir/vazir.css">
@@ -73,25 +78,7 @@ $bodyClass = $wavesAnimationDisabled ? 'class="no-waves-animation"' : '';
                         </div>
                     </div>
                     <div class="d-flex align-items-center">
-                        <!-- Locations quick-open button (hidden: shows locations card when clicked) 
-                        <button id="showLocationsBtn" class="btn btn-icon p-0" type="button" title="نمایش مکان‌ها" style="background:transparent;border:none;margin-inline-end:8px;padding:0;">
-                            <img src="/dashboard/observers/locations.png" alt="مکان‌ها" style="width:40px;height:40px;object-fit:contain;display:block;">
-                        </button>
-                        <button id="showStatsBtn" class="btn btn-icon p-0" type="button" title="نمایش نمودار" style="background:transparent;border:none;margin-inline-end:8px;padding:0;">
-                            <img src="/dashboard/statices.png" alt="نمودار" style="width:40px;height:40px;object-fit:contain;display:block;">
-                        </button>
-                        <button id="showExamsDetailBtn" class="btn btn-icon p-0" type="button" title="جزئیات جلسات" style="background:transparent;border:none;margin-inline-end:8px;padding:0;">
-                            <img src="/dashboard/statices.png" alt="جزئیات" style="width:40px;height:40px;object-fit:contain;display:block;">
-                        </button>
-                        <button id="showAssignmentBtn" class="btn btn-icon p-0" type="button"
-                            title="چینش مراقبین و عوامل اجرائی"
-                            style="background:transparent;border:none;margin-inline-end:8px;padding:0;">
-                            <img src="/dashboard/statices.png" alt="چینش"
-                                style="width:40px;height:40px;object-fit:contain;display:block;">
-                        </button> 
-                        <button id="showReportBtn" class="btn btn-icon p-0" type="button" title="گزارش مراقبین و عوامل اجرائی" style="background:transparent;border:none;margin-inline-end:8px;padding:0;">
-                            <img src="/dashboard/observers/calendar.png" alt="گزارش" style="width:40px;height:40px;object-fit:contain;display:block;">
-                        </button>-->
+
                         <button id="backToDashboardBtn" class="btn btn-icon p-0" type="button" title="بازگشت به داشبورد"
                             style="background:transparent;border:none;margin-inline-end:8px;padding:0;">
                             <img src="/dashboard/home.png" alt="بازگشت"
@@ -265,11 +252,7 @@ $bodyClass = $wavesAnimationDisabled ? 'class="no-waves-animation"' : '';
                         <div class="col-12 col-md-6">
                             <button id="assignDailyBtn" class="btn btn-upload w-100">چینش خودکار بر اساس حضور روزانه
                                 مراقب</button>
-                        </div><!--
-                        <div class="col-12 col-md-4">
-                            <button id="assignManualBtn" class="btn btn-upload w-100">چینش دستی مراقبین و عوامل
-                                اجرائی</button>
-                        </div>-->
+                        </div>
                     </div>
                 </div>
             </div>
