@@ -2148,16 +2148,16 @@ body.swal2-toast-shown {
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
   border: 1px solid rgba(100, 180, 255, 0.2);
-  border-radius: 12px;
-  padding: 14px 18px;
+  border-radius: 10px;
+  padding: 10px 14px;
   box-shadow: 0 20px 50px rgba(0, 0, 0, 0.5),
     0 8px 25px rgba(60, 166, 255, 0.12), inset 0 1px 0 rgba(255, 255, 255, 0.08);
 
-  min-width: 300px;
-  max-width: 600px;
+  min-width: 200px;
+  max-width: 550px;
   font-family: "Vazir", sans-serif;
   direction: rtl;
-  text-align: right;
+  text-align: justify;
 }
 
 .session-locations-tooltip.visible {
@@ -2188,25 +2188,11 @@ body.swal2-toast-shown {
 
 /* Tooltip content - inline flow */
 .session-locations-content {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 6px;
+  display: block;
   line-height: 1.8;
-  font-size: 0.88rem;
-}
-
-/* Each location item (inline) */
-.session-loc-item {
-  display: inline;
-  white-space: nowrap;
-}
-
-/* Pipe separator */
-.session-loc-pipe {
-  color: rgba(255, 255, 255, 0.6);
-  margin: 0 4px;
-  font-weight: 300;
+  font-size: 0.78rem;
+  text-align: justify;
+  text-align-last: right;
 }
 
 /* Location name with color */
