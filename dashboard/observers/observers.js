@@ -1950,6 +1950,9 @@
         } catch (e) {}
       });
 
+      // Initialize locations tooltip for each row
+      initLocationsTooltip(container);
+
       // Batch save (all rows)
       if (saveAll) {
         saveAll.disabled = true;
@@ -2059,6 +2062,202 @@
           }
         });
       }
+    }
+
+    // Session Locations Tooltip for ExamsDetail rows
+    // Shows building/class locations with student counts when hovering over session inputs
+    // Each of the 3 session columns gets its own tooltip
+    function initLocationsTooltip(container) {
+      if (!container) return;
+
+      // Create tooltip element if not exists
+      let tooltip = document.getElementById("sessionLocationsTooltip");
+      if (!tooltip) {
+        tooltip = document.createElement("div");
+        tooltip.id = "sessionLocationsTooltip";
+        tooltip.className = "session-locations-tooltip";
+        tooltip.innerHTML = `<div class="session-locations-content"></div>`;
+        document.body.appendChild(tooltip);
+      }
+
+      const tooltipContent = tooltip.querySelector(
+        ".session-locations-content"
+      );
+      let hoverTimeout = null;
+      let isTooltipVisible = false;
+      let currentInput = null;
+      const locationsCache = new Map(); // Cache per session (date|time)
+
+      // Fetch locations data for specific session
+      async function fetchSessionLocations(examDate, examTime) {
+        const cacheKey = `${examDate}|${examTime}`;
+        if (locationsCache.has(cacheKey)) {
+          return locationsCache.get(cacheKey);
+        }
+
+        try {
+          const resp = await csrfFetch(
+            `/API/getSessionLocations.php?exam_date=${encodeURIComponent(
+              examDate
+            )}&exam_time=${encodeURIComponent(examTime)}`,
+            { cache: "no-store" }
+          );
+          if (resp.ok) {
+            const data = await resp.json();
+            const locs = data.success ? data.locations || [] : [];
+            locationsCache.set(cacheKey, locs);
+            return locs;
+          }
+        } catch (e) {
+          console.error("Error fetching session locations:", e);
+        }
+        locationsCache.set(cacheKey, []);
+        return [];
+      }
+
+      // Position tooltip below the input
+      function positionTooltip(inputEl) {
+        const rect = inputEl.getBoundingClientRect();
+        const scrollTop =
+          window.pageYOffset || document.documentElement.scrollTop;
+        const scrollLeft =
+          window.pageXOffset || document.documentElement.scrollLeft;
+
+        // Position below input with some gap
+        tooltip.style.top = rect.bottom + scrollTop + 10 + "px";
+
+        // Try to center under input, but keep within viewport
+        const tooltipWidth = tooltip.offsetWidth || 400;
+        let rightPos =
+          document.documentElement.clientWidth - rect.right + scrollLeft;
+
+        // Adjust if tooltip would go off left edge
+        const leftEdge =
+          document.documentElement.clientWidth - rightPos - tooltipWidth;
+        if (leftEdge < 10) {
+          rightPos = Math.max(
+            10,
+            document.documentElement.clientWidth - tooltipWidth - 10
+          );
+        }
+
+        tooltip.style.right = rightPos + "px";
+        tooltip.style.left = "auto";
+      }
+
+      // Build tooltip HTML content
+      function buildTooltipContent(locations) {
+        if (!locations || locations.length === 0) {
+          return '<span class="session-loc-empty">مکانی برای این جلسه یافت نشد</span>';
+        }
+
+        let html = "";
+        locations.forEach((loc, idx) => {
+          const colorClass = `color-${(idx % 10) + 1}`;
+          const locationName = `${escapeHtml(
+            loc.building || ""
+          )} - ${escapeHtml(loc.class_name || "")}`;
+          const studentCount = toPersianDigits(loc.student_count || 0);
+          const proctorCount = toPersianDigits(loc.required_proctors || 0);
+
+          html += `<span class="session-loc-item">`;
+          html += `<span class="session-loc-name ${colorClass}">${locationName}</span> `;
+          html += `<span class="session-loc-details">`;
+          html += `دانشجو <span class="session-loc-num">${studentCount}</span> نفر`;
+          html += ` و مراقب <span class="session-loc-num">${proctorCount}</span> نفر`;
+          html += `</span>`;
+          html += `</span>`;
+
+          // Add pipe separator if not last item
+          if (idx < locations.length - 1) {
+            html += `<span class="session-loc-pipe">|</span>`;
+          }
+        });
+
+        return html;
+      }
+
+      // Show tooltip with locations data
+      async function showTooltip(inputEl, examDate, examTime) {
+        if (!examDate || !examTime) {
+          hideTooltip();
+          return;
+        }
+
+        currentInput = inputEl;
+
+        // Show loading state
+        tooltipContent.innerHTML =
+          '<span class="session-loc-empty">در حال بارگذاری...</span>';
+        positionTooltip(inputEl);
+        tooltip.classList.add("visible");
+        isTooltipVisible = true;
+
+        // Fetch and display data
+        const locations = await fetchSessionLocations(examDate, examTime);
+
+        // Check if still hovering over same input
+        if (currentInput !== inputEl || !isTooltipVisible) return;
+
+        tooltipContent.innerHTML = buildTooltipContent(locations);
+        positionTooltip(inputEl); // Re-position after content change
+      }
+
+      // Hide tooltip
+      function hideTooltip() {
+        tooltip.classList.remove("visible");
+        isTooltipVisible = false;
+        currentInput = null;
+      }
+
+      // Attach event listeners to session inputs
+      const rows = container.querySelectorAll("tbody tr");
+      rows.forEach((row) => {
+        // Get exam date from row attribute
+        const examDate = row.getAttribute("data-date") || "";
+
+        // Find all session input columns (ep-input class)
+        const sessionInputs = row.querySelectorAll(".ep-input");
+
+        sessionInputs.forEach((input) => {
+          // Get exam time from input's data-time attribute
+          const examTime = input.getAttribute("data-time") || "";
+
+          input.addEventListener("mouseenter", () => {
+            // Clear any existing timeout
+            if (hoverTimeout) clearTimeout(hoverTimeout);
+
+            // Wait 1 second before showing tooltip
+            hoverTimeout = setTimeout(() => {
+              showTooltip(input, examDate, examTime);
+            }, 1000);
+          });
+
+          input.addEventListener("mouseleave", () => {
+            // Clear timeout if mouse leaves before 1 second
+            if (hoverTimeout) {
+              clearTimeout(hoverTimeout);
+              hoverTimeout = null;
+            }
+            hideTooltip();
+          });
+        });
+      });
+
+      // Hide on scroll
+      window.addEventListener(
+        "scroll",
+        () => {
+          if (isTooltipVisible) {
+            hideTooltip();
+            if (hoverTimeout) {
+              clearTimeout(hoverTimeout);
+              hoverTimeout = null;
+            }
+          }
+        },
+        { passive: true }
+      );
     }
 
     // Note: use the module-scoped `escapeHtml` declared near the top of this file

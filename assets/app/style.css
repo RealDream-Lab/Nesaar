@@ -2125,3 +2125,144 @@ body.swal2-toast-shown {
   font-size: 1.05rem;
   line-height: 1.9;
 }
+
+/* ========================================
+   Session Locations Tooltip (مکان‌های جلسه)
+   ======================================== */
+.session-locations-tooltip {
+  position: absolute;
+  z-index: 9999;
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  transform: translateY(8px) scale(0.96);
+  transition: opacity 0.3s cubic-bezier(0.4, 0, 0.2, 1),
+    transform 0.3s cubic-bezier(0.4, 0, 0.2, 1), visibility 0s 0.3s;
+
+  /* Glassmorphism style */
+  background: linear-gradient(
+    145deg,
+    rgba(12, 28, 48, 0.95),
+    rgba(18, 40, 65, 0.92)
+  );
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(100, 180, 255, 0.2);
+  border-radius: 12px;
+  padding: 14px 18px;
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.5),
+    0 8px 25px rgba(60, 166, 255, 0.12), inset 0 1px 0 rgba(255, 255, 255, 0.08);
+
+  min-width: 300px;
+  max-width: 600px;
+  font-family: "Vazir", sans-serif;
+  direction: rtl;
+  text-align: right;
+}
+
+.session-locations-tooltip.visible {
+  opacity: 1;
+  visibility: visible;
+  transform: translateY(0) scale(1);
+  transition: opacity 0.3s cubic-bezier(0.4, 0, 0.2, 1),
+    transform 0.3s cubic-bezier(0.4, 0, 0.2, 1), visibility 0s 0s;
+}
+
+/* Arrow pointer (above tooltip) */
+.session-locations-tooltip::before {
+  content: "";
+  position: absolute;
+  top: -7px;
+  right: 20px;
+  width: 14px;
+  height: 14px;
+  background: linear-gradient(
+    135deg,
+    rgba(12, 28, 48, 0.95),
+    rgba(18, 40, 65, 0.92)
+  );
+  border-top: 1px solid rgba(100, 180, 255, 0.2);
+  border-right: 1px solid rgba(100, 180, 255, 0.2);
+  transform: rotate(-45deg);
+}
+
+/* Tooltip content - inline flow */
+.session-locations-content {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  line-height: 1.8;
+  font-size: 0.88rem;
+}
+
+/* Each location item (inline) */
+.session-loc-item {
+  display: inline;
+  white-space: nowrap;
+}
+
+/* Pipe separator */
+.session-loc-pipe {
+  color: rgba(255, 255, 255, 0.6);
+  margin: 0 4px;
+  font-weight: 300;
+}
+
+/* Location name with color */
+.session-loc-name {
+  font-weight: 600;
+  transition: text-shadow 0.2s ease;
+}
+
+/* Location details (student & proctor count) */
+.session-loc-details {
+  color: rgba(200, 220, 240, 0.85);
+  font-weight: 400;
+}
+
+/* Number styling */
+.session-loc-num {
+  font-weight: 700;
+  color: #fbbf24;
+  margin: 0 2px;
+}
+
+/* Color palette for locations - vibrant colors */
+.session-loc-name.color-1 {
+  color: #60a5fa;
+} /* Blue */
+.session-loc-name.color-2 {
+  color: #34d399;
+} /* Emerald */
+.session-loc-name.color-3 {
+  color: #f472b6;
+} /* Pink */
+.session-loc-name.color-4 {
+  color: #a78bfa;
+} /* Purple */
+.session-loc-name.color-5 {
+  color: #fbbf24;
+} /* Amber */
+.session-loc-name.color-6 {
+  color: #38bdf8;
+} /* Sky */
+.session-loc-name.color-7 {
+  color: #fb923c;
+} /* Orange */
+.session-loc-name.color-8 {
+  color: #4ade80;
+} /* Green */
+.session-loc-name.color-9 {
+  color: #f87171;
+} /* Red */
+.session-loc-name.color-10 {
+  color: #22d3ee;
+} /* Cyan */
+
+/* Empty state */
+.session-loc-empty {
+  color: rgba(180, 200, 220, 0.7);
+  font-style: italic;
+  padding: 4px 0;
+}
