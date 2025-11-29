@@ -1,5 +1,5 @@
-const CACHE_NAME = "exam-seat-v0.9.25";
-const VERSION = "0.9.25";
+const CACHE_NAME = "exam-seat-v0.9.30";
+const VERSION = "0.9.30";
 const urlsToCache = [
   "/",
   "/index.php",
@@ -87,7 +87,7 @@ self.addEventListener("activate", (event) => {
               type: "sw-update",
               version: CACHE_NAME,
               tagVersion: `نسخه ${VERSION}`,
-              changes: ["فعال‌سازی سرویس پوش نوتیفیکیشن"],
+              changes: ["فعال‌سازی پوش نوتیفیکیشن"],
             });
           });
         });
