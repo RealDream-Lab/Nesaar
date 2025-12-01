@@ -94,6 +94,8 @@ if ($reportType === 'session') {
     generateSecretaryReport($pdo, $mpdf, $examDate, $examTime, $config);
 } elseif ($reportType === 'reproduction') {
     generateReproductionReport($pdo, $mpdf, $examDate, $examTime, $config);
+} elseif ($reportType === 'location') {
+    generateLocationReport($pdo, $mpdf, $examDate, $examTime, $config);
 } elseif ($reportType === 'descriptive') {
     generateDescriptiveLabels($pdo, $mpdf, $examDate, $examTime, $config);
 } elseif ($reportType === 'proctor_notice') {
@@ -975,6 +977,244 @@ function generateReproductionReport($pdo, $mpdf, $examDate, $examTime, $config)
                         <td>' . toPersianDigits($count) . '</td>
                         <td style="text-align: right;">' . $g['building'] . '</td>
                         <td style="text-align: right;">' . $g['class_name'] . '</td>
+                    </tr>';
+                }
+            }
+            $html .= '</tbody></table></div>';
+        }
+    }
+
+    $mpdf->WriteHTML($html);
+}
+
+function generateLocationReport($pdo, $mpdf, $examDate, $examTime, $config)
+{
+    // Fetch courses for electronic section (same as reproduction report)
+    $stmt = $pdo->prepare("
+        SELECT 
+            c.course_code, 
+            c.course_name, 
+            c.exam_date, 
+            c.exam_time, 
+            MAX(es.exam_type) AS exam_type, 
+            c.course_type,
+            COUNT(es.student_id) as student_count
+        FROM courses c
+        LEFT JOIN exam_seats es ON c.course_code = es.course_code
+        WHERE c.exam_date = ? AND c.exam_time = ?
+        GROUP BY c.course_code, c.course_name, c.exam_date, c.exam_time, c.course_type
+        ORDER BY c.course_code
+    ");
+    $stmt->execute([$examDate, $examTime]);
+    $courses = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+    // Fetch all students for this session with their locations and courses
+    $stmt = $pdo->prepare("
+        SELECT 
+            es.student_id,
+            es.seat_number,
+            es.building,
+            es.class_name,
+            es.course_code,
+            es.exam_type,
+            c.course_name,
+            c.course_type
+        FROM exam_seats es
+        JOIN courses c ON es.course_code = c.course_code
+        WHERE c.exam_date = ? AND c.exam_time = ?
+        ORDER BY es.building, es.class_name, es.course_code
+    ");
+    $stmt->execute([$examDate, $examTime]);
+    $allStudents = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+    if (empty($allStudents)) {
+        die('No students found for this session.');
+    }
+
+    $mpdf->AddPage('P');
+    $html = '
+    <style>
+        body { font-family: vazir; font-size: 10pt; }
+        .header { text-align: center; margin-bottom: 10px; }
+        .title { font-size: 16pt; font-weight: bold; }
+        .meta { font-size: 11pt; font-weight: bold; margin-top: 5px; }
+        .type-header { background: #000; color: #fff; font-size: 12pt; font-weight: bold; text-align: center; padding: 6px; border-radius: 8px; margin: 10px 0; }
+        .simple-table { width: 100%; border-collapse: collapse; margin-bottom: 10px; font-size: 9pt; }
+        .simple-table th, .simple-table td { border: 1px solid #ddd; padding: 5px; text-align: center; }
+        .simple-table th { background-color: #f1f1f1; font-size: 9pt; }
+        .location-box { margin-bottom: 15px; page-break-inside: avoid; }
+        .location-header { width: 100%; border-collapse: separate; border-spacing: 0; margin-bottom: 5px; }
+        
+.location-index-cell {
+    width: 40px;
+    vertical-align: middle;
+    padding: 0;
+    text-align: center;
+    background-color: #000;
+    border-radius: 5px;
+}
+
+.location-index-box { 
+    color: #fff;
+    font-weight: bold;
+    text-align: center;
+    padding: 8px 0;
+    display: block;
+    width: 100%;
+    background: transparent;
+}
+
+        .location-info { font-size: 11pt; font-weight: bold; vertical-align: middle; padding-right: 10px; }
+        .nested-table { width: 100%; border-collapse: collapse; table-layout: fixed; font-size: 9pt; }
+        .nested-table th, .nested-table td { border: 1px solid #ddd; padding: 4px; text-align: center; }
+        .nested-table th { background-color: #f1f1f1; font-size: 9pt; }
+    </style>
+    <div class="header"><div class="title">ملزومات اتاق تکثیر</div><div class="meta">' . toPersianDigits($examTime) . ' | ' . toPersianDigits($examDate) . '</div></div>
+    ';
+
+    // 1. Electronic (Summary by Course - same as reproduction report)
+    $elecCourses = [];
+    foreach ($courses as $c) {
+        // Check if has electronic students
+        $count = 0;
+        foreach ($allStudents as $s) {
+            if ($s['course_code'] === $c['course_code'] && ($s['exam_type'] ?? '') === 'الکترونیکی') {
+                $count++;
+            }
+        }
+        if ($count > 0) {
+            $c['elec_count'] = $count;
+            $elecCourses[]   = $c;
+        }
+    }
+
+    if (!empty($elecCourses)) {
+        $html .= '<div class="type-header">الکترونیکی</div>';
+        $html .= '<table class="simple-table"><thead><tr><th>#</th><th>کد درس</th><th>نام درس</th><th>تعداد</th></tr></thead><tbody>';
+        foreach ($elecCourses as $i => $c) {
+            $html .= '<tr>
+                <td>' . toPersianDigits($i + 1) . '</td>
+                <td>' . toPersianDigits($c['course_code']) . '</td>
+                <td style="text-align: right;">' . $c['course_name'] . '</td>
+                <td>' . toPersianDigits($c['elec_count']) . '</td>
+            </tr>';
+        }
+        $html .= '</tbody></table>';
+    }
+
+    // 2. Written (Detailed by Location)
+    // Group students by location (building || class_name), then by course
+    $locationGroups = [];
+    foreach ($allStudents as $s) {
+        // Only process written exams for location-based report
+        if (($s['exam_type'] ?? '') !== 'کتبی')
+            continue;
+
+        $b   = trim($s['building'] ?? '') ?: 'بدون ساختمان';
+        $c   = trim($s['class_name'] ?? '') ?: 'بدون کلاس';
+        $key = $b . '||' . $c;
+
+        if (!isset($locationGroups[$key])) {
+            $locationGroups[$key] = [
+                'building' => $b,
+                'class_name' => $c,
+                'students' => [],
+                'courses' => []
+            ];
+        }
+
+        $locationGroups[$key]['students'][] = $s;
+
+        // Group by course within this location
+        $courseCode = $s['course_code'];
+        if (!isset($locationGroups[$key]['courses'][$courseCode])) {
+            $locationGroups[$key]['courses'][$courseCode] = [
+                'course_code' => $courseCode,
+                'course_name' => $s['course_name'],
+                'course_type' => $s['course_type'],
+                'nums' => []
+            ];
+        }
+
+        // Parse seat numbers
+        $raw = $s['seat_number'];
+        if (preg_match('/(\d+)\s*[-–—]\s*(\d+)/u', $raw, $m)) {
+            $start = min((int)$m[1], (int)$m[2]);
+            $end   = max((int)$m[1], (int)$m[2]);
+            for ($i = $start; $i <= $end; $i++)
+                $locationGroups[$key]['courses'][$courseCode]['nums'][] = $i;
+        } elseif (preg_match('/(\d+)\s*(?:تا|تا‌)\s*(\d+)/u', $raw, $m)) {
+            $start = min((int)$m[1], (int)$m[2]);
+            $end   = max((int)$m[1], (int)$m[2]);
+            for ($i = $start; $i <= $end; $i++)
+                $locationGroups[$key]['courses'][$courseCode]['nums'][] = $i;
+        } else {
+            preg_match_all('/\d+/', $raw, $matches);
+            foreach ($matches[0] as $n)
+                $locationGroups[$key]['courses'][$courseCode]['nums'][] = (int)$n;
+        }
+    }
+
+    // Sort locations by building then class
+    uksort($locationGroups, function ($a, $b) {
+        return strcmp($a, $b);
+    });
+
+    // Render Written Locations (Detailed)
+    if (!empty($locationGroups)) {
+        $html          .= '<div class="type-header">کتبی</div>';
+        $locationIndex  = 0;
+
+        foreach ($locationGroups as $key => $loc) {
+            $locationIndex++;
+            $totalStudents = count($loc['students']);
+
+            $html .= '<div class="location-box">';
+            $html .= '<table class="location-header"><tr>
+                <td class="location-index-cell"><div class="location-index-box">' . toPersianDigits($locationIndex) . '</div></td>
+                <td class="location-info">' . $loc['building'] . ' | ' . $loc['class_name'] . '</td>
+                <td style="text-align: left; font-weight: bold; font-size: 10pt;">' . toPersianDigits($totalStudents) . ' نفر</td>
+            </tr></table>';
+
+            $html .= '<table class="nested-table"><thead><tr>
+                <th style="width: 15%;">از شماره</th>
+                <th style="width: 15%;">تا شماره</th>
+                <th style="width: 10%;">تعداد</th>
+                <th style="width: 15%;">کد درس</th>
+                <th style="width: 45%;">نام درس</th>
+            </tr></thead><tbody>';
+
+            if (empty($loc['courses'])) {
+                $html .= '<tr><td colspan="5">بدون اطلاعات</td></tr>';
+            } else {
+                // Sort courses by minimum seat number
+                $sortedCourses = [];
+                foreach ($loc['courses'] as $courseCode => $courseData) {
+                    $uniq = array_unique($courseData['nums']);
+                    sort($uniq, SORT_NUMERIC);
+                    if (empty($uniq))
+                        continue;
+                    $courseData['min_seat']     = $uniq[0];
+                    $courseData['max_seat']     = end($uniq);
+                    $courseData['count']        = count($uniq);
+                    $sortedCourses[$courseCode] = $courseData;
+                }
+
+                uasort($sortedCourses, function ($a, $b) {
+                    return $a['min_seat'] - $b['min_seat'];
+                });
+
+                foreach ($sortedCourses as $courseData) {
+                    $start = $courseData['min_seat'];
+                    $end   = $courseData['max_seat'];
+                    $count = $courseData['count'];
+
+                    $html .= '<tr>
+                        <td>' . toPersianDigits($start) . '</td>
+                        <td>' . toPersianDigits($end) . '</td>
+                        <td>' . toPersianDigits($count) . '</td>
+                        <td>' . toPersianDigits($courseData['course_code']) . '</td>
+                        <td style="text-align: right;">' . $courseData['course_name'] . '</td>
                     </tr>';
                 }
             }

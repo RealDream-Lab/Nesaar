@@ -37,7 +37,7 @@ CREATE TABLE IF NOT EXISTS exam_seats (
 
 CREATE TABLE IF NOT EXISTS Config (
   ID int NOT NULL AUTO_INCREMENT PRIMARY KEY,
-  ConfigName varchar(20) COLLATE utf8mb4_general_ci NOT NULL UNIQUE,
+  ConfigName varchar(50) COLLATE utf8mb4_general_ci NOT NULL UNIQUE,
   ConfigValue varchar(100) COLLATE utf8mb4_general_ci NOT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 

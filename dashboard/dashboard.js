@@ -697,6 +697,9 @@ try {
       const rptDownloadVal = String(cfg.rptDownload || "").toUpperCase();
       const wavesAnimationChecked =
         String(cfg.WavesAnimation || "YES").toUpperCase() !== "NO";
+      const reproductionReportModeVal = String(
+        cfg.ReproductionReportMode || "course"
+      ).toLowerCase();
 
       let smsCreditValue = null;
       try {
@@ -791,6 +794,25 @@ try {
                                     <label for="er_rptDownload" style="margin:0;cursor:pointer;font-size:0.9rem;">دانلود</label>
                                 </div>
                             </div>
+                            <div style="display:flex;align-items:center;gap:15px;margin-top:8px;">
+                                <span style="font-size:0.92rem;color:inherit;">نحوه چاپ گزارش ملزومات اتاق تکثیر:</span>
+                                <div style="display:flex;align-items:center;gap:5px;">
+                                    <input type="radio" id="er_reprCourse" name="er_reproductionMode" value="course" ${
+                                      reproductionReportModeVal !== "location"
+                                        ? "checked"
+                                        : ""
+                                    } style="cursor:pointer;">
+                                    <label for="er_reprCourse" style="margin:0;cursor:pointer;font-size:0.9rem;">بر اساس درس</label>
+                                </div>
+                                <div style="display:flex;align-items:center;gap:5px;">
+                                    <input type="radio" id="er_reprLocation" name="er_reproductionMode" value="location" ${
+                                      reproductionReportModeVal === "location"
+                                        ? "checked"
+                                        : ""
+                                    } style="cursor:pointer;">
+                                    <label for="er_reprLocation" style="margin:0;cursor:pointer;font-size:0.9rem;">بر اساس مکان</label>
+                                </div>
+                            </div>
 
                         </div>
                     </div>
@@ -832,6 +854,9 @@ try {
             ?.checked
             ? "YES"
             : "NO";
+          const reproductionMode =
+            document.querySelector('input[name="er_reproductionMode"]:checked')
+              ?.value || "course";
           // return values to then handle save confirmation
           return {
             AdminNickName: admin.trim(),
@@ -843,6 +868,7 @@ try {
             SendSMS: sendSms,
             rptDownload: rptDownload,
             WavesAnimation: wavesAnimation,
+            ReproductionReportMode: reproductionMode,
           };
         },
       });
@@ -4147,10 +4173,32 @@ async function printEssentialsReproduction() {
     if (examDate && examTime) {
       examDate = toEnglishDigits(String(examDate)).replace(/-/g, "/");
       examTime = toEnglishDigits(String(examTime));
-      const url = `../API/generatePDF.php?report_type=reproduction&exam_date=${encodeURIComponent(
+
+      // Check config for report mode
+      let reportType = "reproduction";
+      let reportTitle = "ملزومات اتاق تکثیر";
+      try {
+        const cfgResp = await guardedFetch("../API/getConfig.php", {
+          cache: "no-store",
+        });
+        if (cfgResp && cfgResp.ok) {
+          const cfg = await cfgResp.json();
+          if (
+            String(cfg.ReproductionReportMode || "").toLowerCase() ===
+            "location"
+          ) {
+            reportType = "location";
+            reportTitle = "ملزومات اتاق تکثیر (بر اساس مکان)";
+          }
+        }
+      } catch (e) {
+        console.warn("Could not load config for reproduction report mode", e);
+      }
+
+      const url = `../API/generatePDF.php?report_type=${reportType}&exam_date=${encodeURIComponent(
         examDate
       )}&exam_time=${encodeURIComponent(examTime)}&_t=${new Date().getTime()}`;
-      showReportModal(url, "ملزومات اتاق تکثیر");
+      showReportModal(url, reportTitle);
     } else {
       Swal.fire({
         icon: "error",

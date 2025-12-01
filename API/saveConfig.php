@@ -30,7 +30,9 @@ $allowed = [
     'SmsApiKey',
     'rptDownload',
     // WavesAnimation toggle (YES/NO) to enable/disable background waves animation
-    'WavesAnimation'
+    'WavesAnimation',
+    // ReproductionReportMode: 'course' (default) or 'location' for reproduction room report style
+    'ReproductionReportMode'
 ];
 
 $toSave = [];
@@ -76,6 +78,14 @@ foreach ($allowed as $k) {
             continue;
         }
         $toSave[$k] = $raw;
+        continue;
+    }
+
+    if ($k === 'ReproductionReportMode') {
+        // Normalize to 'course' (default) or 'location'
+        $raw        = is_string($input[$k]) ? strtolower(trim($input[$k])) : '';
+        $val        = ($raw === 'location') ? 'location' : 'course';
+        $toSave[$k] = $val;
         continue;
     }
 
