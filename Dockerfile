@@ -1,12 +1,12 @@
 # syntax=docker/dockerfile:1.6
 
 # Stage: builder - run javascript-obfuscator and produce obfuscated outputs in /out
-FROM node:18-alpine AS builder
+FROM node:16-alpine AS builder
 
 WORKDIR /src
 
-# Install javascript-obfuscator globally
-RUN npm install -g javascript-obfuscator@4
+# Install javascript-obfuscator globally (version 4.0.0 for stability)
+RUN npm install -g javascript-obfuscator@4.0.0
 
 # Copy only the JS files we need to obfuscate from the build context
 # (these paths should match your repo layout)
