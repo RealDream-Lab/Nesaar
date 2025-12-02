@@ -4692,7 +4692,7 @@
     restoreBtn.addEventListener("click", async () => {
       const confirm = await Swal.fire({
         title: "بازیابی مراقبین",
-        html: '<div style="text-align: justify; direction: rtl;">این عملیات مراقبین نسخه پشتیبان را به لیست فعلی <b>اضافه</b> می‌کند. مراقبین تکراری (بر اساس کد ملی) نادیده گرفته می‌شوند. آیا ادامه می‌دهید؟</div>',
+        html: '<div style="text-align: justify; direction: rtl;">این عملیات مراقبین نسخه پشتیبان را به لیست فعلی <b>اضافه</b> می‌کند. مراقبین تکراری نادیده گرفته می‌شوند. آیا ادامه می‌دهید؟</div>',
         icon: "question",
         showCancelButton: true,
         confirmButtonText: "بله، بازیابی کن",
