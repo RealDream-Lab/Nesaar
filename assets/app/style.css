@@ -21,6 +21,7 @@ body {
   touch-action: pan-y;
   height: 100%;
   overflow-x: hidden; /* Prevent any horizontal scrolling */
+  scroll-behavior: smooth;
 }
 
 html {

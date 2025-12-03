@@ -2833,17 +2833,13 @@ async function filterStudentsByCourse(courseCode) {
     if (wrap && wrap.classList.contains("d-none"))
       wrap.classList.remove("d-none");
 
-    // Scroll the top of the students list into view (account for header height)
+    // Scroll the top of the students list into view
     setTimeout(() => {
-      try {
-        const studentsHeader = document.getElementById("studentsListHeader");
-        if (studentsHeader) {
-          studentsHeader.scrollIntoView({ behavior: "smooth", block: "start" });
-        }
-      } catch (e) {
-        /* ignore scroll errors */
+      const studentsHeader = document.getElementById("studentsListHeader");
+      if (studentsHeader) {
+        studentsHeader.scrollIntoView({ behavior: "smooth", block: "start" });
       }
-    }, 100);
+    }, 300);
   } catch (error) {
     console.error("Error:", error);
     Swal.fire({
@@ -2916,15 +2912,11 @@ function showAllStudents() {
 
   // Scroll the top of the students list into view
   setTimeout(() => {
-    try {
-      const studentsHeader = document.getElementById("studentsListHeader");
-      if (studentsHeader) {
-        studentsHeader.scrollIntoView({ behavior: "smooth", block: "start" });
-      }
-    } catch (e) {
-      /* ignore scroll errors */
+    const studentsHeader = document.getElementById("studentsListHeader");
+    if (studentsHeader) {
+      studentsHeader.scrollIntoView({ behavior: "smooth", block: "start" });
     }
-  }, 100);
+  }, 300);
 }
 
 // Add event listeners to upload buttons
