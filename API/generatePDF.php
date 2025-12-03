@@ -96,6 +96,8 @@ if ($reportType === 'session') {
     generateReproductionReport($pdo, $mpdf, $examDate, $examTime, $config);
 } elseif ($reportType === 'location') {
     generateLocationReport($pdo, $mpdf, $examDate, $examTime, $config);
+} elseif ($reportType === 'location_labels') {
+    generateLocationLabels($pdo, $mpdf, $examDate, $examTime, $config);
 } elseif ($reportType === 'descriptive') {
     generateDescriptiveLabels($pdo, $mpdf, $examDate, $examTime, $config);
 } elseif ($reportType === 'proctor_notice') {
@@ -1225,6 +1227,231 @@ function generateLocationReport($pdo, $mpdf, $examDate, $examTime, $config)
     $mpdf->WriteHTML($html);
 }
 
+function generateLocationLabels($pdo, $mpdf, $examDate, $examTime, $config)
+{
+    // Fetch all students for this session with their locations and courses (written exams only)
+    $stmt = $pdo->prepare("
+        SELECT 
+            es.student_id,
+            es.seat_number,
+            es.building,
+            es.class_name,
+            es.course_code,
+            es.exam_type,
+            c.course_name,
+            c.course_type
+        FROM exam_seats es
+        JOIN courses c ON es.course_code = c.course_code
+        WHERE c.exam_date = ? AND c.exam_time = ? AND es.exam_type = 'کتبی'
+        ORDER BY es.building, es.class_name, es.course_code
+    ");
+    $stmt->execute([$examDate, $examTime]);
+    $allStudents = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+    if (empty($allStudents)) {
+        die('No written exam students found for this session.');
+    }
+
+    // Group students by location (building || class_name), then by course
+    $locationGroups = [];
+    foreach ($allStudents as $s) {
+        $b   = trim($s['building'] ?? '') ?: 'بدون ساختمان';
+        $c   = trim($s['class_name'] ?? '') ?: 'بدون کلاس';
+        $key = $b . '||' . $c;
+
+        if (!isset($locationGroups[$key])) {
+            $locationGroups[$key] = [
+                'building' => $b,
+                'class_name' => $c,
+                'students' => [],
+                'courses' => []
+            ];
+        }
+
+        $locationGroups[$key]['students'][] = $s;
+
+        // Group by course within this location
+        $courseCode = $s['course_code'];
+        if (!isset($locationGroups[$key]['courses'][$courseCode])) {
+            $locationGroups[$key]['courses'][$courseCode] = [
+                'course_code' => $courseCode,
+                'course_name' => $s['course_name'],
+                'course_type' => $s['course_type'],
+                'nums' => []
+            ];
+        }
+
+        // Parse seat numbers
+        $raw = $s['seat_number'];
+        if (preg_match('/(\d+)\s*[-–—]\s*(\d+)/u', $raw, $m)) {
+            $start = min((int)$m[1], (int)$m[2]);
+            $end   = max((int)$m[1], (int)$m[2]);
+            for ($i = $start; $i <= $end; $i++)
+                $locationGroups[$key]['courses'][$courseCode]['nums'][] = $i;
+        } elseif (preg_match('/(\d+)\s*(?:تا|تا‌)\s*(\d+)/u', $raw, $m)) {
+            $start = min((int)$m[1], (int)$m[2]);
+            $end   = max((int)$m[1], (int)$m[2]);
+            for ($i = $start; $i <= $end; $i++)
+                $locationGroups[$key]['courses'][$courseCode]['nums'][] = $i;
+        } else {
+            preg_match_all('/\d+/', $raw, $matches);
+            foreach ($matches[0] as $n)
+                $locationGroups[$key]['courses'][$courseCode]['nums'][] = (int)$n;
+        }
+    }
+
+    // Sort locations by building then class
+    uksort($locationGroups, function ($a, $b) {
+        return strcmp($a, $b);
+    });
+
+    if (empty($locationGroups)) {
+        die('No location data found.');
+    }
+
+    // Create new mPDF instance for A5 Landscape
+    $mpdf = new \Mpdf\Mpdf([
+        'mode' => 'utf-8',
+        'format' => 'A5',
+        'orientation' => 'L',
+        'margin_left' => 8,
+        'margin_right' => 8,
+        'margin_top' => 8,
+        'margin_bottom' => 8,
+        'tempDir' => __DIR__ . '/../temp',
+        'fontDir' => array_merge((new \Mpdf\Config\ConfigVariables())->getDefaults()['fontDir'], [
+            __DIR__ . '/../assets/fonts/vazir/Farsi-Digits'
+        ]),
+        'fontdata' => (new \Mpdf\Config\FontVariables())->getDefaults()['fontdata'] + [
+            'vazir' => [
+                'R' => 'Vazir-Regular-FD.ttf',
+                'B' => 'Vazir-Bold-FD.ttf',
+                'useOTL' => 0xFF,
+                'useKashida' => 75,
+            ]
+        ],
+        'default_font' => 'vazir'
+    ]);
+    $mpdf->SetDirectionality('rtl');
+
+    $css = '
+        body { font-family: vazir; font-size: 10pt; direction: rtl; }
+        .label-page { width: 100%; height: 100%; }
+        .location-title { 
+            text-align: center; 
+            font-size: 14pt; 
+            font-weight: bold; 
+            background: #000; 
+            color: #fff; 
+            padding: 8px 15px; 
+            border-radius: 8px; 
+            margin-bottom: 10px;
+        }
+        .meta-info {
+            text-align: center;
+            font-size: 10pt;
+            color: #333;
+            margin-bottom: 8px;
+        }
+        .courses-table { 
+            width: 100%; 
+            border-collapse: collapse; 
+            font-size: 9pt; 
+        }
+        .courses-table th, .courses-table td { 
+            border: 1px solid #999; 
+            padding: 5px 8px; 
+            text-align: center; 
+        }
+        .courses-table th { 
+            background-color: #e0e0e0; 
+            font-weight: bold; 
+            font-size: 9pt;
+        }
+        .courses-table td.course-name {
+            text-align: right;
+        }
+        .total-row {
+            font-weight: bold;
+            background-color: #f5f5f5;
+        }
+    ';
+
+    $pageIndex = 0;
+    foreach ($locationGroups as $key => $loc) {
+        if ($pageIndex > 0) {
+            $mpdf->AddPage('L');
+        }
+        $pageIndex++;
+
+        $totalStudents = count($loc['students']);
+
+        // Sort courses by minimum seat number
+        $sortedCourses = [];
+        foreach ($loc['courses'] as $courseCode => $courseData) {
+            $uniq = array_unique($courseData['nums']);
+            sort($uniq, SORT_NUMERIC);
+            if (empty($uniq))
+                continue;
+            $courseData['min_seat']     = $uniq[0];
+            $courseData['max_seat']     = end($uniq);
+            $courseData['count']        = count($uniq);
+            $sortedCourses[$courseCode] = $courseData;
+        }
+
+        uasort($sortedCourses, function ($a, $b) {
+            return $a['min_seat'] - $b['min_seat'];
+        });
+
+        $html  = '<style>' . $css . '</style>';
+        $html .= '<div class="label-page">';
+
+        // Location title (building | class)
+        $html .= '<div class="location-title">' . $loc['building'] . ' — ' . $loc['class_name'] . '</div>';
+
+        // Meta info (date, time, total)
+        $html .= '<div class="meta-info">' . toPersianDigits($examDate) . ' | ساعت ' . toPersianDigits($examTime) . ' | مجموع: ' . toPersianDigits($totalStudents) . ' نفر</div>';
+
+        // Courses table
+        $html .= '<table class="courses-table">';
+        $html .= '<thead><tr>
+            <th style="width: 8%;">#</th>
+            <th style="width: 12%;">از شماره</th>
+            <th style="width: 12%;">تا شماره</th>
+            <th style="width: 10%;">تعداد</th>
+            <th style="width: 15%;">کد درس</th>
+            <th style="width: 43%;">نام درس</th>
+        </tr></thead><tbody>';
+
+        if (empty($sortedCourses)) {
+            $html .= '<tr><td colspan="6">بدون اطلاعات</td></tr>';
+        } else {
+            $rowIndex = 0;
+            foreach ($sortedCourses as $courseData) {
+                $rowIndex++;
+                $html .= '<tr>
+                    <td>' . toPersianDigits($rowIndex) . '</td>
+                    <td>' . toPersianDigits($courseData['min_seat']) . '</td>
+                    <td>' . toPersianDigits($courseData['max_seat']) . '</td>
+                    <td>' . toPersianDigits($courseData['count']) . '</td>
+                    <td>' . toPersianDigits($courseData['course_code']) . '</td>
+                    <td class="course-name">' . $courseData['course_name'] . '</td>
+                </tr>';
+            }
+        }
+
+        $html .= '</tbody></table>';
+        $html .= '</div>';
+
+        $mpdf->WriteHTML($html);
+    }
+
+    $filename   = 'LocationLabels_' . str_replace(['/', '\\'], '-', $examDate) . '.pdf';
+    $outputMode = (isset($config['rptDownload']) && strtoupper($config['rptDownload']) === 'YES') ? 'D' : 'I';
+    $mpdf->Output($filename, $outputMode);
+    exit;
+}
+
 function generateDescriptiveLabels($pdo, $mpdf, $examDate, $examTime, $config)
 {
     // Fetch Courses (Descriptive and Test-Descriptive)
@@ -1234,24 +1461,6 @@ function generateDescriptiveLabels($pdo, $mpdf, $examDate, $examTime, $config)
     ");
     $stmt->execute([$examDate, $examTime]);
     $courses = $stmt->fetchAll(PDO::FETCH_ASSOC);
-
-    if (empty($courses)) {
-        echo '<script>
-            if (window.opener && window.opener.Swal) {
-                window.opener.Swal.fire({
-                    icon: "info",
-                    title: "اطلاعات",
-                    text: "هیچ درس تشریحی برای این آزمون یافت نشد.",
-                    confirmButtonText: "باشه",
-                    customClass: { popup: "swal2-rtl swal2-glass", confirmButton: "btn btn-primary" }
-                });
-            } else {
-                alert("هیچ درس تشریحی برای این آزمون یافت نشد.");
-            }
-            window.close();
-        </script>';
-        exit;
-    }
 
     // A5 Landscape
     $mpdf = new \Mpdf\Mpdf([

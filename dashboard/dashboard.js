@@ -4081,35 +4081,84 @@ async function printProctorNotices() {
 }
 
 async function examEssentialsHandler() {
+  const context = window._lastExamContext || null;
+  let examDate = context?.exam_date;
+  let examTime = context?.exam_time;
+
+  // Check what types of exams exist for this session
+  let hasDescriptive = false;
+  let hasLocations = false;
+
+  if (examDate && examTime) {
+    const cleanDate = toEnglishDigits(String(examDate)).replace(/-/g, "/");
+    const cleanTime = toEnglishDigits(String(examTime));
+
+    try {
+      const checkResp = await guardedFetch(
+        `../API/getNextExamReport.php?exam_date=${encodeURIComponent(
+          cleanDate
+        )}&exam_time=${encodeURIComponent(cleanTime)}`,
+        { cache: "no-store" }
+      );
+      const checkData = await checkResp.json();
+
+      if (checkData && !checkData.error) {
+        const courses = Array.isArray(checkData.courses)
+          ? checkData.courses
+          : [];
+        // Check for descriptive (essay) exams
+        hasDescriptive = courses.some(
+          (c) => c.course_type && c.course_type.includes("تشریحی")
+        );
+        // Check for locations (written exams have locations)
+        hasLocations = courses.some(
+          (c) => c.exam_type === "کتبی" || !c.exam_type
+        );
+      }
+    } catch (e) {
+      console.warn("Failed to check exam types:", e);
+      // Show buttons by default if check fails
+      hasDescriptive = true;
+      hasLocations = true;
+    }
+  }
+
+  // Build dynamic button HTML
+  let buttonsHtml = `
+    <div style="display:flex;flex-direction:column;gap:12px;margin-top:1rem;">
+      <button id="essentialsPrintSessionBtn" class="btn btn-primary w-100" style="padding:12px;font-size:1rem;font-weight:600;" onclick="try{ startEssentialsPrint('session'); }catch(e){ console.error(e); }">
+        صورتجلسه آزمون
+      </button>
+      <button id="essentialsPrintSeatBtn" class="btn btn-primary w-100" style="padding:12px;font-size:1rem;font-weight:600;" onclick="try{ startEssentialsPrint('seat'); }catch(e){ console.error(e); }">
+        شماره‌ صندلی‌آزمون
+      </button>
+      <button id="essentialsSecretaryBtn" class="btn btn-primary w-100" style="padding:12px;font-size:1rem;font-weight:600;" onclick="try{ startEssentialsPrint('secretary'); }catch(e){ console.error(e); }">
+        ملزومات منشی جلسه
+      </button>
+      <button id="essentialsReproductionBtn" class="btn btn-primary w-100" style="padding:12px;font-size:1rem;font-weight:600;" onclick="try{ startEssentialsPrint('reproduction'); }catch(e){ console.error(e); }">
+        ملزومات اتاق تکثیر
+      </button>`;
+
+  if (hasDescriptive) {
+    buttonsHtml += `
+      <button id="essentialsDescriptiveBtn" class="btn btn-primary w-100" style="padding:12px;font-size:1rem;font-weight:600;" onclick="try{ startEssentialsPrint('descriptive'); }catch(e){ console.error(e); }">
+        برچسب پاکت‌های تشریحی
+      </button>`;
+  }
+
+  if (hasLocations) {
+    buttonsHtml += `
+      <button id="essentialsLocationLabelsBtn" class="btn btn-primary w-100" style="padding:12px;font-size:1rem;font-weight:600;" onclick="try{ startEssentialsPrint('locationLabels'); }catch(e){ console.error(e); }">
+        برچسب پاکت سوالات
+      </button>`;
+  }
+
+  buttonsHtml += `</div>`;
+
   Swal.fire({
     icon: "info",
     title: "ملزومات جلسه آزمون",
-    html: `
-            <div style="display:flex;flex-direction:column;gap:12px;margin-top:1rem;">
-                <!-- Quick print shortcuts that reuse existing handlers -->
-                <button id="essentialsPrintSessionBtn" class="btn btn-primary w-100" style="padding:12px;font-size:1rem;font-weight:600;" onclick="try{ startEssentialsPrint('session'); }catch(e){ console.error(e); }">
-                    صورتجلسه آزمون
-                </button>
-                <button id="essentialsPrintSeatBtn" class="btn btn-primary w-100" style="padding:12px;font-size:1rem;font-weight:600;" onclick="try{ startEssentialsPrint('seat'); }catch(e){ console.error(e); }">
-                     شماره‌ صندلی‌آزمون
-                </button>
-
-                <button id="essentialsSecretaryBtn" class="btn btn-primary w-100" style="padding:12px;font-size:1rem;font-weight:600;" onclick="try{ startEssentialsPrint('secretary'); }catch(e){ console.error(e); }">
-                    ملزومات منشی جلسه
-                </button>
-                <button id="essentialsReproductionBtn" class="btn btn-primary w-100" style="padding:12px;font-size:1rem;font-weight:600;" onclick="try{ startEssentialsPrint('reproduction'); }catch(e){ console.error(e); }">
-                    ملزومات اتاق تکثیر
-                </button>
-                <button id="essentialsDescriptiveBtn" class="btn btn-primary w-100" style="padding:12px;font-size:1rem;font-weight:600;" onclick="try{ startEssentialsPrint('descriptive'); }catch(e){ console.error(e); }">
-                    برچسب پاکت‌های تشریحی
-                </button>
-                <!-- 
-                <button id="essentialsTestBtn" class="btn btn-primary w-100" style="padding:12px;font-size:1rem;font-weight:600;" onclick="try{ startEssentialsPrint('test'); }catch(e){ console.error(e); }">
-                    برچسب پاکت‌های تستی
-                </button> 
-                -->
-            </div>
-        `,
+    html: buttonsHtml,
     showConfirmButton: false,
     showCancelButton: false,
     customClass: { popup: "swal2-rtl swal2-glass" },
@@ -4127,6 +4176,7 @@ function startEssentialsPrint(kind) {
       else if (kind === "proctorNotice") printProctorNotices();
       else if (kind === "reproduction") printEssentialsReproduction();
       else if (kind === "descriptive") printEssentialsDescriptive();
+      else if (kind === "locationLabels") printLocationLabels();
       else if (kind === "test") printEssentialsTest();
     } catch (e) {
       console.error("startEssentialsPrint error:", e);
@@ -4226,55 +4276,41 @@ async function printEssentialsDescriptive() {
       examDate = toEnglishDigits(String(examDate)).replace(/-/g, "/");
       examTime = toEnglishDigits(String(examTime));
 
-      // Check for essay exams first
-      try {
-        const checkResp = await guardedFetch(
-          `../API/getNextExamReport.php?exam_date=${encodeURIComponent(
-            examDate
-          )}&exam_time=${encodeURIComponent(examTime)}`,
-          { cache: "no-store" }
-        );
-        const checkData = await checkResp.json();
-
-        if (checkData && !checkData.error) {
-          const courses = Array.isArray(checkData.courses)
-            ? checkData.courses
-            : [];
-          // Filter for descriptive (essay) exams
-          const hasEssay = courses.some(
-            (c) => c.course_type && c.course_type.includes("تشریحی")
-          );
-
-          if (!hasEssay) {
-            await Swal.fire({
-              icon: "info",
-              title: "اطلاعات",
-              text: "هیچ درس تشریحی برای این آزمون یافت نشد.",
-              confirmButtonText: "باشه",
-              timer: 3000,
-              timerProgressBar: true,
-              customClass: {
-                popup: "swal2-rtl swal2-glass",
-                confirmButton: "btn btn-primary",
-              },
-            });
-            // Reopen essentials menu after message closes
-            setTimeout(() => {
-              try {
-                examEssentialsHandler();
-              } catch (e) {}
-            }, 3000);
-            return;
-          }
-        }
-      } catch (e) {
-        console.warn("Failed to pre-check essay exams:", e);
-      }
-
       const url = `../API/generatePDF.php?report_type=descriptive&exam_date=${encodeURIComponent(
         examDate
       )}&exam_time=${encodeURIComponent(examTime)}&_t=${new Date().getTime()}`;
       showReportModal(url, "برچسب پاکت‌های تشریحی");
+    } else {
+      Swal.fire({
+        icon: "error",
+        title: "خطا",
+        text: "اطلاعات آزمون یافت نشد",
+        confirmButtonText: "باشه",
+        customClass: {
+          popup: "swal2-rtl swal2-glass",
+          confirmButton: "btn btn-primary",
+        },
+      });
+    }
+  } catch (e) {
+    console.error(e);
+  }
+}
+
+async function printLocationLabels() {
+  try {
+    const context = window._lastExamContext || null;
+    let examDate = context?.exam_date;
+    let examTime = context?.exam_time;
+
+    if (examDate && examTime) {
+      examDate = toEnglishDigits(String(examDate)).replace(/-/g, "/");
+      examTime = toEnglishDigits(String(examTime));
+
+      const url = `../API/generatePDF.php?report_type=location_labels&exam_date=${encodeURIComponent(
+        examDate
+      )}&exam_time=${encodeURIComponent(examTime)}&_t=${new Date().getTime()}`;
+      showReportModal(url, "برچسب پاکت سوالات مکان‌ها");
     } else {
       Swal.fire({
         icon: "error",
