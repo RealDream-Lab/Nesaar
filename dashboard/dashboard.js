@@ -2813,6 +2813,12 @@ async function filterStudentsByCourse(courseCode) {
     const tbody = document.querySelector("#studentsTableBody");
     if (tbody) tbody.innerHTML = tbodyHtml;
 
+    // Update header to show course name
+    const studentsHeader = document.getElementById("studentsListHeader");
+    if (studentsHeader) {
+      studentsHeader.innerHTML = `<span style="color:#e91e63">${courseCode}</span> <span style="color:#00bcd4">${data.course.course_name}</span>`;
+    }
+
     // Remove the initial info prompt (only show it until the first time names are loaded)
     const info = document.getElementById("studentsTableInfo");
     if (info)
@@ -2827,28 +2833,17 @@ async function filterStudentsByCourse(courseCode) {
     if (wrap && wrap.classList.contains("d-none"))
       wrap.classList.remove("d-none");
 
-    // Scroll the top of the students table into view (account for header height)
-    try {
-      if (wrap) {
-        const header = document.querySelector(".dashboard-header");
-        const headerHeight = header
-          ? Math.ceil(header.getBoundingClientRect().height)
-          : 0;
-        const rect = wrap.getBoundingClientRect();
-        const docTop =
-          window.pageYOffset || document.documentElement.scrollTop || 0;
-        const targetTop = Math.max(0, rect.top + docTop - headerHeight - 8);
-        window.scrollTo({ top: targetTop, behavior: "smooth" });
-      } else {
-        try {
-          scrollToReportCardWithRetry();
-        } catch (e) {
-          /* ignore */
+    // Scroll the top of the students list into view (account for header height)
+    setTimeout(() => {
+      try {
+        const studentsHeader = document.getElementById("studentsListHeader");
+        if (studentsHeader) {
+          studentsHeader.scrollIntoView({ behavior: "smooth", block: "start" });
         }
+      } catch (e) {
+        /* ignore scroll errors */
       }
-    } catch (e) {
-      /* ignore scroll errors */
-    }
+    }, 100);
   } catch (error) {
     console.error("Error:", error);
     Swal.fire({
@@ -2899,6 +2894,12 @@ function showAllStudents() {
   const tbody = document.querySelector("#studentsTableBody");
   if (tbody) tbody.innerHTML = tbodyHtml;
 
+  // Reset header to default
+  const studentsHeader = document.getElementById("studentsListHeader");
+  if (studentsHeader) {
+    studentsHeader.textContent = "لیست دانشجویان";
+  }
+
   // Remove the initial info prompt (only show it until the first time names are loaded)
   const info = document.getElementById("studentsTableInfo");
   if (info)
@@ -2913,28 +2914,17 @@ function showAllStudents() {
   if (wrap && wrap.classList.contains("d-none"))
     wrap.classList.remove("d-none");
 
-  // Scroll the top of the students table into view (account for header height)
-  try {
-    if (wrap) {
-      const header = document.querySelector(".dashboard-header");
-      const headerHeight = header
-        ? Math.ceil(header.getBoundingClientRect().height)
-        : 0;
-      const rect = wrap.getBoundingClientRect();
-      const docTop =
-        window.pageYOffset || document.documentElement.scrollTop || 0;
-      const targetTop = Math.max(0, rect.top + docTop - headerHeight - 8);
-      window.scrollTo({ top: targetTop, behavior: "smooth" });
-    } else {
-      try {
-        scrollToReportCardWithRetry();
-      } catch (e) {
-        /* ignore */
+  // Scroll the top of the students list into view
+  setTimeout(() => {
+    try {
+      const studentsHeader = document.getElementById("studentsListHeader");
+      if (studentsHeader) {
+        studentsHeader.scrollIntoView({ behavior: "smooth", block: "start" });
       }
+    } catch (e) {
+      /* ignore scroll errors */
     }
-  } catch (e) {
-    /* ignore scroll errors */
-  }
+  }, 100);
 }
 
 // Add event listeners to upload buttons
@@ -3568,7 +3558,7 @@ async function showNextExamReport() {
     // Users should select a course (or click "همه دروس") to load the names.
     html += `
             <div>
-                <h5 class="text-primary mb-3">لیست دانشجویان</h5>
+                <h5 id="studentsListHeader" class="text-primary mb-3">لیست دانشجویان</h5>
                 <div id="studentsTableInfo" class="alert alert-info text-center" role="alert" style="margin-bottom:1rem;">
                     برای مشاهدهٔ اسامی، لطفاً یک درس را از لیست دروس انتخاب کنید یا روی «همه دروس» کلیک کنید.
                 </div>

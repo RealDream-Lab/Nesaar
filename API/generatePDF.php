@@ -1415,12 +1415,12 @@ function generateLocationLabels($pdo, $mpdf, $examDate, $examTime, $config)
         // Courses table
         $html .= '<table class="courses-table">';
         $html .= '<thead><tr>
-            <th style="width: 8%;">#</th>
-            <th style="width: 12%;">از شماره</th>
-            <th style="width: 12%;">تا شماره</th>
-            <th style="width: 10%;">تعداد</th>
-            <th style="width: 15%;">کد درس</th>
-            <th style="width: 43%;">نام درس</th>
+            <th style="width: 5%;">#</th>
+            <th style="width: 10%;">از شماره</th>
+            <th style="width: 10%;">تا شماره</th>
+            <th style="width: 7%;">تعداد</th>
+            <th style="width: 8%;">کد درس</th>
+            <th style="width: 60%;">نام درس</th>
         </tr></thead><tbody>';
 
         if (empty($sortedCourses)) {
