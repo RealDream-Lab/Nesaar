@@ -124,7 +124,7 @@ RUN rm -f /var/www/html/assets/app/app.js \
 COPY --from=builder /out/ /var/www/html/
 
 # Ensure Composer dependencies are installed
-RUN composer require openspout/openspout --no-interaction --prefer-dist || true \
+RUN composer require openspout/openspout:^5.0 --no-interaction --prefer-dist || true \
     && composer require mpdf/mpdf --no-interaction --prefer-dist || true \
     && composer require minishlink/web-push --no-interaction --prefer-dist || true
 
