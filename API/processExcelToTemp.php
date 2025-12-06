@@ -104,12 +104,10 @@ try {
     $rows = [];
     foreach ($reader->getSheetIterator() as $sheet) {
         foreach ($sheet->getRowIterator() as $row) {
-            $cells   = $row->getCells();
-            $rowData = [];
-            foreach ($cells as $cell) {
-                $rowData[] = $cell->getValue();
-            }
-            $rows[] = $rowData;
+            // In OpenSpout v4, Row is an object that contains cells, but getCells() might be deprecated or removed in favor of direct iteration or toArray()
+            // Let's try toArray() which is the standard way to get values in v4
+            $rowData = $row->toArray();
+            $rows[]  = $rowData;
         }
         break; // Only first sheet
     }
@@ -209,8 +207,9 @@ try {
     }
     $createSql .= implode(', ', $columnDefs) . ") ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci";
 
-    if (!$pdo->query($createSql)) {
-        throw new Exception('خطا در ایجاد جدول موقت: ' . $pdo->error);
+    if ($pdo->query($createSql) === false) {
+        $err = $pdo->errorInfo();
+        throw new Exception('خطا در ایجاد جدول موقت: ' . ($err[2] ?? 'Unknown error'));
     }
 
     // Prepare insert into target table

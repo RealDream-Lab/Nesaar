@@ -8,11 +8,11 @@ if (session_status() === PHP_SESSION_NONE) {
 ini_set('display_errors', '0');
 ini_set('log_errors', '1');
 ini_set('error_log', __DIR__ . '/../database/api_errors.log');
-set_error_handler(function($errno, $errstr, $errfile, $errline) {
+set_error_handler(function ($errno, $errstr, $errfile, $errline) {
     // Convert PHP warnings/notices to exceptions so they are handled uniformly
     throw new ErrorException($errstr, 0, $errno, $errfile, $errline);
 });
-set_exception_handler(function($e) {
+set_exception_handler(function ($e) {
     http_response_code(500);
     error_log((string)$e);
     header('Content-Type: application/json; charset=utf-8');
@@ -40,17 +40,18 @@ if ($__lic['valid'] !== true) {
         if (isset($pdo) && $pdo instanceof PDO) {
             $st = $pdo->prepare("SELECT ConfigValue FROM Config WHERE ConfigName = 'AllowImportOnInvalidLicense'");
             $st->execute();
-            $val = strtoupper(trim((string)($st->fetchColumn() ?? '')));
+            $val         = strtoupper(trim((string)($st->fetchColumn() ?? '')));
             $allowBypass = ($val === 'YES');
         }
-    } catch (Throwable $e) { /* ignore and deny bypass */ }
+    } catch (Throwable $e) { /* ignore and deny bypass */
+    }
     if (!$allowBypass) {
         license_guard_respond_forbidden($__lic['message'] ?? 'License validation failed');
     }
 }
 
 // Require authenticated admin session and rate limit validations
-$session = admin_session_require($pdo);
+$session      = admin_session_require($pdo);
 $rateLimitKey = 'validate_excel_header:' . ($session['username'] ?? 'unknown');
 // Allow higher rate for header validation during bulk imports (interactive tools may call this frequently)
 rate_limit_enforce($pdo, $rateLimitKey, 100, 120);
@@ -58,7 +59,7 @@ rate_limit_enforce($pdo, $rateLimitKey, 100, 120);
 $filename = $_POST['filename'] ?? '';
 $examType = $_POST['examType'] ?? '';
 
-if (empty($filename) || !in_array($examType, ['K','E'])) {
+if (empty($filename) || !in_array($examType, ['K', 'E'])) {
     http_response_code(400);
     echo json_encode(['error' => 'نام فایل یا نوع آزمون نامعتبر است']);
     exit;
@@ -82,12 +83,11 @@ try {
     }
     $reader->open($filePath);
     $headerRow = null;
-    $rowCount = 0;
+    $rowCount  = 0;
     foreach ($reader->getSheetIterator() as $sheet) {
         foreach ($sheet->getRowIterator() as $r) {
-            $cells = $r->getCells();
-            $rowData = [];
-            foreach ($cells as $c) $rowData[] = $c->getValue();
+            // OpenSpout v5 compatibility
+            $rowData = $r->toArray();
             if ($headerRow === null) {
                 $headerRow = $rowData;
             }
@@ -105,27 +105,45 @@ try {
 
     // Expected columns (must match server logic)
     $columns = [
-        'شماره دانشجويي', 'شماره شناسنامه', 'مرکز مبدا', 'مرکز مقصد', 'نام', 'نام خانوادگي', 'مدرک',
-        'کد درس', 'نام درس', 'تاريخ آزمون', 'ساعت آزمون', 'شماره صندلي', 'نوع آزمون', 'نوع درس',
-        'ساختمان', 'کلاس', 'ردیف'
+        'شماره دانشجويي',
+        'شماره شناسنامه',
+        'مرکز مبدا',
+        'مرکز مقصد',
+        'نام',
+        'نام خانوادگي',
+        'مدرک',
+        'کد درس',
+        'نام درس',
+        'تاريخ آزمون',
+        'ساعت آزمون',
+        'شماره صندلي',
+        'نوع آزمون',
+        'نوع درس',
+        'ساختمان',
+        'کلاس',
+        'ردیف'
     ];
 
-    $normalize = function($s) {
-        if ($s === null) return '';
+    $normalize = function ($s) {
+        if ($s === null)
+            return '';
         $s = trim((string)$s);
-        $s = str_replace(['ك','ي'], ['ک','ی'], $s);
+        $s = str_replace(['ك', 'ي'], ['ک', 'ی'], $s);
         $s = preg_replace('/\s+/u', ' ', $s);
         return mb_strtolower($s);
     };
 
     $expected = array_map($normalize, $columns);
-    $actual = array_map($normalize, $headerRow);
+    $actual   = array_map($normalize, $headerRow);
 
     // Check each expected exists in header
     foreach ($expected as $exp) {
         $found = false;
         foreach ($actual as $act) {
-            if ($exp === $act) { $found = true; break; }
+            if ($exp === $act) {
+                $found = true;
+                break;
+            }
         }
         if (!$found) {
             http_response_code(400);
