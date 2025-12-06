@@ -27,7 +27,6 @@ require_once __DIR__ . '/../vendor/autoload.php'; // For OpenSpout
 require_once __DIR__ . '/db_init.php';
 
 use OpenSpout\Reader\XLSX\Reader as XLSXReader;
-use OpenSpout\Reader\XLS\Reader as XLSReader;
 
 // Enforce CSRF first (cheap)
 csrf_enforce();
@@ -94,10 +93,8 @@ try {
     // Create reader based on file type
     if ($fileExtension === 'xlsx') {
         $reader = new XLSXReader();
-    } elseif ($fileExtension === 'xls') {
-        $reader = new XLSReader();
     } else {
-        throw new Exception('Unsupported file type');
+        throw new Exception('فقط فایل‌های با پسوند xlsx پشتیبانی می‌شوند');
     }
     $reader->open($filePath);
 
