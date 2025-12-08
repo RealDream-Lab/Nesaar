@@ -1768,7 +1768,7 @@ function generateProctorNotices($pdo, $mpdf, $config)
 }
 
 /**
- * Generate Attendance Sheet Report (صورتجلسه حضور و غیاب)
+ * Generate Attendance Sheet Report (فهرست حضور و غیاب)
  * Two-column layout with student photos, names, exam details
  * Based on official PNU attendance sheet format
  */

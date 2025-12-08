@@ -4188,7 +4188,7 @@ async function examEssentialsHandler() {
       </button>
       
       <button id="essentialsAttendanceBtn" class="btn btn-primary w-100" style="padding:12px;font-size:1rem;font-weight:600;" onclick="try{ startEssentialsPrint('attendance'); }catch(e){ console.error(e); }">
-        صورتجلسه حضور و غیاب
+        فهرست حضور و غیاب
       </button>
       <button id="essentialsPrintSeatBtn" class="btn btn-primary w-100" style="padding:12px;font-size:1rem;font-weight:600;" onclick="try{ startEssentialsPrint('seat'); }catch(e){ console.error(e); }">
         شماره‌ صندلی‌آزمون
@@ -4341,7 +4341,7 @@ async function printAttendanceSheet() {
       const url = `../API/generatePDF.php?report_type=attendance_sheet&exam_date=${encodeURIComponent(
         examDate
       )}&exam_time=${encodeURIComponent(examTime)}&_t=${new Date().getTime()}`;
-      showReportModal(url, "صورتجلسه حضور و غیاب");
+      showReportModal(url, "فهرست حضور و غیاب");
     } else {
       Swal.fire({
         icon: "error",
