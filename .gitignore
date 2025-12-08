@@ -31,3 +31,9 @@ backup/
 !/temp/**/
 # Un-ignore .gitkeep files so they can be tracked
 !/temp/**/.gitkeep
+
+# --- PIC DIRECTORY (Student Photos) ---
+# Ignore all student photos but keep directory structure
+/pic/**
+!/pic/
+!/pic/.gitkeep

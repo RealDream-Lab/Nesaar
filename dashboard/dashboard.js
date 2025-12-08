@@ -250,32 +250,107 @@ function safePrintWindow_OLD(win) {
 function showReportModal(url, title) {
   const rptDownload =
     window.appConfig && window.appConfig.rptDownload === "YES";
+
+  // Helper function to create spinner HTML with counter - counter is OUTSIDE spinning element
+  const createSpinnerHtml = () => `
+    <div class="swal2-spinner-wrapper">
+      <div class="swal2-loading-spinner"></div>
+      <span id="loadingCounter">000</span>
+    </div>
+    <p style="margin-top: 15px;">لطفاً صبر کنید</p>`;
+
+  // Helper function to start counter
+  const startCounter = () => {
+    let seconds = 0;
+    return setInterval(() => {
+      seconds++;
+      const counterEl = document.getElementById("loadingCounter");
+      if (counterEl) {
+        counterEl.textContent = String(seconds).padStart(3, "0");
+      }
+    }, 1000);
+  };
+
   if (rptDownload) {
-    window.open(url, "_blank");
-    // If we opened a new tab, we might want to reopen the menu immediately or not at all.
-    // Since the modal didn't open, the previous modal (essentials menu) is already closed by the button click?
-    // Actually, the button click in examEssentialsHandler doesn't close the modal automatically unless we do it.
-    // But startEssentialsPrint is called, which calls printX, which calls showReportModal.
-    // If showReportModal opens a new Swal, the old one closes.
-    // If we open a new tab, we don't open a new Swal, so the old one might stay open?
-    // No, SweetAlert usually stays open unless closed.
-    // But if we want to be safe, we can check if we need to reopen it.
-    // However, the user specifically asked about "when the report modal is closed".
-    // So this applies to the iframe modal case.
-    reopenEssentialsMenuIfRequested();
-  } else {
+    // Show loading for download mode
+    let counterInterval;
     Swal.fire({
-      title: title || "پیش‌نمایش گزارش",
-      html: `<iframe src="${url}" style="width:100%; height:85vh; border:none;"></iframe>`,
-      width: "95%",
-      padding: "0",
-      showCloseButton: true,
+      title: "در حال آماده‌سازی گزارش...",
+      html: createSpinnerHtml(),
+      allowOutsideClick: false,
       showConfirmButton: false,
       customClass: {
         popup: "swal2-rtl swal2-glass",
       },
-      didClose: () => {
-        reopenEssentialsMenuIfRequested();
+      didOpen: () => {
+        counterInterval = startCounter();
+        // Open download after a brief delay
+        setTimeout(() => {
+          clearInterval(counterInterval);
+          window.open(url, "_blank");
+          Swal.close();
+          reopenEssentialsMenuIfRequested();
+        }, 500);
+      },
+      willClose: () => {
+        if (counterInterval) clearInterval(counterInterval);
+      },
+    });
+  } else {
+    // Show loading spinner first, then load iframe
+    let counterInterval;
+    Swal.fire({
+      title: "در حال آماده‌سازی گزارش...",
+      html: createSpinnerHtml(),
+      allowOutsideClick: false,
+      showConfirmButton: false,
+      customClass: {
+        popup: "swal2-rtl swal2-glass",
+      },
+      didOpen: () => {
+        counterInterval = startCounter();
+        // Create iframe and wait for it to load
+        const iframe = document.createElement("iframe");
+        iframe.src = url;
+        iframe.style.cssText =
+          "width:100%; height:85vh; border:none; display:none;";
+        iframe.onload = () => {
+          clearInterval(counterInterval);
+          // Show the actual report modal
+          Swal.fire({
+            title: title || "پیش‌نمایش گزارش",
+            html: `<iframe src="${url}" style="width:100%; height:85vh; border:none;"></iframe>`,
+            width: "95%",
+            padding: "0",
+            showCloseButton: true,
+            showConfirmButton: false,
+            customClass: {
+              popup: "swal2-rtl swal2-glass",
+            },
+            didClose: () => {
+              reopenEssentialsMenuIfRequested();
+            },
+          });
+        };
+        iframe.onerror = () => {
+          clearInterval(counterInterval);
+          Swal.fire({
+            icon: "error",
+            title: "خطا",
+            text: "خطا در بارگذاری گزارش",
+            customClass: { popup: "swal2-rtl" },
+          });
+        };
+        document.body.appendChild(iframe);
+        // Cleanup hidden iframe after use
+        setTimeout(() => {
+          if (iframe.parentNode) {
+            iframe.parentNode.removeChild(iframe);
+          }
+        }, 60000);
+      },
+      willClose: () => {
+        if (counterInterval) clearInterval(counterInterval);
       },
     });
   }
@@ -4111,6 +4186,10 @@ async function examEssentialsHandler() {
       <button id="essentialsPrintSessionBtn" class="btn btn-primary w-100" style="padding:12px;font-size:1rem;font-weight:600;" onclick="try{ startEssentialsPrint('session'); }catch(e){ console.error(e); }">
         صورتجلسه آزمون
       </button>
+      
+      <button id="essentialsAttendanceBtn" class="btn btn-primary w-100" style="padding:12px;font-size:1rem;font-weight:600;" onclick="try{ startEssentialsPrint('attendance'); }catch(e){ console.error(e); }">
+        صورتجلسه حضور و غیاب
+      </button>
       <button id="essentialsPrintSeatBtn" class="btn btn-primary w-100" style="padding:12px;font-size:1rem;font-weight:600;" onclick="try{ startEssentialsPrint('seat'); }catch(e){ console.error(e); }">
         شماره‌ صندلی‌آزمون
       </button>
@@ -4157,6 +4236,7 @@ function startEssentialsPrint(kind) {
       else if (kind === "secretary") printEssentialsSecretary();
       else if (kind === "proctorNotice") printProctorNotices();
       else if (kind === "reproduction") printEssentialsReproduction();
+      else if (kind === "attendance") printAttendanceSheet();
       else if (kind === "descriptive") printEssentialsDescriptive();
       else if (kind === "locationLabels") printLocationLabels();
       else if (kind === "test") printEssentialsTest();
@@ -4231,6 +4311,37 @@ async function printEssentialsReproduction() {
         examDate
       )}&exam_time=${encodeURIComponent(examTime)}&_t=${new Date().getTime()}`;
       showReportModal(url, reportTitle);
+    } else {
+      Swal.fire({
+        icon: "error",
+        title: "خطا",
+        text: "اطلاعات آزمون یافت نشد",
+        confirmButtonText: "باشه",
+        customClass: {
+          popup: "swal2-rtl swal2-glass",
+          confirmButton: "btn btn-primary",
+        },
+      });
+    }
+  } catch (e) {
+    console.error(e);
+  }
+}
+
+async function printAttendanceSheet() {
+  try {
+    const context = window._lastExamContext || null;
+    let examDate = context?.exam_date;
+    let examTime = context?.exam_time;
+
+    if (examDate && examTime) {
+      examDate = toEnglishDigits(String(examDate)).replace(/-/g, "/");
+      examTime = toEnglishDigits(String(examTime));
+
+      const url = `../API/generatePDF.php?report_type=attendance_sheet&exam_date=${encodeURIComponent(
+        examDate
+      )}&exam_time=${encodeURIComponent(examTime)}&_t=${new Date().getTime()}`;
+      showReportModal(url, "صورتجلسه حضور و غیاب");
     } else {
       Swal.fire({
         icon: "error",

@@ -96,6 +96,11 @@ $bodyClass = $wavesAnimationDisabled ? 'class="no-waves-animation"' : '';
                             <img src="/assets/app/recipient.png" alt="کاربر Recipient"
                                 style="width:40px;height:40px;object-fit:contain;display:block;">
                         </button>
+                        <button id="upload" class="btn btn-icon p-0" type="button" title="آپلود عکس دانشجویان"
+                            style="background:transparent;border:none;margin-inline-end:8px;padding:0;">
+                            <img src="/dashboard/upload.png" alt="آپلود عکس دانشجویان"
+                                style="width:40px;height:40px;object-fit:contain;display:block;">
+                        </button>
                         <button id="editRolesBtn" class="btn btn-icon p-0" type="button"
                             title="پیکربندی و ویرایش نقش‌ها"
                             style="background:transparent;border:none;margin-inline-end:8px;padding:0;">

@@ -102,6 +102,8 @@ if ($reportType === 'session') {
     generateDescriptiveLabels($pdo, $mpdf, $examDate, $examTime, $config);
 } elseif ($reportType === 'proctor_notice') {
     generateProctorNotices($pdo, $mpdf, $config);
+} elseif ($reportType === 'attendance_sheet') {
+    generateAttendanceSheet($pdo, $mpdf, $examDate, $examTime, $config);
 } else {
     die('Unknown report type');
 }
@@ -1764,3 +1766,364 @@ function generateProctorNotices($pdo, $mpdf, $config)
     $mpdf->Output($filename, $outputMode);
     exit;
 }
+
+/**
+ * Generate Attendance Sheet Report (صورتجلسه حضور و غیاب)
+ * Two-column layout with student photos, names, exam details
+ * Based on official PNU attendance sheet format
+ */
+function generateAttendanceSheet($pdo, $mpdf, $examDate, $examTime, $config)
+{
+    // Fetch SaadCode from config
+    $saadCode = isset($config['SaadCode']) ? trim($config['SaadCode']) : '';
+    if (empty($saadCode)) {
+        die('SaadCode not configured');
+    }
+
+    // Base picture directory
+    $picBaseDir = __DIR__ . '/../pic/' . $saadCode;
+
+    // Ensure picture directory exists
+    if (!is_dir($picBaseDir)) {
+        if (!@mkdir($picBaseDir, 0755, true)) {
+            error_log("Failed to create picture directory: {$picBaseDir}");
+        }
+    }
+
+    // Fetch university and center info from config
+    $university   = isset($config['University']) ? trim($config['University']) : 'دانشگاه پیام نور';
+    $centerName   = isset($config['CenterName']) ? trim($config['CenterName']) : '';
+    $provinceName = isset($config['ProvinceName']) ? trim($config['ProvinceName']) : '';
+
+    // Fetch names for signatures from config
+    // BossNickName = رئیس مرکز/دانشگاه, HeadOfEDU = رئیس آموزش, Chairman = مسئول امتحانات
+    $bossName          = isset($config['BossNickName']) ? trim($config['BossNickName']) : '';
+    $educationHeadName = isset($config['HeadOfEDU']) ? trim($config['HeadOfEDU']) : '';
+    $examHeadName      = isset($config['Chairman']) ? trim($config['Chairman']) : '';
+    $sessionHeadName   = ''; // مسئول جلسه - بدون اسم از پیش تعیین شده
+
+    // Convert exam date to Persian date
+    $dateParts = explode('/', toEnglishDigits($examDate));
+    if (count($dateParts) === 3) {
+        list($jy, $jm, $jd) = $dateParts;
+        $persianDateStr     = toPersianDigits($jy . '/' . $jm . '/' . $jd);
+    } else {
+        $persianDateStr = toPersianDigits($examDate);
+    }
+
+    // Logo path - use PNU logo
+    $logoPath   = __DIR__ . '/../assets/app/Pnulogo.png';
+    $logoExists = file_exists($logoPath);
+
+    // First, count total pages across all locations for global page numbering
+    $totalGlobalPages = 0;
+    $locationData     = [];
+
+    // Fetch all distinct locations (building + class_name combinations)
+    $stmt = $pdo->prepare("
+        SELECT DISTINCT es.building, es.class_name
+        FROM exam_seats es
+        JOIN courses c ON es.course_code = c.course_code
+        WHERE c.exam_date = ? AND c.exam_time = ?
+        ORDER BY es.building, es.class_name
+    ");
+    $stmt->execute([$examDate, $examTime]);
+    $locations = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+    if (empty($locations)) {
+        die('No exam data found for the specified date and time');
+    }
+
+    // Pre-calculate total pages for all locations
+    foreach ($locations as $location) {
+        $stmt = $pdo->prepare("
+            SELECT COUNT(*) as cnt
+            FROM exam_seats es
+            JOIN courses c ON es.course_code = c.course_code
+            WHERE c.exam_date = ? AND c.exam_time = ? AND es.building = ? AND es.class_name = ?
+        ");
+        $stmt->execute([$examDate, $examTime, $location['building'], $location['class_name']]);
+        $count             = $stmt->fetch(PDO::FETCH_ASSOC)['cnt'];
+        $pagesForLocation  = max(1, ceil($count / 18)); // 18 students per page
+        $totalGlobalPages += $pagesForLocation;
+        $locationData[]    = [
+            'building' => $location['building'],
+            'class_name' => $location['class_name'],
+            'pages' => $pagesForLocation
+        ];
+    }
+
+    $globalPageNumber = 0;
+
+    // Process each location (building + class)
+    foreach ($locations as $location) {
+        $building  = $location['building'];
+        $className = $location['class_name'];
+
+        // Fetch all students for this specific location
+        $stmt = $pdo->prepare("
+            SELECT 
+                es.student_id, 
+                s.first_name, 
+                s.last_name,
+                s.national_id,
+                es.seat_number,
+                es.class_name,
+                es.exam_type,
+                c.course_code,
+                c.course_name
+            FROM exam_seats es
+            JOIN students s ON es.student_id = s.student_id
+            JOIN courses c ON es.course_code = c.course_code
+            WHERE c.exam_date = ? AND c.exam_time = ? AND es.building = ? AND es.class_name = ?
+            ORDER BY es.seat_number ASC
+        ");
+        $stmt->execute([$examDate, $examTime, $building, $className]);
+        $students = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+        if (empty($students)) {
+            continue;
+        }
+
+        // Total students count for this location
+        $totalStudentsInLocation = count($students);
+
+        // Get exam types for this location
+        $examTypes = [];
+        foreach ($students as $stu) {
+            $type = $stu['exam_type'] ?? 'کتبی';
+            if (!in_array($type, $examTypes)) {
+                $examTypes[] = $type;
+            }
+        }
+        $examTypesStr = implode(' و ', $examTypes);
+
+        // 18 students per page (2 columns × 9 rows)
+        $pageSize              = 18;
+        $pages                 = array_chunk($students, $pageSize);
+        $totalPagesForLocation = count($pages);
+
+        foreach ($pages as $pageIndex => $pageStudents) {
+            $globalPageNumber++;
+
+            // Check if this is the last page of entire report
+            $isLastGlobalPage = ($globalPageNumber == $totalGlobalPages) ? true : false;
+
+            // For pages after the first, add new page
+            if ($globalPageNumber > 1) {
+                $mpdf->AddPage();
+            }
+
+            // Build footer for THIS page
+            $footerHtml = buildAttendanceFooter($globalPageNumber, $totalGlobalPages, $isLastGlobalPage, $bossName, $educationHeadName, $examHeadName);
+
+            $html = '
+            <style>
+                @page { 
+                    margin: 5mm 5mm 5mm 5mm;
+                }
+                body { font-family: vazir; font-size: 8pt; direction: rtl; margin: 0; padding: 0; }
+                
+                .page-wrapper { position: relative; min-height: 277mm; }
+                
+                .header-section { text-align: center; margin-bottom: 2mm; position: relative; }
+                .logo-float { position: absolute; left: 0; top: 0; width: 12mm; }
+                .university-name { font-weight: bold; font-size: 12pt; margin-bottom: 1mm; }
+                .exam-info { font-size: 9pt; }
+                .dynamic-value { font-weight: bold; }
+                
+                .students-table { width: 100%; border-collapse: collapse; border: 2px solid #000; }
+                .students-table > tbody > tr > td { border: 0; border-left: 2px solid #000; padding: 0; vertical-align: top; width: 50%; }
+                .students-table > tbody > tr > td:first-child { border-left: none; }
+                
+                .column-table { width: 100%; border-collapse: collapse; }
+                .column-table td { border: 1px solid #000; padding: 1mm; vertical-align: middle; font-size: 7.5pt; line-height: 1.3; height: 25mm; }
+                
+                .student-row { height: 25mm; }
+                .seat-col { width: 18%; text-align: center; vertical-align: middle; padding: 1mm !important; }
+                .seat-number { font-weight: bold; font-size: 14pt; margin-bottom: 1mm; }
+                
+                .info-col { width: 62%; font-size: 7.5pt; line-height: 1.4; vertical-align: middle; padding: 1.5mm !important; }
+                .exam-info-line { margin-bottom: 0.5mm; }
+                
+                .photo-col { width: 20%; text-align: center; vertical-align: middle; padding: 1mm !important; }
+                .photo-box { border: 1px solid #000; width: 16mm; height: 20mm; margin: 0 auto; overflow: hidden; background: #fff; }
+                .student-photo { width: 16mm; height: 20mm; }
+                .no-photo { width: 100%; height: 100%; background: #f9f9f9; line-height: 20mm; font-size: 6pt; color: #666; text-align: center; }
+                
+                .empty-row td { height: 25mm; border: none; }
+                
+                .footer-section { position: fixed; bottom: 0; left: 0; right: 0; }
+            </style>';
+
+            // Header section - logo floats, doesn't affect table width
+            $html .= '<div class="header-section">';
+            if ($logoExists) {
+                $html .= '<img class="logo-float" src="' . $logoPath . '" />';
+            }
+            $html .= '<div class="university-name">' . $university . '</div>';
+            $html .= '<div class="exam-info">فهرست حضور و غیاب آزمون‌های <span class="dynamic-value">' . toPersianDigits($examTime) . '</span> | <span class="dynamic-value">' . $persianDateStr . '</span> مستقر در <span class="dynamic-value">' . $building . '</span> | <span class="dynamic-value">' . $className . '</span></div>';
+            $html .= '</div>';
+
+            // Split students into 2 columns: first 9 go to right column, rest to left
+            $column1 = array_slice($pageStudents, 0, min(9, count($pageStudents)));
+            $column2 = array_slice($pageStudents, 9);
+
+            // Do NOT add empty rows - leave space empty at end
+
+            // Two-column table with thick border between columns
+            $html .= '<table class="students-table">';
+            $html .= '<tr>';
+
+            // Right column (first half of students)
+            $html .= '<td style="width: 50%; vertical-align: top;">';
+            $html .= '<table class="column-table">';
+            foreach ($column1 as $student) {
+                $html .= renderAttendanceStudentRow($student, $picBaseDir, $saadCode);
+            }
+            $html .= '</table>';
+            $html .= '</td>';
+
+            // Left column (second half of students)
+            $html .= '<td style="width: 50%; vertical-align: top;">';
+            $html .= '<table class="column-table">';
+            foreach ($column2 as $student) {
+                $html .= renderAttendanceStudentRow($student, $picBaseDir, $saadCode);
+            }
+            $html .= '</table>';
+            $html .= '</td>';
+
+            $html .= '</tr>';
+            $html .= '</table>';
+
+            // Footer embedded in HTML with position fixed
+            $html .= '<div class="footer-section">' . $footerHtml . '</div>';
+
+            $mpdf->WriteHTML($html);
+        }
+    }
+
+    $filename   = 'AttendanceSheet_' . date('Y-m-d_H-i-s') . '.pdf';
+    $outputMode = (isset($config['rptDownload']) && strtoupper($config['rptDownload']) === 'YES') ? 'D' : 'I';
+    $mpdf->Output($filename, $outputMode);
+    exit;
+}
+
+/**
+ * Build footer HTML for attendance sheet (without wrapper div for fixed positioning)
+ */
+function buildAttendanceFooter($pageNum, $totalPages, $isLastPage, $bossName, $educationHeadName, $examHeadName)
+{
+    $footerHtml = '<div style="font-family: vazir; direction: rtl; font-size: 8pt; width: 100%; border: 2px solid #000; padding: 2mm; background: #fff;">';
+
+    // Attendance counts - table layout
+    $footerHtml .= '<table style="width: 100%; border-collapse: collapse; margin-bottom: 2mm;">';
+    $footerHtml .= '<tr>';
+    $footerHtml .= '<td style="width: 50%; text-align: right; font-size: 8pt;">تعداد حاضرین ........ و غایبین ........ نفر</td>';
+    if ($isLastPage === true) {
+        $footerHtml .= '<td style="width: 50%; text-align: left; font-size: 8pt;">تعداد حاضرین کل ........ نفر و غایبین کل ........ نفر</td>';
+    } else {
+        $footerHtml .= '<td style="width: 50%;"></td>';
+    }
+    $footerHtml .= '</tr>';
+    $footerHtml .= '</table>';
+
+    // Signature boxes - 4 columns - TALLER boxes (22mm)
+    $footerHtml .= '<table style="width: 100%; border-collapse: collapse;">';
+    $footerHtml .= '<tr>';
+    $footerHtml .= '<td style="text-align: center; width: 25%; padding: 1mm;">';
+    $footerHtml .= '<div style="border: 1px solid #000; height: 22mm; margin-bottom: 1mm;"></div>';
+    $footerHtml .= '<div style="font-size: 7pt;">رئیس مرکز</div>';
+    $footerHtml .= '<div style="font-size: 7pt; font-weight: bold;">' . $bossName . '</div>';
+    $footerHtml .= '<br><br><br>';
+    $footerHtml .= '</td>';
+    $footerHtml .= '<td style="text-align: center; width: 25%; padding: 1mm;">';
+    $footerHtml .= '<div style="border: 1px solid #000; height: 22mm; margin-bottom: 1mm;"></div>';
+    $footerHtml .= '<div style="font-size: 7pt;">رئیس آموزش</div>';
+    $footerHtml .= '<div style="font-size: 7pt; font-weight: bold;">' . $educationHeadName . '</div>';
+    $footerHtml .= '<br><br><br>';
+    $footerHtml .= '</td>';
+    $footerHtml .= '<td style="text-align: center; width: 25%; padding: 1mm;">';
+    $footerHtml .= '<div style="border: 1px solid #000; height: 22mm; margin-bottom: 1mm;"></div>';
+    $footerHtml .= '<div style="font-size: 7pt;">مسئول امتحانات</div>';
+    $footerHtml .= '<div style="font-size: 7pt; font-weight: bold;">' . $examHeadName . '</div>';
+    $footerHtml .= '<br><br><br>';
+    $footerHtml .= '</td>';
+    $footerHtml .= '<td style="text-align: center; width: 25%; padding: 1mm;">';
+    $footerHtml .= '<div style="border: 1px solid #000; height: 22mm; margin-bottom: 1mm;"></div>';
+    $footerHtml .= '<div style="font-size: 7pt;">مراقب</div>';
+    $footerHtml .= '<div style="font-size: 7pt;">&nbsp;</div>';
+    $footerHtml .= '<br><br><br>';
+    $footerHtml .= '</td>';
+    $footerHtml .= '</tr>';
+    $footerHtml .= '</table>';
+
+    $footerHtml .= '</div>';
+    $footerHtml .= '<div style="font-family: vazir; text-align: left; font-size: 7pt; margin-top: 1mm;">صفحه ' . toPersianDigits($pageNum) . ' از ' . toPersianDigits($totalPages) . '</div>';
+
+    return $footerHtml;
+}
+
+/**
+ * Helper function to render a single student row in the attendance sheet
+ * Layout: Photo (left) | Info (middle) | Seat# & Name (right)
+ * In RTL, the order in HTML is reversed
+ */
+function renderAttendanceStudentRow($student, $picBaseDir, $saadCode)
+{
+    if ($student === null) {
+        // Empty row - no borders, just empty space
+        return '<tr class="empty-row"><td></td><td></td><td></td></tr>';
+    }
+
+    $studentId  = $student['student_id'];
+    $nationalId = $student['national_id'] ?? '';
+    $firstName  = $student['first_name'];
+    $lastName   = $student['last_name'];
+    $seatNum    = $student['seat_number'];
+    $courseCode = $student['course_code'];
+    $courseName = $student['course_name'];
+
+    $html = '<tr class="student-row">';
+
+    // Right cell: Seat number (big) + student ID + national ID below
+    $html .= '<td class="seat-col">';
+    $html .= '<div class="seat-number">' . toPersianDigits($seatNum) . '</div>';
+    $html .= '<div style="font-size: 6pt; margin-top: 1mm;">' . toPersianDigits($studentId) . '</div>';
+    $html .= '<div style="font-size: 6pt;">' . toPersianDigits($nationalId) . '</div>';
+    $html .= '</td>';
+
+    // Middle cell: Student name (centered, larger font) + Course info
+    $html .= '<td class="info-col">';
+    $html .= '<div style="text-align: center; font-size: 9pt; font-weight: bold; margin-bottom: 2mm;">' . $firstName . ' ' . $lastName . '</div>';
+    $html .= '<div class="exam-info-line">' . toPersianDigits($courseCode) . '</div>';
+    $html .= '<div class="exam-info-line">' . $courseName . '</div>';
+    $html .= '</td>';
+
+    // Left cell: Photo with border box
+    $html      .= '<td class="photo-col">';
+    $html      .= '<div class="photo-box">';
+    $photoPath  = $picBaseDir . '/' . $studentId . '.jpg';
+
+    // Check if file exists and has reasonable size (at least 100 bytes)
+    $showPhoto = false;
+    if (@file_exists($photoPath)) {
+        $fileSize = @filesize($photoPath);
+        if ($fileSize !== false && $fileSize > 100) {
+            $showPhoto = true;
+        }
+    }
+
+    if ($showPhoto) {
+        $html .= '<img class="student-photo" src="' . $photoPath . '" />';
+    } else {
+        $html .= '<div class="no-photo">بدون عکس</div>';
+    }
+    $html .= '</div>';
+    $html .= '</td>';
+
+    $html .= '</tr>';
+
+    return $html;
+}
+
