@@ -5204,7 +5204,8 @@ if (navigator.serviceWorker) {
 
       // Build table
       let tableHtml = `
-        <div style="max-height:400px;overflow-y:auto;direction:rtl;">
+        <style>.no-photo-list::-webkit-scrollbar{display:none;}</style>
+        <div class="no-photo-list" style="max-height:400px;overflow-y:auto;scrollbar-width:none;-ms-overflow-style:none;direction:rtl;">
           <table style="width:100%;border-collapse:collapse;font-size:14px;">
             <thead style="position:sticky;top:0;background:#1e293b;">
               <tr>
@@ -5255,6 +5256,310 @@ if (navigator.serviceWorker) {
         icon: "error",
         title: "خطا",
         text: e.message || "خطا در دریافت لیست دانشجویان",
+        confirmButtonText: "باشه",
+        customClass: {
+          popup: "swal2-rtl swal2-glass",
+          confirmButton: "btn btn-primary",
+        },
+      });
+    }
+  }
+})();
+
+// =====================================================
+// Photo Update Requests Notification Module
+// =====================================================
+(function initPhotoUpdateRequests() {
+  const photoRequestsBtn = document.getElementById("photoRequestsBtn");
+  const photoRequestsBadge = document.getElementById("photoRequestsBadge");
+
+  if (!photoRequestsBtn || !photoRequestsBadge) return;
+
+  let pendingRequests = [];
+
+  // Fetch pending requests count
+  async function fetchPendingRequests() {
+    try {
+      const response = await guardedFetch("../API/getPhotoUpdateRequests.php", {
+        cache: "no-store",
+      });
+      if (response.ok) {
+        const data = await response.json();
+        if (data.success) {
+          pendingRequests = data.requests || [];
+          updateBadge(data.count || 0);
+        }
+      }
+    } catch (e) {
+      console.warn("Failed to fetch photo update requests", e);
+    }
+  }
+
+  function updateBadge(count) {
+    if (count > 0) {
+      photoRequestsBadge.textContent = toPersianDigits(count);
+      photoRequestsBadge.style.display = "block";
+    } else {
+      photoRequestsBadge.style.display = "none";
+    }
+  }
+
+  // Initial fetch and periodic refresh
+  fetchPendingRequests();
+  setInterval(fetchPendingRequests, 30000); // Refresh every 30 seconds
+
+  // Click handler
+  photoRequestsBtn.addEventListener("click", async () => {
+    if (pendingRequests.length === 0) {
+      Swal.fire({
+        icon: "info",
+        title: "بدون درخواست",
+        text: "هیچ درخواست تغییر عکسی در انتظار بررسی نیست.",
+        confirmButtonText: "باشه",
+        customClass: {
+          popup: "swal2-rtl swal2-glass",
+          confirmButton: "btn btn-primary",
+        },
+      });
+      return;
+    }
+
+    // Show list of pending requests
+    showPhotoRequestsList();
+  });
+
+  async function showPhotoRequestsList() {
+    // Refresh the list first
+    await fetchPendingRequests();
+
+    if (pendingRequests.length === 0) {
+      Swal.fire({
+        icon: "success",
+        title: "همه درخواست‌ها بررسی شد",
+        text: "هیچ درخواستی در انتظار نیست.",
+        confirmButtonText: "عالی!",
+        customClass: {
+          popup: "swal2-rtl swal2-glass",
+          confirmButton: "btn btn-primary",
+        },
+      });
+      return;
+    }
+
+    let listHtml = `
+      <style>.photo-req-list::-webkit-scrollbar{display:none;}</style>
+      <div class="photo-req-list" style="max-height:400px;overflow-y:auto;scrollbar-width:none;-ms-overflow-style:none;direction:rtl;">
+        <table style="width:100%;border-collapse:collapse;font-size:14px;">
+          <thead style="position:sticky;top:0;background:#1e293b;">
+            <tr>
+              <th style="padding:10px;text-align:right;border-bottom:1px solid #475569;">دانشجو</th>
+              <th style="padding:10px;text-align:right;border-bottom:1px solid #475569;">تاریخ</th>
+              <th style="padding:10px;text-align:center;border-bottom:1px solid #475569;">عملیات</th>
+            </tr>
+          </thead>
+          <tbody>
+    `;
+
+    pendingRequests.forEach((req) => {
+      listHtml += `
+        <tr style="border-bottom:1px solid #334155;" data-request-id="${
+          req.id
+        }">
+          <td style="padding:8px;text-align:right;">
+            <div>${escapeHtml(req.first_name)} ${escapeHtml(
+        req.last_name
+      )}</div>
+            <div style="font-size:11px;color:#94a3b8;font-family:monospace;">${escapeHtml(
+              req.student_id
+            )}</div>
+          </td>
+          <td style="padding:8px;text-align:right;font-size:12px;">${escapeHtml(
+            req.created_at_formatted
+          )}</td>
+          <td style="padding:8px;text-align:center;">
+            <button class="btn btn-sm btn-primary review-photo-btn" data-request-id="${
+              req.id
+            }" style="padding:4px 12px;font-size:12px;">بررسی</button>
+          </td>
+        </tr>
+      `;
+    });
+
+    listHtml += `</tbody></table></div>`;
+
+    const result = await Swal.fire({
+      title: `درخواست‌های تغییر عکس (${toPersianDigits(
+        pendingRequests.length
+      )})`,
+      html: listHtml,
+      width: "600px",
+      showConfirmButton: true,
+      confirmButtonText: "بستن",
+      customClass: {
+        popup: "swal2-rtl swal2-glass",
+        confirmButton: "btn btn-primary",
+      },
+      didOpen: (popup) => {
+        const reviewBtns = popup.querySelectorAll(".review-photo-btn");
+        reviewBtns.forEach((btn) => {
+          btn.addEventListener("click", async (e) => {
+            e.preventDefault();
+            const requestId = parseInt(btn.getAttribute("data-request-id"), 10);
+            const request = pendingRequests.find((r) => r.id === requestId);
+            if (request) {
+              Swal.close();
+              await showPhotoReviewModal(request);
+            }
+          });
+        });
+      },
+    });
+  }
+
+  async function showPhotoReviewModal(request) {
+    const currentPhotoHtml = request.has_current_photo
+      ? `<img src="${escapeHtml(
+          request.current_photo_url
+        )}?t=${Date.now()}" style="max-width:180px;max-height:220px;border-radius:8px;border:2px solid #475569;" onerror="this.parentElement.innerHTML='<div style=\\'padding:40px;color:#94a3b8;\\'>خطا در بارگذاری</div>'">`
+      : `<div style="padding:40px 20px;color:#f87171;background:rgba(248,113,113,0.1);border-radius:8px;border:1px dashed #f87171;">فاقد عکس در آرشیو</div>`;
+
+    const modalHtml = `
+      <div style="text-align:right;direction:rtl;">
+        <div style="margin-bottom:15px;padding:10px;background:rgba(255,255,255,0.05);border-radius:8px;">
+          <strong>${escapeHtml(request.first_name)} ${escapeHtml(
+      request.last_name
+    )}</strong>
+          <span style="margin-right:10px;font-family:monospace;color:#94a3b8;">${escapeHtml(
+            request.student_id
+          )}</span>
+        </div>
+        
+        <div style="display:flex;gap:20px;justify-content:center;margin-bottom:20px;">
+          <div style="text-align:center;">
+            <div style="font-size:12px;color:#94a3b8;margin-bottom:8px;">عکس فعلی</div>
+            ${currentPhotoHtml}
+          </div>
+          <div style="text-align:center;">
+            <div style="font-size:12px;color:#94a3b8;margin-bottom:8px;">عکس جدید</div>
+            <img src="${escapeHtml(
+              request.new_photo_url
+            )}?t=${Date.now()}" style="max-width:180px;max-height:220px;border-radius:8px;border:2px solid #4ade80;" onerror="this.parentElement.innerHTML='<div style=\\'padding:40px;color:#94a3b8;\\'>خطا در بارگذاری</div>'">
+          </div>
+        </div>
+        
+        <div style="margin-bottom:15px;padding:10px;background:rgba(251,191,36,0.1);border-radius:8px;border:1px solid rgba(251,191,36,0.3);">
+          <label style="display:flex;align-items:center;gap:10px;cursor:pointer;">
+            <input type="checkbox" id="faceVerifiedCheckbox" style="width:18px;height:18px;">
+            <span style="color:#fbbf24;">چهره دانشجو به صورت حضوری رؤیت شد</span>
+          </label>
+        </div>
+      </div>
+    `;
+
+    const result = await Swal.fire({
+      title: "بررسی درخواست تغییر عکس",
+      html: modalHtml,
+      width: "650px",
+      showCancelButton: true,
+      showDenyButton: true,
+      confirmButtonText: "✓ تایید و جایگزینی",
+      denyButtonText: "✗ رد درخواست",
+      cancelButtonText: "انصراف",
+      reverseButtons: true,
+      customClass: {
+        popup: "swal2-rtl swal2-glass",
+        actions: "swal2-actions-inline",
+        confirmButton: "btn btn-success mx-1",
+        denyButton: "btn btn-cancel mx-1",
+        cancelButton: "btn btn-cancel mx-1",
+      },
+      buttonsStyling: false,
+      didOpen: (popup) => {
+        const confirmBtn = Swal.getConfirmButton();
+        const checkbox = popup.querySelector("#faceVerifiedCheckbox");
+
+        // Initially disable confirm button
+        confirmBtn.disabled = true;
+        confirmBtn.style.opacity = "0.5";
+
+        checkbox.addEventListener("change", () => {
+          confirmBtn.disabled = !checkbox.checked;
+          confirmBtn.style.opacity = checkbox.checked ? "1" : "0.5";
+        });
+      },
+      preConfirm: () => {
+        const checkbox = Swal.getPopup().querySelector("#faceVerifiedCheckbox");
+        if (!checkbox.checked) {
+          Swal.showValidationMessage("ابتدا تیک رؤیت حضوری را بزنید");
+          return false;
+        }
+        return true;
+      },
+    });
+
+    if (result.isConfirmed) {
+      await processPhotoRequest(request.id, "approve");
+    } else if (result.isDenied) {
+      await processPhotoRequest(request.id, "reject");
+    } else {
+      // User cancelled, go back to list
+      showPhotoRequestsList();
+    }
+  }
+
+  async function processPhotoRequest(requestId, action) {
+    Swal.fire({
+      title: "در حال پردازش...",
+      html: "لطفاً صبر کنید",
+      allowOutsideClick: false,
+      showConfirmButton: false,
+      customClass: { popup: "swal2-rtl swal2-glass" },
+      didOpen: () => Swal.showLoading(),
+    });
+
+    try {
+      const csrfToken = document.querySelector(
+        'meta[name="csrf-token"]'
+      )?.content;
+      const response = await guardedFetch(
+        "../API/reviewPhotoUpdateRequest.php",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "X-CSRF-Token": csrfToken || "",
+          },
+          body: JSON.stringify({ request_id: requestId, action: action }),
+        }
+      );
+
+      const data = await response.json();
+
+      if (data.success) {
+        await fetchPendingRequests(); // Refresh the list
+
+        Swal.fire({
+          icon: "success",
+          title: action === "approve" ? "تایید شد" : "رد شد",
+          text: data.message,
+          confirmButtonText: "ادامه",
+          customClass: {
+            popup: "swal2-rtl swal2-glass",
+            confirmButton: "btn btn-primary",
+          },
+        }).then(() => {
+          if (pendingRequests.length > 0) {
+            showPhotoRequestsList();
+          }
+        });
+      } else {
+        throw new Error(data.error || "خطا در پردازش درخواست");
+      }
+    } catch (e) {
+      Swal.fire({
+        icon: "error",
+        title: "خطا",
+        text: e.message || "خطا در پردازش درخواست",
         confirmButtonText: "باشه",
         customClass: {
           popup: "swal2-rtl swal2-glass",

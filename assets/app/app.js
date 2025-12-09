@@ -1800,9 +1800,16 @@ document.addEventListener("DOMContentLoaded", () => {
                             : ""
                         }
                     </div>
-                    <button type="button" class="session-logout-btn">
-                        <span class="session-logout-text">خروج</span>
-                    </button>
+                    <div class="session-actions">
+                        <button type="button" class="session-photo-btn" data-student-id="${escapeHtml(
+                          resolvedStudentId
+                        )}" title="آپلود/تغییر عکس">
+                            📷
+                        </button>
+                        <button type="button" class="session-logout-btn">
+                            <span class="session-logout-text">خروج</span>
+                        </button>
+                    </div>
                 </div>
             `);
     }
@@ -1860,6 +1867,17 @@ document.addEventListener("DOMContentLoaded", () => {
 
     examCards.innerHTML = htmlParts.join("");
     lastPayload = safeExams.slice();
+
+    // Photo upload button handler
+    const photoBtn = examCards.querySelector(".session-photo-btn");
+    if (photoBtn) {
+      photoBtn.addEventListener("click", async (event) => {
+        event.preventDefault();
+        event.stopPropagation();
+        const studentId = photoBtn.getAttribute("data-student-id");
+        await showStudentPhotoUploadModal(studentId);
+      });
+    }
 
     const logoutBtn = examCards.querySelector(".session-logout-btn");
     if (logoutBtn) {
@@ -2936,6 +2954,189 @@ document.addEventListener("DOMContentLoaded", () => {
       }
     } catch (error) {
       console.error("[Push] Error:", error);
+    }
+  }
+
+  // Student Photo Upload Modal
+  async function showStudentPhotoUploadModal(studentId) {
+    if (!studentId || !currentCredentials) {
+      Swal.fire({
+        icon: "error",
+        title: "خطا",
+        text: "اطلاعات دانشجو یافت نشد",
+        confirmButtonText: "باشه",
+        customClass: {
+          popup: "swal2-rtl swal2-glass",
+          confirmButton: "btn btn-primary",
+        },
+      });
+      return;
+    }
+
+    const modalHtml = `
+      <div style="text-align:justify;direction:rtl;">
+        <p style="margin-bottom:15px;color:#94a3b8;font-size:14px;">
+          با آپلود عکس جدید، درخواست شما برای بررسی به مدیر ارسال می‌شود و پس از تایید، عکس شما به‌روزرسانی خواهد شد.
+        </p>
+        <div id="photoPreviewContainer" style="text-align:center;margin-bottom:15px;display:none;">
+          <img id="photoPreview" style="max-width:200px;max-height:200px;border-radius:12px;border:2px solid #475569;" />
+        </div>
+        <div class="photo-upload-dropzone" id="studentPhotoDropzone" style="border:2px dashed #475569;border-radius:12px;padding:30px 20px;text-align:center;cursor:pointer;transition:all 0.3s;">
+          <div style="font-size:40px;margin-bottom:10px;">📷</div>
+          <p style="margin:0;color:#94a3b8;">عکس خود را انتخاب کنید</p>
+          <p style="margin:5px 0 0;font-size:11px;color:#64748b;">فرمت JPG - حداکثر ۵۱۲ کیلوبایت</p>
+          <input type="file" id="studentPhotoInput" accept=".jpg,.jpeg" style="display:none;">
+        </div>
+      </div>
+    `;
+
+    let selectedFile = null;
+
+    const result = await Swal.fire({
+      title: "آپلود عکس پروفایل",
+      html: modalHtml,
+      showCancelButton: true,
+      confirmButtonText: "ثبت",
+      cancelButtonText: "لغو",
+      reverseButtons: true,
+      customClass: {
+        popup: "swal2-rtl swal2-glass",
+        confirmButton: "btn btn-primary mx-2",
+        cancelButton: "btn btn-cancel mx-2",
+      },
+      buttonsStyling: false,
+      preConfirm: () => {
+        if (!selectedFile) {
+          Swal.showValidationMessage("لطفاً یک عکس انتخاب کنید");
+          return false;
+        }
+        return true;
+      },
+      didOpen: (popup) => {
+        const dropzone = popup.querySelector("#studentPhotoDropzone");
+        const fileInput = popup.querySelector("#studentPhotoInput");
+        const previewContainer = popup.querySelector("#photoPreviewContainer");
+        const previewImg = popup.querySelector("#photoPreview");
+
+        const handleFile = (file) => {
+          if (!file) return;
+
+          const ext = file.name.split(".").pop().toLowerCase();
+          if (!["jpg", "jpeg"].includes(ext)) {
+            Swal.showValidationMessage("فرمت فایل باید JPG باشد");
+            return;
+          }
+
+          if (file.size > 512 * 1024) {
+            Swal.showValidationMessage(
+              "حجم فایل نباید بیش از ۵۱۲ کیلوبایت باشد"
+            );
+            return;
+          }
+
+          selectedFile = file;
+
+          // Show preview
+          const reader = new FileReader();
+          reader.onload = (e) => {
+            previewImg.src = e.target.result;
+            previewContainer.style.display = "block";
+            dropzone.style.display = "none";
+          };
+          reader.readAsDataURL(file);
+        };
+
+        dropzone.addEventListener("click", () => fileInput.click());
+
+        dropzone.addEventListener("dragover", (e) => {
+          e.preventDefault();
+          dropzone.style.borderColor = "#3b82f6";
+          dropzone.style.background = "rgba(59,130,246,0.1)";
+        });
+
+        dropzone.addEventListener("dragleave", (e) => {
+          e.preventDefault();
+          dropzone.style.borderColor = "#475569";
+          dropzone.style.background = "transparent";
+        });
+
+        dropzone.addEventListener("drop", (e) => {
+          e.preventDefault();
+          dropzone.style.borderColor = "#475569";
+          dropzone.style.background = "transparent";
+          if (e.dataTransfer.files.length > 0) {
+            handleFile(e.dataTransfer.files[0]);
+          }
+        });
+
+        fileInput.addEventListener("change", () => {
+          if (fileInput.files.length > 0) {
+            handleFile(fileInput.files[0]);
+          }
+        });
+
+        // Allow clicking preview to change photo
+        previewContainer.addEventListener("click", () => {
+          previewContainer.style.display = "none";
+          dropzone.style.display = "block";
+          selectedFile = null;
+          fileInput.click();
+        });
+      },
+    });
+
+    if (!result.isConfirmed || !selectedFile) return;
+
+    // Show loading
+    Swal.fire({
+      title: "در حال ارسال...",
+      html: "لطفاً صبر کنید",
+      allowOutsideClick: false,
+      showConfirmButton: false,
+      customClass: { popup: "swal2-rtl swal2-glass" },
+      didOpen: () => Swal.showLoading(),
+    });
+
+    try {
+      const formData = new FormData();
+      formData.append("photo", selectedFile);
+      formData.append("student_id", studentId);
+      formData.append("national_id", currentCredentials.nationalId);
+
+      const response = await secureFetch("API/studentPhotoUpdateRequest.php", {
+        method: "POST",
+        body: formData,
+      });
+
+      const data = await response.json();
+
+      if (data.success) {
+        Swal.fire({
+          icon: "success",
+          title: "درخواست ثبت شد",
+          text:
+            data.message ||
+            "درخواست شما ثبت شد و پس از تایید مدیر اعمال خواهد شد.",
+          confirmButtonText: "باشه",
+          customClass: {
+            popup: "swal2-rtl swal2-glass",
+            confirmButton: "btn btn-primary",
+          },
+        });
+      } else {
+        throw new Error(data.error || "خطا در ثبت درخواست");
+      }
+    } catch (error) {
+      Swal.fire({
+        icon: "error",
+        title: "خطا",
+        text: error.message || "خطا در ارسال درخواست",
+        confirmButtonText: "باشه",
+        customClass: {
+          popup: "swal2-rtl swal2-glass",
+          confirmButton: "btn btn-primary",
+        },
+      });
     }
   }
 });

@@ -1638,6 +1638,41 @@ body.login-active #loginRow {
   pointer-events: none;
 }
 
+.session-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.session-photo-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 42px;
+  height: 42px;
+  border: 1px solid rgba(255, 255, 255, 0.28);
+  border-radius: 50%;
+  background: linear-gradient(
+    135deg,
+    rgba(59, 130, 246, 0.3),
+    rgba(59, 130, 246, 0.1)
+  );
+  font-size: 1.2rem;
+  cursor: pointer;
+  transition: transform 0.18s ease, box-shadow 0.18s ease, background 0.18s ease;
+}
+
+.session-photo-btn:hover,
+.session-photo-btn:focus {
+  background: linear-gradient(
+    135deg,
+    rgba(59, 130, 246, 0.5),
+    rgba(59, 130, 246, 0.2)
+  );
+  transform: scale(1.1);
+  box-shadow: 0 8px 24px rgba(59, 130, 246, 0.3);
+}
+
 .session-card .session-logout-btn:focus-visible {
   outline: 2px solid rgba(123, 213, 255, 0.9);
   outline-offset: 3px;

@@ -101,6 +101,15 @@ $bodyClass = $wavesAnimationDisabled ? 'class="no-waves-animation"' : '';
                             <img src="/dashboard/upload.png" alt="آپلود عکس دانشجویان"
                                 style="width:40px;height:40px;object-fit:contain;display:block;">
                         </button>
+                        <!-- Photo Update Requests Notification Bell -->
+                        <button id="photoRequestsBtn" class="btn btn-icon p-0" type="button"
+                            title="درخواست‌های تغییر عکس"
+                            style="background:transparent;border:none;margin-inline-end:8px;padding:0;position:relative;">
+                            <img src="/dashboard/bell.png" alt="درخواست‌های تغییر عکس"
+                                style="width:40px;height:40px;object-fit:contain;display:block;padding-top: 3px;padding-bottom: 3px;">
+                            <span id="photoRequestsBadge" class="notification-badge"
+                                style="display:none;position:absolute;top:-5px;right:-5px;background:#ef4444;color:white;font-size:11px;font-weight:bold;padding:2px 6px;border-radius:10px;min-width:18px;text-align:center;"></span>
+                        </button>
                         <button id="editRolesBtn" class="btn btn-icon p-0" type="button"
                             title="پیکربندی و ویرایش نقش‌ها"
                             style="background:transparent;border:none;margin-inline-end:8px;padding:0;">
