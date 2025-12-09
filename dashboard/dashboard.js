@@ -4880,3 +4880,387 @@ if (navigator.serviceWorker) {
     }
   });
 }
+
+// =====================================================
+// Student Photo Upload Module
+// =====================================================
+(function initStudentPhotoUpload() {
+  const uploadBtn = document.getElementById("upload");
+  if (!uploadBtn) return;
+
+  uploadBtn.addEventListener("click", openPhotoUploadModal);
+
+  async function getStudentsWithoutPhoto() {
+    try {
+      const response = await guardedFetch(
+        "../API/getStudentsWithoutPhoto.php",
+        {
+          cache: "no-store",
+        }
+      );
+      if (response.ok) {
+        return await response.json();
+      }
+    } catch (e) {
+      console.warn("Failed to fetch students without photo", e);
+    }
+    return null;
+  }
+
+  async function openPhotoUploadModal() {
+    // First fetch current status
+    const status = await getStudentsWithoutPhoto();
+    const withoutPhoto = status?.withoutPhoto ?? "---";
+    const totalStudents = status?.totalStudents ?? "---";
+
+    const modalHtml = `
+      <div class="photo-upload-container" style="text-align:right;direction:rtl;">
+        <div class="photo-upload-stats" style="display:flex;gap:20px;margin-bottom:20px;justify-content:center;">
+          <div class="stat-box-mini" style="background:rgba(255,255,255,0.1);padding:15px 25px;border-radius:12px;text-align:center;">
+            <div style="font-size:24px;font-weight:bold;color:#4ade80;">${toPersianDigits(
+              totalStudents
+            )}</div>
+            <div style="font-size:12px;color:#94a3b8;">کل دانشجویان</div>
+          </div>
+          <div class="stat-box-mini" id="withoutPhotoStat" style="background:rgba(255,255,255,0.1);padding:15px 25px;border-radius:12px;text-align:center;cursor:pointer;" title="کلیک برای مشاهده لیست">
+            <div style="font-size:24px;font-weight:bold;color:#f87171;" id="withoutPhotoCount">${toPersianDigits(
+              withoutPhoto
+            )}</div>
+            <div style="font-size:12px;color:#94a3b8;">بدون عکس</div>
+          </div>
+        </div>
+        
+        <div class="photo-upload-dropzone" id="photoDropzone" style="border:2px dashed #475569;border-radius:12px;padding:40px 20px;text-align:center;cursor:pointer;transition:all 0.3s;margin-bottom:20px;">
+          <div style="font-size:48px;margin-bottom:10px;">📸</div>
+          <p style="margin:0;color:#94a3b8;">فایل‌های JPG را اینجا رها کنید یا کلیک کنید</p>
+          <p style="margin:5px 0 0;font-size:12px;color:#64748b;">نام فایل باید ۹ رقم انگلیسی باشد (شماره دانشجویی)</p>
+          <input type="file" id="photoFileInput" multiple accept=".jpg,.jpeg" style="display:none;">
+        </div>
+        
+        <div id="uploadProgressSection" style="display:none;">
+          <div style="display:flex;justify-content:space-between;margin-bottom:8px;">
+            <span id="uploadProgressText">در حال آپلود...</span>
+            <span id="uploadProgressPercent">۰٪</span>
+          </div>
+          <div style="background:#1e293b;border-radius:8px;height:12px;overflow:hidden;">
+            <div id="uploadProgressBar" style="background:linear-gradient(90deg,#3b82f6,#60a5fa);height:100%;width:0%;transition:width 0.3s;"></div>
+          </div>
+          <div style="margin-top:8px;text-align:center;">
+            <span id="uploadCountText">۰ از ۰</span>
+          </div>
+        </div>
+        
+        <div id="uploadResultSection" style="display:none;margin-top:20px;padding:15px;background:rgba(74,222,128,0.1);border-radius:12px;border:1px solid rgba(74,222,128,0.3);">
+          <div style="display:flex;justify-content:space-around;text-align:center;">
+            <div>
+              <div style="font-size:20px;font-weight:bold;color:#4ade80;" id="uploadedCount">۰</div>
+              <div style="font-size:12px;color:#94a3b8;">آپلود شده</div>
+            </div>
+            <div>
+              <div style="font-size:20px;font-weight:bold;color:#f87171;" id="failedCount">۰</div>
+              <div style="font-size:12px;color:#94a3b8;">ناموفق</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    `;
+
+    const result = await Swal.fire({
+      title: "آپلود عکس دانشجویان",
+      html: modalHtml,
+      showConfirmButton: false,
+      showCloseButton: true,
+      width: "500px",
+      customClass: {
+        popup: "swal2-rtl swal2-glass",
+      },
+      didOpen: (popup) => {
+        const dropzone = popup.querySelector("#photoDropzone");
+        const fileInput = popup.querySelector("#photoFileInput");
+        const withoutPhotoStat = popup.querySelector("#withoutPhotoStat");
+
+        // Click on dropzone opens file picker
+        dropzone.addEventListener("click", () => fileInput.click());
+
+        // Drag and drop
+        dropzone.addEventListener("dragover", (e) => {
+          e.preventDefault();
+          dropzone.style.borderColor = "#3b82f6";
+          dropzone.style.background = "rgba(59,130,246,0.1)";
+        });
+
+        dropzone.addEventListener("dragleave", (e) => {
+          e.preventDefault();
+          dropzone.style.borderColor = "#475569";
+          dropzone.style.background = "transparent";
+        });
+
+        dropzone.addEventListener("drop", (e) => {
+          e.preventDefault();
+          dropzone.style.borderColor = "#475569";
+          dropzone.style.background = "transparent";
+          const files = e.dataTransfer.files;
+          if (files.length > 0) {
+            handleFiles(files, popup);
+          }
+        });
+
+        // File input change
+        fileInput.addEventListener("change", () => {
+          if (fileInput.files.length > 0) {
+            handleFiles(fileInput.files, popup);
+          }
+        });
+
+        // Click on without photo stat to show list
+        if (withoutPhotoStat) {
+          withoutPhotoStat.addEventListener("click", () => {
+            showStudentsWithoutPhotoList();
+          });
+        }
+      },
+    });
+  }
+
+  async function handleFiles(files, popup) {
+    const progressSection = popup.querySelector("#uploadProgressSection");
+    const progressBar = popup.querySelector("#uploadProgressBar");
+    const progressPercent = popup.querySelector("#uploadProgressPercent");
+    const progressText = popup.querySelector("#uploadProgressText");
+    const uploadCountText = popup.querySelector("#uploadCountText");
+    const resultSection = popup.querySelector("#uploadResultSection");
+    const uploadedCountEl = popup.querySelector("#uploadedCount");
+    const failedCountEl = popup.querySelector("#failedCount");
+    const dropzone = popup.querySelector("#photoDropzone");
+    const withoutPhotoCountEl = popup.querySelector("#withoutPhotoCount");
+
+    // Filter valid files
+    const validFiles = [];
+    const invalidFiles = [];
+
+    for (let i = 0; i < files.length; i++) {
+      const file = files[i];
+      const ext = file.name.split(".").pop().toLowerCase();
+      const nameWithoutExt = file.name.replace(/\.[^/.]+$/, "");
+
+      if (
+        (ext === "jpg" || ext === "jpeg") &&
+        /^[0-9]{9}$/.test(nameWithoutExt)
+      ) {
+        validFiles.push(file);
+      } else {
+        invalidFiles.push(file.name);
+      }
+    }
+
+    // Store ignored count for final report
+    const ignoredCount = invalidFiles.length;
+
+    if (validFiles.length === 0) {
+      Swal.fire({
+        icon: "error",
+        title: "خطا",
+        text: "هیچ فایل معتبری یافت نشد. فایل‌ها باید JPG باشند و نام آن‌ها ۹ رقم انگلیسی باشد.",
+        confirmButtonText: "باشه",
+        customClass: {
+          popup: "swal2-rtl swal2-glass",
+          confirmButton: "btn btn-primary",
+        },
+      });
+      return;
+    }
+
+    // Continue without asking - invalid files are silently ignored
+
+    // Hide dropzone and show progress
+    dropzone.style.display = "none";
+    progressSection.style.display = "block";
+    resultSection.style.display = "none";
+
+    const totalFiles = validFiles.length;
+    let uploadedCount = 0;
+    let failedCount = 0;
+    const batchSize = 10; // Upload 10 files at a time
+
+    progressText.textContent = "در حال آپلود...";
+
+    for (let i = 0; i < totalFiles; i += batchSize) {
+      const batch = validFiles.slice(i, Math.min(i + batchSize, totalFiles));
+      const formData = new FormData();
+
+      batch.forEach((file) => {
+        formData.append("photos[]", file);
+      });
+
+      try {
+        const response = await guardedFetch("../API/uploadStudentPhotos.php", {
+          method: "POST",
+          body: formData,
+        });
+
+        const result = await response.json();
+        if (result.success) {
+          uploadedCount += result.uploaded || 0;
+          failedCount += result.failed || 0;
+        } else {
+          failedCount += batch.length;
+        }
+      } catch (e) {
+        console.error("Upload batch error", e);
+        failedCount += batch.length;
+      }
+
+      // Update progress
+      const processed = Math.min(i + batchSize, totalFiles);
+      const percent = Math.round((processed / totalFiles) * 100);
+      progressBar.style.width = percent + "%";
+      progressPercent.textContent = toPersianDigits(percent) + "٪";
+      uploadCountText.textContent =
+        toPersianDigits(processed) + " از " + toPersianDigits(totalFiles);
+
+      // Update without photo count in real-time
+      try {
+        const status = await getStudentsWithoutPhoto();
+        if (status && withoutPhotoCountEl) {
+          withoutPhotoCountEl.textContent = toPersianDigits(
+            status.withoutPhoto
+          );
+        }
+      } catch (e) {}
+    }
+
+    // Show results
+    progressText.textContent = "آپلود کامل شد";
+    resultSection.style.display = "block";
+    uploadedCountEl.textContent = toPersianDigits(uploadedCount);
+    failedCountEl.textContent = toPersianDigits(failedCount);
+
+    // Show ignored count if any
+    if (ignoredCount > 0) {
+      const ignoredInfo = document.createElement("div");
+      ignoredInfo.style.cssText =
+        "margin-top:10px;text-align:center;font-size:12px;color:#94a3b8;";
+      ignoredInfo.textContent = `${toPersianDigits(
+        ignoredCount
+      )} فایل نامعتبر نادیده گرفته شد`;
+      resultSection.appendChild(ignoredInfo);
+    }
+
+    // Final update of without photo count
+    try {
+      const status = await getStudentsWithoutPhoto();
+      if (status && withoutPhotoCountEl) {
+        withoutPhotoCountEl.textContent = toPersianDigits(status.withoutPhoto);
+
+        // If there are still students without photo, make the stat clickable and highlighted
+        if (status.withoutPhoto > 0) {
+          const withoutPhotoStat = popup.querySelector("#withoutPhotoStat");
+          if (withoutPhotoStat) {
+            withoutPhotoStat.style.background = "rgba(248,113,113,0.2)";
+            withoutPhotoStat.style.border = "1px solid rgba(248,113,113,0.5)";
+          }
+        }
+      }
+    } catch (e) {}
+  }
+
+  async function showStudentsWithoutPhotoList() {
+    // Show loading
+    Swal.fire({
+      title: "در حال بارگذاری...",
+      html: "لطفاً صبر کنید",
+      showConfirmButton: false,
+      allowOutsideClick: false,
+      customClass: { popup: "swal2-rtl swal2-glass" },
+      didOpen: () => Swal.showLoading(),
+    });
+
+    try {
+      const response = await guardedFetch(
+        "../API/getStudentsWithoutPhoto.php?full=true",
+        {
+          cache: "no-store",
+        }
+      );
+      const data = await response.json();
+
+      if (!data.success) {
+        throw new Error(data.error || "خطا در دریافت اطلاعات");
+      }
+
+      if (data.withoutPhoto === 0) {
+        Swal.fire({
+          icon: "success",
+          title: "همه دانشجویان عکس دارند",
+          text: "هیچ دانشجویی بدون عکس وجود ندارد.",
+          confirmButtonText: "عالی!",
+          customClass: {
+            popup: "swal2-rtl swal2-glass",
+            confirmButton: "btn btn-primary",
+          },
+        });
+        return;
+      }
+
+      // Build table
+      let tableHtml = `
+        <div style="max-height:400px;overflow-y:auto;direction:rtl;">
+          <table style="width:100%;border-collapse:collapse;font-size:14px;">
+            <thead style="position:sticky;top:0;background:#1e293b;">
+              <tr>
+                <th style="padding:10px;text-align:right;border-bottom:1px solid #475569;">#</th>
+                <th style="padding:10px;text-align:right;border-bottom:1px solid #475569;">شماره دانشجویی</th>
+                <th style="padding:10px;text-align:right;border-bottom:1px solid #475569;">نام و نام خانوادگی</th>
+              </tr>
+            </thead>
+            <tbody>
+      `;
+
+      data.students.forEach((student, index) => {
+        tableHtml += `
+          <tr style="border-bottom:1px solid #334155;">
+            <td style="padding:8px;text-align:right;">${toPersianDigits(
+              index + 1
+            )}</td>
+            <td style="padding:8px;text-align:right;font-family:monospace;">${escapeHtml(
+              student.student_id
+            )}</td>
+            <td style="padding:8px;text-align:right;">${escapeHtml(
+              student.first_name
+            )} ${escapeHtml(student.last_name)}</td>
+          </tr>
+        `;
+      });
+
+      tableHtml += `</tbody></table></div>`;
+
+      Swal.fire({
+        title: `دانشجویان بدون عکس (${toPersianDigits(data.withoutPhoto)} نفر)`,
+        html: tableHtml,
+        width: "600px",
+        showConfirmButton: true,
+        confirmButtonText: "بستن",
+        customClass: {
+          popup: "swal2-rtl swal2-glass",
+          confirmButton: "btn btn-primary",
+        },
+        didClose: () => {
+          // Reopen the upload modal so user can continue uploading
+          openPhotoUploadModal();
+        },
+      });
+    } catch (e) {
+      console.error("Failed to load students without photo", e);
+      Swal.fire({
+        icon: "error",
+        title: "خطا",
+        text: e.message || "خطا در دریافت لیست دانشجویان",
+        confirmButtonText: "باشه",
+        customClass: {
+          popup: "swal2-rtl swal2-glass",
+          confirmButton: "btn btn-primary",
+        },
+      });
+    }
+  }
+})();
