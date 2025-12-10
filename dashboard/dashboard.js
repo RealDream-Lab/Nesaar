@@ -1548,6 +1548,60 @@ async function loadDashboardData() {
       document.getElementById("nextExamDateTime").textContent =
         stats.nextExamDateTime || "آزمونی یافت نشد";
 
+      // Disable/enable Students card based on value
+      try {
+        const studentsEl = document.getElementById("totalStudents");
+        const studentsCard = studentsEl
+          ? studentsEl.closest(".dashboard-card")
+          : null;
+        if (studentsCard) {
+          if (!stats.totalStudents || stats.totalStudents === 0) {
+            studentsCard.classList.add("stat-card-disabled");
+            studentsCard.style.cursor = "default";
+            studentsCard.style.pointerEvents = "none";
+            try {
+              studentsCard.onclick = null;
+            } catch (e) {}
+          } else {
+            studentsCard.classList.remove("stat-card-disabled");
+            studentsCard.style.cursor = "pointer";
+            studentsCard.style.pointerEvents = "";
+            try {
+              studentsCard.onclick = showStudentReport;
+            } catch (e) {}
+          }
+        }
+      } catch (e) {
+        /* ignore */
+      }
+
+      // Disable/enable Courses card based on value
+      try {
+        const coursesEl = document.getElementById("totalCourses");
+        const coursesCard = coursesEl
+          ? coursesEl.closest(".dashboard-card")
+          : null;
+        if (coursesCard) {
+          if (!stats.totalCourses || stats.totalCourses === 0) {
+            coursesCard.classList.add("stat-card-disabled");
+            coursesCard.style.cursor = "default";
+            coursesCard.style.pointerEvents = "none";
+            try {
+              coursesCard.onclick = null;
+            } catch (e) {}
+          } else {
+            coursesCard.classList.remove("stat-card-disabled");
+            coursesCard.style.cursor = "pointer";
+            coursesCard.style.pointerEvents = "";
+            try {
+              coursesCard.onclick = showCourseReport;
+            } catch (e) {}
+          }
+        }
+      } catch (e) {
+        /* ignore */
+      }
+
       // Disable/enable Remaining Sessions card based on value
       if (typeof stats.remainingSessions !== "undefined") {
         const el = document.getElementById("remainingSessions");
