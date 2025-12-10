@@ -2033,13 +2033,13 @@ function buildAttendanceFooter($pageNum, $totalPages, $isLastPage, $bossName, $e
     $footerHtml .= '<tr>';
     $footerHtml .= '<td style="text-align: center; width: 25%; padding: 1mm;"><br>';
     $footerHtml .= '<div style="border: 1px solid #000; height: 22mm; margin-bottom: 1mm;"></div>';
-    $footerHtml .= '<div style="font-size: 7pt;">رئیس مرکز</div>';
+    $footerHtml .= '<div style="font-size: 7pt;">رئیس مرکز / واحد</div>';
     $footerHtml .= '<div style="font-size: 7pt; font-weight: bold;">' . $bossName . '</div>';
     $footerHtml .= '<br><br>';
     $footerHtml .= '</td>';
     $footerHtml .= '<td style="text-align: center; width: 25%; padding: 1mm;"><br>';
     $footerHtml .= '<div style="border: 1px solid #000; height: 22mm; margin-bottom: 1mm;"></div>';
-    $footerHtml .= '<div style="font-size: 7pt;">رئیس آموزش</div>';
+    $footerHtml .= '<div style="font-size: 7pt;">رئیس اداره آموزش</div>';
     $footerHtml .= '<div style="font-size: 7pt; font-weight: bold;">' . $educationHeadName . '</div>';
     $footerHtml .= '<br><br>';
     $footerHtml .= '</td>';
