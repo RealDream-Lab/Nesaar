@@ -2993,7 +2993,7 @@ document.addEventListener("DOMContentLoaded", () => {
     let selectedFile = null;
 
     const result = await Swal.fire({
-      title: "آپلود عکس پروفایل",
+      title: "آپلود عکس دانشجوئی",
       html: modalHtml,
       showCancelButton: true,
       confirmButtonText: "ثبت",

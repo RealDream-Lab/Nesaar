@@ -8,6 +8,7 @@ require_once __DIR__ . '/../includes/admin_session.php';
 require_once __DIR__ . '/../includes/csrf_protection.php';
 require_once __DIR__ . '/../includes/rate_limit.php';
 require_once __DIR__ . '/../includes/audit_log.php';
+require_once __DIR__ . '/../includes/push_helper.php';
 require_once 'db_init.php';
 
 // Security headers
@@ -99,6 +100,15 @@ try {
             'last_name' => $request['last_name']
         ]);
 
+        // Send push notification to student
+        send_push_to_user(
+            $pdo,
+            $request['student_id'],
+            'عکس تأیید شد ✅',
+            'عکس ارسالی شما توسط مدیر سیستم تأیید و در پروفایل شما ثبت شد.',
+            ['type' => 'photo_approved', 'student_id' => $request['student_id']]
+        );
+
         echo json_encode([
             'success' => true,
             'message' => 'عکس دانشجو با موفقیت به‌روزرسانی شد'
@@ -119,6 +129,15 @@ try {
             'first_name' => $request['first_name'],
             'last_name' => $request['last_name']
         ]);
+
+        // Send push notification to student
+        send_push_to_user(
+            $pdo,
+            $request['student_id'],
+            'عکس رد شد ❌',
+            'عکس ارسالی شما توسط مدیر سیستم رد شد. لطفاً عکس مناسب‌تری ارسال کنید.',
+            ['type' => 'photo_rejected', 'student_id' => $request['student_id']]
+        );
 
         echo json_encode([
             'success' => true,
