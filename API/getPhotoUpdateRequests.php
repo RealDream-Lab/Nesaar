@@ -5,11 +5,18 @@
 
 require_once __DIR__ . '/../includes/license_guard.php';
 require_once __DIR__ . '/../includes/admin_session.php';
+require_once __DIR__ . '/../includes/rate_limit.php';
 require_once 'db_init.php';
 
+// Security headers
 header('Content-Type: application/json; charset=utf-8');
+header('X-Content-Type-Options: nosniff');
+header('X-Frame-Options: DENY');
 
 license_guard_enforce_api();
+
+// Rate limiting: 30 requests per minute per IP
+rate_limit_enforce($pdo, 'get_photo_requests', 30, 60);
 
 try {
     // Check if table exists

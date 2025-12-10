@@ -6,11 +6,19 @@
 require_once __DIR__ . '/../includes/license_guard.php';
 require_once __DIR__ . '/../includes/admin_session.php';
 require_once __DIR__ . '/../includes/csrf_protection.php';
+require_once __DIR__ . '/../includes/rate_limit.php';
+require_once __DIR__ . '/../includes/audit_log.php';
 require_once 'db_init.php';
 
+// Security headers
 header('Content-Type: application/json; charset=utf-8');
+header('X-Content-Type-Options: nosniff');
+header('X-Frame-Options: DENY');
 
 license_guard_enforce_api();
+
+// Rate limiting: 30 requests per minute per IP
+rate_limit_enforce($pdo, 'review_photo_request', 30, 60);
 
 // Only allow POST requests
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
@@ -67,37 +75,13 @@ try {
     $newPhotoPath = $updateDir . '/' . $request['filename'];
 
     if ($action === 'approve') {
-        // Get the extension from uploaded file
-        $pathInfo  = pathinfo($request['filename']);
-        $extension = strtolower($pathInfo['extension'] ?? 'jpg');
-
         // Target path (always save as .jpg in main folder)
         $targetPath = $mainDir . '/' . $request['student_id'] . '.jpg';
 
-        // If uploaded file is PNG, convert to JPG
-        if ($extension === 'png') {
-            $img = imagecreatefrompng($newPhotoPath);
-            if ($img) {
-                // Create white background for transparency
-                $width  = imagesx($img);
-                $height = imagesy($img);
-                $jpgImg = imagecreatetruecolor($width, $height);
-                $white  = imagecolorallocate($jpgImg, 255, 255, 255);
-                imagefill($jpgImg, 0, 0, $white);
-                imagecopy($jpgImg, $img, 0, 0, 0, 0, $width, $height);
-                imagejpeg($jpgImg, $targetPath, 90);
-                imagedestroy($img);
-                imagedestroy($jpgImg);
-            } else {
-                echo json_encode(['success' => false, 'error' => 'خطا در پردازش تصویر']);
-                exit;
-            }
-        } else {
-            // Just copy the file
-            if (!copy($newPhotoPath, $targetPath)) {
-                echo json_encode(['success' => false, 'error' => 'خطا در جایگزینی عکس']);
-                exit;
-            }
+        // Copy the file (only JPG files are accepted now)
+        if (!copy($newPhotoPath, $targetPath)) {
+            echo json_encode(['success' => false, 'error' => 'خطا در جایگزینی عکس']);
+            exit;
         }
 
         // Update request status
@@ -106,6 +90,14 @@ try {
 
         // Delete the uploaded file from StudentsUpdate folder
         @unlink($newPhotoPath);
+
+        // Audit log
+        audit_log($pdo, 'PHOTO_REQUEST_APPROVED', 'تایید درخواست عکس دانشجو', 'admin', [
+            'request_id' => $requestId,
+            'student_id' => $request['student_id'],
+            'first_name' => $request['first_name'],
+            'last_name' => $request['last_name']
+        ]);
 
         echo json_encode([
             'success' => true,
@@ -120,6 +112,14 @@ try {
         // Delete the uploaded file
         @unlink($newPhotoPath);
 
+        // Audit log
+        audit_log($pdo, 'PHOTO_REQUEST_REJECTED', 'رد درخواست عکس دانشجو', 'admin', [
+            'request_id' => $requestId,
+            'student_id' => $request['student_id'],
+            'first_name' => $request['first_name'],
+            'last_name' => $request['last_name']
+        ]);
+
         echo json_encode([
             'success' => true,
             'message' => 'درخواست رد شد'
@@ -127,5 +127,6 @@ try {
     }
 
 } catch (Exception $e) {
-    echo json_encode(['success' => false, 'error' => 'خطا در پردازش درخواست: ' . $e->getMessage()]);
+    error_log('Photo review error: ' . $e->getMessage());
+    echo json_encode(['success' => false, 'error' => 'خطا در پردازش درخواست']);
 }

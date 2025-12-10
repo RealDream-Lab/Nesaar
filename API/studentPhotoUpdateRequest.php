@@ -7,11 +7,19 @@
 
 require_once __DIR__ . '/../includes/license_guard.php';
 require_once __DIR__ . '/../includes/csrf_protection.php';
+require_once __DIR__ . '/../includes/rate_limit.php';
+require_once __DIR__ . '/../includes/audit_log.php';
 require_once 'db_init.php';
 
+// Security headers
 header('Content-Type: application/json; charset=utf-8');
+header('X-Content-Type-Options: nosniff');
+header('X-Frame-Options: DENY');
 
 license_guard_enforce_api();
+
+// Rate limiting: 10 requests per 5 minutes per IP
+rate_limit_enforce($pdo, 'student_photo_upload', 10, 300);
 
 // Only allow POST requests
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
@@ -157,6 +165,13 @@ try {
     // Insert new request
     $stmt = $pdo->prepare("INSERT INTO photo_update_requests (student_id, first_name, last_name, filename) VALUES (?, ?, ?, ?)");
     $stmt->execute([$studentId, $student['first_name'], $student['last_name'], $newFilename]);
+
+    // Audit log
+    audit_log($pdo, 'PHOTO_UPDATE_REQUEST', 'درخواست آپلود عکس دانشجو', $studentId, [
+        'filename' => $newFilename,
+        'first_name' => $student['first_name'],
+        'last_name' => $student['last_name']
+    ]);
 
     echo json_encode([
         'success' => true,

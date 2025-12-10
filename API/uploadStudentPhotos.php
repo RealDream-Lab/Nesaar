@@ -7,16 +7,33 @@
 
 require_once __DIR__ . '/../includes/license_guard.php';
 require_once __DIR__ . '/../includes/admin_session.php';
+require_once __DIR__ . '/../includes/csrf_protection.php';
+require_once __DIR__ . '/../includes/rate_limit.php';
+require_once __DIR__ . '/../includes/audit_log.php';
 require_once 'db_init.php';
 
+// Security headers
 header('Content-Type: application/json; charset=utf-8');
+header('X-Content-Type-Options: nosniff');
+header('X-Frame-Options: DENY');
 
 license_guard_enforce_api();
+
+// Rate limiting: 20 requests per 5 minutes per IP
+rate_limit_enforce($pdo, 'admin_photo_upload', 20, 300);
 
 // Only allow POST requests
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     http_response_code(405);
     echo json_encode(['success' => false, 'error' => 'Method not allowed']);
+    exit;
+}
+
+// Validate CSRF token
+$csrfToken = $_SERVER['HTTP_X_CSRF_TOKEN'] ?? $_POST['csrf_token'] ?? null;
+if (!csrf_validate_token($csrfToken)) {
+    http_response_code(403);
+    echo json_encode(['success' => false, 'error' => 'Invalid CSRF token']);
     exit;
 }
 
@@ -114,6 +131,14 @@ for ($i = 0; $i < $totalFiles; $i++) {
         $errors[] = "فایل {$originalName}: خطا در ذخیره‌سازی";
     }
 }
+
+// Audit log
+audit_log($pdo, 'ADMIN_PHOTO_UPLOAD', 'آپلود دسته‌ای عکس دانشجویان', 'admin', [
+    'uploaded' => $uploaded,
+    'failed' => $failed,
+    'total' => $totalFiles,
+    'saad_code' => $saadCode
+]);
 
 echo json_encode([
     'success' => true,
