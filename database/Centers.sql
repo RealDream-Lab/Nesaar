@@ -1,8 +1,8 @@
 
 CREATE TABLE `Centers` (
-  `Id_Center` int DEFAULT NULL,
+  `CenterID` int DEFAULT NULL,
   `Center` varchar(30) DEFAULT NULL,
-  `City` varchar(25) DEFAULT NULL
+  `Provinces` varchar(25) DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb3;
 
 INSERT INTO `Centers` (`Id_Center`, `Center`, `City`) VALUES
