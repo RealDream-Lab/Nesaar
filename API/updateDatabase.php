@@ -155,6 +155,19 @@ try {
     } catch (Throwable $e) { /* ignore */
     }
 
+    // Ensure Centers table is recreated from SQL file
+    try {
+        $pdo->exec('DROP TABLE IF EXISTS `Centers`');
+        $centersSql = file_get_contents(__DIR__ . '/../database/Centers.sql');
+        $pdo->exec($centersSql);
+    } catch (Throwable $e) {
+        error_log('Centers table recreation failed: ' . $e->getMessage());
+        write_progress('error', 'خطا در بازسازی جدول Centers', 0);
+        http_response_code(500);
+        echo json_encode(['error' => 'خطا در بازسازی جدول Centers'], JSON_UNESCAPED_UNICODE);
+        exit;
+    }
+
     // Ensure `locations` table exists before starting transaction (CREATE TABLE is DDL and may cause implicit commit)
     $createLocations = "CREATE TABLE IF NOT EXISTS `locations` (
         `id` INT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
