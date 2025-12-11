@@ -124,10 +124,11 @@ RUN rm -f /var/www/html/assets/app/app.js \
 COPY --from=builder /out/ /var/www/html/
 
 # Ensure Composer dependencies are installed
-RUN composer require openspout/openspout:^5.0 --no-interaction --prefer-dist || true \
-    && composer require mpdf/mpdf --no-interaction --prefer-dist || true \
-    && composer require minishlink/web-push --no-interaction --prefer-dist || true
-
+RUN composer require openspout/openspout:5.0.0 --no-interaction --prefer-dist || true \
+    && composer require mpdf/mpdf:8.2.6 --no-interaction --prefer-dist || true \
+    && composer require minishlink/web-push:9.0.3 --no-interaction --prefer-dist || true \
+    && composer require endroid/qr-code:6.0.9 --no-interaction --prefer-dist || true
+    
 # Create temp directories with proper permissions
 RUN mkdir -p /var/www/html/temp/mpdf/ttfontdata \
     && mkdir -p /var/www/html/database \
