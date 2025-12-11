@@ -2380,7 +2380,7 @@ async function showUploadModal(examType) {
 					<div class="file-name-display" id="fileNameDisplay"></div>
 				</div>
 				<p style="font-size: 0.9rem; color: #6c757d; margin: 0;">
-					فرمت‌های مجاز: XLS, XLSX | حداکثر حجم: ${MAX_UPLOAD_SIZE_FORMATTED}
+					فرمت‌ مجاز: XLSX | حداکثر حجم: ${MAX_UPLOAD_SIZE_FORMATTED}
 				</p>
 				<input type="file" id="databaseFile" accept=".xls,.xlsx">
 			</div>
