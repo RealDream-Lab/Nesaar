@@ -4,6 +4,6 @@
         "mpdf/mpdf": "^8.2",
         "minishlink/web-push": "^9.0",
         "endroid/qr-code": "6.0.9",
-        "khanamiryan/qrcode-detector-decoder": "^2.0"
+        "khanamiryan/qrcode-detector-decoder": "2.0.3"
     }
 }
