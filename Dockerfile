@@ -89,17 +89,20 @@ RUN javascript-obfuscator assets/app/push-notifications.js \
 # Stage: final - base PHP image with app files; we'll remove originals and copy obfuscated outputs
 FROM php:8.3-apache AS final
 
-# Install system dependencies, PHP extensions, Composer, and cron
+# Install system dependencies, PHP extensions, Composer, ImageMagick and cron
 RUN apt-get update \
-    && apt-get install -y --no-install-recommends \
-       libzip-dev libonig-dev libxml2-dev unzip mc curl \
-       libpng-dev libjpeg-dev libfreetype6-dev \
-       libgmp-dev cron \
-    && docker-php-ext-configure gd --with-freetype --with-jpeg \
-    && docker-php-ext-install bcmath mbstring pdo_mysql xml zip gd gmp \
-    && a2enmod rewrite headers \
-    && curl -sS https://getcomposer.org/installer | php -- --install-dir=/usr/local/bin --filename=composer \
-    && rm -rf /var/lib/apt/lists/*
+     && apt-get install -y --no-install-recommends \
+         libzip-dev libonig-dev libxml2-dev unzip mc curl \
+         libpng-dev libjpeg-dev libfreetype6-dev \
+         libgmp-dev cron \
+         libmagickwand-dev libmagickcore-dev imagemagick pkg-config build-essential autoconf \
+     && docker-php-ext-configure gd --with-freetype --with-jpeg \
+     && docker-php-ext-install bcmath mbstring pdo_mysql xml zip gd gmp \
+     && pecl install imagick || true \
+     && docker-php-ext-enable imagick || true \
+     && a2enmod rewrite headers \
+     && curl -sS https://getcomposer.org/installer | php -- --install-dir=/usr/local/bin --filename=composer \
+     && rm -rf /var/lib/apt/lists/*
 
 # Configure PHP upload and post limits
 RUN echo "upload_max_filesize = 128M" > /usr/local/etc/php/conf.d/uploads.ini \
@@ -127,7 +130,8 @@ COPY --from=builder /out/ /var/www/html/
 RUN composer require openspout/openspout:5.0.0 --no-interaction --prefer-dist || true \
     && composer require mpdf/mpdf:8.2.6 --no-interaction --prefer-dist || true \
     && composer require minishlink/web-push:9.0.3 --no-interaction --prefer-dist || true \
-    && composer require endroid/qr-code:6.0.9 --no-interaction --prefer-dist || true
+    && composer require endroid/qr-code:6.0.9 --no-interaction --prefer-dist || true \
+    && composer require khanamiryan/qrcode-detector-decoder:2.0.3 --no-interaction --prefer-dist || true
     
 # Create temp directories with proper permissions
 RUN mkdir -p /var/www/html/temp/mpdf/ttfontdata \
