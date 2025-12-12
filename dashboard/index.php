@@ -79,7 +79,11 @@ $bodyClass = $wavesAnimationDisabled ? 'class="no-waves-animation"' : '';
                             <img src="/dashboard/home.png" alt="بازگشت به داشبورد"
                                 style="width:40px;height:40px;object-fit:contain;display:block;">
                         </button>
-
+                        <button id="absentBtn" class="btn btn-icon p-0" type="button" title="ثبت غیبت"
+                            style="background:transparent;border:none;margin-inline-end:8px;padding:0;">
+                            <img src="/assets/app/absent.png" alt="ثبت غیبت"
+                                style="width:40px;height:40px;object-fit:contain;display:block;padding-bottom: 3px;">
+                        </button>
                         <button id="proctorProfilesBtn" class="btn btn-icon p-0" type="button"
                             title="ماژول مراقبین و عوامل اجرائی"
                             style="background:transparent;border:none;margin-inline-end:8px;padding:0;">

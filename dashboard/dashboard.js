@@ -1243,6 +1243,31 @@ try {
   console.warn("Failed to init proctor profiles button", e);
 }
 
+// Header shortcut: ثبت غیبت (temporary toast)
+try {
+  const absentBtn = document.getElementById("absentBtn");
+  if (absentBtn) {
+    absentBtn.addEventListener("click", () => {
+      try {
+        Swal.fire({
+          toast: true,
+          position: "top-end",
+          icon: "info",
+          title: "ثبت غیبت پس از هماهنگی با پشتیبانی گلستان فعال خواهد شد.",
+          showConfirmButton: false,
+          timer: 2200,
+          timerProgressBar: true,
+          customClass: { popup: "swal2-rtl" },
+        });
+      } catch (err) {
+        console.warn("Failed to show absent toast", err);
+      }
+    });
+  }
+} catch (e) {
+  console.warn("Failed to init absent button", e);
+}
+
 // Update Database button: show temp table counts, warn and block in demo
 try {
   const updateBtn = document.getElementById("updateDBBtn");
