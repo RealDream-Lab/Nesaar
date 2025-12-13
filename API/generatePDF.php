@@ -1867,6 +1867,9 @@ function generateAttendanceSheet($pdo, $mpdf, $examDate, $examTime, $config)
                 s.first_name, 
                 s.last_name,
                 s.national_id,
+                s.destination_center,
+                s.source_center,
+                src.Center AS source_center_name,
                 es.seat_number,
                 es.class_name,
                 es.exam_type,
@@ -1875,6 +1878,7 @@ function generateAttendanceSheet($pdo, $mpdf, $examDate, $examTime, $config)
             FROM exam_seats es
             JOIN students s ON es.student_id = s.student_id
             JOIN courses c ON es.course_code = c.course_code
+            LEFT JOIN Centers src ON s.source_center = src.CenterID
             WHERE c.exam_date = ? AND c.exam_time = ? AND es.building = ? AND es.class_name = ?
             ORDER BY es.seat_number ASC
         ");
@@ -1945,6 +1949,7 @@ function generateAttendanceSheet($pdo, $mpdf, $examDate, $examTime, $config)
                 
                 .info-col { width: 62%; font-size: 7.5pt; line-height: 1.4; vertical-align: middle; padding: 1.5mm !important; }
                 .exam-info-line { margin-bottom: 0.5mm; }
+                .source-center-line { text-align: center; font-size: 8pt; font-weight: bold; margin-top: 1mm; }
                 
                 .photo-col { width: 20%; text-align: center; vertical-align: middle; padding: 1mm !important; }
                 .photo-box { border: 1px solid #000; width: 16mm; height: 20mm; margin: 0 auto; overflow: hidden; background: #fff; }
@@ -2076,13 +2081,17 @@ function renderAttendanceStudentRow($student, $picBaseDir, $saadCode)
         return '<tr class="empty-row"><td></td><td></td><td></td></tr>';
     }
 
-    $studentId  = $student['student_id'];
-    $nationalId = $student['national_id'] ?? '';
-    $firstName  = $student['first_name'];
-    $lastName   = $student['last_name'];
-    $seatNum    = $student['seat_number'];
-    $courseCode = $student['course_code'];
-    $courseName = $student['course_name'];
+    $studentId         = $student['student_id'];
+    $nationalId        = $student['national_id'] ?? '';
+    $firstName         = $student['first_name'];
+    $lastName          = $student['last_name'];
+    $seatNum           = $student['seat_number'];
+    $courseCode        = $student['course_code'];
+    $courseName        = $student['course_name'];
+    $destinationCenter = isset($student['destination_center']) ? trim((string)$student['destination_center']) : '';
+    $sourceCenter      = isset($student['source_center']) ? trim((string)$student['source_center']) : '';
+    $sourceCenterName  = isset($student['source_center_name']) ? trim($student['source_center_name']) : '';
+    $showSourceCenter  = $destinationCenter !== '' && $sourceCenter !== '' && $destinationCenter !== $sourceCenter && $sourceCenterName !== '';
 
     $html = '<tr class="student-row">';
 
@@ -2098,6 +2107,9 @@ function renderAttendanceStudentRow($student, $picBaseDir, $saadCode)
     $html .= '<div style="text-align: center; font-size: 9pt; font-weight: bold; margin-bottom: 2mm;">' . $firstName . ' ' . $lastName . '</div>';
     $html .= '<div class="exam-info-line">' . toPersianDigits($courseCode) . '</div>';
     $html .= '<div class="exam-info-line">' . $courseName . '</div>';
+    if ($showSourceCenter) {
+        $html .= '<div class="source-center-line">' . $sourceCenterName . '</div>';
+    }
     $html .= '</td>';
 
     // Left cell: Photo with border box
