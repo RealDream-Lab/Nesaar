@@ -73,41 +73,47 @@ $bodyClass = $wavesAnimationDisabled ? 'class="no-waves-animation"' : '';
                         </div>
                     </div>
                     <div class="d-flex align-items-center">
-                        <button id="dashboardHomeBtn" class="btn btn-icon p-0" type="button" title="بازگشت به داشبورد"
+                        <button id="dashboardHomeBtn" class="btn btn-icon p-0" type="button"
+                            data-tooltip="بازگشت به داشبورد" aria-label="بازگشت به داشبورد"
                             style="background:transparent;border:none;margin-inline-end:8px;padding:0;"
                             onclick="window.location.href='/dashboard';">
                             <img src="/dashboard/home.png" alt="بازگشت به داشبورد"
                                 style="width:40px;height:40px;object-fit:contain;display:block;">
-                        </button>
-                        <button id="absentBtn" class="btn btn-icon p-0" type="button" title="ثبت غیبت"
+                        </button> <!-- 
+
+                        <button id="absentBtn" class="btn btn-icon p-0" type="button" data-tooltip="ثبت غیبت"
+                            aria-label="ثبت غیبت"
                             style="background:transparent;border:none;margin-inline-end:8px;padding:0;">
                             <img src="/assets/app/absent.png" alt="ثبت غیبت"
                                 style="width:40px;height:40px;object-fit:contain;display:block;padding-bottom: 3px;">
-                        </button>
+                        </button> -->
                         <button id="proctorProfilesBtn" class="btn btn-icon p-0" type="button"
-                            title="ماژول مراقبین و عوامل اجرائی"
+                            data-tooltip="ماژول مراقبین و عوامل اجرائی" aria-label="ماژول مراقبین و عوامل اجرائی"
                             style="background:transparent;border:none;margin-inline-end:8px;padding:0;">
                             <img src="/dashboard/observers/users.png" alt="مشخصات مراقبین"
                                 style="width:40px;height:40px;object-fit:contain;display:block;margin-bottom: 5px;">
                         </button>
-                        <button id="proctorNoticeBtn" class="btn btn-icon p-0" type="button" title="ابلاغ مراقبین"
+                        <button id="proctorNoticeBtn" class="btn btn-icon p-0" type="button"
+                            data-tooltip="ابلاغ مراقبین" aria-label="ابلاغ مراقبین"
                             style="background:transparent;border:none;margin-inline-end:8px;padding:0;">
                             <img src="/dashboard/observers/calendar.png" alt="ابلاغ مراقبین"
                                 style="width:40px;height:40px;object-fit:contain;display:block; margin-top: 3px !important;">
                         </button>
-                        <button id="recipientAccessBtn" class="btn btn-icon p-0" type="button" title="کاربر گزارش گیر"
+                        <button id="recipientAccessBtn" class="btn btn-icon p-0" type="button"
+                            data-tooltip="کاربر گزارش گیر" aria-label="کاربر گزارش گیر"
                             style="background:transparent;border:none;margin-inline-end:8px;padding:0;">
                             <img src="/assets/app/recipient.png" alt="کاربر Recipient"
                                 style="width:40px;height:40px;object-fit:contain;display:block;">
                         </button>
-                        <button id="upload" class="btn btn-icon p-0" type="button" title="آپلود عکس دانشجویان"
+                        <button id="upload" class="btn btn-icon p-0" type="button" data-tooltip="آپلود عکس دانشجویان"
+                            aria-label="آپلود عکس دانشجویان"
                             style="background:transparent;border:none;margin-inline-end:8px;padding:0;">
                             <img src="/dashboard/upload.png" alt="آپلود عکس دانشجویان"
                                 style="width:40px;height:40px;object-fit:contain;display:block;">
                         </button>
                         <!-- Photo Update Requests Notification Bell -->
                         <button id="photoRequestsBtn" class="btn btn-icon p-0" type="button"
-                            title="درخواست‌های تغییر عکس"
+                            data-tooltip="درخواست‌های تغییر عکس" aria-label="درخواست‌های تغییر عکس"
                             style="background:transparent;border:none;margin-inline-end:8px;padding:0;position:relative;">
                             <img src="/dashboard/bell.png" alt="درخواست‌های تغییر عکس"
                                 style="width:40px;height:40px;object-fit:contain;display:block;padding-top: 3px;padding-bottom: 3px;">
@@ -115,13 +121,14 @@ $bodyClass = $wavesAnimationDisabled ? 'class="no-waves-animation"' : '';
                                 style="display:none;position:absolute;top:-5px;right:-5px;background:#ef4444;color:white;font-size:11px;font-weight:bold;padding:2px 6px;border-radius:10px;min-width:18px;text-align:center;"></span>
                         </button>
                         <button id="editRolesBtn" class="btn btn-icon p-0" type="button"
-                            title="پیکربندی و ویرایش نقش‌ها"
+                            data-tooltip="پیکربندی و ویرایش نقش‌ها" aria-label="پیکربندی و ویرایش نقش‌ها"
                             style="background:transparent;border:none;margin-inline-end:8px;padding:0;">
                             <img src="/dashboard/config.png" alt="پیکربندی و ویرایش نقش‌ها" class="rotating-icon"
                                 style="width:40px;height:40px;object-fit:contain;display:block;">
                         </button>
 
-                        <button class="btn btn-logout" id="logoutBtn" type="button" title="خروج"
+                        <button class="btn btn-logout" id="logoutBtn" type="button" data-tooltip="خروج"
+                            aria-label="خروج"
                             style="background:transparent;border:none;margin-inline-start:0;padding:0;">
                             <img src="/dashboard/logout.png" alt="خروج"
                                 style="width:40px;height:40px;object-fit:contain;display:block;transform:rotate(180deg);">
