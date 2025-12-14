@@ -775,6 +775,8 @@ try {
       const reproductionReportModeVal = String(
         cfg.ReproductionReportMode || "course"
       ).toLowerCase();
+      const multiExamModeChecked =
+        String(cfg.MultiExamMode || "NO").toUpperCase() === "YES";
 
       let smsCreditValue = null;
       try {
@@ -888,6 +890,12 @@ try {
                                     <label for="er_reprLocation" style="margin:0;cursor:pointer;font-size:0.9rem;">بر اساس مکان</label>
                                 </div>
                             </div>
+                            <div style="display:flex;align-items:center;gap:10px;margin-top:8px;">
+                                <input id="er_multiExamMode" type="checkbox" ${
+                                  multiExamModeChecked ? "checked" : ""
+                                } style="width:1.15rem;height:1.15rem;">
+                                <label for="er_multiExamMode" style="margin:0;cursor:pointer;">مدیریت چندآزمونی (یکسان‌سازی صندلی دانشجویان با بیش از یک امتحان در جلسه)</label>
+                            </div>
 
                         </div>
                     </div>
@@ -932,6 +940,10 @@ try {
           const reproductionMode =
             document.querySelector('input[name="er_reproductionMode"]:checked')
               ?.value || "course";
+          const multiExamMode = document.getElementById("er_multiExamMode")
+            ?.checked
+            ? "YES"
+            : "NO";
           // return values to then handle save confirmation
           return {
             AdminNickName: admin.trim(),
@@ -944,6 +956,7 @@ try {
             rptDownload: rptDownload,
             WavesAnimation: wavesAnimation,
             ReproductionReportMode: reproductionMode,
+            MultiExamMode: multiExamMode,
           };
         },
       });

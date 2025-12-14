@@ -3,7 +3,7 @@ require_once 'jdf.php';
 require_once __DIR__ . '/../includes/license_guard.php';
 require_once __DIR__ . '/../includes/user_session.php';
 $current_persian_date = jdate('Y/m/d', '', '', 'Asia/Tehran', 'en');
-$current_time = jdate('H:i', '', '', 'Asia/Tehran', 'en');
+$current_time         = jdate('H:i', '', '', 'Asia/Tehran', 'en');
 header('Content-Type: application/json; charset=utf-8');
 
 // Enforce license validity before proceeding
@@ -11,7 +11,7 @@ license_guard_enforce_api();
 
 // Load .env file when present so Docker/local configs stay in sync
 (function () {
-    $root = realpath(__DIR__ . '/../');
+    $root    = realpath(__DIR__ . '/../');
     $envFile = $root ? $root . '/.env' : null;
     if (!$envFile || !is_file($envFile)) {
         return;
@@ -30,7 +30,7 @@ license_guard_enforce_api();
             continue;
         }
         [$key, $value] = $parts;
-        $key = trim($key);
+        $key           = trim($key);
         if ($key === '') {
             continue;
         }
@@ -47,14 +47,15 @@ license_guard_enforce_api();
 // Encryption settings
 const ENCRYPTION_KEY = 'PNU_EXAM_SEAT_2025_SECRET_KEY'; // Should match frontend
 
-function decryptData($encryptedData, $key) {
+function decryptData($encryptedData, $key)
+{
     try {
         // Simple Base64 decoding for compatibility with frontend
         $decoded = base64_decode($encryptedData);
         if ($decoded === false) {
             return null;
         }
-        
+
         return json_decode($decoded, true);
     } catch (Exception $e) {
         error_log('Decryption failed: ' . $e->getMessage());
@@ -82,17 +83,17 @@ if (!$credentials || !isset($credentials['student_id'], $credentials['national_i
     exit;
 }
 
-$student_id = $credentials['student_id'];
+$student_id  = $credentials['student_id'];
 $national_id = $credentials['national_id'];
 
 // کوئری امن
-$seatHasExamType = false;
+$seatHasExamType   = false;
 $courseHasExamType = false;
 try {
     $colStmt = $pdo->prepare("SELECT COLUMN_NAME FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'exam_seats' AND COLUMN_NAME = 'exam_type'");
     $colStmt->execute();
     $seatHasExamType = (bool)$colStmt->fetchColumn();
-    $colStmt2 = $pdo->prepare("SELECT COLUMN_NAME FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'courses' AND COLUMN_NAME = 'exam_type'");
+    $colStmt2        = $pdo->prepare("SELECT COLUMN_NAME FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'courses' AND COLUMN_NAME = 'exam_type'");
     $colStmt2->execute();
     $courseHasExamType = (bool)$colStmt2->fetchColumn();
 } catch (Exception $e) {
@@ -107,7 +108,7 @@ if ($seatHasExamType) {
     $examTypeSelect = "c.exam_type AS exam_type";
 }
 
-$sql = "SELECT 
+$sql  = "SELECT 
     s.student_id AS student_id,
     s.national_id AS national_id,
     s.first_name AS first_name,
@@ -143,6 +144,49 @@ if (empty($results)) {
     exit;
 }
 
+// Check MultiExamMode config and apply primary seat for multi-exam sessions
+try {
+    $configStmt = $pdo->prepare("SELECT ConfigValue FROM Config WHERE ConfigName = 'MultiExamMode'");
+    $configStmt->execute();
+    $multiExamMode = strtoupper($configStmt->fetchColumn() ?: 'NO');
+
+    if ($multiExamMode === 'YES') {
+        // Group exams by session (date + time)
+        $sessionExams = [];
+        foreach ($results as $idx => $row) {
+            $sessionKey = $row['exam_date'] . '|' . $row['exam_time'];
+            if (!isset($sessionExams[$sessionKey])) {
+                $sessionExams[$sessionKey] = [];
+            }
+            $sessionExams[$sessionKey][] = ['idx' => $idx, 'seat' => $row['seat_number']];
+        }
+
+        // For sessions with multiple exams, find primary seat and apply to all
+        foreach ($sessionExams as $sessionKey => $exams) {
+            if (count($exams) > 1) {
+                // Parse seat numbers and find minimum
+                $seatNumbers = [];
+                foreach ($exams as $exam) {
+                    $raw = $exam['seat'];
+                    if (preg_match('/(\d+)/', $raw, $m)) {
+                        $seatNumbers[$exam['idx']] = (int)$m[1];
+                    }
+                }
+                if (!empty($seatNumbers)) {
+                    $primarySeat = min($seatNumbers);
+                    // Apply primary seat to all exams in this session
+                    foreach ($exams as $exam) {
+                        $results[$exam['idx']]['seat_number'] = (string)$primarySeat;
+                    }
+                }
+            }
+        }
+    }
+} catch (Exception $e) {
+    // If config check fails, proceed without modification
+    error_log('MultiExamMode check failed: ' . $e->getMessage());
+}
+
 try {
     user_session_set($pdo, [
         'student_id' => $student_id,
@@ -160,39 +204,39 @@ foreach ($results as &$row) {
         // مقایسه ساده تاریخ امتحان با تاریخ جاری
         if ($row['exam_date'] == $current_persian_date) {
             // اگر امتحان امروز است، بررسی ساعت
-            $exam_time_parts = explode(':', $row['exam_time']);
+            $exam_time_parts    = explode(':', $row['exam_time']);
             $current_time_parts = explode(':', $current_time);
-            
+
             if (count($exam_time_parts) >= 2 && count($current_time_parts) >= 2) {
-                $exam_hour = (int)$exam_time_parts[0];
-                $exam_minute = (int)$exam_time_parts[1];
-                $current_hour = (int)$current_time_parts[0];
+                $exam_hour      = (int)$exam_time_parts[0];
+                $exam_minute    = (int)$exam_time_parts[1];
+                $current_hour   = (int)$current_time_parts[0];
                 $current_minute = (int)$current_time_parts[1];
-                
-                $exam_total_minutes = ($exam_hour * 60) + $exam_minute;
+
+                $exam_total_minutes    = ($exam_hour * 60) + $exam_minute;
                 $current_total_minutes = ($current_hour * 60) + $current_minute;
-                $minutes_difference = $exam_total_minutes - $current_total_minutes;
-                
+                $minutes_difference    = $exam_total_minutes - $current_total_minutes;
+
                 // اگر بیشتر از 30 دقیقه تا امتحان باقی مانده
                 if ($minutes_difference > 30) {
                     $exam_datetime = DateTime::createFromFormat('H:i', $row['exam_time']);
                     $exam_datetime->modify('-30 minutes');
-                    $visible_time = $exam_datetime->format('H:i');
+                    $visible_time       = $exam_datetime->format('H:i');
                     $row['seat_number'] = 'شماره صندلی شما تا ساعت ' . $visible_time . ' همان روز مخفی می‌باشد.';
-                    $row['building'] = '';
-                    $row['class_name'] = '';
-                    $row['seat_row'] = '';
+                    $row['building']    = '';
+                    $row['class_name']  = '';
+                    $row['seat_row']    = '';
                 }
             }
         } elseif ($row['exam_date'] > $current_persian_date) {
             // اگر امتحان در آینده است (تاریخ بعدی)
             $exam_datetime = DateTime::createFromFormat('H:i', $row['exam_time']);
             $exam_datetime->modify('-30 minutes');
-            $visible_time = $exam_datetime->format('H:i');
+            $visible_time       = $exam_datetime->format('H:i');
             $row['seat_number'] = 'شماره صندلی شما تا ساعت ' . $visible_time . ' همان روز مخفی می‌باشد.';
-            $row['building'] = '';
-            $row['class_name'] = '';
-            $row['seat_row'] = '';
+            $row['building']    = '';
+            $row['class_name']  = '';
+            $row['seat_row']    = '';
         }
     }
     // اضافه کردن روز هفته
@@ -200,12 +244,13 @@ foreach ($results as &$row) {
 }
 
 // تابع برای گرفتن روز هفته پارسی
-function getPersianDayOfWeek($jalali_date) {
+function getPersianDayOfWeek($jalali_date)
+{
     list($jy, $jm, $jd) = explode('/', $jalali_date);
     list($gy, $gm, $gd) = jalali_to_gregorian($jy, $jm, $jd);
-    $timestamp = mktime(0, 0, 0, $gm, $gd, $gy);
-    $day = date('l', $timestamp);
-    $days = [
+    $timestamp          = mktime(0, 0, 0, $gm, $gd, $gy);
+    $day                = date('l', $timestamp);
+    $days               = [
         'Saturday' => 'شنبه',
         'Sunday' => 'یکشنبه',
         'Monday' => 'دوشنبه',

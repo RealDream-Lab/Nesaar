@@ -5577,4 +5577,611 @@
       } catch (e) {}
     });
   }
+
+  // =====================================================
+  // REASSIGN PROCTOR SESSIONS FEATURE
+  // =====================================================
+
+  /**
+   * Opens a multi-step modal to:
+   * 1. Select a proctor who cannot attend (only those with sessions)
+   * 2. Show their assigned sessions with checkboxes
+   * 3. Allow excluding proctors from receiving reassigned sessions
+   * 4. Redistribute selected sessions to other available proctors
+   * 5. Show list of affected proctors for reprinting notices
+   */
+  async function openReassignProctorModal() {
+    // Step 1: Load proctors and their session counts
+    try {
+      Swal.fire({
+        title: "در حال بارگذاری...",
+        allowOutsideClick: false,
+        showConfirmButton: false,
+        didOpen: () => {
+          try {
+            Swal.showLoading();
+          } catch (e) {}
+        },
+        customClass: { popup: "swal2-rtl swal2-glass" },
+      });
+    } catch (e) {}
+
+    let proctors = [];
+    let proctorSessionCounts = {};
+    try {
+      const resp = await csrfFetch("/API/getProctors.php", {
+        cache: "no-store",
+      });
+      if (resp && resp.ok) {
+        const j = await resp.json();
+        proctors = Array.isArray(j.proctors) ? j.proctors : [];
+      }
+    } catch (e) {
+      console.warn("getProctors failed", e);
+    }
+
+    // Get session counts for each proctor to filter those without sessions
+    try {
+      const statsResp = await csrfFetch("/API/getStatistics.php", {
+        cache: "no-store",
+      });
+      if (statsResp && statsResp.ok) {
+        const statsData = await statsResp.json();
+        const allExams = Array.isArray(statsData.allExams)
+          ? statsData.allExams
+          : [];
+        // For each proctor, count their upcoming sessions
+        for (const p of proctors) {
+          try {
+            const sessResp = await csrfFetch(
+              `/API/getProctorSessions.php?proctor_id=${p.id}`,
+              { cache: "no-store" }
+            );
+            if (sessResp && sessResp.ok) {
+              const sessData = await sessResp.json();
+              const sessions = Array.isArray(sessData.sessions)
+                ? sessData.sessions
+                : [];
+              const upcomingCount = sessions.filter(
+                (s) => s.status !== "past"
+              ).length;
+              proctorSessionCounts[p.id] = upcomingCount;
+            } else {
+              proctorSessionCounts[p.id] = 0;
+            }
+          } catch (e) {
+            proctorSessionCounts[p.id] = 0;
+          }
+        }
+      }
+    } catch (e) {
+      console.warn("Failed to get session counts", e);
+    }
+
+    // Filter proctors to only those with upcoming sessions
+    const proctorsWithSessions = proctors.filter(
+      (p) => (proctorSessionCounts[p.id] || 0) > 0
+    );
+
+    if (proctorsWithSessions.length === 0) {
+      Swal.fire({
+        icon: "info",
+        title: "مراقبی برای جابجایی وجود ندارد",
+        text: "هیچ مراقبی جلسه آینده‌ای ندارد.",
+        customClass: { popup: "swal2-rtl swal2-glass" },
+      });
+      return;
+    }
+
+    if (proctors.length < 2) {
+      Swal.fire({
+        icon: "warning",
+        title: "تعداد مراقبین کافی نیست",
+        text: "برای جابجایی حداقل ۲ مراقب در سیستم لازم است.",
+        customClass: { popup: "swal2-rtl swal2-glass" },
+      });
+      return;
+    }
+
+    // Build dropdown options - only proctors with sessions
+    const options = proctorsWithSessions.reduce((acc, p) => {
+      const name = `${p.first_name || ""} ${p.last_name || ""}`.trim();
+      const sessionCount = proctorSessionCounts[p.id] || 0;
+      acc[p.id] = `${name || `مراقب #${p.id}`} (${toPersianDigits(
+        sessionCount
+      )} جلسه)`;
+      return acc;
+    }, {});
+
+    const { value: selectedProctorId } = await Swal.fire({
+      title: "انتخاب مراقب",
+      html: '<p style="direction:rtl;text-align:justify;margin-bottom:1rem;color:#f0f0f0;">مراقبی را که نمی‌تواند در برخی جلسات حضور یابد انتخاب کنید:</p>',
+      input: "select",
+      inputOptions: options,
+      inputPlaceholder: "انتخاب مراقب...",
+      showCancelButton: true,
+      confirmButtonText: "مرحله بعد",
+      cancelButtonText: "لغو",
+      customClass: {
+        popup: "swal2-rtl swal2-glass proctor-restrictions-modal",
+        confirmButton: "btn btn-primary",
+        cancelButton: "btn btn-cancel",
+        input: "reassign-select-input",
+      },
+      inputValidator: (value) => {
+        if (!value) return "لطفاً یک مراقب انتخاب کنید";
+      },
+      didOpen: () => {
+        // Fix select styling for dark background
+        const selectEl = Swal.getInput();
+        if (selectEl) {
+          selectEl.style.backgroundColor = "#fff";
+          selectEl.style.color = "#04202a";
+          selectEl.style.border = "2px solid #1a6fa6";
+        }
+      },
+    });
+
+    if (!selectedProctorId) return;
+
+    const proctorId = parseInt(selectedProctorId, 10);
+    const selectedProctor = proctors.find(
+      (p) => parseInt(p.id, 10) === proctorId
+    );
+    const proctorName = selectedProctor
+      ? `${selectedProctor.first_name || ""} ${
+          selectedProctor.last_name || ""
+        }`.trim()
+      : `مراقب #${proctorId}`;
+
+    // Step 2: Load this proctor's sessions
+    try {
+      Swal.fire({
+        title: "در حال بارگذاری جلسات...",
+        allowOutsideClick: false,
+        showConfirmButton: false,
+        didOpen: () => {
+          try {
+            Swal.showLoading();
+          } catch (e) {}
+        },
+        customClass: { popup: "swal2-rtl swal2-glass" },
+      });
+    } catch (e) {}
+
+    let sessions = [];
+    try {
+      const resp = await csrfFetch(
+        `/API/getProctorSessions.php?proctor_id=${encodeURIComponent(
+          proctorId
+        )}`,
+        { cache: "no-store" }
+      );
+      if (resp && resp.ok) {
+        const j = await resp.json();
+        sessions = Array.isArray(j.sessions) ? j.sessions : [];
+      }
+    } catch (e) {
+      console.warn("getProctorSessions failed", e);
+    }
+
+    // Filter to only upcoming sessions
+    const upcomingSessions = sessions.filter((s) => s.status !== "past");
+
+    if (upcomingSessions.length === 0) {
+      Swal.fire({
+        icon: "info",
+        title: "بدون جلسه آینده",
+        text: `${proctorName} هیچ جلسه آینده‌ای ندارد.`,
+        customClass: { popup: "swal2-rtl swal2-glass" },
+      });
+      return;
+    }
+
+    // Color helper (same as restrictions modal)
+    function hexToRgba(hex, a) {
+      const h = hex.replace("#", "");
+      const r = parseInt(h.substring(0, 2), 16);
+      const g = parseInt(h.substring(2, 4), 16);
+      const b = parseInt(h.substring(4, 6), 16);
+      return `rgba(${r}, ${g}, ${b}, ${a})`;
+    }
+    const paletteCool = ["#d0e8ff", "#e6f7ff", "#e6fffa", "#dff7ec", "#e6e6ff"];
+    const paletteWarm = ["#fff1b8", "#ffd6d6", "#ffe3e3", "#fbe7f7", "#f9d9ff"];
+
+    const allTimes = Array.from(
+      new Set(
+        upcomingSessions.map((s) => (s.exam_time || "").trim()).filter(Boolean)
+      )
+    );
+    allTimes.sort((a, b) => {
+      const pa = (a || "").split(":").map((x) => Number(x || 0));
+      const pb = (b || "").split(":").map((x) => Number(x || 0));
+      if (pa[0] !== pb[0]) return pa[0] - pb[0];
+      return (pa[1] || 0) - (pb[1] || 0);
+    });
+
+    const morningTimes = allTimes.filter((t) => {
+      const hh = Number((t || "").split(":")[0] || 0);
+      return hh < 12;
+    });
+    const afternoonTimes = allTimes.filter((t) => {
+      const hh = Number((t || "").split(":")[0] || 0);
+      return hh >= 12;
+    });
+
+    const morningIndex = new Map();
+    morningTimes.forEach((t, i) => morningIndex.set(t, i));
+    const afternoonIndex = new Map();
+    afternoonTimes.forEach((t, i) => afternoonIndex.set(t, i));
+
+    function colorForTime(tt) {
+      try {
+        const t = (tt || "").trim();
+        if (morningIndex.has(t)) {
+          return paletteCool[morningIndex.get(t) % paletteCool.length];
+        }
+        if (afternoonIndex.has(t)) {
+          return paletteWarm[afternoonIndex.get(t) % paletteWarm.length];
+        }
+        const hh = Number((t || "").split(":")[0] || 0);
+        if (hh < 12) return paletteCool[hh % paletteCool.length];
+        return paletteWarm[hh % paletteWarm.length];
+      } catch (e) {
+        return paletteCool[0];
+      }
+    }
+
+    // Build session cards
+    const cardsHtml = upcomingSessions
+      .map((s) => {
+        const d = s.exam_date || "";
+        const t = s.exam_time || "";
+        const baseHex = colorForTime(t);
+        const g1 = hexToRgba(baseHex, 0.96);
+        const g2 = hexToRgba(baseHex, 0.82);
+        return `
+          <div class="proctor-session-card reassign-session" data-selected="0" data-date="${escapeHtml(
+            d
+          )}" data-time="${escapeHtml(
+          t
+        )}" style="background: linear-gradient(140deg, ${g1}, ${g2}); color: #04202a; cursor:pointer;">
+            <div class="ps-dt">${escapeHtml(t)} | ${escapeHtml(d)}</div>
+          </div>`;
+      })
+      .join("");
+
+    const html = `
+      <p style="direction:rtl;text-align:justify;margin-bottom:0.8rem;line-height:1.6;color:#f0f0f0;">
+        جلسات زیر برای <strong style="color:#fff;">${escapeHtml(
+          proctorName
+        )}</strong> ثبت شده است. جلساتی که می‌خواهید از این مراقب بگیرید و به دیگران تقسیم کنید را انتخاب نمایید:
+      </p>
+      <div style="margin-bottom:0.5rem;text-align:left;">
+        <button type="button" id="selectAllReassignBtn" class="btn btn-sm" style="margin-left:4px;background:#1a6fa6;color:#fff;border:none;">انتخاب همه</button>
+        <button type="button" id="deselectAllReassignBtn" class="btn btn-sm" style="background:#6c757d;color:#fff;border:none;">لغو انتخاب</button>
+      </div>
+      <div class="proctor-session-grid" style="direction:rtl;text-align:center;padding:8px;">
+        ${cardsHtml}
+      </div>
+    `;
+
+    const { value: confirmed } = await Swal.fire({
+      title: `جابجایی جلسات ${escapeHtml(proctorName)}`,
+      html: html,
+      showCancelButton: true,
+      confirmButtonText: "جابجایی و تقسیم",
+      cancelButtonText: "لغو",
+      customClass: {
+        popup: "swal2-rtl swal2-glass proctor-restrictions-modal",
+        confirmButton: "btn btn-primary",
+        cancelButton: "btn btn-cancel",
+      },
+      didOpen: () => {
+        try {
+          const container = Swal.getHtmlContainer();
+          if (!container) return;
+
+          // Click handler for session cards
+          container.querySelectorAll(".reassign-session").forEach((el) => {
+            el.addEventListener("click", (ev) => {
+              ev.preventDefault();
+              const isSel = el.getAttribute("data-selected") === "1";
+              if (isSel) {
+                el.setAttribute("data-selected", "0");
+                el.classList.remove("selected");
+              } else {
+                el.setAttribute("data-selected", "1");
+                el.classList.add("selected");
+              }
+            });
+          });
+
+          // Select all / Deselect all
+          const selectAllBtn = container.querySelector("#selectAllReassignBtn");
+          const deselectAllBtn = container.querySelector(
+            "#deselectAllReassignBtn"
+          );
+
+          if (selectAllBtn) {
+            selectAllBtn.addEventListener("click", () => {
+              container.querySelectorAll(".reassign-session").forEach((el) => {
+                el.setAttribute("data-selected", "1");
+                el.classList.add("selected");
+              });
+            });
+          }
+
+          if (deselectAllBtn) {
+            deselectAllBtn.addEventListener("click", () => {
+              container.querySelectorAll(".reassign-session").forEach((el) => {
+                el.setAttribute("data-selected", "0");
+                el.classList.remove("selected");
+              });
+            });
+          }
+        } catch (e) {}
+      },
+      preConfirm: () => {
+        const container = Swal.getHtmlContainer();
+        const selectedEls = container
+          ? Array.from(container.querySelectorAll('[data-selected="1"]'))
+          : [];
+        if (selectedEls.length === 0) {
+          Swal.showValidationMessage("حداقل یک جلسه انتخاب کنید");
+          return false;
+        }
+        return selectedEls.map((el) => ({
+          exam_date: el.getAttribute("data-date") || "",
+          exam_time: el.getAttribute("data-time") || "",
+        }));
+      },
+    });
+
+    if (!confirmed || !Array.isArray(confirmed) || confirmed.length === 0)
+      return;
+
+    // Step 3: Show eligible proctors for exclusion
+    // Get other proctors who could receive sessions (exclude source proctor)
+    const eligibleForReceiving = proctors.filter(
+      (p) => parseInt(p.id, 10) !== proctorId
+    );
+
+    // Build checkboxes for exclusion
+    const exclusionHtml = `
+      <p style="direction:rtl;text-align:justify;margin-bottom:0.8rem;line-height:1.6;color:#f0f0f0;">
+        مراقبینی که <strong style="color:#ffc107;">نمی‌خواهید</strong> جلسات به آن‌ها تخصیص داده شود را علامت بزنید:
+      </p>
+      <div style="direction:rtl;max-height:300px;overflow-y:auto;overflow-x:hidden;scrollbar-width:none;-ms-overflow-style:none;" class="hide-scrollbar">
+        ${eligibleForReceiving
+          .map((p) => {
+            const name =
+              `${p.first_name || ""} ${p.last_name || ""}`.trim() ||
+              `مراقب #${p.id}`;
+            const sessionCount = proctorSessionCounts[p.id] || 0;
+            return `
+            <label style="display:flex;align-items:center;padding:8px 12px;margin-bottom:6px;background:rgba(255,255,255,0.95);border-radius:8px;cursor:pointer;color:#04202a;">
+              <input type="checkbox" data-proctor-id="${
+                p.id
+              }" style="margin-left:10px;width:18px;height:18px;cursor:pointer;">
+              <span style="flex:1;">${escapeHtml(name)}</span>
+              <span style="font-size:0.85rem;color:#666;">(${toPersianDigits(
+                sessionCount
+              )} جلسه)</span>
+            </label>
+          `;
+          })
+          .join("")}
+      </div>
+      <p style="direction:rtl;text-align:justify;margin-top:0.8rem;line-height:1.4;font-size:0.9rem;color:#a0a0a0;">
+        نکته: مراقبینی که جلسه‌ای ندارند یا قبلاً جابجا شده‌اند ممکن است دوباره جلسه بگیرند.
+      </p>
+    `;
+
+    const { value: exclusionConfirmed, isConfirmed: proceedWithExclusion } =
+      await Swal.fire({
+        title: "مستثنا کردن مراقبین (اختیاری)",
+        html: exclusionHtml,
+        showCancelButton: true,
+        confirmButtonText: "ادامه و جابجایی",
+        cancelButtonText: "بازگشت",
+        customClass: {
+          popup: "swal2-rtl swal2-glass proctor-restrictions-modal",
+          confirmButton: "btn btn-primary",
+          cancelButton: "btn btn-cancel",
+        },
+        preConfirm: () => {
+          const container = Swal.getHtmlContainer();
+          const checkedEls = container
+            ? Array.from(
+                container.querySelectorAll('input[type="checkbox"]:checked')
+              )
+            : [];
+          return checkedEls.map((el) =>
+            parseInt(el.getAttribute("data-proctor-id"), 10)
+          );
+        },
+      });
+
+    if (!proceedWithExclusion) return;
+
+    const excludedProctorIds = Array.isArray(exclusionConfirmed)
+      ? exclusionConfirmed
+      : [];
+
+    // Step 4: Send to API
+    try {
+      Swal.fire({
+        title: "در حال جابجایی...",
+        allowOutsideClick: false,
+        showConfirmButton: false,
+        didOpen: () => {
+          try {
+            Swal.showLoading();
+          } catch (e) {}
+        },
+        customClass: { popup: "swal2-rtl swal2-glass" },
+      });
+    } catch (e) {}
+
+    let result = null;
+    try {
+      const resp = await csrfFetch("/API/reassignProctorSessions.php", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json; charset=utf-8",
+          "X-CSRF-Token": getCsrfToken(),
+        },
+        body: JSON.stringify({
+          source_proctor_id: proctorId,
+          sessions: confirmed,
+          excluded_proctor_ids: excludedProctorIds,
+        }),
+      });
+      result = await resp.json();
+    } catch (e) {
+      console.warn("reassignProctorSessions failed", e);
+    }
+
+    if (!result || !result.success) {
+      const msg =
+        result && result.message ? result.message : "جابجایی ناموفق بود.";
+      Swal.fire({
+        icon: "error",
+        title: "خطا",
+        text: msg,
+        customClass: { popup: "swal2-rtl swal2-glass" },
+      });
+      return;
+    }
+
+    // Step 5: Show result with affected proctors
+    const affectedProctors = result.affected_proctors || [];
+    const reassignedCount = result.reassigned_count || 0;
+
+    if (reassignedCount === 0) {
+      Swal.fire({
+        icon: "warning",
+        title: "جابجایی انجام نشد",
+        text: "هیچ جلسه‌ای قابل جابجایی نبود (ممکن است مراقب دیگری برای این جلسات در دسترس نباشد).",
+        customClass: { popup: "swal2-rtl swal2-glass" },
+      });
+      return;
+    }
+
+    // Get affected proctor IDs for filtered PDF generation
+    const affectedProctorIds = affectedProctors.map((ap) => ap.proctor_id);
+    // Also include source proctor since their notice changed
+    affectedProctorIds.push(proctorId);
+
+    // Build affected proctors list with hidden scrollbar
+    let affectedHtml = `
+      <style>.hide-scrollbar::-webkit-scrollbar{display:none;}</style>
+      <p style="direction:rtl;text-align:justify;line-height:1.6;margin-bottom:1rem;color:#f0f0f0;">
+        <strong style="color:#fff;">${toPersianDigits(
+          reassignedCount
+        )}</strong> جلسه از <strong style="color:#fff;">${escapeHtml(
+      proctorName
+    )}</strong> گرفته و بین مراقبین زیر تقسیم شد:
+      </p>
+      <div style="direction:rtl;max-height:300px;overflow-y:auto;overflow-x:hidden;scrollbar-width:none;-ms-overflow-style:none;" class="hide-scrollbar">
+    `;
+
+    affectedProctors.forEach((ap) => {
+      const sessionsStr = ap.added_sessions
+        .map((s) => `${s.exam_time} | ${s.exam_date}`)
+        .join("، ");
+      affectedHtml += `
+        <div style="background:rgba(255,255,255,0.95);border:1px solid #dee2e6;border-radius:8px;padding:10px;margin-bottom:8px;">
+          <strong style="color:#04202a;">${escapeHtml(ap.proctor_name)}</strong>
+          <div style="font-size:0.9rem;color:#555;margin-top:4px;">جلسات اضافه شده: ${escapeHtml(
+            sessionsStr
+          )}</div>
+        </div>
+      `;
+    });
+
+    affectedHtml += `
+      </div>
+      <p style="direction:rtl;text-align:justify;line-height:1.6;margin-top:1rem;color:#ffc107;font-weight:bold;">
+        توجه: ابلاغ مراقبین فوق و نیز ${escapeHtml(
+          proctorName
+        )} تغییر کرده و نیاز به چاپ مجدد دارد.
+      </p>
+    `;
+
+    const { isConfirmed: wantsPrint } = await Swal.fire({
+      title: "جابجایی انجام شد",
+      html: affectedHtml,
+      icon: "success",
+      showCancelButton: true,
+      confirmButtonText: "چاپ ابلاغ افراد تغییریافته",
+      cancelButtonText: "بستن",
+      customClass: {
+        popup: "swal2-rtl swal2-glass",
+        confirmButton: "btn btn-primary",
+        cancelButton: "btn btn-cancel",
+      },
+    });
+
+    // Mark proctors changed
+    try {
+      markProctorsChanged();
+    } catch (e) {}
+
+    // Refresh session stats
+    try {
+      if (typeof renderSessionStatsCard === "function") {
+        await renderSessionStatsCard();
+      }
+    } catch (e) {}
+
+    // If user wants to print, open the proctor notice PDF for affected proctors only
+    if (wantsPrint) {
+      // Build URL with affected proctor IDs
+      const proctorIdsParam = affectedProctorIds.join(",");
+      const url = `/API/generatePDF.php?report_type=proctor_notice&proctor_ids=${encodeURIComponent(
+        proctorIdsParam
+      )}&_t=${new Date().getTime()}`;
+
+      // Check config for download vs view mode
+      const rptDownload =
+        window.appConfig && window.appConfig.rptDownload === "YES";
+
+      if (rptDownload) {
+        // Download mode
+        window.open(url, "_blank");
+      } else {
+        // View in modal (similar to dashboard showReportModal)
+        Swal.fire({
+          title: "ابلاغ مراقبین تغییریافته",
+          html: `<iframe src="${url}" style="width:100%;height:70vh;border:none;border-radius:8px;"></iframe>`,
+          width: "90%",
+          showConfirmButton: false,
+          showCloseButton: true,
+          customClass: {
+            popup: "swal2-rtl swal2-glass",
+          },
+        });
+      }
+    }
+  }
+
+  // Attach event listener to reassign button
+  const reassignProctorBtn = document.getElementById("reassignProctorBtn");
+  if (reassignProctorBtn) {
+    reassignProctorBtn.addEventListener("click", async () => {
+      try {
+        await openReassignProctorModal();
+      } catch (err) {
+        console.warn("openReassignProctorModal failed", err);
+        Swal.fire({
+          icon: "error",
+          title: "خطا",
+          text: "باز کردن پنجره جابجایی ممکن نیست.",
+          customClass: { popup: "swal2-rtl swal2-glass" },
+        });
+      }
+    });
+  }
 })();

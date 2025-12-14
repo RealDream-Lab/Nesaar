@@ -101,7 +101,21 @@ if ($reportType === 'session') {
 } elseif ($reportType === 'descriptive') {
     generateDescriptiveLabels($pdo, $mpdf, $examDate, $examTime, $config);
 } elseif ($reportType === 'proctor_notice') {
-    generateProctorNotices($pdo, $mpdf, $config);
+    // Parse optional proctor_ids parameter for filtered notice generation
+    $filterProctorIds = null;
+    if (!empty($_GET['proctor_ids'])) {
+        $idsStr = trim($_GET['proctor_ids']);
+        if ($idsStr !== '') {
+            $filterProctorIds = array_map('intval', explode(',', $idsStr));
+            $filterProctorIds = array_filter($filterProctorIds, function ($id) {
+                return $id > 0;
+            });
+            if (empty($filterProctorIds)) {
+                $filterProctorIds = null;
+            }
+        }
+    }
+    generateProctorNotices($pdo, $mpdf, $config, $filterProctorIds);
 } elseif ($reportType === 'attendance_sheet') {
     generateAttendanceSheet($pdo, $mpdf, $examDate, $examTime, $config);
 } else {
@@ -315,6 +329,9 @@ function generateSeatNumbersReport($pdo, $mpdf, $examDate, $examTime, $config)
 {
     $mpdf->AddPage('L'); // Landscape
 
+    // Check MultiExamMode config
+    $multiExamModeEnabled = isset($config['MultiExamMode']) && strtoupper($config['MultiExamMode']) === 'YES';
+
     // Fetch Students with Seat Info
     // We can reuse the query logic from getNextExamReport.php but we need to do it here.
     // First get courses to get the list of course codes
@@ -336,6 +353,7 @@ function generateSeatNumbersReport($pdo, $mpdf, $examDate, $examTime, $config)
 
     $stmt = $pdo->prepare("
         SELECT 
+            s.student_id,
             s.first_name,
             s.last_name,
             es.seat_number,
@@ -355,10 +373,43 @@ function generateSeatNumbersReport($pdo, $mpdf, $examDate, $examTime, $config)
         die('No students found.');
     }
 
+    // If MultiExamMode is enabled, find multi-exam students and their primary seat
+    $primarySeats = [];
+    if ($multiExamModeEnabled) {
+        // Group by student_id to find multi-exam students
+        $studentExams = [];
+        foreach ($students as $s) {
+            $sid = $s['student_id'];
+            if (!isset($studentExams[$sid])) {
+                $studentExams[$sid] = [];
+            }
+            // Parse seat number
+            $raw = $s['seat_number'];
+            if (preg_match('/(\d+)/', $raw, $m)) {
+                $studentExams[$sid][] = (int)$m[1];
+            }
+        }
+        // For multi-exam students, find primary seat (minimum)
+        foreach ($studentExams as $sid => $seats) {
+            if (count($seats) > 1) {
+                $primarySeats[$sid] = min($seats);
+            }
+        }
+    }
+
     // Pagination
     $perPage    = 44; // 22 per column * 2 columns
     $chunks     = array_chunk($students, $perPage);
     $totalPages = count($chunks);
+
+    // Helper function to get display seat number
+    $getDisplaySeat = function ($student) use ($primarySeats, $multiExamModeEnabled) {
+        $sid = $student['student_id'];
+        if ($multiExamModeEnabled && isset($primarySeats[$sid])) {
+            return $primarySeats[$sid];
+        }
+        return $student['seat_number'];
+    };
 
     $htmlStyle = '
     <style>
@@ -396,14 +447,16 @@ function generateSeatNumbersReport($pdo, $mpdf, $examDate, $examTime, $config)
         // Column 1
         $html .= '<div class="col"><table class="col-table"><thead><tr><th class="name-col">نام و نام خانوادگی</th><th class="course-col">نام درس</th><th class="seat-col">صندلی</th></tr></thead><tbody>';
         foreach ($col1 as $s) {
-            $html .= '<tr><td>' . $s['last_name'] . ' ' . $s['first_name'] . '</td><td>' . $s['course_name'] . '</td><td class="seat-col">' . toPersianDigits($s['seat_number']) . '</td></tr>';
+            $displaySeat  = $getDisplaySeat($s);
+            $html        .= '<tr><td>' . $s['last_name'] . ' ' . $s['first_name'] . '</td><td>' . $s['course_name'] . '</td><td class="seat-col">' . toPersianDigits($displaySeat) . '</td></tr>';
         }
         $html .= '</tbody></table></div>';
 
         // Column 2
         $html .= '<div class="col" style="margin-left: 0;"><table class="col-table"><thead><tr><th class="name-col">نام و نام خانوادگی</th><th class="course-col">نام درس</th><th class="seat-col">صندلی</th></tr></thead><tbody>';
         foreach ($col2 as $s) {
-            $html .= '<tr><td>' . $s['last_name'] . ' ' . $s['first_name'] . '</td><td>' . $s['course_name'] . '</td><td class="seat-col">' . toPersianDigits($s['seat_number']) . '</td></tr>';
+            $displaySeat  = $getDisplaySeat($s);
+            $html        .= '<tr><td>' . $s['last_name'] . ' ' . $s['first_name'] . '</td><td>' . $s['course_name'] . '</td><td class="seat-col">' . toPersianDigits($displaySeat) . '</td></tr>';
         }
         $html .= '</tbody></table></div>';
 
@@ -577,6 +630,25 @@ function generateSecretaryReport($pdo, $mpdf, $examDate, $examTime, $config)
     $stmt->execute($courseCodes);
     $allStudents = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
+    // Find multi-exam students (students with more than one course in this session)
+    $multiExamStudents = [];
+    $studentExamCount  = [];
+    foreach ($allStudents as $s) {
+        $sid = $s['student_id'];
+        if (!isset($studentExamCount[$sid])) {
+            $studentExamCount[$sid] = [];
+        }
+        $studentExamCount[$sid][] = $s;
+    }
+    foreach ($studentExamCount as $sid => $exams) {
+        if (count($exams) > 1) {
+            $multiExamStudents[$sid] = $exams;
+        }
+    }
+
+    // Check MultiExamMode config
+    $multiExamModeEnabled = isset($config['MultiExamMode']) && strtoupper($config['MultiExamMode']) === 'YES';
+
     // Start PDF
     $mpdf->AddPage('P');
 
@@ -615,11 +687,90 @@ function generateSecretaryReport($pdo, $mpdf, $examDate, $examTime, $config)
         .nested-table th, .nested-table td { border: 1px solid #ddd; padding: 4px; text-align: center; }
         .nested-table th { background-color: #f1f1f1; font-size: 9pt; }
         .type-header { background: #000; color: #fff; font-size: 12pt; font-weight: bold; text-align: center; padding: 6px; border-radius: 8px; margin: 10px 0; }
+        .multi-exam-section { margin-bottom: 20px; page-break-inside: avoid; }
+        .multi-exam-header { background: #dc3545; color: #fff; font-size: 11pt; font-weight: bold; text-align: center; padding: 6px; border-radius: 8px; margin: 10px 0; }
+        .multi-exam-table { width: 100%; border-collapse: collapse; margin-bottom: 10px; font-size: 9pt; }
+        .multi-exam-table th, .multi-exam-table td { border: 1px solid #ddd; padding: 5px; text-align: center; }
+        .multi-exam-table th { background-color: #f8d7da; font-size: 9pt; }
+        .primary-seat { font-weight: bold; color: #dc3545; }
     </style>
     ';
 
     // Secretary List Header
     $html .= '<div class="header"><div class="title">لیست منشی جلسه</div><div class="meta">' . toPersianDigits($examTime) . ' | ' . toPersianDigits($examDate) . '</div></div>';
+
+    // Multi-Exam Students Section (if any)
+    if (!empty($multiExamStudents)) {
+        // Fetch student names
+        $multiStudentIds      = array_keys($multiExamStudents);
+        $placeholdersStudents = str_repeat('?,', count($multiStudentIds) - 1) . '?';
+        $stmtNames            = $pdo->prepare("SELECT student_id, first_name, last_name FROM students WHERE student_id IN ($placeholdersStudents)");
+        $stmtNames->execute($multiStudentIds);
+        $studentNames = [];
+        while ($row = $stmtNames->fetch(PDO::FETCH_ASSOC)) {
+            $studentNames[$row['student_id']] = $row['first_name'] . ' ' . $row['last_name'];
+        }
+
+        // Build course_code to course_name map
+        $courseMap = [];
+        foreach ($courses as $c) {
+            $courseMap[$c['course_code']] = $c['course_name'];
+        }
+
+        $html .= '<div class="multi-exam-section">';
+        $html .= '<div class="multi-exam-header">دانشجویان چند آزمونی (' . toPersianDigits(count($multiExamStudents)) . ' نفر)</div>';
+        $html .= '<table class="multi-exam-table"><thead><tr>';
+        $html .= '<th style="width: 6%;">ردیف</th>';
+        $html .= '<th style="width: 10%;">شماره دانشجویی</th>';
+        $html .= '<th style="width: 18%;">نام و نام خانوادگی</th>';
+        $html .= '<th style="width: 32%;">دروس</th>';
+        $html .= '<th style="width: 22%;">شماره صندلی‌ها</th>';
+        $html .= '<th style="width: 12%;">صندلی اصلی</th>';
+        $html .= '</tr></thead><tbody>';
+
+        $rowIndex = 0;
+        foreach ($multiExamStudents as $sid => $exams) {
+            $rowIndex++;
+            $studentName = $studentNames[$sid] ?? 'نامشخص';
+
+            // Collect courses and seat numbers
+            $coursesList = [];
+            $seatNumbers = [];
+            foreach ($exams as $exam) {
+                $courseName    = $courseMap[$exam['course_code']] ?? $exam['course_code'];
+                $coursesList[] = $courseName;
+                // Parse seat number (get first number)
+                $raw = $exam['seat_number'];
+                if (preg_match('/(\d+)/', $raw, $m)) {
+                    $seatNumbers[$exam['course_code']] = (int)$m[1];
+                } else {
+                    $seatNumbers[$exam['course_code']] = 0;
+                }
+            }
+
+            // Find primary seat (minimum)
+            $primarySeat = min($seatNumbers);
+
+            // Format seat display (without star)
+            $seatsDisplay = [];
+            foreach ($exams as $exam) {
+                $seatNum        = $seatNumbers[$exam['course_code']];
+                $seatsDisplay[] = toPersianDigits($seatNum);
+            }
+
+            $html .= '<tr>';
+            $html .= '<td>' . toPersianDigits($rowIndex) . '</td>';
+            $html .= '<td>' . toPersianDigits($sid) . '</td>';
+            $html .= '<td style="text-align: right;">' . $studentName . '</td>';
+            $html .= '<td style="text-align: right; font-size: 8pt;">' . implode(' | ', $coursesList) . '</td>';
+            $html .= '<td>' . implode(' - ', $seatsDisplay) . '</td>';
+            $html .= '<td style="font-weight: bold;">' . toPersianDigits($primarySeat) . '</td>';
+            $html .= '</tr>';
+        }
+
+        $html .= '</tbody></table>';
+        $html .= '</div>';
+    }
 
     // Group Courses by Type
     $examTypes   = ['الکترونیکی', 'کتبی'];
@@ -1542,7 +1693,7 @@ function generateDescriptiveLabels($pdo, $mpdf, $examDate, $examTime, $config)
     exit; // Exit because we created a new mPDF instance here
 }
 
-function generateProctorNotices($pdo, $mpdf, $config)
+function generateProctorNotices($pdo, $mpdf, $config, $filterProctorIds = null)
 {
     // Helper function to get Persian weekday name from Jalali date
     $getWeekday = function ($jalaliDate) {
@@ -1579,8 +1730,16 @@ function generateProctorNotices($pdo, $mpdf, $config)
     } catch (Exception $e) {
     }
 
-    // Fetch Assignments
-    $stmt = $pdo->query("SELECT proctor_id, proctor_name, exam_date, exam_time FROM ExamAssignments WHERE TRIM(IFNULL(proctor_name, '')) != ''");
+    // Fetch Assignments - optionally filter by proctor IDs
+    $sql = "SELECT proctor_id, proctor_name, exam_date, exam_time FROM ExamAssignments WHERE TRIM(IFNULL(proctor_name, '')) != ''";
+    if ($filterProctorIds !== null && is_array($filterProctorIds) && count($filterProctorIds) > 0) {
+        $placeholders  = implode(',', array_fill(0, count($filterProctorIds), '?'));
+        $sql          .= " AND proctor_id IN ($placeholders)";
+        $stmt          = $pdo->prepare($sql);
+        $stmt->execute(array_map('intval', $filterProctorIds));
+    } else {
+        $stmt = $pdo->query($sql);
+    }
     $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
     $proctors    = [];
@@ -1834,6 +1993,43 @@ function generateAttendanceSheet($pdo, $mpdf, $examDate, $examTime, $config)
         die('No exam data found for the specified date and time');
     }
 
+    // Check MultiExamMode config and build primary seat map
+    $multiExamModeEnabled = isset($config['MultiExamMode']) && strtoupper($config['MultiExamMode']) === 'YES';
+    $primarySeatsMap      = []; // student_id => primary_seat_number
+
+    if ($multiExamModeEnabled) {
+        // Fetch all students with their seat numbers for this session
+        $stmt = $pdo->prepare("
+            SELECT es.student_id, es.seat_number
+            FROM exam_seats es
+            JOIN courses c ON es.course_code = c.course_code
+            WHERE c.exam_date = ? AND c.exam_time = ?
+        ");
+        $stmt->execute([$examDate, $examTime]);
+        $allSeats = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+        // Group by student_id
+        $studentExams = [];
+        foreach ($allSeats as $row) {
+            $sid = $row['student_id'];
+            if (!isset($studentExams[$sid])) {
+                $studentExams[$sid] = [];
+            }
+            // Parse seat number
+            $raw = $row['seat_number'];
+            if (preg_match('/(\d+)/', $raw, $m)) {
+                $studentExams[$sid][] = (int)$m[1];
+            }
+        }
+
+        // For multi-exam students, find primary seat (minimum)
+        foreach ($studentExams as $sid => $seats) {
+            if (count($seats) > 1) {
+                $primarySeatsMap[$sid] = min($seats);
+            }
+        }
+    }
+
     // Pre-calculate total pages for all locations
     foreach ($locations as $location) {
         $stmt = $pdo->prepare("
@@ -1984,7 +2180,7 @@ function generateAttendanceSheet($pdo, $mpdf, $examDate, $examTime, $config)
             $html .= '<td style="width: 50%; vertical-align: top;">';
             $html .= '<table class="column-table">';
             foreach ($column1 as $student) {
-                $html .= renderAttendanceStudentRow($student, $picBaseDir, $saadCode);
+                $html .= renderAttendanceStudentRow($student, $picBaseDir, $saadCode, $primarySeatsMap);
             }
             $html .= '</table>';
             $html .= '</td>';
@@ -1993,7 +2189,7 @@ function generateAttendanceSheet($pdo, $mpdf, $examDate, $examTime, $config)
             $html .= '<td style="width: 50%; vertical-align: top;">';
             $html .= '<table class="column-table">';
             foreach ($column2 as $student) {
-                $html .= renderAttendanceStudentRow($student, $picBaseDir, $saadCode);
+                $html .= renderAttendanceStudentRow($student, $picBaseDir, $saadCode, $primarySeatsMap);
             }
             $html .= '</table>';
             $html .= '</td>';
@@ -2074,7 +2270,7 @@ function buildAttendanceFooter($pageNum, $totalPages, $isLastPage, $bossName, $e
  * Layout: Photo (left) | Info (middle) | Seat# & Name (right)
  * In RTL, the order in HTML is reversed
  */
-function renderAttendanceStudentRow($student, $picBaseDir, $saadCode)
+function renderAttendanceStudentRow($student, $picBaseDir, $saadCode, $primarySeatsMap = [])
 {
     if ($student === null) {
         // Empty row - no borders, just empty space
@@ -2093,13 +2289,27 @@ function renderAttendanceStudentRow($student, $picBaseDir, $saadCode)
     $sourceCenterName  = isset($student['source_center_name']) ? trim($student['source_center_name']) : '';
     $showSourceCenter  = $destinationCenter !== '' && $sourceCenter !== '' && $destinationCenter !== $sourceCenter && $sourceCenterName !== '';
 
+    // Check if this student has a primary seat (multi-exam student)
+    $primarySeat = isset($primarySeatsMap[$studentId]) ? $primarySeatsMap[$studentId] : null;
+
+    // Parse current seat number to check if it equals primary seat
+    $currentSeatNum = 0;
+    if (preg_match('/(\d+)/', $seatNum, $m)) {
+        $currentSeatNum = (int)$m[1];
+    }
+    // Only show primary seat label if current seat is NOT the primary seat
+    $showPrimarySeatLabel = ($primarySeat !== null && $currentSeatNum !== $primarySeat);
+
     $html = '<tr class="student-row">';
 
-    // Right cell: Seat number (big) + student ID + national ID below
+    // Right cell: Seat number (big) + student ID + national ID + primary seat (if applicable)
     $html .= '<td class="seat-col">';
     $html .= '<div class="seat-number">' . toPersianDigits($seatNum) . '</div>';
     $html .= '<div style="font-size: 6pt; margin-top: 1mm;">' . toPersianDigits($studentId) . '</div>';
     $html .= '<div style="font-size: 6pt;">' . toPersianDigits($nationalId) . '</div>';
+    if ($showPrimarySeatLabel) {
+        $html .= '<div style="font-size: 6pt; margin-top: 1mm; background: #fff; color: #000; padding: 2px 0; text-align: center;">استقرار: ' . toPersianDigits($primarySeat) . '</div>';
+    }
     $html .= '</td>';
 
     // Middle cell: Student name (centered, larger font) + Course info
