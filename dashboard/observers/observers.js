@@ -6114,6 +6114,7 @@
       title: "جابجایی انجام شد",
       html: affectedHtml,
       icon: "success",
+      width: "700px", // ← اینجا عرض مودال
       showCancelButton: true,
       confirmButtonText: "چاپ ابلاغ افراد تغییریافته",
       cancelButtonText: "بستن",
