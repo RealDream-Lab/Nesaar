@@ -851,6 +851,12 @@ try {
                                 </label>
                             </div>
                             <div style="display:flex;align-items:center;gap:10px;margin-top:8px;">
+                                <input id="er_multiExamMode" type="checkbox" ${
+                                  multiExamModeChecked ? "checked" : ""
+                                } style="width:1.15rem;height:1.15rem;">
+                                <label for="er_multiExamMode" style="margin:0;cursor:pointer;">مدیریت چندآزمونی (یکسان‌سازی صندلی دانشجویان با بیش از یک امتحان در جلسه)</label>
+                            </div>
+                            <div style="display:flex;align-items:center;gap:10px;margin-top:8px;">
                                 <input id="er_wavesAnimation" type="checkbox" ${
                                   wavesAnimationChecked ? "checked" : ""
                                 } style="width:1.15rem;height:1.15rem;">
@@ -890,12 +896,7 @@ try {
                                     <label for="er_reprLocation" style="margin:0;cursor:pointer;font-size:0.9rem;">بر اساس مکان</label>
                                 </div>
                             </div>
-                            <div style="display:flex;align-items:center;gap:10px;margin-top:8px;">
-                                <input id="er_multiExamMode" type="checkbox" ${
-                                  multiExamModeChecked ? "checked" : ""
-                                } style="width:1.15rem;height:1.15rem;">
-                                <label for="er_multiExamMode" style="margin:0;cursor:pointer;">مدیریت چندآزمونی (یکسان‌سازی صندلی دانشجویان با بیش از یک امتحان در جلسه)</label>
-                            </div>
+
 
                         </div>
                     </div>

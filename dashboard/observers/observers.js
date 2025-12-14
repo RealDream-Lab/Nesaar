@@ -6167,6 +6167,89 @@
     }
   }
 
+  // Initialize header custom tooltips using the same tooltip template as observers
+  try {
+    function initHeaderTooltips() {
+      const tooltipId = "headerTooltip";
+      let tooltip = document.getElementById(tooltipId);
+      if (!tooltip) {
+        tooltip = document.createElement("div");
+        tooltip.id = tooltipId;
+        tooltip.className = "session-locations-tooltip"; // reuse observers CSS
+        tooltip.innerHTML = `<div class="session-locations-content"></div>`;
+        document.body.appendChild(tooltip);
+      }
+
+      const tooltipContent = tooltip.querySelector(
+        ".session-locations-content"
+      );
+      let currentEl = null;
+
+      function positionTooltip(el) {
+        const rect = el.getBoundingClientRect();
+        tooltip.style.position = "fixed";
+        tooltip.style.top = rect.bottom + 8 + "px";
+
+        // Ensure tooltip can shrink to content
+        tooltip.style.minWidth = "0px";
+        tooltip.style.width = "auto";
+
+        // Make visible to measure size
+        tooltip.classList.add("visible");
+        // Force reflow and measure
+        const tw = tooltip.offsetWidth;
+        const viewportW = document.documentElement.clientWidth;
+        const elemCenter = rect.left + rect.width / 2;
+
+        // The arrow in CSS is placed with `right: 20px` from tooltip's right edge.
+        // To align the arrow under the element center we compute left so that:
+        // tooltip_left + (tw - 20) === elemCenter  => tooltip_left = elemCenter - (tw - 20)
+        let desiredLeft = Math.round(elemCenter - (tw - 20));
+
+        // Clamp within viewport with 8px margin
+        const minLeft = 8;
+        const maxLeft = Math.max(8, viewportW - tw - 8);
+        if (desiredLeft < minLeft) desiredLeft = minLeft;
+        if (desiredLeft > maxLeft) desiredLeft = maxLeft;
+
+        tooltip.style.left = desiredLeft + "px";
+        tooltip.style.right = "auto";
+      }
+
+      function showTooltip(el, text) {
+        currentEl = el;
+        tooltipContent.textContent = text;
+        // positionTooltip will add `.visible` before measuring
+        positionTooltip(el);
+      }
+
+      function hideTooltip() {
+        tooltip.classList.remove("visible");
+        currentEl = null;
+      }
+
+      const elems = document.querySelectorAll("[data-tooltip]");
+      elems.forEach((el) => {
+        el.addEventListener("mouseenter", () => {
+          const t = el.getAttribute("data-tooltip") || "";
+          if (!t) return;
+          showTooltip(el, t);
+        });
+        el.addEventListener("mouseleave", hideTooltip);
+        el.addEventListener("focus", () => {
+          const t = el.getAttribute("data-tooltip") || "";
+          if (!t) return;
+          showTooltip(el, t);
+        });
+        el.addEventListener("blur", hideTooltip);
+      });
+    }
+
+    initHeaderTooltips();
+  } catch (e) {
+    console.warn("Failed to init header tooltips", e);
+  }
+
   // Attach event listener to reassign button
   const reassignProctorBtn = document.getElementById("reassignProctorBtn");
   if (reassignProctorBtn) {

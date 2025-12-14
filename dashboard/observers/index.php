@@ -79,13 +79,14 @@ $bodyClass = $wavesAnimationDisabled ? 'class="no-waves-animation"' : '';
                     </div>
                     <div class="d-flex align-items-center">
 
-                        <button id="reassignProctorBtn" class="btn btn-icon p-0" type="button" title="جابجایی مراقب"
+                        <button id="reassignProctorBtn" class="btn btn-icon p-0" type="button"
                             data-tooltip="جابجایی مراقب (انتقال جلسات)" aria-label="جابجایی مراقب"
                             style="background:transparent;border:none;margin-inline-end:8px;padding:0;">
                             <img src="/dashboard/observers/shuffle.png" alt="جابجایی مراقب"
                                 style="width:40px;height:40px;object-fit:contain;display:block;padding-top: 4px;">
                         </button>
-                        <button id="backToDashboardBtn" class="btn btn-icon p-0" type="button" title="بازگشت به داشبورد"
+                        <button id="backToDashboardBtn" class="btn btn-icon p-0" type="button"
+                            data-tooltip="بازگشت به داشبورد"
                             style="background:transparent;border:none;margin-inline-end:8px;padding:0;">
                             <img src="/dashboard/home.png" alt="بازگشت"
                                 style="width:40px;height:40px;object-fit:contain;display:block;">
