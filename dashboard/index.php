@@ -100,7 +100,7 @@ $bodyClass = $wavesAnimationDisabled ? 'class="no-waves-animation"' : '';
                                 style="width:40px;height:40px;object-fit:contain;display:block; margin-top: 3px !important;">
                         </button>
                         <button id="recipientAccessBtn" class="btn btn-icon p-0" type="button"
-                            data-tooltip="کاربر گزارش گیر" aria-label="کاربر گزارش گیر"
+                            data-tooltip="کاربر استخراج گزارش‌ها" aria-label="کاربر استخراج گزارش‌ها"
                             style="background:transparent;border:none;margin-inline-end:8px;padding:0;">
                             <img src="/assets/app/recipient.png" alt="کاربر Recipient"
                                 style="width:40px;height:40px;object-fit:contain;display:block;">

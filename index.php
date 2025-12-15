@@ -93,7 +93,7 @@ if ($licenseStatus['valid'] !== true) {
                     </div>
                     <div class="form-check form-check-inline">
                       <label class="form-check-label" for="coworkerType">
-                        عضو اجرائی
+                        عوامل اجرائی
                       </label>
                       <input class="form-check-input" type="radio" name="userType" id="coworkerType" value="coworker">
                     </div>
