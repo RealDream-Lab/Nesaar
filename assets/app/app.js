@@ -1430,6 +1430,8 @@ document.addEventListener("DOMContentLoaded", () => {
             focusConfirm: false,
             showCancelButton: false,
             confirmButtonText: "ذخیره",
+            allowOutsideClick: false,
+            allowEscapeKey: false,
             preConfirm: () => {
               const admin =
                 document.getElementById("swal-adminnick")?.value.trim() || "";
