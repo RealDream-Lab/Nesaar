@@ -721,10 +721,10 @@ function generateSecretaryReport($pdo, $mpdf, $examDate, $examTime, $config)
         $html .= '<div class="multi-exam-header">دانشجویان چند آزمونی (' . toPersianDigits(count($multiExamStudents)) . ' نفر)</div>';
         $html .= '<table class="multi-exam-table"><thead><tr>';
         $html .= '<th style="width: 6%;">ردیف</th>';
-        $html .= '<th style="width: 10%;">شماره دانشجویی</th>';
-        $html .= '<th style="width: 18%;">نام و نام خانوادگی</th>';
-        $html .= '<th style="width: 32%;">دروس</th>';
-        $html .= '<th style="width: 22%;">شماره صندلی‌ها</th>';
+        $html .= '<th style="width: 12%;">شماره دانشجویی</th>';
+        $html .= '<th style="width: 20%;">نام و نام خانوادگی</th>';
+        $html .= '<th style="width: 35%;">دروس</th>';
+        $html .= '<th style="width: 15%;">شماره صندلی‌ها</th>';
         $html .= '<th style="width: 12%;">صندلی اصلی</th>';
         $html .= '</tr></thead><tbody>';
 
