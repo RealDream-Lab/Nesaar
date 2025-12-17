@@ -1140,6 +1140,210 @@ function generateReproductionReport($pdo, $mpdf, $examDate, $examTime, $config)
     }
 
     $mpdf->WriteHTML($html);
+
+    // Check MultiExamMode config and add multi-exam students section
+    $multiExamModeEnabled = isset($config['MultiExamMode']) && strtoupper($config['MultiExamMode']) === 'YES';
+
+    if ($multiExamModeEnabled) {
+        // Find multi-exam students (students with more than one course in this session)
+        $studentExamCount = [];
+        foreach ($allStudents as $s) {
+            $sid = $s['student_id'];
+            if (!isset($studentExamCount[$sid])) {
+                $studentExamCount[$sid] = [];
+            }
+            $studentExamCount[$sid][] = $s;
+        }
+
+        $multiExamStudents = [];
+        foreach ($studentExamCount as $sid => $exams) {
+            if (count($exams) > 1) {
+                $multiExamStudents[$sid] = $exams;
+            }
+        }
+
+        if (!empty($multiExamStudents)) {
+            // Fetch student names
+            $multiStudentIds      = array_keys($multiExamStudents);
+            $placeholdersStudents = str_repeat('?,', count($multiStudentIds) - 1) . '?';
+            $stmtNames            = $pdo->prepare("SELECT student_id, first_name, last_name FROM students WHERE student_id IN ($placeholdersStudents)");
+            $stmtNames->execute($multiStudentIds);
+            $studentNames = [];
+            while ($row = $stmtNames->fetch(PDO::FETCH_ASSOC)) {
+                $studentNames[$row['student_id']] = $row['first_name'] . ' ' . $row['last_name'];
+            }
+
+            // Build course_code to course_name map
+            $courseMap = [];
+            foreach ($courses as $c) {
+                $courseMap[$c['course_code']] = $c['course_name'];
+            }
+
+            // Group multi-exam students by their primary seat location (building || class_name)
+            $locationMultiExam = [];
+            foreach ($multiExamStudents as $sid => $exams) {
+                // Find primary seat (minimum seat number)
+                $seatNumbers = [];
+                $primaryExam = null;
+                foreach ($exams as $exam) {
+                    $raw = $exam['seat_number'];
+                    if (preg_match('/(\d+)/', $raw, $m)) {
+                        $seatNum                           = (int)$m[1];
+                        $seatNumbers[$exam['course_code']] = $seatNum;
+                        if ($primaryExam === null || $seatNum < $seatNumbers[$primaryExam['course_code']]) {
+                            $primaryExam = $exam;
+                        }
+                    }
+                }
+
+                if ($primaryExam) {
+                    $b   = trim($primaryExam['building'] ?? '') ?: 'بدون ساختمان';
+                    $c   = trim($primaryExam['class_name'] ?? '') ?: 'بدون کلاس';
+                    $key = $b . '||' . $c;
+
+                    if (!isset($locationMultiExam[$key])) {
+                        $locationMultiExam[$key] = [
+                            'building' => $b,
+                            'class_name' => $c,
+                            'students' => []
+                        ];
+                    }
+
+                    $primarySeat     = min($seatNumbers);
+                    $primaryLocation = $b . ' | ' . $c;
+
+                    // Build exam details with location info for each exam
+                    $examDetails = [];
+                    foreach ($exams as $exam) {
+                        $examB        = trim($exam['building'] ?? '') ?: 'بدون ساختمان';
+                        $examC        = trim($exam['class_name'] ?? '') ?: 'بدون کلاس';
+                        $examLocation = $examB . ' | ' . $examC;
+                        $examSeat     = $seatNumbers[$exam['course_code']] ?? 0;
+                        $isPrimary    = ($examSeat == $primarySeat);
+
+                        $examDetails[] = [
+                            'course_code' => $exam['course_code'],
+                            'course_name' => $courseMap[$exam['course_code']] ?? $exam['course_code'],
+                            'seat_number' => $examSeat,
+                            'location' => $examLocation,
+                            'is_primary' => $isPrimary,
+                            'send_to' => $primaryLocation
+                        ];
+                    }
+
+                    // Sort exam details by seat number
+                    usort($examDetails, function ($a, $b) {
+                        return $a['seat_number'] - $b['seat_number'];
+                    });
+
+                    $locationMultiExam[$key]['students'][] = [
+                        'student_id' => $sid,
+                        'student_name' => $studentNames[$sid] ?? 'نامشخص',
+                        'primary_seat' => $primarySeat,
+                        'primary_location' => $primaryLocation,
+                        'exams' => $exams,
+                        'exam_details' => $examDetails,
+                        'seat_numbers' => $seatNumbers,
+                        'course_map' => $courseMap
+                    ];
+                }
+            }
+
+            // Sort locations
+            uksort($locationMultiExam, function ($a, $b) {
+                return strcmp($a, $b);
+            });
+
+            // Add page break and render multi-exam section
+            $mpdf->AddPage('P');
+            $multiHtml = '
+            <style>
+                body { font-family: vazir; font-size: 10pt; }
+                .header { text-align: center; margin-bottom: 10px; }
+                .title { font-size: 16pt; font-weight: bold; }
+                .meta { font-size: 11pt; font-weight: bold; margin-top: 5px; }
+                .multi-exam-header { background: #dc3545; color: #fff; font-size: 12pt; font-weight: bold; text-align: center; padding: 6px; border-radius: 8px; margin: 10px 0; }
+                .location-multi-box { margin-bottom: 15px; page-break-inside: avoid; }
+                .location-multi-header { width: 100%; border-collapse: separate; border-spacing: 0; margin-bottom: 5px; }
+                .location-index-cell { width: 40px; vertical-align: middle; padding: 0; text-align: center; background-color: #dc3545; border-radius: 5px; }
+                .location-index-box { color: #fff; font-weight: bold; text-align: center; padding: 8px 0; display: block; width: 100%; background: transparent; }
+                .location-info { font-size: 11pt; font-weight: bold; vertical-align: middle; padding-right: 10px; }
+                .multi-exam-table { width: 100%; border-collapse: collapse; margin-bottom: 10px; font-size: 8pt; }
+                .multi-exam-table th, .multi-exam-table td { border: 1px solid #ddd; padding: 4px; text-align: center; }
+                .multi-exam-table th { background-color: #f8d7da; font-size: 8pt; }
+                .row-odd { background-color: #f9f9f9; }
+                .row-even { background-color: #ffffff; }
+            </style>
+            <div class="header"><div class="title">دانشجویان چند آزمونی - ملزومات اتاق تکثیر</div><div class="meta">' . toPersianDigits($examTime) . ' | ' . toPersianDigits($examDate) . '</div></div>
+            <div class="multi-exam-header">لیست دانشجویان چند آزمونی بر اساس مکان استقرار (' . toPersianDigits(count($multiExamStudents)) . ' نفر)</div>
+            ';
+
+            $locationIndex = 0;
+            foreach ($locationMultiExam as $key => $loc) {
+                $locationIndex++;
+
+                // Sort students by primary seat
+                usort($loc['students'], function ($a, $b) {
+                    return $a['primary_seat'] - $b['primary_seat'];
+                });
+
+                $multiHtml .= '<div class="location-multi-box">';
+                $multiHtml .= '<table class="location-multi-header"><tr>
+                    <td class="location-index-cell"><div class="location-index-box">' . toPersianDigits($locationIndex) . '</div></td>
+                    <td class="location-info">' . $loc['building'] . ' | ' . $loc['class_name'] . '</td>
+                    <td style="text-align: left; font-weight: bold; font-size: 10pt;">' . toPersianDigits(count($loc['students'])) . ' نفر</td>
+                </tr></table>';
+
+                $multiHtml .= '<table class="multi-exam-table"><thead><tr>
+                    <th style="width: 5%;">ردیف</th>
+                    <th style="width: 10%;">شماره دانشجویی</th>
+                    <th style="width: 14%;">نام دانشجو</th>
+                    <th style="width: 20%;">نام درس</th>
+                    <th style="width: 8%;">صندلی</th>
+                    <th style="width: 18%;">مکان اصلی صندلی</th>
+                    <th style="width: 25%;">ارسال سوالات به</th>
+                </tr></thead><tbody>';
+
+                $rowIndex     = 0;
+                $studentIndex = 0;
+                foreach ($loc['students'] as $student) {
+                    $studentIndex++;
+                    $isFirstRow = true;
+                    $examCount  = count($student['exam_details']);
+                    $rowClass   = ($studentIndex % 2 == 1) ? 'row-odd' : 'row-even';
+
+                    foreach ($student['exam_details'] as $examDetail) {
+                        $rowIndex++;
+
+                        $multiHtml .= '<tr class="' . $rowClass . '">';
+
+                        if ($isFirstRow) {
+                            $multiHtml  .= '<td rowspan="' . $examCount . '">' . toPersianDigits($studentIndex) . '</td>';
+                            $multiHtml  .= '<td rowspan="' . $examCount . '">' . toPersianDigits($student['student_id']) . '</td>';
+                            $multiHtml  .= '<td rowspan="' . $examCount . '" style="text-align: right;">' . $student['student_name'] . '</td>';
+                            $isFirstRow  = false;
+                        }
+
+                        $multiHtml .= '<td style="text-align: right;">' . $examDetail['course_name'] . '</td>';
+                        $multiHtml .= '<td>' . toPersianDigits($examDetail['seat_number']) . '</td>';
+                        $multiHtml .= '<td style="text-align: right; font-size: 7pt;">' . $examDetail['location'] . '</td>';
+
+                        if ($examDetail['is_primary']) {
+                            $multiHtml .= '<td style="text-align: center;">همین مکان</td>';
+                        } else {
+                            $multiHtml .= '<td style="text-align: right; font-size: 7pt;">' . $examDetail['send_to'] . '</td>';
+                        }
+
+                        $multiHtml .= '</tr>';
+                    }
+                }
+
+                $multiHtml .= '</tbody></table></div>';
+            }
+
+            $mpdf->WriteHTML($multiHtml);
+        }
+    }
 }
 
 function generateLocationReport($pdo, $mpdf, $examDate, $examTime, $config)
@@ -1378,6 +1582,210 @@ function generateLocationReport($pdo, $mpdf, $examDate, $examTime, $config)
     }
 
     $mpdf->WriteHTML($html);
+
+    // Check MultiExamMode config and add multi-exam students section
+    $multiExamModeEnabled = isset($config['MultiExamMode']) && strtoupper($config['MultiExamMode']) === 'YES';
+
+    if ($multiExamModeEnabled) {
+        // Find multi-exam students (students with more than one course in this session)
+        $studentExamCount = [];
+        foreach ($allStudents as $s) {
+            $sid = $s['student_id'];
+            if (!isset($studentExamCount[$sid])) {
+                $studentExamCount[$sid] = [];
+            }
+            $studentExamCount[$sid][] = $s;
+        }
+
+        $multiExamStudents = [];
+        foreach ($studentExamCount as $sid => $exams) {
+            if (count($exams) > 1) {
+                $multiExamStudents[$sid] = $exams;
+            }
+        }
+
+        if (!empty($multiExamStudents)) {
+            // Fetch student names
+            $multiStudentIds      = array_keys($multiExamStudents);
+            $placeholdersStudents = str_repeat('?,', count($multiStudentIds) - 1) . '?';
+            $stmtNames            = $pdo->prepare("SELECT student_id, first_name, last_name FROM students WHERE student_id IN ($placeholdersStudents)");
+            $stmtNames->execute($multiStudentIds);
+            $studentNames = [];
+            while ($row = $stmtNames->fetch(PDO::FETCH_ASSOC)) {
+                $studentNames[$row['student_id']] = $row['first_name'] . ' ' . $row['last_name'];
+            }
+
+            // Build course_code to course_name map
+            $courseMap = [];
+            foreach ($courses as $c) {
+                $courseMap[$c['course_code']] = $c['course_name'];
+            }
+
+            // Group multi-exam students by their primary seat location (building || class_name)
+            $locationMultiExam = [];
+            foreach ($multiExamStudents as $sid => $exams) {
+                // Find primary seat (minimum seat number)
+                $seatNumbers = [];
+                $primaryExam = null;
+                foreach ($exams as $exam) {
+                    $raw = $exam['seat_number'];
+                    if (preg_match('/(\d+)/', $raw, $m)) {
+                        $seatNum                           = (int)$m[1];
+                        $seatNumbers[$exam['course_code']] = $seatNum;
+                        if ($primaryExam === null || $seatNum < $seatNumbers[$primaryExam['course_code']]) {
+                            $primaryExam = $exam;
+                        }
+                    }
+                }
+
+                if ($primaryExam) {
+                    $b   = trim($primaryExam['building'] ?? '') ?: 'بدون ساختمان';
+                    $c   = trim($primaryExam['class_name'] ?? '') ?: 'بدون کلاس';
+                    $key = $b . '||' . $c;
+
+                    if (!isset($locationMultiExam[$key])) {
+                        $locationMultiExam[$key] = [
+                            'building' => $b,
+                            'class_name' => $c,
+                            'students' => []
+                        ];
+                    }
+
+                    $primarySeat     = min($seatNumbers);
+                    $primaryLocation = $b . ' | ' . $c;
+
+                    // Build exam details with location info for each exam
+                    $examDetails = [];
+                    foreach ($exams as $exam) {
+                        $examB        = trim($exam['building'] ?? '') ?: 'بدون ساختمان';
+                        $examC        = trim($exam['class_name'] ?? '') ?: 'بدون کلاس';
+                        $examLocation = $examB . ' | ' . $examC;
+                        $examSeat     = $seatNumbers[$exam['course_code']] ?? 0;
+                        $isPrimary    = ($examSeat == $primarySeat);
+
+                        $examDetails[] = [
+                            'course_code' => $exam['course_code'],
+                            'course_name' => $courseMap[$exam['course_code']] ?? $exam['course_code'],
+                            'seat_number' => $examSeat,
+                            'location' => $examLocation,
+                            'is_primary' => $isPrimary,
+                            'send_to' => $primaryLocation
+                        ];
+                    }
+
+                    // Sort exam details by seat number
+                    usort($examDetails, function ($a, $b) {
+                        return $a['seat_number'] - $b['seat_number'];
+                    });
+
+                    $locationMultiExam[$key]['students'][] = [
+                        'student_id' => $sid,
+                        'student_name' => $studentNames[$sid] ?? 'نامشخص',
+                        'primary_seat' => $primarySeat,
+                        'primary_location' => $primaryLocation,
+                        'exams' => $exams,
+                        'exam_details' => $examDetails,
+                        'seat_numbers' => $seatNumbers,
+                        'course_map' => $courseMap
+                    ];
+                }
+            }
+
+            // Sort locations
+            uksort($locationMultiExam, function ($a, $b) {
+                return strcmp($a, $b);
+            });
+
+            // Add page break and render multi-exam section
+            $mpdf->AddPage('P');
+            $multiHtml = '
+            <style>
+                body { font-family: vazir; font-size: 10pt; }
+                .header { text-align: center; margin-bottom: 10px; }
+                .title { font-size: 16pt; font-weight: bold; }
+                .meta { font-size: 11pt; font-weight: bold; margin-top: 5px; }
+                .multi-exam-header { background: #dc3545; color: #fff; font-size: 12pt; font-weight: bold; text-align: center; padding: 6px; border-radius: 8px; margin: 10px 0; }
+                .location-multi-box { margin-bottom: 15px; page-break-inside: avoid; }
+                .location-multi-header { width: 100%; border-collapse: separate; border-spacing: 0; margin-bottom: 5px; }
+                .location-index-cell { width: 40px; vertical-align: middle; padding: 0; text-align: center; background-color: #dc3545; border-radius: 5px; }
+                .location-index-box { color: #fff; font-weight: bold; text-align: center; padding: 8px 0; display: block; width: 100%; background: transparent; }
+                .location-info { font-size: 11pt; font-weight: bold; vertical-align: middle; padding-right: 10px; }
+                .multi-exam-table { width: 100%; border-collapse: collapse; margin-bottom: 10px; font-size: 8pt; }
+                .multi-exam-table th, .multi-exam-table td { border: 1px solid #ddd; padding: 4px; text-align: center; }
+                .multi-exam-table th { background-color: #f8d7da; font-size: 8pt; }
+                .row-odd { background-color: #f9f9f9; }
+                .row-even { background-color: #ffffff; }
+            </style>
+            <div class="header"><div class="title">دانشجویان چند آزمونی - ملزومات اتاق تکثیر</div><div class="meta">' . toPersianDigits($examTime) . ' | ' . toPersianDigits($examDate) . '</div></div>
+            <div class="multi-exam-header">لیست دانشجویان چند آزمونی بر اساس مکان استقرار (' . toPersianDigits(count($multiExamStudents)) . ' نفر)</div>
+            ';
+
+            $locationIndex = 0;
+            foreach ($locationMultiExam as $key => $loc) {
+                $locationIndex++;
+
+                // Sort students by primary seat
+                usort($loc['students'], function ($a, $b) {
+                    return $a['primary_seat'] - $b['primary_seat'];
+                });
+
+                $multiHtml .= '<div class="location-multi-box">';
+                $multiHtml .= '<table class="location-multi-header"><tr>
+                    <td class="location-index-cell"><div class="location-index-box">' . toPersianDigits($locationIndex) . '</div></td>
+                    <td class="location-info">' . $loc['building'] . ' | ' . $loc['class_name'] . '</td>
+                    <td style="text-align: left; font-weight: bold; font-size: 10pt;">' . toPersianDigits(count($loc['students'])) . ' نفر</td>
+                </tr></table>';
+
+                $multiHtml .= '<table class="multi-exam-table"><thead><tr>
+                    <th style="width: 5%;">ردیف</th>
+                    <th style="width: 10%;">شماره دانشجویی</th>
+                    <th style="width: 14%;">نام دانشجو</th>
+                    <th style="width: 20%;">نام درس</th>
+                    <th style="width: 8%;">صندلی</th>
+                    <th style="width: 18%;">مکان اصلی صندلی</th>
+                    <th style="width: 25%;">ارسال سوالات به</th>
+                </tr></thead><tbody>';
+
+                $rowIndex     = 0;
+                $studentIndex = 0;
+                foreach ($loc['students'] as $student) {
+                    $studentIndex++;
+                    $isFirstRow = true;
+                    $examCount  = count($student['exam_details']);
+                    $rowClass   = ($studentIndex % 2 == 1) ? 'row-odd' : 'row-even';
+
+                    foreach ($student['exam_details'] as $examDetail) {
+                        $rowIndex++;
+
+                        $multiHtml .= '<tr class="' . $rowClass . '">';
+
+                        if ($isFirstRow) {
+                            $multiHtml  .= '<td rowspan="' . $examCount . '">' . toPersianDigits($studentIndex) . '</td>';
+                            $multiHtml  .= '<td rowspan="' . $examCount . '">' . toPersianDigits($student['student_id']) . '</td>';
+                            $multiHtml  .= '<td rowspan="' . $examCount . '" style="text-align: right;">' . $student['student_name'] . '</td>';
+                            $isFirstRow  = false;
+                        }
+
+                        $multiHtml .= '<td style="text-align: right;">' . $examDetail['course_name'] . '</td>';
+                        $multiHtml .= '<td>' . toPersianDigits($examDetail['seat_number']) . '</td>';
+                        $multiHtml .= '<td style="text-align: right; font-size: 7pt;">' . $examDetail['location'] . '</td>';
+
+                        if ($examDetail['is_primary']) {
+                            $multiHtml .= '<td style="text-align: center;">همین مکان</td>';
+                        } else {
+                            $multiHtml .= '<td style="text-align: right; font-size: 7pt;">' . $examDetail['send_to'] . '</td>';
+                        }
+
+                        $multiHtml .= '</tr>';
+                    }
+                }
+
+                $multiHtml .= '</tbody></table></div>';
+            }
+
+            $mpdf->WriteHTML($multiHtml);
+        }
+    }
 }
 
 function generateLocationLabels($pdo, $mpdf, $examDate, $examTime, $config)
