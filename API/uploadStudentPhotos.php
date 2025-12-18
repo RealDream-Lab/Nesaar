@@ -19,8 +19,8 @@ header('X-Frame-Options: DENY');
 
 license_guard_enforce_api();
 
-// Rate limiting: 20 requests per 5 minutes per IP
-rate_limit_enforce($pdo, 'admin_photo_upload', 20, 300);
+// Rate limiting: 20000 requests per 5 minutes per IP (for bulk photo uploads)
+rate_limit_enforce($pdo, 'admin_photo_upload', 20000, 300);
 
 // Only allow POST requests
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
