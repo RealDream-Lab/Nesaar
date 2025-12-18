@@ -219,6 +219,10 @@ $bodyClass = $wavesAnimationDisabled ? 'class="no-waves-animation"' : '';
                     <!-- Table section -->
                     <div id="proctorsList" style="margin-top:0.8rem;"></div>
                     <div style="margin-top:0.9rem;text-align:center;">
+                        <button id="uploadProctorsExcelBtn" class="btn btn-info"
+                            style="width:280px; margin-inline-end:10px;">
+                            آپلود فایل اکسل مراقبین
+                        </button>
                         <button id="restoreProctorsBtn" class="btn btn-warning"
                             style="width:280px; margin-inline-end:10px; display:none;">
                             بازیابی از نسخه پشتیبان

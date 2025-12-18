@@ -1665,39 +1665,53 @@
       const uniqueTimes = Array.from(
         new Set(exams.map((e) => (e.exam_time || "").trim()).filter(Boolean))
       ).sort();
-      const columnTimes = uniqueTimes.slice(0, 3);
-      const colLabels = ["جلسه اول", "جلسه دوم", "جلسه سوم"];
+      // Support up to 6 sessions dynamically
+      const maxSessions = Math.min(Math.max(uniqueTimes.length, 3), 6);
+      const columnTimes = uniqueTimes.slice(0, maxSessions);
+      const colLabels = [
+        "جلسه اول",
+        "جلسه دوم",
+        "جلسه سوم",
+        "جلسه چهارم",
+        "جلسه پنجم",
+        "جلسه ششم",
+      ];
+
+      // Adjust column widths based on number of sessions
+      const dateColWidth = maxSessions > 3 ? "140px" : "220px";
+      const sessionColWidth =
+        maxSessions > 4 ? "120px" : maxSessions > 3 ? "140px" : "160px";
 
       let html = `
                 <table class="table" style="direction:rtl;text-align:right;margin:0;">
                     <thead>
                         <tr>
-                            <th style="width:60px"></th>
-                            <th style="width:220px">تاریخ</th>
+                            <th style="width:50px"></th>
+                            <th style="width:${dateColWidth}">تاریخ</th>
             `;
-      for (let ci = 0; ci < 3; ci++) {
+      for (let ci = 0; ci < maxSessions; ci++) {
         const time = columnTimes[ci] || "";
         const suffix = time ? ` (${escapeHtml(time)})` : "";
-        html += `<th style="width:160px">${colLabels[ci]}${suffix}</th>`;
+        html += `<th style="width:${sessionColWidth}">${colLabels[ci]}${suffix}</th>`;
       }
-      html += `<th style="width:120px">عملیات</th></tr></thead><tbody>`;
+      html += `<th style="width:100px">عملیات</th></tr></thead><tbody>`;
 
       dates.forEach((d) => {
         const list = (byDate.get(d) || []).sort((a, b) =>
           (a.exam_time || "").localeCompare(b.exam_time || "")
         );
         // map sessions into columns by time when possible; fall back to next empty slot
-        const slots = [null, null, null];
+        const slots = Array(maxSessions).fill(null);
         list.forEach((sess) => {
           const t = (sess.exam_time || "").trim();
           let placed = false;
           const idx = columnTimes.indexOf(t);
-          if (idx >= 0 && idx < 3 && !slots[idx]) {
+          if (idx >= 0 && idx < maxSessions && !slots[idx]) {
             slots[idx] = sess;
             placed = true;
           }
           if (!placed) {
-            for (let k = 0; k < 3; k++) {
+            for (let k = 0; k < maxSessions; k++) {
               if (!slots[k]) {
                 slots[k] = sess;
                 placed = true;
@@ -1713,7 +1727,7 @@
           d
         )}</td>`;
 
-        for (let s = 0; s < 3; s++) {
+        for (let s = 0; s < maxSessions; s++) {
           const session = slots[s];
           if (!session) {
             html += `<td style="vertical-align:middle;color:var(--text-muted);">-</td>`;
@@ -4747,6 +4761,203 @@
         });
       } finally {
         restoreBtn.disabled = false;
+      }
+    });
+  })();
+
+  // Handle Excel upload button click
+  (function initUploadProctorsExcelButton() {
+    const uploadBtn = document.getElementById("uploadProctorsExcelBtn");
+    if (!uploadBtn) return;
+
+    uploadBtn.addEventListener("click", async () => {
+      let selectedFile = null;
+
+      const result = await Swal.fire({
+        title: "آپلود فایل اکسل مراقبین",
+        html: `
+          <div style="text-align: justify; direction: rtl; margin-bottom: 1rem;">
+            <p>یک فایل اکسل (xlsx) با ستون‌های زیر آپلود کنید:</p>
+            <ul style="text-align: right; margin-right: 1rem;">
+              <li>جنسیت (مرد/زن)</li>
+              <li>نام</li>
+              <li>نام خانوادگی</li>
+              <li>شماره ملی (۱۰ رقم)</li>
+              <li>شماره همراه (۱۱ رقم)</li>
+            </ul>
+            <p style="color: #888; font-size: 0.85rem;">توجه: ردیف‌های با شماره ملی یا شماره همراه تکراری رد خواهند شد.</p>
+          </div>
+          <div style="margin-bottom: 1rem;">
+            <a href="/API/generateProctorsSampleExcel.php" download="sample_proctors.xlsx" class="btn btn-sm" style="background:#3b82f6;color:#fff;text-decoration:none;padding:6px 12px;border-radius:6px;">
+              <i class="bi bi-download"></i> دانلود فایل نمونه
+            </a>
+          </div>
+          <div class="excel-upload-dropzone" id="proctorsExcelDropzone" style="border:2px dashed #475569;border-radius:12px;padding:30px 20px;text-align:center;cursor:pointer;transition:all 0.3s;background:rgba(59,130,246,0.05);">
+            <div style="font-size:40px;margin-bottom:10px;">📊</div>
+            <p style="margin:0;color:#64748b;" id="dropzoneText">فایل xlsx را اینجا رها کنید یا کلیک کنید</p>
+            <input type="file" id="proctorsExcelFile" accept=".xlsx" style="display:none;">
+          </div>
+        `,
+        showCancelButton: true,
+        confirmButtonText: "آپلود و پردازش",
+        cancelButtonText: "لغو",
+        customClass: {
+          popup: "swal2-rtl swal2-glass",
+          confirmButton: "btn btn-primary",
+          cancelButton: "btn btn-cancel",
+        },
+        didOpen: (popup) => {
+          const dropzone = popup.querySelector("#proctorsExcelDropzone");
+          const fileInput = popup.querySelector("#proctorsExcelFile");
+          const dropzoneText = popup.querySelector("#dropzoneText");
+
+          // Click on dropzone opens file picker
+          dropzone.addEventListener("click", () => fileInput.click());
+
+          // Drag and drop
+          dropzone.addEventListener("dragover", (e) => {
+            e.preventDefault();
+            dropzone.style.borderColor = "#3b82f6";
+            dropzone.style.background = "rgba(59,130,246,0.15)";
+          });
+
+          dropzone.addEventListener("dragleave", (e) => {
+            e.preventDefault();
+            dropzone.style.borderColor = "#475569";
+            dropzone.style.background = "rgba(59,130,246,0.05)";
+          });
+
+          dropzone.addEventListener("drop", (e) => {
+            e.preventDefault();
+            dropzone.style.borderColor = "#475569";
+            dropzone.style.background = "rgba(59,130,246,0.05)";
+            const files = e.dataTransfer.files;
+            if (files.length > 0) {
+              const file = files[0];
+              if (file.name.toLowerCase().endsWith(".xlsx")) {
+                selectedFile = file;
+                dropzoneText.textContent = `فایل انتخاب شده: ${file.name}`;
+                dropzone.style.borderColor = "#22c55e";
+                dropzone.style.background = "rgba(34,197,94,0.1)";
+              } else {
+                dropzoneText.textContent = "فقط فایل‌های xlsx پشتیبانی می‌شود";
+                dropzone.style.borderColor = "#ef4444";
+              }
+            }
+          });
+
+          // File input change
+          fileInput.addEventListener("change", () => {
+            if (fileInput.files.length > 0) {
+              selectedFile = fileInput.files[0];
+              dropzoneText.textContent = `فایل انتخاب شده: ${selectedFile.name}`;
+              dropzone.style.borderColor = "#22c55e";
+              dropzone.style.background = "rgba(34,197,94,0.1)";
+            }
+          });
+        },
+        preConfirm: () => {
+          const fileInput = document.getElementById("proctorsExcelFile");
+          if (!selectedFile && (!fileInput.files || !fileInput.files.length)) {
+            Swal.showValidationMessage("لطفاً یک فایل انتخاب کنید");
+            return false;
+          }
+          return selectedFile || fileInput.files[0];
+        },
+      });
+
+      if (!result.isConfirmed || !result.value) return;
+
+      const file = result.value;
+
+      // Show loading
+      Swal.fire({
+        title: "در حال پردازش...",
+        html: "لطفاً صبر کنید...",
+        allowOutsideClick: false,
+        allowEscapeKey: false,
+        didOpen: () => {
+          Swal.showLoading();
+        },
+        customClass: { popup: "swal2-rtl swal2-glass" },
+      });
+
+      try {
+        const formData = new FormData();
+        formData.append("file", file);
+
+        const resp = await fetch("/API/uploadProctorsExcel.php", {
+          method: "POST",
+          headers: {
+            "X-CSRF-Token": getCsrfToken(),
+          },
+          body: formData,
+        });
+
+        const result = await resp.json();
+
+        if (resp.ok && result.success) {
+          let detailsHtml = "";
+          if (result.results) {
+            const r = result.results;
+            detailsHtml = `
+              <div style="text-align: right; direction: rtl; margin-top: 1rem; font-size: 0.9rem;">
+                <p>کل ردیف‌ها: ${toPersianDigits(r.total)}</p>
+                <p style="color: green;">اضافه شده: ${toPersianDigits(
+                  r.inserted
+                )}</p>
+                ${
+                  r.skipped_duplicate_national_id > 0
+                    ? `<p style="color: #888;">رد شده (شماره ملی تکراری): ${toPersianDigits(
+                        r.skipped_duplicate_national_id
+                      )}</p>`
+                    : ""
+                }
+                ${
+                  r.skipped_duplicate_phone > 0
+                    ? `<p style="color: #888;">رد شده (شماره همراه تکراری): ${toPersianDigits(
+                        r.skipped_duplicate_phone
+                      )}</p>`
+                    : ""
+                }
+                ${
+                  r.skipped_invalid > 0
+                    ? `<p style="color: orange;">رد شده (نامعتبر): ${toPersianDigits(
+                        r.skipped_invalid
+                      )}</p>`
+                    : ""
+                }
+              </div>
+            `;
+          }
+
+          Swal.fire({
+            icon: "success",
+            title: "آپلود موفق",
+            html: `<div style="text-align: right; direction: rtl;">${
+              result.message || "فایل با موفقیت پردازش شد."
+            }${detailsHtml}</div>`,
+            customClass: { popup: "swal2-rtl swal2-glass" },
+          });
+
+          // Reload proctors list
+          await loadProctors();
+        } else {
+          Swal.fire({
+            icon: "error",
+            title: "خطا",
+            text: result.error || "آپلود ناموفق بود.",
+            customClass: { popup: "swal2-rtl swal2-glass" },
+          });
+        }
+      } catch (err) {
+        console.error("Upload failed:", err);
+        Swal.fire({
+          icon: "error",
+          title: "خطا",
+          text: "خطا در ارتباط با سرور",
+          customClass: { popup: "swal2-rtl swal2-glass" },
+        });
       }
     });
   })();
