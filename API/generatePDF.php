@@ -977,7 +977,7 @@ function generateSecretaryReport($pdo, $mpdf, $examDate, $examTime, $config)
         $html .= '<table class="proctor-table" style="width: 100%;"><thead><tr>';
         $html .= '<th style="width: 40px;">ردیف</th>';
         $html .= '<th style="width: 40%;">نام عامل اجرائی</th>';
-        $html .= '<th style="width: 50%;">محل استقرار</th>';
+        $html .= '<th style="width: 50%;">محل استقرار پیشنهادی</th>';
         $html .= '</tr></thead><tbody>';
 
         $globalIndex = 1;
