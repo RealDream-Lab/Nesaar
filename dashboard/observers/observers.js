@@ -6152,46 +6152,81 @@
     if (!confirmed || !Array.isArray(confirmed) || confirmed.length === 0)
       return;
 
-    // Step 3: Show eligible proctors for exclusion
+    // Step 3: Show eligible proctors for exclusion/inclusion
     // Get other proctors who could receive sessions (exclude source proctor)
     const eligibleForReceiving = proctors.filter(
       (p) => parseInt(p.id, 10) !== proctorId
     );
 
-    // Build checkboxes for exclusion
+    // Fetch restrictions for validation in include mode
+    let proctorRestrictionsMap = {};
+    try {
+      const restrictResp = await csrfFetch("/API/getProctorRestrictions.php");
+      const restrictData = await restrictResp.json();
+      if (restrictData.success && Array.isArray(restrictData.restrictions)) {
+        restrictData.restrictions.forEach((r) => {
+          const pid = parseInt(r.proctor_id, 10);
+          const key = `${r.exam_date}|${r.exam_time}`;
+          if (!proctorRestrictionsMap[pid]) proctorRestrictionsMap[pid] = {};
+          proctorRestrictionsMap[pid][key] = true;
+        });
+      }
+    } catch (e) {
+      console.warn("Could not fetch proctor restrictions", e);
+    }
+
+    // Build checkboxes for exclusion/inclusion with radio toggle
+    const buildProctorListHtml = () =>
+      eligibleForReceiving
+        .map((p) => {
+          const name =
+            `${p.first_name || ""} ${p.last_name || ""}`.trim() ||
+            `مراقب #${p.id}`;
+          const sessionCount = proctorSessionCounts[p.id] || 0;
+          return `
+        <label style="display:flex;align-items:center;padding:8px 12px;margin-bottom:6px;background:rgba(255,255,255,0.95);border-radius:8px;cursor:pointer;color:#04202a;">
+          <input type="checkbox" data-proctor-id="${
+            p.id
+          }" style="margin-left:10px;width:18px;height:18px;cursor:pointer;">
+          <span style="flex:1;">${escapeHtml(name)}</span>
+          <span style="font-size:0.85rem;color:#666;">(${toPersianDigits(
+            sessionCount
+          )} جلسه)</span>
+        </label>
+      `;
+        })
+        .join("");
+
     const exclusionHtml = `
-      <p style="direction:rtl;text-align:justify;margin-bottom:0.8rem;line-height:1.6;color:#f0f0f0;">
-        مراقبینی که <strong style="color:#ffc107;">نمی‌خواهید</strong> جلسات به آن‌ها تخصیص داده شود را علامت بزنید:
-      </p>
-      <div style="direction:rtl;max-height:300px;overflow-y:auto;overflow-x:hidden;scrollbar-width:none;-ms-overflow-style:none;" class="hide-scrollbar">
-        ${eligibleForReceiving
-          .map((p) => {
-            const name =
-              `${p.first_name || ""} ${p.last_name || ""}`.trim() ||
-              `مراقب #${p.id}`;
-            const sessionCount = proctorSessionCounts[p.id] || 0;
-            return `
-            <label style="display:flex;align-items:center;padding:8px 12px;margin-bottom:6px;background:rgba(255,255,255,0.95);border-radius:8px;cursor:pointer;color:#04202a;">
-              <input type="checkbox" data-proctor-id="${
-                p.id
-              }" style="margin-left:10px;width:18px;height:18px;cursor:pointer;">
-              <span style="flex:1;">${escapeHtml(name)}</span>
-              <span style="font-size:0.85rem;color:#666;">(${toPersianDigits(
-                sessionCount
-              )} جلسه)</span>
-            </label>
-          `;
-          })
-          .join("")}
+      <div style="direction:rtl;margin-bottom:1rem;">
+        <div style="display:flex;justify-content:center;gap:1.5rem;margin-bottom:0.8rem;">
+          <label style="display:flex;align-items:center;cursor:pointer;color:#f0f0f0;">
+            <input type="radio" name="proctor-mode" value="exclude" checked style="margin-left:6px;width:18px;height:18px;cursor:pointer;">
+            <span>استثنا</span>
+          </label>
+          <label style="display:flex;align-items:center;cursor:pointer;color:#f0f0f0;">
+            <input type="radio" name="proctor-mode" value="include" style="margin-left:6px;width:18px;height:18px;cursor:pointer;">
+            <span>شامل</span>
+          </label>
+        </div>
+        <p id="proctor-mode-description" style="text-align:justify;margin-bottom:0.8rem;line-height:1.6;color:#f0f0f0;">
+          مراقبینی که <strong style="color:#ffc107;">نمی‌خواهید</strong> جلسات به آن‌ها تخصیص داده شود را علامت بزنید:
+        </p>
       </div>
-      <p style="direction:rtl;text-align:justify;margin-top:0.8rem;line-height:1.4;font-size:0.9rem;color:#a0a0a0;">
+      <div id="proctor-list-container" style="direction:rtl;max-height:300px;overflow-y:auto;overflow-x:hidden;scrollbar-width:none;-ms-overflow-style:none;" class="hide-scrollbar">
+        ${buildProctorListHtml()}
+      </div>
+      <p id="validation-message" style="direction:rtl;text-align:justify;margin-top:0.8rem;line-height:1.4;font-size:0.9rem;color:#a0a0a0;">
         نکته: مراقبینی که جلسه‌ای ندارند یا قبلاً جابجا شده‌اند ممکن است دوباره جلسه بگیرند.
       </p>
     `;
 
-    const { value: exclusionConfirmed, isConfirmed: proceedWithExclusion } =
+    // Track mode selection
+    let currentMode = "exclude";
+
+    const { value: selectionConfirmed, isConfirmed: proceedWithSelection } =
       await Swal.fire({
-        title: "مستثنا کردن مراقبین (اختیاری)",
+        title: "انتخاب مراقبین برای جابجایی",
         html: exclusionHtml,
         showCancelButton: true,
         confirmButtonText: "ادامه و جابجایی",
@@ -6201,6 +6236,125 @@
           confirmButton: "btn btn-primary",
           cancelButton: "btn btn-cancel",
         },
+        didOpen: () => {
+          const container = Swal.getHtmlContainer();
+          if (!container) return;
+
+          const radioInputs = container.querySelectorAll(
+            'input[name="proctor-mode"]'
+          );
+          const descriptionEl = container.querySelector(
+            "#proctor-mode-description"
+          );
+          const validationEl = container.querySelector("#validation-message");
+          const confirmBtn = Swal.getConfirmButton();
+
+          // Function to validate include mode
+          const validateIncludeMode = () => {
+            if (currentMode !== "include") {
+              if (confirmBtn) confirmBtn.disabled = false;
+              if (validationEl) {
+                validationEl.style.color = "#a0a0a0";
+                validationEl.textContent =
+                  "نکته: مراقبینی که جلسه‌ای ندارند یا قبلاً جابجا شده‌اند ممکن است دوباره جلسه بگیرند.";
+              }
+              return;
+            }
+
+            const checkedEls = container.querySelectorAll(
+              'input[type="checkbox"]:checked'
+            );
+            const selectedProctorIds = Array.from(checkedEls).map((el) =>
+              parseInt(el.getAttribute("data-proctor-id"), 10)
+            );
+
+            if (selectedProctorIds.length === 0) {
+              if (confirmBtn) confirmBtn.disabled = true;
+              if (validationEl) {
+                validationEl.style.color = "#ff6b6b";
+                validationEl.textContent =
+                  "⚠️ در حالت «شامل» باید حداقل یک مراقب انتخاب کنید.";
+              }
+              return;
+            }
+
+            // Check if selected proctors can handle all sessions
+            let canHandle = true;
+            let unassignableSessions = [];
+
+            for (const sess of confirmed) {
+              const sessionKey = `${sess.exam_date}|${sess.exam_time}`;
+              let hasEligible = false;
+
+              for (const pid of selectedProctorIds) {
+                // Check if this proctor is restricted for this session
+                if (
+                  proctorRestrictionsMap[pid] &&
+                  proctorRestrictionsMap[pid][sessionKey]
+                ) {
+                  continue;
+                }
+                hasEligible = true;
+                break;
+              }
+
+              if (!hasEligible) {
+                canHandle = false;
+                unassignableSessions.push(
+                  `${sess.exam_time} | ${sess.exam_date}`
+                );
+              }
+            }
+
+            if (!canHandle) {
+              if (confirmBtn) confirmBtn.disabled = true;
+              if (validationEl) {
+                validationEl.style.color = "#ff6b6b";
+                validationEl.innerHTML = `⚠️ امکان جابجایی وجود ندارد. مراقبین انتخاب‌شده نمی‌توانند جلسات زیر را پوشش دهند:<br><small style="color:#ffc107;">${unassignableSessions
+                  .slice(0, 3)
+                  .join("، ")}${
+                  unassignableSessions.length > 3 ? " و ..." : ""
+                }</small>`;
+              }
+            } else {
+              if (confirmBtn) confirmBtn.disabled = false;
+              if (validationEl) {
+                validationEl.style.color = "#4caf50";
+                validationEl.textContent = `✓ مراقبین انتخاب‌شده (${toPersianDigits(
+                  selectedProctorIds.length
+                )} نفر) می‌توانند تمام ${toPersianDigits(
+                  confirmed.length
+                )} جلسه را پوشش دهند.`;
+              }
+            }
+          };
+
+          // Radio change handler
+          radioInputs.forEach((radio) => {
+            radio.addEventListener("change", (e) => {
+              currentMode = e.target.value;
+              if (descriptionEl) {
+                if (currentMode === "include") {
+                  descriptionEl.innerHTML = `مراقبینی که <strong style="color:#4caf50;">می‌خواهید</strong> جلسات به آن‌ها تخصیص داده شود را علامت بزنید:`;
+                } else {
+                  descriptionEl.innerHTML = `مراقبینی که <strong style="color:#ffc107;">نمی‌خواهید</strong> جلسات به آن‌ها تخصیص داده شود را علامت بزنید:`;
+                }
+              }
+              validateIncludeMode();
+            });
+          });
+
+          // Checkbox change handler for validation
+          const checkboxes = container.querySelectorAll(
+            'input[type="checkbox"]'
+          );
+          checkboxes.forEach((cb) => {
+            cb.addEventListener("change", validateIncludeMode);
+          });
+
+          // Initial validation
+          validateIncludeMode();
+        },
         preConfirm: () => {
           const container = Swal.getHtmlContainer();
           const checkedEls = container
@@ -6208,17 +6362,25 @@
                 container.querySelectorAll('input[type="checkbox"]:checked')
               )
             : [];
-          return checkedEls.map((el) =>
+          const selectedIds = checkedEls.map((el) =>
             parseInt(el.getAttribute("data-proctor-id"), 10)
           );
+          return {
+            mode: currentMode,
+            proctor_ids: selectedIds,
+          };
         },
       });
 
-    if (!proceedWithExclusion) return;
+    if (!proceedWithSelection) return;
 
-    const excludedProctorIds = Array.isArray(exclusionConfirmed)
-      ? exclusionConfirmed
+    const isIncludeMode =
+      selectionConfirmed && selectionConfirmed.mode === "include";
+    const selectedProctorIds = selectionConfirmed
+      ? selectionConfirmed.proctor_ids
       : [];
+    const excludedProctorIds = isIncludeMode ? [] : selectedProctorIds;
+    const includedProctorIds = isIncludeMode ? selectedProctorIds : [];
 
     // Step 4: Send to API
     try {
@@ -6247,6 +6409,8 @@
           source_proctor_id: proctorId,
           sessions: confirmed,
           excluded_proctor_ids: excludedProctorIds,
+          included_proctor_ids: includedProctorIds,
+          include_mode: isIncludeMode,
         }),
       });
       result = await resp.json();

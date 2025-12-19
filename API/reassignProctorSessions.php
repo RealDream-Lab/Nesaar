@@ -54,6 +54,10 @@ try {
     $excludedProctorIds = isset($input['excluded_proctor_ids']) && is_array($input['excluded_proctor_ids'])
         ? array_map('intval', $input['excluded_proctor_ids'])
         : [];
+    $includedProctorIds = isset($input['included_proctor_ids']) && is_array($input['included_proctor_ids'])
+        ? array_map('intval', $input['included_proctor_ids'])
+        : [];
+    $includeMode        = isset($input['include_mode']) && $input['include_mode'] === true;
 
     if ($sourceProctorId <= 0) {
         echo json_encode(['success' => false, 'error' => 'invalid_proctor_id'], JSON_UNESCAPED_UNICODE);
@@ -163,9 +167,15 @@ try {
             if ($pid === $sourceProctorId)
                 continue;
 
-            // Skip if in excluded list
-            if (in_array($pid, $excludedProctorIds, true))
-                continue;
+            // In include mode: only allow proctors in the included list
+            if ($includeMode) {
+                if (!in_array($pid, $includedProctorIds, true))
+                    continue;
+            } else {
+                // In exclude mode: skip if in excluded list
+                if (in_array($pid, $excludedProctorIds, true))
+                    continue;
+            }
 
             // Skip if restricted
             if (isset($restrictions[$pid][$sessionKey]))

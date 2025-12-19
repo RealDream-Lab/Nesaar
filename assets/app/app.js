@@ -458,6 +458,7 @@ document.addEventListener("DOMContentLoaded", () => {
       studentIdInput.type = "tel";
       studentIdInput.inputMode = "numeric";
       studentIdInput.autocomplete = "off";
+      // For students the second field should be a password input per new requirement
       nationalIdInput.type = "tel";
       nationalIdInput.inputMode = "numeric";
       nationalIdInput.autocomplete = "off";
@@ -479,10 +480,11 @@ document.addEventListener("DOMContentLoaded", () => {
         localStorage.setItem("userType", "staff");
       }
     } else if (coworkerTypeRadio?.checked) {
-      firstFieldLabel.textContent = "نام کاربری";
-      secondFieldLabel.textContent = "رمز عبور";
-      studentIdInput.placeholder = "";
-      nationalIdInput.placeholder = "";
+      // For proctors: first field is national id, second is phone (with leading zero)
+      firstFieldLabel.textContent = "کد ملی";
+      secondFieldLabel.textContent = "شماره همراه";
+      studentIdInput.placeholder = "مثال: 0012345678";
+      nationalIdInput.placeholder = "مثال: 09121234567";
       studentIdInput.type = "tel";
       studentIdInput.inputMode = "numeric";
       studentIdInput.autocomplete = "off";
