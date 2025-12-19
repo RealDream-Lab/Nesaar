@@ -905,18 +905,91 @@ function generateSecretaryReport($pdo, $mpdf, $examDate, $examTime, $config)
 
         $html = '<div class="header"><div class="title">لیست عوامل اجرائی جلسه</div><div class="meta">' . toPersianDigits($examTime) . ' | ' . toPersianDigits($examDate) . '</div></div>';
 
-        // Columns logic (simple 2 columns for now)
-        $chunks       = array_chunk($proctors, ceil(count($proctors) / 2));
-        $html        .= '<table style="width: 100%; vertical-align: top; table-layout: fixed;"><tr>';
-        $globalIndex  = 1;
-        foreach ($chunks as $chunk) {
-            $html .= '<td style="vertical-align: top; padding: 5px; width: 50%;"><table class="proctor-table"><thead><tr><th style="width: 50px;">ردیف</th><th>نام عامل اجرائی</th></tr></thead><tbody>';
-            foreach ($chunk as $p) {
-                $html .= '<tr><td style="text-align: center;">' . toPersianDigits($globalIndex++) . '</td><td>' . $p['proctor_name'] . '</td></tr>';
+        // Gather unique locations for this session (building + class_name) grouped by exam_type
+        $sessionLocations    = [];
+        $electronicLocations = [];
+        $writtenLocations    = [];
+
+        foreach ($allStudents as $s) {
+            $building    = trim($s['building'] ?? '') ?: 'بدون ساختمان';
+            $className   = trim($s['class_name'] ?? '') ?: 'بدون کلاس';
+            $locationKey = $building . ' - ' . $className;
+            $examType    = $s['exam_type'] ?? '';
+
+            if (!isset($sessionLocations[$locationKey])) {
+                $sessionLocations[$locationKey] = [
+                    'building' => $building,
+                    'class_name' => $className,
+                    'display' => $locationKey,
+                    'exam_type' => $examType
+                ];
+
+                // Separate by exam type for balanced assignment
+                if ($examType === 'الکترونیکی') {
+                    $electronicLocations[] = $locationKey;
+                } else {
+                    $writtenLocations[] = $locationKey;
+                }
             }
-            $html .= '</tbody></table></td>';
         }
-        $html .= '</tr></table>';
+
+        // Create a deterministic seed based on date and time for consistent assignment
+        $seedStr = toEnglishDigits($examDate) . '_' . toEnglishDigits($examTime);
+        $seed    = crc32($seedStr);
+        mt_srand($seed);
+
+        // Shuffle locations to randomize assignment while keeping consistency
+        shuffle($electronicLocations);
+        shuffle($writtenLocations);
+
+        // Assign locations to proctors with balance between electronic and written
+        $proctorCount     = count($proctors);
+        $proctorLocations = [];
+
+        // Interleave electronic and written locations for balanced distribution
+        $allLocationsShuffled = [];
+        $maxLen               = max(count($electronicLocations), count($writtenLocations));
+        for ($i = 0; $i < $maxLen; $i++) {
+            if (isset($electronicLocations[$i])) {
+                $allLocationsShuffled[] = $electronicLocations[$i];
+            }
+            if (isset($writtenLocations[$i])) {
+                $allLocationsShuffled[] = $writtenLocations[$i];
+            }
+        }
+
+        // Assign locations to proctors in round-robin fashion
+        $locIndex = 0;
+        $locCount = count($allLocationsShuffled);
+        foreach ($proctors as $idx => $p) {
+            if ($locCount > 0) {
+                $proctorLocations[$idx] = $allLocationsShuffled[$locIndex % $locCount];
+                $locIndex++;
+            } else {
+                $proctorLocations[$idx] = '-';
+            }
+        }
+
+        // Reset random seed
+        mt_srand();
+
+        // Columns logic - now single table with location column
+        $html .= '<table class="proctor-table" style="width: 100%;"><thead><tr>';
+        $html .= '<th style="width: 40px;">ردیف</th>';
+        $html .= '<th style="width: 40%;">نام عامل اجرائی</th>';
+        $html .= '<th style="width: 50%;">محل استقرار</th>';
+        $html .= '</tr></thead><tbody>';
+
+        $globalIndex = 1;
+        foreach ($proctors as $idx => $p) {
+            $location  = $proctorLocations[$idx] ?? '-';
+            $html     .= '<tr>';
+            $html     .= '<td style="text-align: center;">' . toPersianDigits($globalIndex++) . '</td>';
+            $html     .= '<td>' . $p['proctor_name'] . '</td>';
+            $html     .= '<td style="text-align: right;">' . $location . '</td>';
+            $html     .= '</tr>';
+        }
+        $html .= '</tbody></table>';
         $mpdf->WriteHTML($html);
     }
 }
