@@ -109,10 +109,10 @@ $bodyClass = $wavesAnimationDisabled ? 'class="no-waves-animation"' : '';
                     </div>
                 </div>
                 <div class="col-md-3">
-                    <div class="dashboard-card stat-card" style="cursor: pointer;" onclick="showRemainingSessions()">
+                    <div class="dashboard-card stat-card" style="cursor: pointer;" onclick="showProctorSearch()">
                         <div class="stat-box">
-                            <h3 id="remainingSessions">-</h3>
-                            <p>جلسه باقیمانده</p>
+                            <h3 id="totalProctors">-</h3>
+                            <p>مراقب</p>
                         </div>
                     </div>
                 </div>
@@ -136,11 +136,30 @@ $bodyClass = $wavesAnimationDisabled ? 'class="no-waves-animation"' : '';
             </div>
         </div>
 
+        <!-- Session Calendar Card -->
+        <div class="dashboard-card no-hover collapsible-card" id="sessionCalendarCard">
+            <div class="card-header-collapsible" onclick="toggleCardCollapse(this)">
+                <h4 class="mb-0">تقویم جلسات آزمون</h4>
+                <span class="collapse-icon">▼</span>
+            </div>
+            <div class="card-body-collapsible">
+                <div id="sessionCalendarContainer">
+                    <div class="calendar-loading">در حال بارگذاری تقویم...</div>
+                </div>
+            </div>
+        </div>
+
         <!-- Reports Chart Card -->
-        <div class="dashboard-card no-hover" id="reportsChartCard">
-            <div class="reports-overview">
-                <div class="chart-wrapper">
-                    <canvas id="reportsChart" aria-label="نمودار جلسات آینده" role="img"></canvas>
+        <div class="dashboard-card no-hover collapsible-card" id="reportsChartCard">
+            <div class="card-header-collapsible" onclick="toggleCardCollapse(this)">
+                <h4 class="mb-0">نمودار جلسات آزمون</h4>
+                <span class="collapse-icon">▼</span>
+            </div>
+            <div class="card-body-collapsible">
+                <div class="reports-overview">
+                    <div class="chart-wrapper">
+                        <canvas id="reportsChart" aria-label="نمودار جلسات آینده" role="img"></canvas>
+                    </div>
                 </div>
             </div>
         </div>

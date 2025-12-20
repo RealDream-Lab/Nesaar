@@ -1,4 +1,10 @@
 <?php
+/**
+ * ============================================================================
+ * TODO: DEAD CODE - REMOVE - This entire file is no longer used
+ * SMS functionality was removed from the dashboard settings
+ * ============================================================================
+ */
 declare(strict_types=1);
 
 header('Content-Type: application/json; charset=utf-8');

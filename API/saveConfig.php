@@ -34,7 +34,9 @@ $allowed = [
     // ReproductionReportMode: 'course' (default) or 'location' for reproduction room report style
     'ReproductionReportMode',
     // MultiExamMode: 'YES' to unify seat numbers for multi-exam students
-    'MultiExamMode'
+    'MultiExamMode',
+    // QuickSessionView: 'YES' to skip modal and go directly to full report on calendar click
+    'QuickSessionView'
 ];
 
 $toSave = [];
@@ -42,7 +44,7 @@ foreach ($allowed as $k) {
     if (!array_key_exists($k, $input))
         continue; // skip keys not provided
 
-    if ($k === 'GroupByCourse' || $k === 'PaperSaving' || $k === 'WavesAnimation' || $k === 'MultiExamMode') {
+    if ($k === 'GroupByCourse' || $k === 'PaperSaving' || $k === 'WavesAnimation' || $k === 'MultiExamMode' || $k === 'QuickSessionView') {
         // Normalize any value to strict YES/NO (default NO for most, YES for WavesAnimation)
         $raw = is_string($input[$k]) ? $input[$k] : '';
         $val = strtoupper(trim($raw));

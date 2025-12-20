@@ -154,10 +154,10 @@ $bodyClass = $wavesAnimationDisabled ? 'class="no-waves-animation"' : '';
                     </div>
                 </div>
                 <div class="col-md-3">
-                    <div class="dashboard-card stat-card" style="cursor: pointer;" onclick="showRemainingSessions()">
+                    <div class="dashboard-card stat-card" style="cursor: pointer;" onclick="showProctorSearch()">
                         <div class="stat-box">
-                            <h3 id="remainingSessions">-</h3>
-                            <p>جلسه باقیمانده</p>
+                            <h3 id="totalProctors">-</h3>
+                            <p>مراقب</p>
                         </div>
                     </div>
                 </div>
@@ -179,6 +179,19 @@ $bodyClass = $wavesAnimationDisabled ? 'class="no-waves-animation"' : '';
         <!-- Buttons are placed under the main reports chart below so they together span the full width -->
         <!-- The IDs are preserved for compatibility with any JS hooks (customCardOne/Two/Three) -->
 
+        <!-- Session Calendar Card -->
+        <div class="dashboard-card no-hover collapsible-card" id="sessionCalendarCard">
+            <div class="card-header-collapsible" onclick="toggleCardCollapse(this)">
+                <h4 class="mb-0">تقویم جلسات آزمون</h4>
+                <span class="collapse-icon">▼</span>
+            </div>
+            <div class="card-body-collapsible">
+                <div id="sessionCalendarContainer">
+                    <div class="calendar-loading">در حال بارگذاری تقویم...</div>
+                </div>
+            </div>
+        </div>
+
         <!-- Latest Request Report -->
         <div class="dashboard-card no-hover" id="reportCard" style="display: none;">
             <h4 class="mb-3">آخرین گزارش درخواستی</h4>
@@ -188,82 +201,98 @@ $bodyClass = $wavesAnimationDisabled ? 'class="no-waves-animation"' : '';
             </div>
         </div>
 
-        <!-- Reports Chart Card (empty title by design) -->
-        <div class="dashboard-card no-hover" id="reportsChartCard">
-            <div class="reports-overview">
-                <div class="chart-wrapper">
-                    <canvas id="reportsChart" aria-label="نمودار جلسات آینده" role="img"></canvas>
+
+        <!-- Reports Chart Card -->
+        <div class="dashboard-card no-hover collapsible-card" id="reportsChartCard">
+            <div class="card-header-collapsible" onclick="toggleCardCollapse(this)">
+                <h4 class="mb-0">نمودار جلسات آزمون</h4>
+                <span class="collapse-icon">▼</span>
+            </div>
+            <div class="card-body-collapsible">
+                <div class="reports-overview">
+                    <div class="chart-wrapper">
+                        <canvas id="reportsChart" aria-label="نمودار جلسات آینده" role="img"></canvas>
+                    </div>
                 </div>
             </div>
-
         </div>
 
         <!-- Insight Cards Row -->
         <div class="row mt-4" id="insightCardsContainer"></div>
 
         <!-- Push Notification Management Card -->
-        <div class="dashboard-card no-hover" id="pushNotificationCard">
-            <h4 class="mb-3">ارسال اعلان (پوش نوتیفیکیشن) نسخه آزمایشی </h4>
-            <p style="color:#666; margin-bottom:1rem;">ارسال پیام به دانشجویان و مراقبین ثبت‌نام شده در سیستم اعلان</p>
-            <div class="row g-3">
-                <div class="col-12 col-md-8">
-                    <label class="form-label">عنوان پیام</label>
-                    <input type="text" class="form-control" id="pushTitle" placeholder="مثال: اطلاعیه مهم"
-                        maxlength="100">
-                </div>
-                <div class="col-12 col-md-4">
-                    <label class="form-label">گیرندگان</label>
-                    <div class="d-flex gap-3 mt-2">
-                        <div class="form-check">
-                            <input class="form-check-input" type="checkbox" id="pushStudents" checked>
-                            <label class="form-check-label" for="pushStudents"
-                                style="color:#1e293b;font-weight:600;">دانشجویان</label>
-                        </div>
-                        <div class="form-check">
-                            <input class="form-check-input" type="checkbox" id="pushProctors" checked>
-                            <label class="form-check-label" for="pushProctors"
-                                style="color:#1e293b;font-weight:600;">مراقبین</label>
+        <div class="dashboard-card no-hover collapsible-card" id="pushNotificationCard">
+            <div class="card-header-collapsible" onclick="toggleCardCollapse(this)">
+                <h4 class="mb-0">ارسال اعلان (پوش نوتیفیکیشن) نسخه آزمایشی</h4>
+                <span class="collapse-icon">▼</span>
+            </div>
+            <div class="card-body-collapsible">
+                <p style="color:#666; margin-bottom:1rem;">ارسال پیام به دانشجویان و مراقبین ثبت‌نام شده در سیستم اعلان
+                </p>
+                <div class="row g-3">
+                    <div class="col-12 col-md-8">
+                        <label class="form-label">عنوان پیام</label>
+                        <input type="text" class="form-control" id="pushTitle" placeholder="مثال: اطلاعیه مهم"
+                            maxlength="100">
+                    </div>
+                    <div class="col-12 col-md-4">
+                        <label class="form-label">گیرندگان</label>
+                        <div class="d-flex gap-3 mt-2">
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" id="pushStudents" checked>
+                                <label class="form-check-label" for="pushStudents"
+                                    style="color:#1e293b;font-weight:600;">دانشجویان</label>
+                            </div>
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" id="pushProctors" checked>
+                                <label class="form-check-label" for="pushProctors"
+                                    style="color:#1e293b;font-weight:600;">مراقبین</label>
+                            </div>
                         </div>
                     </div>
-                </div>
-                <div class="col-12">
-                    <label class="form-label">متن پیام</label>
-                    <textarea class="form-control" id="pushBody" rows="3" placeholder="متن پیام را وارد کنید..."
-                        maxlength="500"></textarea>
-                </div>
-                <div class="col-12 col-md-12">
-                    <button class="btn btn-upload-blue w-100" id="sendPushBtn">
-                        <span class="spinner-border spinner-border-sm d-none" role="status"></span>
-                        ارسال اعلان
-                    </button>
-                </div>
-                <div class="col-12">
-                    <div id="pushResult" class="alert d-none" role="alert"></div>
+                    <div class="col-12">
+                        <label class="form-label">متن پیام</label>
+                        <textarea class="form-control" id="pushBody" rows="3" placeholder="متن پیام را وارد کنید..."
+                            maxlength="500"></textarea>
+                    </div>
+                    <div class="col-12 col-md-12">
+                        <button class="btn btn-upload-blue w-100" id="sendPushBtn">
+                            <span class="spinner-border spinner-border-sm d-none" role="status"></span>
+                            ارسال اعلان
+                        </button>
+                    </div>
+                    <div class="col-12">
+                        <div id="pushResult" class="alert d-none" role="alert"></div>
+                    </div>
                 </div>
             </div>
         </div>
 
         <!-- Database Update (moved here to bottom-most section) -->
-        <div class="dashboard-card no-hover">
-            <h4 class="mb-3">بانک اطلاعاتی آزمون‌ها</h4>
-            <div class="row g-3">
-                <div class="col-12 col-md-4">
-                    <button class="btn btn-upload w-100" id="uploadWrittenBtn">
-                        آپلود آزمون‌های کتبی
-                    </button>
-                </div>
-                <div class="col-12 col-md-4">
-                    <button class="btn btn-upload w-100" id="uploadElectronicBtn">
-                        آپلود آزمون‌های الکترونیکی
-                    </button>
-                </div>
-                <div class="col-12 col-md-4">
-                    <button class="btn btn-upload w-100" id="updateDBBtn">
-                        به‌روزرسانی پایگاه داده
-                    </button>
+        <div class="dashboard-card no-hover collapsible-card" id="databaseCard">
+            <div class="card-header-collapsible" onclick="toggleCardCollapse(this)">
+                <h4 class="mb-0">بانک اطلاعاتی آزمون‌ها</h4>
+                <span class="collapse-icon">▼</span>
+            </div>
+            <div class="card-body-collapsible">
+                <div class="row g-3">
+                    <div class="col-12 col-md-4">
+                        <button class="btn btn-upload w-100" id="uploadWrittenBtn">
+                            آپلود آزمون‌های کتبی
+                        </button>
+                    </div>
+                    <div class="col-12 col-md-4">
+                        <button class="btn btn-upload w-100" id="uploadElectronicBtn">
+                            آپلود آزمون‌های الکترونیکی
+                        </button>
+                    </div>
+                    <div class="col-12 col-md-4">
+                        <button class="btn btn-upload w-100" id="updateDBBtn">
+                            به‌روزرسانی پایگاه داده
+                        </button>
+                    </div>
                 </div>
             </div>
-
         </div>
     </div>
     </div>

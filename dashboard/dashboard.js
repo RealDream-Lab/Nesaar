@@ -659,6 +659,9 @@ async function guardedFetch(resource, options = {}) {
   return response;
 }
 
+// ============================================================================
+// TODO: DEAD CODE - REMOVE - SMS functions no longer used
+// ============================================================================
 async function fetchSmsCreditValue() {
   try {
     const response = await guardedFetch("../API/getSmsCredit.php", {
@@ -692,6 +695,9 @@ function formatSmsCreditDisplay(value) {
   }
   return toPersianDigits(String(value));
 }
+// ============================================================================
+// END DEAD CODE - SMS functions
+// ============================================================================
 
 async function checkAuth() {
   try {
@@ -768,7 +774,8 @@ try {
         String(cfg.GroupByCourse || "").toUpperCase() === "YES";
       const paperSavingChecked =
         String(cfg.PaperSaving || "").toUpperCase() === "YES";
-      const sendSmsChecked = String(cfg.SendSMS || "").toUpperCase() === "YES";
+      const quickSessionViewChecked =
+        String(cfg.QuickSessionView || "NO").toUpperCase() === "YES";
       const rptDownloadVal = String(cfg.rptDownload || "").toUpperCase();
       const wavesAnimationChecked =
         String(cfg.WavesAnimation || "YES").toUpperCase() !== "NO";
@@ -778,6 +785,7 @@ try {
       const multiExamModeChecked =
         String(cfg.MultiExamMode || "NO").toUpperCase() === "YES";
 
+      // TODO: DEAD CODE - REMOVE - SMS variables no longer used
       let smsCreditValue = null;
       try {
         smsCreditValue = await fetchSmsCreditValue();
@@ -789,6 +797,7 @@ try {
         smsCreditDisplay === "نامشخص"
           ? "اعتبار: نامشخص"
           : `اعتبار: ${smsCreditDisplay} پیامک`;
+      // END DEAD CODE - SMS variables
 
       // Form HTML: two-column rows for text inputs, toggles under a divider
       const sharedInputStyle =
@@ -842,13 +851,10 @@ try {
                                 <label for="er_paperSaving" style="margin:0;cursor:pointer;">صرفه‌جویی در مصرف کاغذ</label>
                             </div>
                             <div style="display:flex;align-items:center;gap:10px;">
-                                <input id="er_sendSms" type="checkbox" ${
-                                  sendSmsChecked ? "checked" : ""
+                                <input id="er_quickSessionView" type="checkbox" ${
+                                  quickSessionViewChecked ? "checked" : ""
                                 } style="width:1.15rem;height:1.15rem;">
-                                <label for="er_sendSms" style="margin:0;cursor:pointer;display:flex;flex-wrap:wrap;gap:6px;align-items:center;">
-                                    <span>فعال‌سازی ارسال پیامک برای عوامل اجرائی</span>
-                                    <span style="font-size:0.85rem;color:#ffffff;">(${smsCreditParenthetical})</span>
-                                </label>
+                                <label for="er_quickSessionView" style="margin:0;cursor:pointer;">نمایش سریع جزئیات جلسه آزمون (بدون مودال واسط)</label>
                             </div>
                             <div style="display:flex;align-items:center;gap:10px;margin-top:8px;">
                                 <input id="er_multiExamMode" type="checkbox" ${
@@ -928,7 +934,9 @@ try {
           const paperSaving = document.getElementById("er_paperSaving")?.checked
             ? "YES"
             : "NO";
-          const sendSms = document.getElementById("er_sendSms")?.checked
+          const quickSessionView = document.getElementById(
+            "er_quickSessionView"
+          )?.checked
             ? "YES"
             : "NO";
           const rptDownload =
@@ -953,7 +961,7 @@ try {
             Chairman: chair.trim(),
             GroupByCourse: groupByCourse,
             PaperSaving: paperSaving,
-            SendSMS: sendSms,
+            QuickSessionView: quickSessionView,
             rptDownload: rptDownload,
             WavesAnimation: wavesAnimation,
             ReproductionReportMode: reproductionMode,
@@ -1043,13 +1051,7 @@ try {
       }
     });
 
-    const smsSettingsBtn = document.getElementById("smsSettingsBtn");
-    if (smsSettingsBtn) {
-      smsSettingsBtn.addEventListener("click", (ev) => {
-        ev.preventDefault();
-        editBtn.click();
-      });
-    }
+    // TODO: DEAD CODE - REMOVE - SMS settings button no longer exists in UI\n    const smsSettingsBtn = document.getElementById(\"smsSettingsBtn\");\n    if (smsSettingsBtn) {\n      smsSettingsBtn.addEventListener(\"click\", (ev) => {\n        ev.preventDefault();\n        editBtn.click();\n      });\n    }\n    // END DEAD CODE - SMS settings button
   }
 } catch (e) {
   console.warn("Edit roles handler attach failed", e);
@@ -1722,6 +1724,7 @@ async function loadDashboardData() {
         /* ignore */
       }
 
+      // TODO: DEAD CODE - REMOVE - Remaining Sessions card replaced by Proctors card
       // Disable/enable Remaining Sessions card based on value
       if (typeof stats.remainingSessions !== "undefined") {
         const el = document.getElementById("remainingSessions");
@@ -1742,6 +1745,39 @@ async function loadDashboardData() {
             }
           }
         }
+      }
+      // END DEAD CODE - Remaining Sessions card
+
+      // Load proctors count
+      try {
+        const proctorsResponse = await guardedFetch("../API/getProctors.php", {
+          cache: "no-store",
+        });
+        const proctorsData = await proctorsResponse.json();
+        const proctorsEl = document.getElementById("totalProctors");
+        const proctorsCard = proctorsEl
+          ? proctorsEl.closest(".dashboard-card")
+          : null;
+        if (proctorsEl && proctorsData.success) {
+          const count = proctorsData.proctors?.length || 0;
+          proctorsEl.textContent =
+            typeof toPersianDigits === "function"
+              ? toPersianDigits(count)
+              : count;
+          if (proctorsCard) {
+            if (count === 0) {
+              proctorsCard.classList.add("stat-card-disabled");
+              proctorsCard.style.cursor = "default";
+              proctorsCard.style.pointerEvents = "none";
+            } else {
+              proctorsCard.classList.remove("stat-card-disabled");
+              proctorsCard.style.cursor = "pointer";
+              proctorsCard.style.pointerEvents = "";
+            }
+          }
+        }
+      } catch (e) {
+        console.warn("Failed to load proctors count", e);
       }
 
       // Disable/enable Next Exam card when no upcoming exam
@@ -1804,6 +1840,10 @@ async function loadDashboardData() {
   }
 }
 
+// ============================================================================
+// TODO: DEAD CODE - REMOVE - showRemainingSessions function no longer used
+// Remaining Sessions card was replaced by Proctors card
+// ============================================================================
 async function showRemainingSessions() {
   try {
     try {
@@ -1906,6 +1946,9 @@ async function showRemainingSessions() {
     });
   }
 }
+// ============================================================================
+// END DEAD CODE - showRemainingSessions function
+// ============================================================================
 
 async function updateFooterUniversity() {
   try {
@@ -5743,3 +5786,789 @@ if (navigator.serviceWorker) {
     }
   }
 })();
+
+// =====================================================
+// Collapsible Card Functionality
+// =====================================================
+function toggleCardCollapse(headerElement) {
+  const card = headerElement.closest(".collapsible-card");
+  if (card) {
+    card.classList.toggle("collapsed");
+    // Save state to localStorage
+    const cardId = card.id;
+    if (cardId) {
+      const collapsed = card.classList.contains("collapsed");
+      try {
+        const states = JSON.parse(
+          localStorage.getItem("collapsedCards") || "{}"
+        );
+        states[cardId] = collapsed;
+        localStorage.setItem("collapsedCards", JSON.stringify(states));
+      } catch (e) {
+        /* ignore */
+      }
+    }
+  }
+}
+
+// Restore collapsed states on page load
+function restoreCollapsedStates() {
+  try {
+    const states = JSON.parse(localStorage.getItem("collapsedCards") || "{}");
+    Object.keys(states).forEach((cardId) => {
+      if (states[cardId]) {
+        const card = document.getElementById(cardId);
+        if (card && card.classList.contains("collapsible-card")) {
+          card.classList.add("collapsed");
+        }
+      }
+    });
+  } catch (e) {
+    /* ignore */
+  }
+}
+
+// Initialize collapsed states
+document.addEventListener("DOMContentLoaded", restoreCollapsedStates);
+
+// =====================================================
+// Session Calendar Functionality
+// =====================================================
+let sessionCalendarData = null;
+
+const JALALI_WEEKDAYS = ["شنبه", "یکشنبه", "دوشنبه", "سه‌شنبه", "چهارشنبه"];
+
+// Convert Gregorian Date to Jalali string (YYYY/MM/DD)
+function gregorianToJalaliString(gDate) {
+  const gy = gDate.getFullYear();
+  const gm = gDate.getMonth() + 1;
+  const gd = gDate.getDate();
+
+  const g_d_m = [0, 31, 59, 90, 120, 151, 181, 212, 243, 273, 304, 334];
+  let jy, jm, jd;
+
+  let gy2 = gm > 2 ? gy + 1 : gy;
+  let days =
+    355666 +
+    365 * gy +
+    Math.floor((gy2 + 3) / 4) -
+    Math.floor((gy2 + 99) / 100) +
+    Math.floor((gy2 + 399) / 400) +
+    gd +
+    g_d_m[gm - 1];
+  jy = -1595 + 33 * Math.floor(days / 12053);
+  days %= 12053;
+  jy += 4 * Math.floor(days / 1461);
+  days %= 1461;
+  if (days > 365) {
+    jy += Math.floor((days - 1) / 365);
+    days = (days - 1) % 365;
+  }
+  if (days < 186) {
+    jm = 1 + Math.floor(days / 31);
+    jd = 1 + (days % 31);
+  } else {
+    jm = 7 + Math.floor((days - 186) / 30);
+    jd = 1 + ((days - 186) % 30);
+  }
+
+  return (
+    jy + "/" + String(jm).padStart(2, "0") + "/" + String(jd).padStart(2, "0")
+  );
+}
+
+async function loadSessionCalendar() {
+  const container = document.getElementById("sessionCalendarContainer");
+  if (!container) return;
+
+  try {
+    const response = await guardedFetch("../API/getSessionCalendarData.php", {
+      cache: "no-store",
+    });
+    const data = await response.json();
+
+    if (data.error) {
+      container.innerHTML = `<div class="calendar-loading" style="color:#ef4444;">${escapeHtml(
+        data.error
+      )}</div>`;
+      return;
+    }
+
+    if (!data.sessions || data.sessions.length === 0) {
+      container.innerHTML =
+        '<div class="calendar-loading">جلسه آزمونی برای نمایش وجود ندارد</div>';
+      return;
+    }
+
+    sessionCalendarData = data;
+    renderSessionCalendar();
+  } catch (error) {
+    console.error("Error loading session calendar:", error);
+    container.innerHTML =
+      '<div class="calendar-loading" style="color:#ef4444;">خطا در بارگذاری تقویم</div>';
+  }
+}
+
+function renderSessionCalendar() {
+  const container = document.getElementById("sessionCalendarContainer");
+  if (!container || !sessionCalendarData) return;
+
+  const { sessions, times, timeColors } = sessionCalendarData;
+
+  // Group sessions by date
+  const sessionsByDate = {};
+  sessions.forEach((s) => {
+    if (!sessionsByDate[s.exam_date]) {
+      sessionsByDate[s.exam_date] = [];
+    }
+    sessionsByDate[s.exam_date].push(s);
+  });
+
+  // Get all unique dates sorted by timestamp (exclude Thursday=5 and Friday=6)
+  const allDates = [...new Set(sessions.map((s) => s.exam_date))]
+    .map((d) => {
+      const session = sessions.find((s) => s.exam_date === d);
+      return {
+        date: d,
+        timestamp: session?.timestamp || 0,
+        dayOfWeek: session?.day_of_week,
+      };
+    })
+    .filter((d) => d.dayOfWeek !== 5 && d.dayOfWeek !== 6) // Exclude Thursday and Friday
+    .sort((a, b) => a.timestamp - b.timestamp);
+
+  if (allDates.length === 0) {
+    container.innerHTML =
+      '<div class="calendar-loading">جلسه آزمونی برای نمایش وجود ندارد</div>';
+    return;
+  }
+
+  // Calculate weeks - each week starts from Saturday (dayOfWeek = 0)
+  const weeks = [];
+  let currentWeek = [];
+
+  allDates.forEach((dateObj, idx) => {
+    const dayOfWeek = dateObj.dayOfWeek ?? 0;
+
+    // Start new week if this is Saturday and we have items
+    if (dayOfWeek === 0 && currentWeek.length > 0) {
+      weeks.push(currentWeek);
+      currentWeek = [];
+    }
+
+    currentWeek.push(dateObj);
+
+    // If it's Wednesday (4) or last date, close the week
+    if (dayOfWeek === 4 || idx === allDates.length - 1) {
+      if (currentWeek.length > 0) {
+        weeks.push(currentWeek);
+        currentWeek = [];
+      }
+    }
+  });
+
+  if (currentWeek.length > 0) {
+    weeks.push(currentWeek);
+  }
+
+  // Build legend
+  let legendHtml = '<div class="calendar-legend">';
+  times.forEach((time) => {
+    const color = timeColors[time] || "#1a6fa6";
+    const displayTime =
+      typeof toPersianDigits === "function" ? toPersianDigits(time) : time;
+    legendHtml += `
+      <div class="calendar-legend-item">
+        <span class="calendar-legend-color" style="background:${color};"></span>
+        <span>${displayTime}</span>
+      </div>
+    `;
+  });
+  legendHtml += "</div>";
+
+  // Build calendar table with all weeks
+  let tableHtml =
+    '<div class="session-calendar"><table class="calendar-table"><thead><tr>';
+
+  // Header row with weekday names (5 days only)
+  for (let i = 0; i < 5; i++) {
+    tableHtml += `<th>${JALALI_WEEKDAYS[i]}</th>`;
+  }
+  tableHtml += "</tr></thead><tbody>";
+
+  // Build rows for each week
+  weeks.forEach((weekDates) => {
+    tableHtml += "<tr>";
+
+    // Create a map of dayOfWeek -> dateObj for this week
+    const weekDayMap = {};
+    weekDates.forEach((d) => {
+      weekDayMap[d.dayOfWeek] = d;
+    });
+
+    // Find the first date in this week to calculate missing dates
+    const firstDateInWeek = weekDates.reduce(
+      (min, d) => (d.dayOfWeek < min.dayOfWeek ? d : min),
+      weekDates[0]
+    );
+
+    // Build cells for 5 days (Saturday to Wednesday)
+    for (let dayIdx = 0; dayIdx < 5; dayIdx++) {
+      const dateObj = weekDayMap[dayIdx];
+
+      if (!dateObj) {
+        // Calculate the date for this empty cell
+        const dayDiff = dayIdx - firstDateInWeek.dayOfWeek;
+        const emptyDateTimestamp = firstDateInWeek.timestamp + dayDiff * 86400;
+
+        // Convert timestamp to Jalali date
+        const emptyJsDate = new Date(emptyDateTimestamp * 1000);
+        const emptyDateStr = gregorianToJalaliString(emptyJsDate);
+        const displayEmptyDate =
+          typeof toPersianDigits === "function"
+            ? toPersianDigits(emptyDateStr)
+            : emptyDateStr;
+
+        tableHtml += `<td class="calendar-empty">
+          <div class="calendar-date-header">${displayEmptyDate}</div>
+        </td>`;
+        continue;
+      }
+
+      const dateSessions = sessionsByDate[dateObj.date] || [];
+      const displayDate =
+        typeof toPersianDigits === "function"
+          ? toPersianDigits(dateObj.date)
+          : dateObj.date;
+
+      tableHtml += `<td>
+        <div class="calendar-date-header">${displayDate}</div>
+        <div class="calendar-sessions">`;
+
+      // Sort sessions by time
+      dateSessions.sort((a, b) => {
+        const ta = (a.exam_time || "00:00").split(":").map(Number);
+        const tb = (b.exam_time || "00:00").split(":").map(Number);
+        return ta[0] - tb[0] || (ta[1] || 0) - (tb[1] || 0);
+      });
+
+      dateSessions.forEach((session) => {
+        const color = timeColors[session.exam_time] || "#1a6fa6";
+        const displayTime =
+          typeof toPersianDigits === "function"
+            ? toPersianDigits(session.exam_time)
+            : session.exam_time;
+
+        tableHtml += `
+          <div class="calendar-session-event" 
+               style="background:${color};"
+               onclick="showSessionDetail('${session.exam_date}', '${session.exam_time}')">
+            <div class="event-time">جلسه ${displayTime}</div>
+          </div>
+        `;
+      });
+
+      tableHtml += "</div></td>";
+    }
+
+    tableHtml += "</tr>";
+  });
+
+  tableHtml += "</tbody></table></div>";
+
+  container.innerHTML = legendHtml + tableHtml;
+}
+
+async function showSessionDetail(examDate, examTime) {
+  if (!sessionCalendarData) return;
+
+  const session = sessionCalendarData.sessions.find(
+    (s) => s.exam_date === examDate && s.exam_time === examTime
+  );
+
+  if (!session) {
+    Swal.fire({
+      icon: "error",
+      title: "خطا",
+      text: "اطلاعات جلسه یافت نشد",
+      customClass: { popup: "swal2-rtl swal2-glass" },
+    });
+    return;
+  }
+
+  const displayDate =
+    typeof toPersianDigits === "function"
+      ? toPersianDigits(examDate)
+      : examDate;
+  const displayTime =
+    typeof toPersianDigits === "function"
+      ? toPersianDigits(examTime)
+      : examTime;
+
+  // Check if QuickSessionView is enabled - skip modal and go directly to report
+  try {
+    const cfgResp = await guardedFetch("../API/getConfig.php", {
+      cache: "no-store",
+    });
+    const cfg = await cfgResp.json();
+    if (String(cfg.QuickSessionView || "NO").toUpperCase() === "YES") {
+      // Go directly to full report without modal
+      if (typeof applyNextExamOverride === "function") {
+        applyNextExamOverride(examDate, examTime, {
+          customTitle: `آزمون تاریخ ${displayDate} ساعت ${displayTime}`,
+        });
+      }
+      if (typeof showNextExamReport === "function") {
+        showNextExamReport();
+      }
+      return;
+    }
+  } catch (e) {
+    console.warn("Could not check QuickSessionView config", e);
+  }
+
+  // Build detail HTML with all items as small cards
+  let detailHtml = `<div class="session-detail-grid">`;
+
+  // Student count
+  detailHtml += `
+    <div class="session-detail-item">
+      <div class="detail-value">${toPersianDigits(session.student_count)}</div>
+      <div class="detail-label">نفر دانشجو</div>
+    </div>
+  `;
+
+  // Course count
+  detailHtml += `
+    <div class="session-detail-item">
+      <div class="detail-value">${toPersianDigits(session.course_count)}</div>
+      <div class="detail-label">عنوان آزمون</div>
+    </div>
+  `;
+
+  // Location count
+  detailHtml += `
+    <div class="session-detail-item">
+      <div class="detail-value">${toPersianDigits(session.location_count)}</div>
+      <div class="detail-label">مکان برگزاری آزمون</div>
+    </div>
+  `;
+
+  // Proctor count
+  if (session.proctor_count > 0) {
+    detailHtml += `
+      <div class="session-detail-item">
+        <div class="detail-value">${toPersianDigits(
+          session.proctor_count
+        )}</div>
+        <div class="detail-label">نفر مراقب</div>
+      </div>
+    `;
+  }
+
+  // Multi-exam students count
+  if (session.multi_exam_students > 0) {
+    detailHtml += `
+      <div class="session-detail-item">
+        <div class="detail-value">${toPersianDigits(
+          session.multi_exam_students
+        )}</div>
+        <div class="detail-label">دانشجو با چند آزمون</div>
+      </div>
+    `;
+  }
+
+  // Exam types (کتبی / الکترونیکی) as small cards
+  if (session.exam_types) {
+    const written = session.exam_types["کتبی"];
+    const electronic = session.exam_types["الکترونیکی"];
+
+    if (written && written.students > 0) {
+      detailHtml += `
+        <div class="session-detail-item">
+          <div class="detail-value">${toPersianDigits(written.students)}</div>
+          <div class="detail-label">صندلی آزمون کتبی</div>
+        </div>
+      `;
+    }
+
+    if (electronic && electronic.students > 0) {
+      detailHtml += `
+        <div class="session-detail-item">
+          <div class="detail-value">${toPersianDigits(
+            electronic.students
+          )}</div>
+          <div class="detail-label">صندلی آزمون الکترونیکی</div>
+        </div>
+      `;
+    }
+  }
+
+  // Course types (تستی / تشریحی / ...) as small cards
+  if (session.course_types && Object.keys(session.course_types).length > 0) {
+    Object.entries(session.course_types).forEach(([type, data]) => {
+      if (data.students > 0) {
+        detailHtml += `
+          <div class="session-detail-item">
+            <div class="detail-value">${toPersianDigits(data.students)}</div>
+            <div class="detail-label">صندلی ${escapeHtml(type)}</div>
+          </div>
+        `;
+      }
+    });
+  }
+
+  detailHtml += `</div>`;
+
+  Swal.fire({
+    title: `جلسه ${displayTime} | ${displayDate}`,
+    html: detailHtml,
+    width: "700px",
+    showCloseButton: true,
+    showConfirmButton: true,
+    confirmButtonText: "نمایش گزارش کامل",
+    customClass: {
+      popup: "swal2-rtl swal2-glass",
+      confirmButton: "btn btn-primary",
+    },
+  }).then((result) => {
+    if (result.isConfirmed) {
+      // Apply override and show full report
+      if (typeof applyNextExamOverride === "function") {
+        applyNextExamOverride(examDate, examTime, {
+          customTitle: `آزمون تاریخ ${displayDate} ساعت ${displayTime}`,
+        });
+      }
+      if (typeof showNextExamReport === "function") {
+        showNextExamReport();
+      }
+    }
+  });
+}
+
+// Load calendar on page load
+document.addEventListener("DOMContentLoaded", function () {
+  // Delay calendar load to not block initial render
+  setTimeout(() => {
+    if (document.getElementById("sessionCalendarContainer")) {
+      loadSessionCalendar();
+    }
+  }, 500);
+});
+
+// =====================================================
+// Proctor Search Functionality
+// =====================================================
+async function showProctorSearch() {
+  // Create spotlight-style search modal
+  const spotlightHtml = `
+    <div class="spotlight-search-container">
+      <input type="text" id="spotlightInput" class="spotlight-input" placeholder="نام، شماره ملی یا شماره همراه مراقب..." autocomplete="off" />
+      <div id="spotlightResults" class="spotlight-results"></div>
+    </div>
+  `;
+
+  Swal.fire({
+    html: spotlightHtml,
+    showConfirmButton: false,
+    showCloseButton: true,
+    width: "550px",
+    padding: "1.5rem",
+    customClass: {
+      popup: "swal2-rtl swal2-glass spotlight-popup",
+    },
+    didOpen: () => {
+      const input = document.getElementById("spotlightInput");
+      const resultsContainer = document.getElementById("spotlightResults");
+      let debounceTimer = null;
+      let currentResults = [];
+      let selectedIndex = -1;
+
+      input.focus();
+
+      // Handle keyboard navigation
+      input.addEventListener("keydown", (e) => {
+        if (e.key === "ArrowDown") {
+          e.preventDefault();
+          if (currentResults.length > 0) {
+            selectedIndex = Math.min(
+              selectedIndex + 1,
+              currentResults.length - 1
+            );
+            updateSelection();
+          }
+        } else if (e.key === "ArrowUp") {
+          e.preventDefault();
+          if (currentResults.length > 0) {
+            selectedIndex = Math.max(selectedIndex - 1, 0);
+            updateSelection();
+          }
+        } else if (e.key === "Enter") {
+          e.preventDefault();
+          if (selectedIndex >= 0 && currentResults[selectedIndex]) {
+            selectProctor(currentResults[selectedIndex]);
+          }
+        }
+      });
+
+      function updateSelection() {
+        const items = resultsContainer.querySelectorAll(
+          ".spotlight-result-item"
+        );
+        items.forEach((item, idx) => {
+          if (idx === selectedIndex) {
+            item.classList.add("selected");
+            item.scrollIntoView({ block: "nearest" });
+          } else {
+            item.classList.remove("selected");
+          }
+        });
+      }
+
+      async function searchProctors(query) {
+        if (!query || query.trim().length < 2) {
+          resultsContainer.innerHTML =
+            '<div class="spotlight-hint">حداقل ۲ کاراکتر وارد کنید...</div>';
+          currentResults = [];
+          selectedIndex = -1;
+          return;
+        }
+
+        resultsContainer.innerHTML =
+          '<div class="spotlight-loading">در حال جستجو...</div>';
+
+        try {
+          const response = await guardedFetch(
+            `../API/searchProctor.php?q=${encodeURIComponent(query.trim())}`,
+            { cache: "no-store" }
+          );
+          const data = await response.json();
+
+          if (!data.success) {
+            resultsContainer.innerHTML =
+              '<div class="spotlight-empty">مراقبی یافت نشد</div>';
+            currentResults = [];
+            selectedIndex = -1;
+            return;
+          }
+
+          // Handle both single and multiple results
+          const proctors = data.multiple ? data.proctors : [data.proctor];
+          currentResults = proctors;
+          selectedIndex = proctors.length > 0 ? 0 : -1;
+
+          if (proctors.length === 0) {
+            resultsContainer.innerHTML =
+              '<div class="spotlight-empty">مراقبی یافت نشد</div>';
+            return;
+          }
+
+          let resultsHtml = "";
+          proctors.forEach((proctor, idx) => {
+            const isSelected = idx === 0 ? "selected" : "";
+            resultsHtml += `
+              <div class="spotlight-result-item ${isSelected}" data-index="${idx}">
+                <div class="spotlight-result-name">${escapeHtml(
+                  proctor.full_name
+                )}</div>
+                <div class="spotlight-result-details">
+                  ${
+                    proctor.national_id
+                      ? `<span>کد ملی: ${toPersianDigits(
+                          proctor.national_id
+                        )}</span>`
+                      : ""
+                  }
+                  ${
+                    proctor.phone
+                      ? `<span>تلفن: ${toPersianDigits(proctor.phone)}</span>`
+                      : ""
+                  }
+                </div>
+              </div>
+            `;
+          });
+
+          resultsContainer.innerHTML = resultsHtml;
+
+          // Add click handlers
+          resultsContainer
+            .querySelectorAll(".spotlight-result-item")
+            .forEach((item) => {
+              item.addEventListener("click", () => {
+                const idx = parseInt(item.dataset.index);
+                selectProctor(currentResults[idx]);
+              });
+              item.addEventListener("mouseenter", () => {
+                selectedIndex = parseInt(item.dataset.index);
+                updateSelection();
+              });
+            });
+        } catch (error) {
+          console.error("Search error:", error);
+          resultsContainer.innerHTML =
+            '<div class="spotlight-error">خطا در جستجو</div>';
+          currentResults = [];
+          selectedIndex = -1;
+        }
+      }
+
+      async function selectProctor(proctor) {
+        Swal.close();
+
+        // Show loading
+        Swal.fire({
+          title: "در حال دریافت اطلاعات...",
+          allowOutsideClick: false,
+          showConfirmButton: false,
+          customClass: { popup: "swal2-rtl swal2-glass" },
+          didOpen: () => Swal.showLoading(),
+        });
+
+        try {
+          // Fetch full proctor data with sessions
+          const response = await guardedFetch(
+            `../API/searchProctor.php?id=${encodeURIComponent(proctor.id)}`,
+            { cache: "no-store" }
+          );
+          const data = await response.json();
+
+          if (!data.success) {
+            Swal.fire({
+              icon: "error",
+              title: "خطا",
+              text: data.error || "خطا در دریافت اطلاعات مراقب",
+              customClass: { popup: "swal2-rtl swal2-glass" },
+            });
+            return;
+          }
+
+          showProctorReport(data.proctor, data.sessions, data.summary);
+        } catch (error) {
+          console.error("Error fetching proctor details:", error);
+          Swal.fire({
+            icon: "error",
+            title: "خطا",
+            text: "خطا در دریافت اطلاعات مراقب",
+            customClass: { popup: "swal2-rtl swal2-glass" },
+          });
+        }
+      }
+
+      // Debounced search
+      input.addEventListener("input", () => {
+        clearTimeout(debounceTimer);
+        debounceTimer = setTimeout(() => {
+          searchProctors(input.value);
+        }, 300);
+      });
+    },
+  });
+}
+
+function showProctorReport(proctor, sessions, summary) {
+  const reportCard = document.getElementById("reportCard");
+  const reportContent = document.getElementById("reportContent");
+
+  if (!reportCard || !reportContent) {
+    console.error("Report card elements not found");
+    Swal.close();
+    return;
+  }
+
+  // Build proctor info header
+  let html = `
+    <div class="proctor-report-header" style="margin-bottom: 1.5rem; padding: 1rem; background: rgba(26, 111, 166, 0.08); border-radius: 12px;">
+      <h5 style="color: #1a6fa6; margin-bottom: 0.75rem; font-weight: 700;">${escapeHtml(
+        proctor.full_name
+      )}</h5>
+      <div style="display: flex; flex-wrap: wrap; gap: 1.5rem; font-size: 0.95rem; color: #475569;">
+        ${
+          proctor.national_id
+            ? `<span><strong>کد ملی:</strong> ${toPersianDigits(
+                proctor.national_id
+              )}</span>`
+            : ""
+        }
+        ${
+          proctor.phone
+            ? `<span><strong>شماره همراه:</strong> ${toPersianDigits(
+                proctor.phone
+              )}</span>`
+            : ""
+        }
+      </div>
+    </div>
+  `;
+
+  // Summary cards
+  html += `
+    <div class="session-detail-grid" style="margin-bottom: 1.5rem;">
+      <div class="session-detail-item">
+        <div class="detail-value">${toPersianDigits(summary.total)}</div>
+        <div class="detail-label">کل جلسات</div>
+      </div>
+      <div class="session-detail-item">
+        <div class="detail-value">${toPersianDigits(summary.upcoming)}</div>
+        <div class="detail-label">برنامه‌ریزی شده</div>
+      </div>
+      <div class="session-detail-item">
+        <div class="detail-value">${toPersianDigits(summary.past)}</div>
+        <div class="detail-label">برگزار شده</div>
+      </div>
+    </div>
+  `;
+
+  // Sessions table
+  if (sessions.length > 0) {
+    html += `
+      <div class="table-responsive">
+        <table class="table proctor-sessions-table">
+          <thead>
+            <tr>
+              <th>ردیف</th>
+              <th>تاریخ</th>
+              <th>ساعت</th>
+              <th>وضعیت</th>
+            </tr>
+          </thead>
+          <tbody>
+    `;
+
+    sessions.forEach((session, index) => {
+      const displayDate = toPersianDigits(session.exam_date);
+      const displayTime = toPersianDigits(session.exam_time);
+      const statusBadge =
+        session.status === "past"
+          ? '<span class="proctor-session-badge badge-past">برگزار شده</span>'
+          : '<span class="proctor-session-badge badge-upcoming">برنامه‌ریزی شده</span>';
+
+      html += `
+        <tr>
+          <td>${toPersianDigits(index + 1)}</td>
+          <td>${displayDate}</td>
+          <td>${displayTime}</td>
+          <td>${statusBadge}</td>
+        </tr>
+      `;
+    });
+
+    html += `
+          </tbody>
+        </table>
+      </div>
+    `;
+  } else {
+    html += `<p style="text-align: center; color: #94a3b8;">برنامه مراقبتی برای این مراقب ثبت نشده است.</p>`;
+  }
+
+  reportContent.innerHTML = html;
+  reportCard.style.display = "block";
+
+  Swal.close();
+
+  // Scroll to report card
+  setTimeout(() => {
+    reportCard.scrollIntoView({ behavior: "smooth", block: "start" });
+  }, 100);
+}

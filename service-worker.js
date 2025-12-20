@@ -1,5 +1,5 @@
-const CACHE_NAME = "exam-seat-v0.9.108";
-const VERSION = "0.9.108";
+const CACHE_NAME = "exam-seat-v1.0.0";
+const VERSION = "1.0.0";
 const urlsToCache = [
   "/",
   "/index.php",
