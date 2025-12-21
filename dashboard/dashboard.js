@@ -884,7 +884,7 @@ try {
                                 </div>
                             </div>
                             <div style="display:flex;align-items:center;gap:15px;margin-top:8px;">
-                                <span style="font-size:0.92rem;color:inherit;">نحوه چاپ گزارش ملزومات اتاق تکثیر:</span>
+                                <span style="font-size:0.92rem;color:inherit;">نحوه چاپ گزارش صورتجلسه و ملزومات اتاق تکثیر:</span>
                                 <div style="display:flex;align-items:center;gap:5px;">
                                     <input type="radio" id="er_reprCourse" name="er_reproductionMode" value="course" ${
                                       reproductionReportModeVal !== "location"
