@@ -105,9 +105,9 @@ try {
     // Send in batches to avoid connection pool exhaustion
     // Collect all subscriptions first, then send in chunks
     pushLog("Collecting notifications to send...");
-    
+
     $allNotifications = [];
-    
+
     foreach ($upcomingExams as $exam) {
         pushLog("Processing exam: {$exam['course_name']} at {$exam['exam_time']}");
 
@@ -211,17 +211,17 @@ try {
     }
 
     // Send notifications in batches
-    $batchSize = 50;
+    $batchSize          = 50;
     $totalNotifications = count($allNotifications);
     pushLog("Total notifications to send: {$totalNotifications}");
-    
+
     $chunks = array_chunk($allNotifications, $batchSize);
-    
+
     foreach ($chunks as $chunkIndex => $chunk) {
         // Queue this batch
         foreach ($chunk as $notification) {
             try {
-                $sub = $notification['sub'];
+                $sub          = $notification['sub'];
                 $subscription = Subscription::create([
                     'endpoint' => $sub['endpoint'],
                     'publicKey' => $sub['p256dh'],
@@ -232,7 +232,7 @@ try {
                 pushLog("Error queuing notification: " . $e->getMessage());
             }
         }
-        
+
         // Send this batch
         foreach ($webPush->flush() as $report) {
             $endpoint = $report->getRequest()->getUri()->__toString();
@@ -251,12 +251,12 @@ try {
                 }
             }
         }
-        
+
         // Small delay between batches
         if ($chunkIndex < count($chunks) - 1) {
             usleep(100000); // 100ms delay
         }
-        
+
         pushLog("Batch " . ($chunkIndex + 1) . "/" . count($chunks) . " completed");
     }
 

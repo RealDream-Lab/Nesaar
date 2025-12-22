@@ -92,7 +92,7 @@ FROM php:8.3-apache AS final
 # Install system dependencies, PHP extensions, Composer, ImageMagick and cron
 RUN apt-get update \
      && apt-get install -y --no-install-recommends \
-         libzip-dev libonig-dev libxml2-dev unzip mc curl \
+         libzip-dev libonig-dev libxml2-dev unzip mc nano openssh-server curl \
          libpng-dev libjpeg-dev libfreetype6-dev \
          libgmp-dev cron \
          libmagickwand-dev libmagickcore-dev imagemagick pkg-config build-essential autoconf \
