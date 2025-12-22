@@ -76,6 +76,15 @@ try {
     $newPhotoPath = $updateDir . '/' . $request['filename'];
 
     if ($action === 'approve') {
+        // Ensure main directory exists with proper permissions
+        if (!is_dir($mainDir)) {
+            if (!@mkdir($mainDir, 0777, true)) {
+                echo json_encode(['success' => false, 'error' => 'خطا در ایجاد پوشه عکس‌ها']);
+                exit;
+            }
+            @chmod($mainDir, 0777);
+        }
+
         // Target path (always save as .jpg in main folder)
         $targetPath = $mainDir . '/' . $request['student_id'] . '.jpg';
 
