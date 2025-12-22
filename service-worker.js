@@ -1,5 +1,5 @@
-const CACHE_NAME = "exam-seat-v1.0.0";
-const VERSION = "1.0.0";
+const CACHE_NAME = "exam-seat-v1.1.0";
+const VERSION = "1.1.0";
 const urlsToCache = [
   "/",
   "/index.php",
@@ -87,10 +87,7 @@ self.addEventListener("activate", (event) => {
               type: "sw-update",
               version: CACHE_NAME,
               tagVersion: `نسخه ${VERSION}`,
-              changes: [
-                "هماهنگ‌سازی نسخه‌ها (0.9.108)",
-                "بهبود تخصیص محل استقرار عوامل اجرائی در گزارش",
-              ],
+              changes: ["بهبود عملکرد و رفع اشکالات جزئی."],
             });
           });
         });
