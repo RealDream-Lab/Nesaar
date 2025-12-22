@@ -1,7 +1,7 @@
 <?php
 /**
  * Cron Job: Send Exam Reminder Push Notifications
- * Sends notifications 30 minutes before exam starts
+ * Sends notifications X minutes before exam starts (configurable via PushReminderMinutes in Config table, default 30)
  * 
  * Add to crontab (run every minute):
  * * * * * * php /var/www/html/scripts/cron_push_notifications.php >> /var/log/push_cron.log 2>&1
@@ -31,8 +31,8 @@ function pushLog($message)
 pushLog("Starting push notification cron job...");
 
 try {
-    // Get VAPID keys from Config
-    $stmt   = $pdo->query("SELECT ConfigName, ConfigValue FROM Config WHERE ConfigName IN ('VAPID_PUBLIC_KEY', 'VAPID_PRIVATE_KEY', 'VAPID_SUBJECT')");
+    // Get VAPID keys and Push Reminder config
+    $stmt   = $pdo->query("SELECT ConfigName, ConfigValue FROM Config WHERE ConfigName IN ('VAPID_PUBLIC_KEY', 'VAPID_PRIVATE_KEY', 'VAPID_SUBJECT', 'PushReminderMinutes')");
     $config = [];
     while ($row = $stmt->fetch()) {
         $config[$row['ConfigName']] = $row['ConfigValue'];
@@ -42,6 +42,16 @@ try {
         pushLog("ERROR: VAPID keys not configured");
         exit(1);
     }
+
+    // Get reminder minutes from config (default 30)
+    $reminderMinutes = 30;
+    if (!empty($config['PushReminderMinutes'])) {
+        $configMinutes = (int)$config['PushReminderMinutes'];
+        if ($configMinutes >= 30 && $configMinutes <= 180) {
+            $reminderMinutes = $configMinutes;
+        }
+    }
+    pushLog("Using reminder time: {$reminderMinutes} minutes before exam");
 
     // Initialize WebPush
     $auth = [
@@ -57,21 +67,21 @@ try {
 
     // Get current Shamsi date and time
     $currentTimestamp = time();
-    $targetTimestamp  = $currentTimestamp + (30 * 60); // 30 minutes from now
+    $targetTimestamp  = $currentTimestamp + ($reminderMinutes * 60); // X minutes from now
 
     // Get Shamsi date/time for target (with English digits for DB matching)
     $targetShamsiDate = jdate('Y/m/d', $targetTimestamp, '', 'Asia/Tehran', 'en');
     $targetShamsiTime = jdate('H:i', $targetTimestamp, '', 'Asia/Tehran', 'en');
 
-    // Also check current minute (for exams starting in exactly 30 minutes)
+    // Also check current minute (for exams starting in X minutes)
     $currentShamsiDate = jdate('Y/m/d', $currentTimestamp, '', 'Asia/Tehran', 'en');
     $currentShamsiTime = jdate('H:i', $currentTimestamp, '', 'Asia/Tehran', 'en');
 
     pushLog("Current Shamsi: {$currentShamsiDate} {$currentShamsiTime}");
-    pushLog("Target Shamsi (30 min later): {$targetShamsiDate} {$targetShamsiTime}");
+    pushLog("Target Shamsi ({$reminderMinutes} min later): {$targetShamsiDate} {$targetShamsiTime}");
 
-    // Find exams starting in 30 minutes (with 1-minute tolerance)
-    // We check for exams where exam_time matches the time 30 minutes from now
+    // Find exams starting in X minutes (with 1-minute tolerance)
+    // We check for exams where exam_time matches the time X minutes from now
     $stmt = $pdo->prepare("
         SELECT DISTINCT c.course_code, c.course_name, c.exam_date, c.exam_time
         FROM courses c
@@ -82,11 +92,11 @@ try {
     $upcomingExams = $stmt->fetchAll();
 
     if (empty($upcomingExams)) {
-        pushLog("No exams starting in 30 minutes");
+        pushLog("No exams starting in {$reminderMinutes} minutes");
         exit(0);
     }
 
-    pushLog("Found " . count($upcomingExams) . " exam(s) starting in 30 minutes");
+    pushLog("Found " . count($upcomingExams) . " exam(s) starting in {$reminderMinutes} minutes");
 
     $totalSent    = 0;
     $totalFailed  = 0;
@@ -158,9 +168,13 @@ try {
         // =====================================================
         // Send to Proctors
         // =====================================================
+        // Get proctors with their assigned locations from exam_seats
         $stmt = $pdo->prepare("
-            SELECT DISTINCT ea.proctor_id, ea.proctor_name, ea.building, ea.class_name
+            SELECT DISTINCT ea.proctor_id, ea.proctor_name, es.building, es.class_name
             FROM ExamAssignments ea
+            JOIN courses c ON c.exam_date COLLATE utf8mb4_unicode_ci = ea.exam_date 
+                          AND c.exam_time COLLATE utf8mb4_unicode_ci = ea.exam_time
+            JOIN exam_seats es ON es.course_code COLLATE utf8mb4_unicode_ci = c.course_code
             WHERE ea.exam_date = ? AND ea.exam_time = ?
             AND ea.proctor_id IS NOT NULL AND ea.proctor_id > 0
         ");

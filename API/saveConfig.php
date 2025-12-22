@@ -36,7 +36,9 @@ $allowed = [
     // MultiExamMode: 'YES' to unify seat numbers for multi-exam students
     'MultiExamMode',
     // QuickSessionView: 'YES' to skip modal and go directly to full report on calendar click
-    'QuickSessionView'
+    'QuickSessionView',
+    // PushReminderMinutes: minutes before exam to send push notification (30-180, default 30)
+    'PushReminderMinutes'
 ];
 
 $toSave = [];
@@ -90,6 +92,17 @@ foreach ($allowed as $k) {
         $raw        = is_string($input[$k]) ? strtolower(trim($input[$k])) : '';
         $val        = ($raw === 'location') ? 'location' : 'course';
         $toSave[$k] = $val;
+        continue;
+    }
+
+    if ($k === 'PushReminderMinutes') {
+        // Validate: must be 30-180 in steps of 30
+        $raw         = is_numeric($input[$k]) ? (int)$input[$k] : 30;
+        $validValues = [30, 60, 90, 120, 150, 180];
+        if (!in_array($raw, $validValues, true)) {
+            $raw = 30; // default
+        }
+        $toSave[$k] = (string)$raw;
         continue;
     }
 

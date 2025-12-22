@@ -2820,11 +2820,29 @@ document.addEventListener("DOMContentLoaded", () => {
       // Mark as asked for this session
       sessionStorage.setItem("pushNotificationAsked", "true");
 
+      // Get reminder minutes from config (default 30)
+      let reminderMinutes = 30;
+      try {
+        const cachedConfig = localStorage.getItem("appConfig");
+        if (cachedConfig) {
+          const cfg = JSON.parse(cachedConfig);
+          const cfgMinutes = parseInt(cfg.PushReminderMinutes, 10);
+          if (!isNaN(cfgMinutes) && cfgMinutes >= 30 && cfgMinutes <= 180) {
+            reminderMinutes = cfgMinutes;
+          }
+        }
+      } catch (e) {
+        console.warn("[Push] Failed to get reminder minutes from config", e);
+      }
+
       // Show subscription prompt
       const result = await Swal.fire({
         icon: "info",
         title: "اعلان یادآوری آزمون",
-        html: '<div style="text-align:right;">آیا می‌خواهید ۳۰ دقیقه قبل از هر آزمون یادآوری دریافت کنید؟</div>',
+        html:
+          '<div style="text-align:right;">آیا می‌خواهید ' +
+          toPersianDigits(reminderMinutes) +
+          " دقیقه قبل از هر آزمون یادآوری دریافت کنید؟</div>",
         showCancelButton: true,
         confirmButtonText: "بله",
         cancelButtonText: "خیر",
@@ -2914,11 +2932,29 @@ document.addEventListener("DOMContentLoaded", () => {
       // Mark as asked for this session
       sessionStorage.setItem("pushNotificationAskedProctor", "true");
 
+      // Get reminder minutes from config (default 30)
+      let reminderMinutes = 30;
+      try {
+        const cachedConfig = localStorage.getItem("appConfig");
+        if (cachedConfig) {
+          const cfg = JSON.parse(cachedConfig);
+          const cfgMinutes = parseInt(cfg.PushReminderMinutes, 10);
+          if (!isNaN(cfgMinutes) && cfgMinutes >= 30 && cfgMinutes <= 180) {
+            reminderMinutes = cfgMinutes;
+          }
+        }
+      } catch (e) {
+        console.warn("[Push] Failed to get reminder minutes from config", e);
+      }
+
       // Show subscription prompt
       const result = await Swal.fire({
         icon: "info",
         title: "اعلان یادآوری مراقبت",
-        html: '<div style="text-align:right;">آیا می‌خواهید ۳۰ دقیقه قبل از هر شیفت مراقبت یادآوری دریافت کنید؟</div>',
+        html:
+          '<div style="text-align:right;">آیا می‌خواهید ' +
+          toPersianDigits(reminderMinutes) +
+          " دقیقه قبل از هر شیفت مراقبت یادآوری دریافت کنید؟</div>",
         showCancelButton: true,
         confirmButtonText: "بله",
         cancelButtonText: "خیر",

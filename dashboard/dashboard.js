@@ -837,73 +837,84 @@ try {
                             </div>
                         </div>
                         <hr style="border:0;border-top:1px solid rgba(255,255,255,0.15);margin:14px 0;">
-                        <div style="display:flex;flex-direction:column;gap:10px;">
-                            <div style="display:flex;align-items:center;gap:10px;">
+                        <div class="settings-options-grid">
+                            <div class="settings-option-item">
                                 <input id="er_groupByCourse" type="checkbox" ${
                                   groupByCourseChecked ? "checked" : ""
                                 } style="width:1.15rem;height:1.15rem;">
                                 <label for="er_groupByCourse" style="margin:0;cursor:pointer;">مرتب‌سازی صندلی‌ها براساس درس</label>
                             </div>
-                            <div style="display:flex;align-items:center;gap:10px;">
+                            <div class="settings-option-item">
                                 <input id="er_paperSaving" type="checkbox" ${
                                   paperSavingChecked ? "checked" : ""
                                 } style="width:1.15rem;height:1.15rem;">
                                 <label for="er_paperSaving" style="margin:0;cursor:pointer;">صرفه‌جویی در مصرف کاغذ</label>
                             </div>
-                            <div style="display:flex;align-items:center;gap:10px;">
+                            <div class="settings-option-item">
                                 <input id="er_quickSessionView" type="checkbox" ${
                                   quickSessionViewChecked ? "checked" : ""
                                 } style="width:1.15rem;height:1.15rem;">
-                                <label for="er_quickSessionView" style="margin:0;cursor:pointer;">نمایش سریع جزئیات جلسه آزمون (بدون مودال واسط)</label>
+                                <label for="er_quickSessionView" style="margin:0;cursor:pointer;">نمایش سریع جزئیات جلسه</label>
                             </div>
-                            <div style="display:flex;align-items:center;gap:10px;margin-top:8px;">
+                            <div class="settings-option-item">
                                 <input id="er_multiExamMode" type="checkbox" ${
                                   multiExamModeChecked ? "checked" : ""
                                 } style="width:1.15rem;height:1.15rem;">
-                                <label for="er_multiExamMode" style="margin:0;cursor:pointer;">مدیریت چندآزمونی (یکسان‌سازی صندلی دانشجویان با بیش از یک امتحان در جلسه)</label>
+                                <label for="er_multiExamMode" style="margin:0;cursor:pointer;">مدیریت چندآزمونی</label>
                             </div>
-                            <div style="display:flex;align-items:center;gap:10px;margin-top:8px;">
+                            <div class="settings-option-item">
                                 <input id="er_wavesAnimation" type="checkbox" ${
                                   wavesAnimationChecked ? "checked" : ""
                                 } style="width:1.15rem;height:1.15rem;">
                                 <label for="er_wavesAnimation" style="margin:0;cursor:pointer;">نمایش انیمیشن پس‌زمینه</label>
                             </div>
-                            <div style="display:flex;align-items:center;gap:15px;margin-top:8px;">
+                        </div>
+                        <hr style="border:0;border-top:1px solid rgba(255,255,255,0.15);margin:14px 0;">
+                        <div class="settings-radio-grid">
+                            <div class="settings-radio-group">
                                 <span style="font-size:0.92rem;color:inherit;">نحوه دریافت گزارشات:</span>
-                                <div style="display:flex;align-items:center;gap:5px;">
-                                    <input type="radio" id="er_rptView" name="er_rptDownload" value="NO" ${
-                                      rptDownloadVal !== "YES" ? "checked" : ""
-                                    } style="cursor:pointer;">
-                                    <label for="er_rptView" style="margin:0;cursor:pointer;font-size:0.9rem;">مشاهده</label>
-                                </div>
-                                <div style="display:flex;align-items:center;gap:5px;">
-                                    <input type="radio" id="er_rptDownload" name="er_rptDownload" value="YES" ${
-                                      rptDownloadVal === "YES" ? "checked" : ""
-                                    } style="cursor:pointer;">
-                                    <label for="er_rptDownload" style="margin:0;cursor:pointer;font-size:0.9rem;">دانلود</label>
-                                </div>
-                            </div>
-                            <div style="display:flex;align-items:center;gap:15px;margin-top:8px;">
-                                <span style="font-size:0.92rem;color:inherit;">نحوه چاپ گزارش صورتجلسه و ملزومات اتاق تکثیر:</span>
-                                <div style="display:flex;align-items:center;gap:5px;">
-                                    <input type="radio" id="er_reprCourse" name="er_reproductionMode" value="course" ${
-                                      reproductionReportModeVal !== "location"
-                                        ? "checked"
-                                        : ""
-                                    } style="cursor:pointer;">
-                                    <label for="er_reprCourse" style="margin:0;cursor:pointer;font-size:0.9rem;">بر اساس درس</label>
-                                </div>
-                                <div style="display:flex;align-items:center;gap:5px;">
-                                    <input type="radio" id="er_reprLocation" name="er_reproductionMode" value="location" ${
-                                      reproductionReportModeVal === "location"
-                                        ? "checked"
-                                        : ""
-                                    } style="cursor:pointer;">
-                                    <label for="er_reprLocation" style="margin:0;cursor:pointer;font-size:0.9rem;">بر اساس مکان</label>
+                                <div class="settings-radio-options">
+                                    <div class="settings-radio-item">
+                                        <input type="radio" id="er_rptView" name="er_rptDownload" value="NO" ${
+                                          rptDownloadVal !== "YES"
+                                            ? "checked"
+                                            : ""
+                                        } style="cursor:pointer;">
+                                        <label for="er_rptView" style="margin:0;cursor:pointer;font-size:0.9rem;">مشاهده</label>
+                                    </div>
+                                    <div class="settings-radio-item">
+                                        <input type="radio" id="er_rptDownload" name="er_rptDownload" value="YES" ${
+                                          rptDownloadVal === "YES"
+                                            ? "checked"
+                                            : ""
+                                        } style="cursor:pointer;">
+                                        <label for="er_rptDownload" style="margin:0;cursor:pointer;font-size:0.9rem;">دانلود</label>
+                                    </div>
                                 </div>
                             </div>
-
-
+                            <div class="settings-radio-group">
+                                <span style="font-size:0.92rem;color:inherit;">گزارش ملزومات تکثیر:</span>
+                                <div class="settings-radio-options">
+                                    <div class="settings-radio-item">
+                                        <input type="radio" id="er_reprCourse" name="er_reproductionMode" value="course" ${
+                                          reproductionReportModeVal !==
+                                          "location"
+                                            ? "checked"
+                                            : ""
+                                        } style="cursor:pointer;">
+                                        <label for="er_reprCourse" style="margin:0;cursor:pointer;font-size:0.9rem;">بر اساس درس</label>
+                                    </div>
+                                    <div class="settings-radio-item">
+                                        <input type="radio" id="er_reprLocation" name="er_reproductionMode" value="location" ${
+                                          reproductionReportModeVal ===
+                                          "location"
+                                            ? "checked"
+                                            : ""
+                                        } style="cursor:pointer;">
+                                        <label for="er_reprLocation" style="margin:0;cursor:pointer;font-size:0.9rem;">بر اساس مکان</label>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>`;
@@ -911,7 +922,7 @@ try {
       const modalResult = await Swal.fire({
         title: "ویرایش نقش‌ها و تنظیمات",
         html: formHtml,
-        width: 720,
+        width: 850,
         showCancelButton: true,
         confirmButtonText: "ذخیره",
         cancelButtonText: "انصراف",
@@ -4362,6 +4373,7 @@ async function examEssentialsHandler() {
   // Check what types of exams exist for this session
   let hasDescriptive = false;
   let hasLocations = false;
+  let hasTest = false;
 
   if (examDate && examTime) {
     const cleanDate = toEnglishDigits(String(examDate)).replace(/-/g, "/");
@@ -4388,12 +4400,17 @@ async function examEssentialsHandler() {
         hasLocations = courses.some(
           (c) => c.exam_type === "کتبی" || !c.exam_type
         );
+        // Check for test exams (تستی or تستی و تشریحی)
+        hasTest = courses.some(
+          (c) => c.course_type && c.course_type.includes("تستی")
+        );
       }
     } catch (e) {
       console.warn("Failed to check exam types:", e);
       // Show buttons by default if check fails
       hasDescriptive = true;
       hasLocations = true;
+      hasTest = true;
     }
   }
 
@@ -4431,6 +4448,13 @@ async function examEssentialsHandler() {
       </button>`;
   }
 
+  if (hasTest) {
+    buttonsHtml += `
+      <button id="essentialsTestLabelsBtn" class="btn btn-primary w-100" style="padding:12px;font-size:1rem;font-weight:600;" onclick="try{ startEssentialsPrint('testLabels'); }catch(e){ console.error(e); }">
+        برچسب پاکت اوراق تستی اسکن شده
+      </button>`;
+  }
+
   buttonsHtml += `</div>`;
 
   Swal.fire({
@@ -4456,6 +4480,7 @@ function startEssentialsPrint(kind) {
       else if (kind === "attendance") printAttendanceSheet();
       else if (kind === "descriptive") printEssentialsDescriptive();
       else if (kind === "locationLabels") printLocationLabels();
+      else if (kind === "testLabels") printEssentialsTestLabels();
       else if (kind === "test") printEssentialsTest();
     } catch (e) {
       console.error("startEssentialsPrint error:", e);
@@ -4621,6 +4646,37 @@ async function printLocationLabels() {
         examDate
       )}&exam_time=${encodeURIComponent(examTime)}&_t=${new Date().getTime()}`;
       showReportModal(url, "برچسب پاکت سوالات مکان‌ها");
+    } else {
+      Swal.fire({
+        icon: "error",
+        title: "خطا",
+        text: "اطلاعات آزمون یافت نشد",
+        confirmButtonText: "باشه",
+        customClass: {
+          popup: "swal2-rtl swal2-glass",
+          confirmButton: "btn btn-primary",
+        },
+      });
+    }
+  } catch (e) {
+    console.error(e);
+  }
+}
+
+async function printEssentialsTestLabels() {
+  try {
+    const context = window._lastExamContext || null;
+    let examDate = context?.exam_date;
+    let examTime = context?.exam_time;
+
+    if (examDate && examTime) {
+      examDate = toEnglishDigits(String(examDate)).replace(/-/g, "/");
+      examTime = toEnglishDigits(String(examTime));
+
+      const url = `../API/generatePDF.php?report_type=test_labels&exam_date=${encodeURIComponent(
+        examDate
+      )}&exam_time=${encodeURIComponent(examTime)}&_t=${new Date().getTime()}`;
+      showReportModal(url, "برچسب پاکت اوراق تستی اسکن شده");
     } else {
       Swal.fire({
         icon: "error",
@@ -5063,6 +5119,143 @@ function renderInsightCards(stats) {
       resultDiv.classList.add("d-none");
     }, 5000);
   }
+})();
+
+// =====================================================
+// Push Reminder Timing Configuration (Modal Version)
+// =====================================================
+(function initPushReminderTiming() {
+  const openBtn = document.getElementById("openPushSettingsBtn");
+  if (!openBtn) return; // Not on admin dashboard
+
+  let currentMinutes = 30; // Default
+
+  // Load current setting
+  async function loadReminderTime() {
+    try {
+      const response = await guardedFetch("../API/getConfig.php", {
+        cache: "no-store",
+      });
+      if (response.ok) {
+        const config = await response.json();
+        const configMinutes = parseInt(config.PushReminderMinutes, 10);
+        if (
+          !isNaN(configMinutes) &&
+          configMinutes >= 30 &&
+          configMinutes <= 180
+        ) {
+          currentMinutes = configMinutes;
+        }
+      }
+    } catch (e) {
+      console.warn("Failed to load push reminder config", e);
+    }
+  }
+
+  // Load on init
+  loadReminderTime();
+
+  // Open settings modal
+  openBtn.addEventListener("click", async () => {
+    await loadReminderTime(); // Refresh
+
+    const timeOptions = [30, 60, 90, 120, 150, 180];
+    const buttonsHtml = timeOptions
+      .map((mins) => {
+        const isSelected = mins === currentMinutes;
+        const persianMins = toPersianDigits(mins);
+        return `<button type="button" class="reminder-modal-btn ${
+          isSelected ? "selected" : ""
+        }" data-minutes="${mins}">${persianMins} دقیقه</button>`;
+      })
+      .join("");
+
+    const modalHtml = `
+      <div style="text-align:justify;direction:rtl;">
+        <p style="margin-bottom:1rem;color:inherit;">زمان ارسال یادآوری خودکار برای دانشجویان و مراقبین:</p>
+        <div style="background:rgba(255,193,7,0.15);padding:0.75rem;border-radius:8px;margin-bottom:1rem;border-right:3px solid #ffc107;">
+          <strong style="color:#f59e0b;">⏰ در حال حاضر:</strong>
+          <span style="color:inherit;margin-right:0.5rem;">${toPersianDigits(
+            currentMinutes
+          )} دقیقه قبل از آزمون</span>
+        </div>
+        <div class="reminder-btns-grid">
+          ${buttonsHtml}
+        </div>
+        <small style="display:block;margin-top:1rem;color:rgba(255,255,255,0.6);text-align:justify;">این زمان تعیین می‌کند که چند دقیقه قبل از شروع آزمون، اعلان یادآوری به صورت خودکار ارسال شود.</small>
+      </div>
+    `;
+
+    let selectedMinutes = currentMinutes;
+
+    const result = await Swal.fire({
+      title: "تنظیمات یادآوری خودکار",
+      html: modalHtml,
+      width: 450,
+      showCancelButton: true,
+      confirmButtonText: "ذخیره",
+      cancelButtonText: "انصراف",
+      customClass: {
+        popup: "swal2-rtl swal2-glass",
+        confirmButton: "btn btn-primary",
+        cancelButton: "btn btn-cancel",
+      },
+      didOpen: () => {
+        const btns = Swal.getPopup().querySelectorAll(".reminder-modal-btn");
+        btns.forEach((btn) => {
+          btn.addEventListener("click", () => {
+            btns.forEach((b) => b.classList.remove("selected"));
+            btn.classList.add("selected");
+            selectedMinutes = parseInt(btn.dataset.minutes, 10);
+          });
+        });
+      },
+      preConfirm: () => selectedMinutes,
+    });
+
+    if (!result.isConfirmed) return;
+
+    // Save
+    try {
+      const response = await guardedFetch("../API/saveConfig.php", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          PushReminderMinutes: selectedMinutes.toString(),
+        }),
+      });
+
+      const saveResult = await response.json();
+
+      if (saveResult.success) {
+        currentMinutes = selectedMinutes;
+        Swal.fire({
+          icon: "success",
+          title: "ذخیره شد",
+          text: `زمان یادآوری به ${toPersianDigits(
+            selectedMinutes
+          )} دقیقه قبل از آزمون تغییر یافت.`,
+          timer: 2500,
+          showConfirmButton: false,
+          customClass: { popup: "swal2-rtl swal2-glass" },
+        });
+      } else {
+        throw new Error(saveResult.error || "خطا در ذخیره‌سازی");
+      }
+    } catch (error) {
+      console.error("Save reminder time error:", error);
+      Swal.fire({
+        icon: "error",
+        title: "خطا",
+        text: error.message || "خطا در ذخیره‌سازی تنظیمات",
+        confirmButtonText: "باشه",
+        customClass: {
+          popup: "swal2-rtl swal2-glass",
+          confirmButton: "btn btn-primary",
+        },
+      });
+    }
+  });
 })();
 
 // =====================================================

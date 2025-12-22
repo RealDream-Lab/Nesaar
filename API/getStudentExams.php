@@ -198,6 +198,19 @@ try {
     error_log('Failed to set user session cookie: ' . $e->getMessage());
 }
 
+// Get reminder minutes from config (default 30)
+$reminderMinutes = 30;
+try {
+    $reminderStmt = $pdo->prepare("SELECT ConfigValue FROM Config WHERE ConfigName = 'PushReminderMinutes'");
+    $reminderStmt->execute();
+    $reminderVal = $reminderStmt->fetchColumn();
+    if ($reminderVal !== false && (int)$reminderVal >= 30 && (int)$reminderVal <= 180) {
+        $reminderMinutes = (int)$reminderVal;
+    }
+} catch (Exception $e) {
+    // Use default if config fetch fails
+}
+
 // بررسی زمان امتحان برای مخفی کردن اطلاعات
 foreach ($results as &$row) {
     if (!empty($row['exam_date']) && !empty($row['exam_time'])) {
@@ -217,10 +230,10 @@ foreach ($results as &$row) {
                 $current_total_minutes = ($current_hour * 60) + $current_minute;
                 $minutes_difference    = $exam_total_minutes - $current_total_minutes;
 
-                // اگر بیشتر از 30 دقیقه تا امتحان باقی مانده
-                if ($minutes_difference > 30) {
+                // اگر بیشتر از X دقیقه تا امتحان باقی مانده (بر اساس تنظیمات)
+                if ($minutes_difference > $reminderMinutes) {
                     $exam_datetime = DateTime::createFromFormat('H:i', $row['exam_time']);
-                    $exam_datetime->modify('-30 minutes');
+                    $exam_datetime->modify("-{$reminderMinutes} minutes");
                     $visible_time       = $exam_datetime->format('H:i');
                     $row['seat_number'] = 'شماره صندلی شما تا ساعت ' . $visible_time . ' همان روز مخفی می‌باشد.';
                     $row['building']    = '';
@@ -231,7 +244,7 @@ foreach ($results as &$row) {
         } elseif ($row['exam_date'] > $current_persian_date) {
             // اگر امتحان در آینده است (تاریخ بعدی)
             $exam_datetime = DateTime::createFromFormat('H:i', $row['exam_time']);
-            $exam_datetime->modify('-30 minutes');
+            $exam_datetime->modify("-{$reminderMinutes} minutes");
             $visible_time       = $exam_datetime->format('H:i');
             $row['seat_number'] = 'شماره صندلی شما تا ساعت ' . $visible_time . ' همان روز مخفی می‌باشد.';
             $row['building']    = '';

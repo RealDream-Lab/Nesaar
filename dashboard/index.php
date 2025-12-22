@@ -223,12 +223,19 @@ $bodyClass = $wavesAnimationDisabled ? 'class="no-waves-animation"' : '';
         <!-- Push Notification Management Card -->
         <div class="dashboard-card no-hover collapsible-card" id="pushNotificationCard">
             <div class="card-header-collapsible" onclick="toggleCardCollapse(this)">
-                <h4 class="mb-0">ارسال اعلان (پوش نوتیفیکیشن) نسخه آزمایشی</h4>
+                <h4 class="mb-0">ارسال اعلان (پوش نوتیفیکیشن)</h4>
                 <span class="collapse-icon">▼</span>
             </div>
             <div class="card-body-collapsible">
-                <p style="color:#666; margin-bottom:1rem;">ارسال پیام به دانشجویان و مراقبین ثبت‌نام شده در سیستم اعلان
-                </p>
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <p style="color:#666; margin-bottom:0;">ارسال پیام به دانشجویان و مراقبین ثبت‌نام شده در سیستم اعلان
+                    </p>
+                    <button type="button" class="btn btn-sm btn-outline-secondary" id="openPushSettingsBtn"
+                        title="تنظیمات یادآوری خودکار">
+                        <i class="bi bi-gear"></i> تنظیمات
+                    </button>
+                </div>
+
                 <div class="row g-3">
                     <div class="col-12 col-md-8">
                         <label class="form-label">عنوان پیام</label>

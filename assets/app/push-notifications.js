@@ -344,6 +344,28 @@ async function initPushNotificationUI(containerId, userType, userId) {
       return;
     }
 
+    // Get reminder minutes from config (default 30)
+    let reminderMinutes = 30;
+    try {
+      const cachedConfig = localStorage.getItem("appConfig");
+      if (cachedConfig) {
+        const cfg = JSON.parse(cachedConfig);
+        const cfgMinutes = parseInt(cfg.PushReminderMinutes, 10);
+        if (!isNaN(cfgMinutes) && cfgMinutes >= 30 && cfgMinutes <= 180) {
+          reminderMinutes = cfgMinutes;
+        }
+      }
+    } catch (e) {
+      console.warn("[Push] Failed to get reminder minutes from config", e);
+    }
+
+    // Convert to Persian digits
+    const persianDigits = ["۰", "۱", "۲", "۳", "۴", "۵", "۶", "۷", "۸", "۹"];
+    const reminderPersian = String(reminderMinutes).replace(
+      /\d/g,
+      (d) => persianDigits[d]
+    );
+
     container.innerHTML = `
       <div class="form-check form-switch">
         <input class="form-check-input" type="checkbox" id="pushToggle" ${
@@ -351,7 +373,7 @@ async function initPushNotificationUI(containerId, userType, userId) {
         }>
         <label class="form-check-label" for="pushToggle">
           <i class="bi bi-bell${pushMgr.isSubscribed ? "-fill" : ""}"></i>
-          دریافت اعلان یادآوری آزمون (۳۰ دقیقه قبل)
+          دریافت اعلان یادآوری آزمون (${reminderPersian} دقیقه قبل)
         </label>
       </div>
     `;

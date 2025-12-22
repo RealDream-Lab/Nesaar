@@ -100,6 +100,8 @@ if ($reportType === 'session') {
     generateLocationLabels($pdo, $mpdf, $examDate, $examTime, $config);
 } elseif ($reportType === 'descriptive') {
     generateDescriptiveLabels($pdo, $mpdf, $examDate, $examTime, $config);
+} elseif ($reportType === 'test_labels') {
+    generateTestLabels($pdo, $mpdf, $examDate, $examTime, $config);
 } elseif ($reportType === 'proctor_notice') {
     // Parse optional proctor_ids parameter for filtered notice generation
     $filterProctorIds = null;
@@ -136,6 +138,16 @@ $mpdf->Output($filename, $outputMode);
 
 function generateSessionReport($pdo, $mpdf, $examDate, $examTime, $config)
 {
+    // Check if location-based report mode is enabled
+    $locationMode = isset($config['ReproductionReportMode']) && strtolower($config['ReproductionReportMode']) === 'location';
+
+    if ($locationMode) {
+        // Generate location-based session reports
+        generateSessionReportByLocation($pdo, $mpdf, $examDate, $examTime, $config);
+        return;
+    }
+
+    // Default: course-based report (original logic)
     // Fetch Courses
     $stmt = $pdo->prepare("
         SELECT 
@@ -322,6 +334,240 @@ function generateSessionReport($pdo, $mpdf, $examDate, $examTime, $config)
         $mpdf->SetHTMLFooter('<div style="background-color: #444; color: #fff; text-align: center; padding: 5px; font-size: 9pt;">صفحه ' . toPersianDigits($index + 1) . ' از ' . toPersianDigits($totalPages) . '</div>');
 
         $mpdf->WriteHTML($pageHtml);
+    }
+}
+
+/**
+ * Generate session report grouped by building
+ * Each building gets its own separate session report with the building name shown under university
+ */
+function generateSessionReportByLocation($pdo, $mpdf, $examDate, $examTime, $config)
+{
+    // Fetch all exam seats with course info for this session
+    $stmt = $pdo->prepare("
+        SELECT 
+            es.course_code,
+            es.building,
+            es.class_name,
+            es.student_id,
+            c.course_name,
+            c.course_type,
+            es.exam_type
+        FROM exam_seats es
+        JOIN courses c ON es.course_code = c.course_code
+        WHERE c.exam_date = ? AND c.exam_time = ?
+    ");
+    $stmt->execute([$examDate, $examTime]);
+    $allSeats = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+    if (empty($allSeats)) {
+        die('No exam seats found for this session.');
+    }
+
+    // Group by building only (not by class)
+    $buildings = [];
+    foreach ($allSeats as $seat) {
+        $building = trim($seat['building'] ?? '') ?: 'بدون ساختمان';
+
+        if (!isset($buildings[$building])) {
+            $buildings[$building] = [
+                'building' => $building,
+                'courses' => []
+            ];
+        }
+
+        $courseCode = $seat['course_code'];
+        if (!isset($buildings[$building]['courses'][$courseCode])) {
+            $buildings[$building]['courses'][$courseCode] = [
+                'course_code' => $courseCode,
+                'course_name' => $seat['course_name'],
+                'course_type' => $seat['course_type'],
+                'exam_type' => $seat['exam_type'],
+                'student_count' => 0
+            ];
+        }
+        $buildings[$building]['courses'][$courseCode]['student_count']++;
+    }
+
+    // Sort buildings by name
+    uksort($buildings, 'strcmp');
+
+    // Calculate Semester/Year
+    $semesterLabel = "نامشخص";
+    $partsDate     = explode('/', toEnglishDigits($examDate));
+    $year          = isset($partsDate[0]) ? (int)$partsDate[0] : 0;
+    $month         = isset($partsDate[1]) ? (int)$partsDate[1] : 0;
+
+    if (in_array($month, [9, 10]))
+        $semesterLabel = "نیمسال اول";
+    elseif (in_array($month, [2, 3]))
+        $semesterLabel = "نیمسال دوم";
+    elseif (in_array($month, [5, 6]))
+        $semesterLabel = "دوره تابستان";
+    else {
+        if ($month >= 7 && $month <= 12)
+            $semesterLabel = "نیمسال اول";
+        elseif ($month >= 1 && $month <= 4)
+            $semesterLabel = "نیمسال دوم";
+    }
+
+    if ($semesterLabel === "نیمسال اول") {
+        $acadStart = $year;
+        $acadEnd   = $year + 1;
+    } else {
+        $acadStart = $year - 1;
+        $acadEnd   = $year;
+    }
+    $acadYearStr = toPersianDigits($acadEnd) . '-' . toPersianDigits($acadStart);
+
+    // Config Values
+    $university = $config['University'] ?? 'دانشگاه پیام نور';
+    $university = trim(preg_replace('/^نسار\s*-\s*/u', '', $university));
+    $bossName   = $config['BossNickName'] ?? '________________';
+    $headName   = $config['HeadOfEDU'] ?? '________________';
+    $chairName  = $config['Chairman'] ?? '________________';
+
+    $baseStyle = '
+    <style>
+        body { font-family: vazir; font-size: 10pt; }
+        .header { width: 100%; border-bottom: 1px solid #000; padding-bottom: 10px; margin-bottom: 10px; }
+        .header-table { width: 100%; }
+        .logo { width: 80px; }
+        .title { font-size: 16pt; font-weight: bold; margin-bottom: 8px; }
+        .university-name { font-size: 12pt; margin-bottom: 6px; }
+        .location-name { font-size: 10pt; font-weight: bold; color: #333; margin-top: 4px; }
+        .meta { text-align: right; margin-bottom: 10px; font-size: 10pt; }
+        .courses-table { width: 100%; border-collapse: collapse; font-size: 9pt; table-layout: fixed; }
+        .courses-table th { background-color: #efefef; border: 1px solid #ccc; padding: 5px; font-weight: bold; }
+        .courses-table td { border: 1px solid #ccc; padding: 8px 5px; text-align: center; }
+        .courses-table td.name { text-align: right; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .footer-signs { position: fixed; bottom: 15mm; left: 0; right: 0; width: 100%; }
+        .page-footer { position: fixed; bottom: 0; width: 100%; text-align: center; font-size: 9pt; background-color: #444; color: #fff; padding: 5px; }
+    </style>
+    ';
+
+    $locationIndex  = 0;
+    $totalLocations = count($buildings);
+
+    foreach ($buildings as $buildingName => $buildingData) {
+        $locationIndex++;
+        $locationLabel = $buildingData['building'];
+
+        // Convert courses array to indexed array and sort
+        $courses = array_values($buildingData['courses']);
+
+        // Sort logic (Electronic first)
+        usort($courses, function ($a, $b) {
+            $typeA = $a['exam_type'] ?? '';
+            $typeB = $b['exam_type'] ?? '';
+            if ($typeA === $typeB) {
+                return (int)$a['course_code'] - (int)$b['course_code'];
+            }
+            if ($typeA === 'الکترونیکی')
+                return -1;
+            if ($typeB === 'الکترونیکی')
+                return 1;
+            return strcmp($typeA, $typeB);
+        });
+
+        // Pagination for this location
+        $perPage    = 15;
+        $chunks     = array_chunk($courses, $perPage);
+        $totalPages = count($chunks);
+
+        foreach ($chunks as $pageIndex => $chunk) {
+            if ($locationIndex > 1 || $pageIndex > 0)
+                $mpdf->AddPage();
+
+            $pageHtml = $baseStyle;
+
+            // Header with location name
+            $pageHtml .= '
+            <div class="header">
+                <table class="header-table">
+                    <tr>
+                        <td style="width: 20%; text-align: center; border: none;">
+                            <img src="../assets/app/Pnulogo.png" class="logo"><br>
+                            <span style="font-size: 9pt; font-weight: bold;">مرکز سنجش و آزمون</span>
+                        </td>
+                        <td style="width: 60%; text-align: center; border: none;">
+                            <div class="title">صورتجلسه آزمون</div>
+                            <div class="university-name">' . $university . '</div>
+                            <div class="location-name">' . $locationLabel . '</div>
+                        </td>
+                        <td style="width: 20%; border: none;"></td>
+                    </tr>
+                </table>
+            </div>';
+
+            $pageHtml .= '<div class="meta">آزمون دروس زیر در ' . $semesterLabel . ' سالتحصیلی ' . $acadYearStr . ' با حضور امضاء کنندگان زیر در ساعت ' . toPersianDigits($examTime) . ' مورخ ' . toPersianDigits($examDate) . ' شروع گردید. (نمونه سوال ضمیمه می باشد)</div>';
+
+            // Table
+            $pageHtml .= '<table class="courses-table">
+                <thead>
+                    <tr>
+                        <th style="width: 5%;">ردیف</th>
+                        <th style="width: 15%;">نوع درس</th>
+                        <th style="width: 10%;">کد درس</th>
+                        <th style="width: 45%;">نام درس</th>
+                        <th style="width: 10%;">تعداد</th>
+                        <th style="width: 15%;">حاضر / غایب</th>
+                    </tr>
+                </thead>
+                <tbody>';
+
+            $startRow = ($pageIndex * $perPage) + 1;
+            foreach ($chunk as $i => $course) {
+                $rowNum    = $startRow + $i;
+                $count     = $course['student_count'] ?? 0;
+                $pageHtml .= '<tr>
+                    <td>' . toPersianDigits($rowNum) . '</td>
+                    <td>' . ($course['course_type'] ?? '') . '</td>
+                    <td>' . toPersianDigits($course['course_code']) . '</td>
+                    <td class="name">' . ($course['course_name']) . '</td>
+                    <td>' . toPersianDigits($count) . '</td>
+                    <td> ___ / ___ </td>
+                </tr>';
+            }
+            $pageHtml .= '</tbody></table>';
+
+            // Footer Signatures
+            $pageHtml .= '<div class="footer-signs">
+                <div style="border-bottom: 1px solid #000; padding-bottom: 5px; margin-bottom: 15px; text-align: center; font-size: 9pt;">پس از انقضای مهلت آزمون، پاسخنامه‌ها جمع‌آوری و بعد از شمارش و کنترل با لیست حضور و غیاب و تایید، تحویل ستاد امتحانات گردید.</div>
+                
+                <table style="width: 100%; border: none;">
+                    <tr>
+                        <td style="border: none; text-align: right; padding: 10px;">نام و نام خانوادگی رئیس مرکز/ معاون مرکز/ سرپرست واحد: ' . $bossName . '</td>
+                        <td style="border: none; text-align: left; padding: 10px;">امضاء</td>
+                    </tr>
+                    <tr>
+                        <td style="border: none; text-align: right; padding: 10px;">نام و نام خانوادگی رئیس اداره آموزش: ' . $headName . '</td>
+                        <td style="border: none; text-align: left; padding: 10px;">امضاء</td>
+                    </tr>
+                    <tr>
+                        <td style="border: none; text-align: right; padding: 10px;">نام و نام خانوادگی مسئول جلسه: ' . $chairName . '</td>
+                        <td style="border: none; text-align: left; padding: 10px;">امضاء</td>
+                    </tr>
+                    <tr>
+                        <td style="border: none; text-align: right; padding: 10px;">نام و نام خانوادگی ناظران/مراقبان جلسه:</td>
+                        <td style="border: none; text-align: left; padding: 10px;">امضاء</td>
+                    </tr>
+                    <tr>
+                        <td style="border: none; text-align: right; padding: 10px;">نام و نام خانوادگی بازرس اعزامی از استان/سازمان مرکزی:</td>
+                        <td style="border: none; text-align: left; padding: 10px;">امضاء</td>
+                    </tr>
+                </table>
+            </div>';
+
+            // Page Number with location info
+            $footerText = 'مکان ' . toPersianDigits($locationIndex) . ' از ' . toPersianDigits($totalLocations);
+            if ($totalPages > 1) {
+                $footerText .= ' | صفحه ' . toPersianDigits($pageIndex + 1) . ' از ' . toPersianDigits($totalPages);
+            }
+            $mpdf->SetHTMLFooter('<div style="background-color: #444; color: #fff; text-align: center; padding: 5px; font-size: 9pt;">' . $footerText . '</div>');
+
+            $mpdf->WriteHTML($pageHtml);
+        }
     }
 }
 
@@ -2088,10 +2334,13 @@ function generateLocationLabels($pdo, $mpdf, $examDate, $examTime, $config)
 
 function generateDescriptiveLabels($pdo, $mpdf, $examDate, $examTime, $config)
 {
-    // Fetch Courses (Descriptive and Test-Descriptive)
+    // Fetch Courses (Descriptive and Test-Descriptive) with student count
     $stmt = $pdo->prepare("
-        SELECT * FROM courses 
-        WHERE exam_date = ? AND exam_time = ? AND course_type LIKE '%تشریحی%'
+        SELECT c.*, COUNT(es.student_id) as student_count 
+        FROM courses c
+        LEFT JOIN exam_seats es ON c.course_code = es.course_code
+        WHERE c.exam_date = ? AND c.exam_time = ? AND c.course_type LIKE '%تشریحی%'
+        GROUP BY c.course_code, c.course_name, c.exam_date, c.exam_time, c.course_type
     ");
     $stmt->execute([$examDate, $examTime]);
     $courses = $stmt->fetchAll(PDO::FETCH_ASSOC);
@@ -2120,17 +2369,45 @@ function generateDescriptiveLabels($pdo, $mpdf, $examDate, $examTime, $config)
 
     $htmlStyle = '
     <style>
-        body { font-family: vazir; font-size: 13pt; line-height: 1.8; }
-        .page { border: 1px solid #fff; padding: 10px; height: 100%; box-sizing: border-box; }
+        body { font-family: vazir; font-size: 13pt; line-height: 1.5; }
+        .page { border: 1px solid #fff; padding: 5px; box-sizing: border-box; }
         .strong { font-weight: bold; }
         .blank { display: inline-block; width: 50px; border-bottom: 1px solid #000; }
-        .footer-table { width: 100%; border-collapse: collapse; margin-top: 30px; }
-        .footer-table td { border: 1px solid #000; padding: 10px; vertical-align: top; height: 80px; width: 50%; }
+        .footer-table { width: 100%; border-collapse: collapse; margin-top: 15px; }
+        .footer-table td { border: 1px solid #000; padding: 10px; vertical-align: top; height: 60px; width: 50%; }
+        .count-line { text-align: center; margin-top: 10px; font-size: 10pt; }
     </style>';
 
     foreach ($courses as $i => $c) {
         if ($i > 0)
             $mpdf->AddPage('L');
+
+        // Get buildings for this course
+        $buildingsStmt = $pdo->prepare("
+            SELECT DISTINCT building 
+            FROM exam_seats 
+            WHERE course_code = ? 
+            ORDER BY building
+        ");
+        $buildingsStmt->execute([$c['course_code']]);
+        $buildings = $buildingsStmt->fetchAll(PDO::FETCH_COLUMN);
+
+        $buildingText = '';
+        if (!empty($buildings)) {
+            $buildings = array_filter($buildings); // Remove empty values
+            // Remove the word "ساختمان" from building names
+            $buildings = array_map(function ($b) {
+                return trim(preg_replace('/ساختمان\s*/u', '', $b));
+            }, $buildings);
+            $buildings = array_filter($buildings); // Remove empty after replacement
+
+            if (count($buildings) === 1) {
+                $buildingText = ' و در ساختمان <span class="strong">' . $buildings[0] . '</span>';
+            } elseif (count($buildings) > 1) {
+                $lastBuilding = array_pop($buildings);
+                $buildingText = ' و در ساختمان‌های <span class="strong">' . implode('، ', $buildings) . ' و ' . $lastBuilding . '</span>';
+            }
+        }
 
         $html = $htmlStyle . '
         <div class="page">
@@ -2140,9 +2417,15 @@ function generateDescriptiveLabels($pdo, $mpdf, $examDate, $examTime, $config)
                 با کد <span class="strong">' . toPersianDigits($c['course_code']) . '</span>
                 که آزمون آن در تاریخ <span class="strong">' . toPersianDigits($examDate) . '</span> 
                 ساعت <span class="strong">' . toPersianDigits($examTime) . '</span>
-                به صورت <span class="strong">' . ($c['course_type'] ?? 'کتبی') . '</span> برگزار گردیده، تحویل حضور استاد محترم می‌گردد.
+                به صورت <span class="strong">' . ($c['course_type'] ?? 'کتبی') . '</span>' . $buildingText . ' برگزار گردید، تحویل حضور استاد محترم می‌گردد.
             </div>
-            <div style="margin-top: 20px; font-size: 11pt;">
+            <div class="count-line">
+                تعداد کل: <span class="strong">' . toPersianDigits($c['student_count'] ?? 0) . '</span> &nbsp;&nbsp;&nbsp;&nbsp;
+                حاضرین: _________ &nbsp;&nbsp;&nbsp;&nbsp;
+                غایبین: _________ &nbsp;&nbsp;&nbsp;&nbsp;
+                تعداد اوراق تحویلی: _________
+            </div>
+            <div style="margin-top: 10px; font-size: 13pt; text-align: justify;">
                 <span class="strong">تأکید می‌شود:</span><br>
                 بر اساس ضوابط آموزشی، استاد محترم موظف است مطابق با نمونه سوالات ضمیمه و کلید سؤالات موجود در سامانه گلستان، حداکثر ظرف ۵ روز پس از تاریخ تحویل، نسبت به تصحیح کامل اوراق و ثبت نمرات نهایی در سامانه گلستان اقدام نموده و پاکت حاوی پاسخنامه‌ها را شمارش شده به دانشگاه بازگرداند.
             </div>
@@ -2169,6 +2452,131 @@ function generateDescriptiveLabels($pdo, $mpdf, $examDate, $examTime, $config)
     }
 
     $filename   = 'Labels_' . str_replace(['/', '\\'], '-', $examDate) . '.pdf';
+    $outputMode = (isset($config['rptDownload']) && strtoupper($config['rptDownload']) === 'YES') ? 'D' : 'I';
+    $mpdf->Output($filename, $outputMode);
+    exit; // Exit because we created a new mPDF instance here
+}
+
+function generateTestLabels($pdo, $mpdf, $examDate, $examTime, $config)
+{
+    // Fetch Courses with Test type (تستی or تستی و تشریحی) with student count
+    $stmt = $pdo->prepare("
+        SELECT c.course_code, c.course_name, c.exam_date, c.exam_time, c.course_type,
+               COUNT(es.student_id) as student_count
+        FROM courses c
+        LEFT JOIN exam_seats es ON c.course_code = es.course_code
+        WHERE c.exam_date = ? AND c.exam_time = ? AND c.course_type LIKE '%تستی%'
+        GROUP BY c.course_code, c.course_name, c.exam_date, c.exam_time, c.course_type
+        ORDER BY c.course_code
+    ");
+    $stmt->execute([$examDate, $examTime]);
+    $courses = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+    if (empty($courses)) {
+        die('هیچ درس تستی برای این جلسه یافت نشد.');
+    }
+
+    // Calculate total students for test exams
+    $totalTestStudents = 0;
+    foreach ($courses as $c) {
+        $totalTestStudents += (int)($c['student_count'] ?? 0);
+    }
+
+    // A5 Landscape
+    $mpdf = new \Mpdf\Mpdf([
+        'mode' => 'utf-8',
+        'format' => 'A5',
+        'orientation' => 'L',
+        'tempDir' => __DIR__ . '/../temp',
+        'fontDir' => array_merge((new \Mpdf\Config\ConfigVariables())->getDefaults()['fontDir'], [
+            __DIR__ . '/../assets/fonts/vazir/Farsi-Digits'
+        ]),
+        'fontdata' => (new \Mpdf\Config\FontVariables())->getDefaults()['fontdata'] + [
+            'vazir' => [
+                'R' => 'Vazir-Regular-FD.ttf',
+                'B' => 'Vazir-Bold-FD.ttf',
+                'useOTL' => 0xFF,
+                'useKashida' => 75,
+            ]
+        ],
+        'default_font' => 'vazir'
+    ]);
+    $mpdf->SetDirectionality('rtl');
+
+    // Config Values
+    $university = $config['University'] ?? 'دانشگاه پیام نور';
+    $university = trim(preg_replace('/^نسار\s*-\s*/u', '', $university));
+
+    $htmlStyle = '
+    <style>
+        body { font-family: vazir; font-size: 10pt; line-height: 1.6; }
+        .page { padding: 5px; }
+        .title { font-size: 14pt; font-weight: bold; text-align: center; margin-bottom: 8px; }
+        .subtitle { font-size: 11pt; text-align: center; margin-bottom: 10px; }
+        .info { font-size: 10pt; text-align: center; margin-bottom: 8px; }
+        .courses-table { width: 100%; border-collapse: collapse; font-size: 9pt; }
+        .courses-table th { background-color: #efefef; border: 1px solid #666; padding: 5px; font-weight: bold; }
+        .courses-table td { border: 1px solid #666; padding: 4px; text-align: center; }
+        .courses-table td.name { text-align: right; }
+        .footer { text-align: center; font-size: 8pt; margin-top: 5px; }
+    </style>';
+
+    // Pagination
+    $perPage    = 12;
+    $chunks     = array_chunk($courses, $perPage);
+    $totalPages = count($chunks);
+
+    foreach ($chunks as $pageIndex => $chunk) {
+        if ($pageIndex > 0)
+            $mpdf->AddPage('L');
+
+        $html = $htmlStyle . '
+        <div class="page">
+            <div class="title">برچسب پاکت اوراق تستی اسکن شده</div>
+            <div class="subtitle">' . $university . '</div>
+            <div class="info">
+                تاریخ: <strong>' . toPersianDigits($examDate) . '</strong> &nbsp;&nbsp;&nbsp;
+                ساعت: <strong>' . toPersianDigits($examTime) . '</strong> &nbsp;&nbsp;&nbsp;
+                کل دانشجویان تستی این جلسه: <strong>' . toPersianDigits($totalTestStudents) . '</strong>
+            </div>
+
+            <table class="courses-table">
+                <thead>
+                    <tr>
+                        <th style="width: 8%;">ردیف</th>
+                        <th style="width: 15%;">کد درس</th>
+                        <th style="width: 42%;">نام درس</th>
+                        <th style="width: 12%;">تعداد</th>
+                        <th style="width: 23%;">حاضرین / غایبین</th>
+                    </tr>
+                </thead>
+                <tbody>';
+
+        $startRow = ($pageIndex * $perPage) + 1;
+        foreach ($chunk as $i => $c) {
+            $rowNum  = $startRow + $i;
+            $count   = $c['student_count'] ?? 0;
+            $html   .= '<tr>
+                <td>' . toPersianDigits($rowNum) . '</td>
+                <td>' . toPersianDigits($c['course_code']) . '</td>
+                <td class="name">' . ($c['course_name']) . '</td>
+                <td>' . toPersianDigits($count) . '</td>
+                <td>...... / ......</td>
+            </tr>';
+        }
+
+        $html .= '</tbody></table>';
+        $html .= '</div>';
+
+        // Set page footer for page numbers (sticks to bottom)
+        if ($totalPages > 1) {
+            $mpdf->SetHTMLFooter('<div style="text-align: center; font-size: 8pt; font-family: vazir;">صفحه ' . toPersianDigits($pageIndex + 1) . ' از ' . toPersianDigits($totalPages) . '</div>');
+        }
+
+        $mpdf->WriteHTML($html);
+    }
+
+    $filename   = 'TestLabels_' . str_replace(['/', '\\'], '-', $examDate) . '_' . str_replace(':', '-', $examTime) . '.pdf';
     $outputMode = (isset($config['rptDownload']) && strtoupper($config['rptDownload']) === 'YES') ? 'D' : 'I';
     $mpdf->Output($filename, $outputMode);
     exit; // Exit because we created a new mPDF instance here
