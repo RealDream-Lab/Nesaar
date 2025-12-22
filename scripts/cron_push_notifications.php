@@ -102,11 +102,17 @@ try {
     $totalFailed  = 0;
     $totalExpired = 0;
 
+    // Send in batches to avoid connection pool exhaustion
+    // Collect all subscriptions first, then send in chunks
+    pushLog("Collecting notifications to send...");
+    
+    $allNotifications = [];
+    
     foreach ($upcomingExams as $exam) {
         pushLog("Processing exam: {$exam['course_name']} at {$exam['exam_time']}");
 
         // =====================================================
-        // Send to Students
+        // Collect Student Notifications
         // =====================================================
         $stmt = $pdo->prepare("
             SELECT DISTINCT es.student_id, s.first_name, s.last_name,
@@ -120,7 +126,6 @@ try {
         $students = $stmt->fetchAll();
 
         foreach ($students as $student) {
-            // Get push subscriptions for this student
             $subStmt = $pdo->prepare("
                 SELECT * FROM push_subscriptions 
                 WHERE user_type = 'student' 
@@ -151,24 +156,13 @@ try {
             ], JSON_UNESCAPED_UNICODE);
 
             foreach ($subscriptions as $sub) {
-                try {
-                    $subscription = Subscription::create([
-                        'endpoint' => $sub['endpoint'],
-                        'publicKey' => $sub['p256dh'],
-                        'authToken' => $sub['auth'],
-                    ]);
-
-                    $webPush->queueNotification($subscription, $payload);
-                } catch (Throwable $e) {
-                    pushLog("Error queuing notification: " . $e->getMessage());
-                }
+                $allNotifications[] = ['sub' => $sub, 'payload' => $payload];
             }
         }
 
         // =====================================================
-        // Send to Proctors
+        // Collect Proctor Notifications
         // =====================================================
-        // Get proctors with their assigned locations from exam_seats
         $stmt = $pdo->prepare("
             SELECT DISTINCT ea.proctor_id, ea.proctor_name, es.building, es.class_name
             FROM ExamAssignments ea
@@ -182,7 +176,6 @@ try {
         $proctors = $stmt->fetchAll();
 
         foreach ($proctors as $proctor) {
-            // Get push subscriptions for this proctor
             $subStmt = $pdo->prepare("
                 SELECT * FROM push_subscriptions 
                 WHERE user_type = 'proctor' 
@@ -212,41 +205,59 @@ try {
             ], JSON_UNESCAPED_UNICODE);
 
             foreach ($subscriptions as $sub) {
-                try {
-                    $subscription = Subscription::create([
-                        'endpoint' => $sub['endpoint'],
-                        'publicKey' => $sub['p256dh'],
-                        'authToken' => $sub['auth'],
-                    ]);
-
-                    $webPush->queueNotification($subscription, $payload);
-                } catch (Throwable $e) {
-                    pushLog("Error queuing notification: " . $e->getMessage());
-                }
+                $allNotifications[] = ['sub' => $sub, 'payload' => $payload];
             }
         }
     }
 
-    // Flush all queued notifications
-    pushLog("Sending queued notifications...");
-
-    foreach ($webPush->flush() as $report) {
-        $endpoint = $report->getRequest()->getUri()->__toString();
-
-        if ($report->isSuccess()) {
-            $totalSent++;
-        } else {
-            if ($report->isSubscriptionExpired()) {
-                $totalExpired++;
-                // Deactivate expired subscription
-                $pdo->prepare("UPDATE push_subscriptions SET is_active = 0 WHERE endpoint = ?")
-                    ->execute([$endpoint]);
-                pushLog("Subscription expired and deactivated: " . substr($endpoint, 0, 50) . "...");
-            } else {
-                $totalFailed++;
-                pushLog("Failed: " . $report->getReason());
+    // Send notifications in batches
+    $batchSize = 50;
+    $totalNotifications = count($allNotifications);
+    pushLog("Total notifications to send: {$totalNotifications}");
+    
+    $chunks = array_chunk($allNotifications, $batchSize);
+    
+    foreach ($chunks as $chunkIndex => $chunk) {
+        // Queue this batch
+        foreach ($chunk as $notification) {
+            try {
+                $sub = $notification['sub'];
+                $subscription = Subscription::create([
+                    'endpoint' => $sub['endpoint'],
+                    'publicKey' => $sub['p256dh'],
+                    'authToken' => $sub['auth'],
+                ]);
+                $webPush->queueNotification($subscription, $notification['payload']);
+            } catch (Throwable $e) {
+                pushLog("Error queuing notification: " . $e->getMessage());
             }
         }
+        
+        // Send this batch
+        foreach ($webPush->flush() as $report) {
+            $endpoint = $report->getRequest()->getUri()->__toString();
+
+            if ($report->isSuccess()) {
+                $totalSent++;
+            } else {
+                if ($report->isSubscriptionExpired()) {
+                    $totalExpired++;
+                    $pdo->prepare("UPDATE push_subscriptions SET is_active = 0 WHERE endpoint = ?")
+                        ->execute([$endpoint]);
+                    pushLog("Subscription expired and deactivated: " . substr($endpoint, 0, 50) . "...");
+                } else {
+                    $totalFailed++;
+                    pushLog("Failed: " . $report->getReason());
+                }
+            }
+        }
+        
+        // Small delay between batches
+        if ($chunkIndex < count($chunks) - 1) {
+            usleep(100000); // 100ms delay
+        }
+        
+        pushLog("Batch " . ($chunkIndex + 1) . "/" . count($chunks) . " completed");
     }
 
     pushLog("Completed: Sent={$totalSent}, Failed={$totalFailed}, Expired={$totalExpired}");

@@ -127,38 +127,52 @@ try {
         'requireInteraction' => $input['requireInteraction'] ?? false
     ], JSON_UNESCAPED_UNICODE);
 
-    $sent    = 0;
-    $failed  = 0;
-    $expired = 0;
+    $sent        = 0;
+    $failed      = 0;
+    $expired     = 0;
+    $failReasons = [];
 
-    // Queue notifications
-    foreach ($subscriptions as $sub) {
-        $subscription = Subscription::create([
-            'endpoint' => $sub['endpoint'],
-            'publicKey' => $sub['p256dh'],
-            'authToken' => $sub['auth'],
-        ]);
+    // Send in batches to avoid connection pool exhaustion
+    $batchSize = 50;
+    $chunks    = array_chunk($subscriptions, $batchSize);
 
-        $webPush->queueNotification($subscription, $payload);
-    }
+    foreach ($chunks as $chunkIndex => $chunk) {
+        // Queue this batch of notifications
+        foreach ($chunk as $sub) {
+            $subscription = Subscription::create([
+                'endpoint' => $sub['endpoint'],
+                'publicKey' => $sub['p256dh'],
+                'authToken' => $sub['auth'],
+            ]);
 
-    // Send all notifications
-    foreach ($webPush->flush() as $report) {
-        $endpoint = $report->getRequest()->getUri()->__toString();
+            $webPush->queueNotification($subscription, $payload);
+        }
 
-        if ($report->isSuccess()) {
-            $sent++;
-        } else {
-            // Check if subscription expired
-            if ($report->isSubscriptionExpired()) {
-                $expired++;
-                // Deactivate expired subscription
-                $pdo->prepare("UPDATE push_subscriptions SET is_active = 0 WHERE endpoint = ?")
-                    ->execute([$endpoint]);
+        // Send this batch
+        foreach ($webPush->flush() as $report) {
+            $endpoint = $report->getRequest()->getUri()->__toString();
+
+            if ($report->isSuccess()) {
+                $sent++;
             } else {
-                $failed++;
-                error_log("Push failed for {$endpoint}: " . $report->getReason());
+                // Check if subscription expired
+                if ($report->isSubscriptionExpired()) {
+                    $expired++;
+                    // Deactivate expired subscription
+                    $pdo->prepare("UPDATE push_subscriptions SET is_active = 0 WHERE endpoint = ?")
+                        ->execute([$endpoint]);
+                } else {
+                    $failed++;
+                    $reason               = $report->getReason();
+                    $failReasons[$reason] = ($failReasons[$reason] ?? 0) + 1;
+                    error_log("Push failed for {$endpoint}: " . $reason);
+                }
             }
+        }
+
+        // Small delay between batches to prevent connection exhaustion
+        if ($chunkIndex < count($chunks) - 1) {
+            usleep(100000); // 100ms delay between batches
         }
     }
 
@@ -168,7 +182,8 @@ try {
         'sent' => $sent,
         'failed' => $failed,
         'expired' => $expired,
-        'total' => count($subscriptions)
+        'total' => count($subscriptions),
+        'failReasons' => $failReasons
     ], JSON_UNESCAPED_UNICODE);
 
 } catch (Throwable $e) {
