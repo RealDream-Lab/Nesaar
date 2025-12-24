@@ -4467,6 +4467,11 @@ async function examEssentialsHandler() {
     );
   }
 
+  // دکمه ثابت قرائت پاسخنامه تستی - همیشه آخرین آیتم
+  allButtons.push(
+    `<button class="btn btn-primary w-100" style="${btnStyle}" onclick="try{ showTestAnswerSheetReaderInfo(); }catch(e){ console.error(e); }">قرائت پاسخنامه تستی</button>`
+  );
+
   // Distribute buttons evenly in two columns
   const total = allButtons.length;
   const hasOdd = total % 2 === 1;
@@ -4526,6 +4531,40 @@ function startEssentialsPrint(kind) {
       console.error("startEssentialsPrint error:", e);
     }
   }, 100);
+}
+
+/**
+ * نمایش اطلاعات قرائت پاسخنامه تستی
+ * این قابلیت پس از هماهنگی با سامانه گلستان فعال خواهد شد
+ */
+function showTestAnswerSheetReaderInfo() {
+  Swal.fire({
+    icon: "info",
+    title: "قرائت پاسخنامه تستی غایبین",
+    html: `
+      <div style="text-align:justify;direction:rtl;line-height:2.2;font-size:1rem;color:#e0e0e0;">
+        <p style="margin-bottom:1rem;">
+          این قابلیت امکان خواندن پاسخنامه‌های تستی اسکن‌شده را فراهم کرده 
+          و خروجی مناسب برای ثبت در سامانه گلستان تولید می‌نماید.
+        </p>
+        <p style="color:#f8d775;">
+          در حال حاضر این امکان در انتظار هماهنگی و مذاکره با تیم توسعه سامانه گلستان است 
+          و پس از نهایی شدن توافقات، فعال خواهد شد.
+        </p>
+      </div>
+    `,
+    confirmButtonText: "متوجه شدم",
+    customClass: { popup: "swal2-rtl swal2-glass" },
+  }).then(() => {
+    // بازگشت به منوی ملزومات آزمون
+    setTimeout(() => {
+      try {
+        examEssentialsHandler();
+      } catch (e) {
+        console.error("Failed to reopen essentials menu:", e);
+      }
+    }, 100);
+  });
 }
 
 async function printEssentialsSecretary() {

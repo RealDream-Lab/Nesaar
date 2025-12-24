@@ -13,6 +13,28 @@ header('Content-Type: application/json; charset=utf-8');
 // CSRF Protection for configuration updates
 csrf_enforce();
 
+// امنیت: بررسی کن که آیا سیستم قبلاً راه‌اندازی شده یا نه
+// اگر IsInit = YES باشد، اجازه تغییر کد ساد و دانشگاه را نده
+$stmt = $pdo->prepare("SELECT ConfigValue FROM Config WHERE ConfigName = 'IsInit'");
+$stmt->execute();
+$row    = $stmt->fetch(PDO::FETCH_ASSOC);
+$isInit = $row ? $row['ConfigValue'] : 'NO';
+
+if ($isInit === 'YES') {
+    // Audit log: ثبت تلاش برای تغییر لایسنس پس از راه‌اندازی
+    audit_log_license($pdo, 're_init_attempt', 'blocked', [
+        'message' => 'Attempt to re-initialize system after setup',
+        'ip' => $_SERVER['REMOTE_ADDR'] ?? 'unknown'
+    ]);
+
+    http_response_code(403);
+    echo json_encode([
+        'error' => 'سیستم قبلاً راه‌اندازی شده است. امکان تغییر کد ساد وجود ندارد.',
+        'alreadyInitialized' => true
+    ]);
+    exit;
+}
+
 $input = json_decode(file_get_contents('php://input'), true);
 
 // Expect SaadCode and University instead of Order
@@ -21,7 +43,7 @@ if (!$input || !isset($input['SaadCode'], $input['University'])) {
     exit;
 }
 
-$saad = trim($input['SaadCode']);
+$saad       = trim($input['SaadCode']);
 $university = trim($input['University']);
 
 if (empty($saad) || empty($university)) {
@@ -31,9 +53,27 @@ if (empty($saad) || empty($university)) {
 
 // Normalize SaadCode early so DB stores ASCII digits
 // Map Persian/Arabic digits to ASCII 0-9
-$map = [
-    '۰' => '0','۱' => '1','۲' => '2','۳' => '3','۴' => '4','۵' => '5','۶' => '6','۷' => '7','۸' => '8','۹' => '9',
-    '٠' => '0','١' => '1','٢' => '2','٣' => '3','٤' => '4','٥' => '5','٦' => '6','٧' => '7','٨' => '8','٩' => '9'
+$map            = [
+    '۰' => '0',
+    '۱' => '1',
+    '۲' => '2',
+    '۳' => '3',
+    '۴' => '4',
+    '۵' => '5',
+    '۶' => '6',
+    '۷' => '7',
+    '۸' => '8',
+    '۹' => '9',
+    '٠' => '0',
+    '١' => '1',
+    '٢' => '2',
+    '٣' => '3',
+    '٤' => '4',
+    '٥' => '5',
+    '٦' => '6',
+    '٧' => '7',
+    '٨' => '8',
+    '٩' => '9'
 ];
 $normalizedSaad = strtr($saad, $map);
 $normalizedSaad = preg_replace('/\s+/u', '', $normalizedSaad);
@@ -45,9 +85,9 @@ if (!preg_match('/^\d{4}$/', $normalizedSaad)) {
 }
 
 // First, call the webhook to validate
-$webhookUrl = 'https://wfa.pnubijar.ac.ir/webhook/Licence';
-$query = http_build_query(['SaadCode' => $normalizedSaad, 'Center' => $university]);
-$ctx = stream_context_create([
+$webhookUrl  = 'https://wfa.pnubijar.ac.ir/webhook/Licence';
+$query       = http_build_query(['SaadCode' => $normalizedSaad, 'Center' => $university]);
+$ctx         = stream_context_create([
     'http' => [
         'method' => 'GET',
         'timeout' => 4,
@@ -126,7 +166,7 @@ try {
         // Store LicenseLastChecked
         date_default_timezone_set('Asia/Tehran');
         $currentTimestamp = date('Y-m-d H:i:s');
-        $stmt = $pdo->prepare("SELECT COUNT(*) as cnt FROM Config WHERE ConfigName = 'LicenseLastChecked'");
+        $stmt             = $pdo->prepare("SELECT COUNT(*) as cnt FROM Config WHERE ConfigName = 'LicenseLastChecked'");
         $stmt->execute();
         $row = $stmt->fetch();
         if ($row && intval($row['cnt']) > 0) {
@@ -139,7 +179,7 @@ try {
     }
 
     $pdo->commit();
-    
+
     // Audit log: ثبت تغییرات پیکربندی
     audit_log_config($pdo, 'SaadCode', null, $normalizedSaad);
     audit_log_config($pdo, 'University', null, $university);

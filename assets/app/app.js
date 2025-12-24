@@ -241,26 +241,62 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   // Fetch and cache config
+  // امنیت: هنگام خطا، فقط cache معتبر استفاده می‌شود و بدون cache سرور باید موفق شود
   async function loadConfig() {
     try {
       const response = await guardedFetch("API/getConfig.php");
       if (!response.ok) throw new Error(`HTTP ${response.status}`);
       const config = await response.json();
       localStorage.setItem("appConfig", JSON.stringify(config));
-      return config;
+      return { config, fromCache: false, error: null };
     } catch (error) {
       console.warn("Failed to load config:", error);
 
       const cached = localStorage.getItem("appConfig");
+      if (cached) {
+        try {
+          const parsedCache = JSON.parse(cached);
+          // فقط cache معتبر که IsInit داره برگردون
+          if (parsedCache && parsedCache.IsInit) {
+            return { config: parsedCache, fromCache: true, error: null };
+          }
+        } catch (parseErr) {
+          console.warn("Invalid cache:", parseErr);
+        }
+      }
 
-      return cached
-        ? JSON.parse(cached)
-        : { University: "", SaadCode: "", IsInit: "NO" };
+      // امنیت: بدون cache معتبر و بدون پاسخ سرور، اجازه نمایش modal تنظیمات اولیه نده
+      // این جلوی حمله‌ای که با قطع اینترنت + پاک کردن localStorage انجام میشه رو می‌گیره
+      return {
+        config: null,
+        fromCache: false,
+        error: "ارتباط با سرور برقرار نشد. لطفاً اتصال اینترنت را بررسی کنید.",
+      };
     }
   }
 
   let appConfig = null;
-  loadConfig().then((config) => {
+  loadConfig().then((result) => {
+    const { config, fromCache, error } = result;
+
+    // امنیت: اگر خطا داشتیم و config نداریم، پیام خطا نشون بده و اجازه ادامه نده
+    if (error && !config) {
+      Swal.fire({
+        icon: "error",
+        title: "خطا در اتصال",
+        text: error,
+        confirmButtonText: "تلاش مجدد",
+        allowOutsideClick: false,
+        allowEscapeKey: false,
+        customClass: {
+          popup: "swal2-rtl swal2-glass",
+        },
+      }).then(() => {
+        window.location.reload();
+      });
+      return;
+    }
+
     appConfig = config;
 
     const footerText = document.getElementById("footerText");
@@ -270,8 +306,26 @@ document.addEventListener("DOMContentLoaded", () => {
         : "نسار";
     }
 
-    if (config.IsInit !== "YES") {
+    // امنیت: فقط اگر سرور موفق بود (نه از cache) اجازه نمایش modal تنظیمات اولیه بده
+    if (config.IsInit !== "YES" && !fromCache) {
       showInitModal(config);
+    } else if (config.IsInit !== "YES" && fromCache) {
+      // از cache اومده و سیستم init نشده - این نباید اتفاق بیفته
+      // احتمالا cache قدیمی یا دستکاری شده
+      Swal.fire({
+        icon: "warning",
+        title: "خطا در بارگذاری",
+        text: "اطلاعات ذخیره شده معتبر نیست. لطفاً صفحه را رفرش کنید.",
+        confirmButtonText: "رفرش",
+        allowOutsideClick: false,
+        allowEscapeKey: false,
+        customClass: {
+          popup: "swal2-rtl swal2-glass",
+        },
+      }).then(() => {
+        localStorage.removeItem("appConfig");
+        window.location.reload();
+      });
     }
   });
 
@@ -397,13 +451,15 @@ document.addEventListener("DOMContentLoaded", () => {
             },
           });
 
-          const newConfig = await loadConfig();
-          appConfig = newConfig;
-          const footerText = document.getElementById("footerText");
-          if (footerText) {
-            footerText.textContent = newConfig.University
-              ? `نسار - ${newConfig.University}`
-              : "نسار";
+          const loadResult = await loadConfig();
+          if (loadResult.config) {
+            appConfig = loadResult.config;
+            const footerText = document.getElementById("footerText");
+            if (footerText) {
+              footerText.textContent = loadResult.config.University
+                ? `نسار - ${loadResult.config.University}`
+                : "نسار";
+            }
           }
         } else {
           if (result.alreadyRegistered) {
@@ -419,7 +475,10 @@ document.addEventListener("DOMContentLoaded", () => {
               },
             }).then(() => {
               loadConfig()
-                .then((config) => showInitModal(config))
+                .then((result) => {
+                  if (result.config) showInitModal(result.config);
+                  else showInitModal(currentConfig || {});
+                })
                 .catch(() => showInitModal(currentConfig || {}));
             });
           } else {
@@ -438,7 +497,10 @@ document.addEventListener("DOMContentLoaded", () => {
           },
         }).then(() => {
           loadConfig()
-            .then((config) => showInitModal(config))
+            .then((result) => {
+              if (result.config) showInitModal(result.config);
+              else showInitModal(currentConfig || {});
+            })
             .catch(() => showInitModal(currentConfig || {}));
         });
       }
@@ -597,7 +659,8 @@ document.addEventListener("DOMContentLoaded", () => {
       let countdownInterval;
 
       if (!appConfig) {
-        appConfig = await loadConfig();
+        const loadResult = await loadConfig();
+        appConfig = loadResult.config || {};
       }
       const university = appConfig.University || "دانشگاه پیام نور مرکز بیجار";
       Swal.fire({
@@ -1394,7 +1457,8 @@ document.addEventListener("DOMContentLoaded", () => {
         }
 
         try {
-          appConfig = await loadConfig();
+          const loadResult = await loadConfig();
+          appConfig = loadResult.config || appConfig;
         } catch (configError) {
           console.warn("Failed to refresh config after login:", configError);
         }
@@ -1471,7 +1535,8 @@ document.addEventListener("DOMContentLoaded", () => {
                 );
               }
 
-              appConfig = await loadConfig();
+              const loadResult = await loadConfig();
+              appConfig = loadResult.config || appConfig;
             } catch (error) {
               console.error("Error saving admin/signature info:", error);
               showAlert("error", "خطا", "خطا در ذخیره اطلاعات مدیریت");
