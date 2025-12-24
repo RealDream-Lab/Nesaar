@@ -2365,7 +2365,21 @@ function generateLocationLabels($pdo, $mpdf, $examDate, $examTime, $config)
             font-weight: bold;
             background-color: #f5f5f5;
         }
+        .footer-signature {
+            text-align: center;
+            font-size: 9pt;
+            margin-top: 10mm;
+            padding-top: 5mm;
+            border-top: 1px dashed #999;
+        }
     ';
+
+    // Set up footer with page numbering and signature
+    $mpdf->SetHTMLFooter('
+        <div style="text-align: center; font-family: vazir; font-size: 8pt; color: #666;">
+            <div style="margin-bottom: 3mm;">محل امضا مراقب: ................................</div>
+        </div>
+    ');
 
     $pageIndex = 0;
     foreach ($locationGroups as $key => $loc) {
@@ -2410,16 +2424,29 @@ function generateLocationLabels($pdo, $mpdf, $examDate, $examTime, $config)
             <th style="width: 8%;">تا شماره</th>
             <th style="width: 6%;">تعداد</th>
             <th style="width: 8%;">کد درس</th>
-            <th style="width: 45%;">نام درس</th>
+            <th style="width: 32%;">نام درس</th>
+            <th style="width: 13%;">نوع درس</th>
             <th style="width: 20%;">حاضرین / غایبین</th>
         </tr></thead><tbody>';
 
         if (empty($sortedCourses)) {
-            $html .= '<tr><td colspan="7">بدون اطلاعات</td></tr>';
+            $html .= '<tr><td colspan="8">بدون اطلاعات</td></tr>';
         } else {
             $rowIndex = 0;
             foreach ($sortedCourses as $courseData) {
                 $rowIndex++;
+                // Determine course type label
+                $courseTypeLabel = '';
+                $ct              = $courseData['course_type'] ?? '';
+                if (stripos($ct, 'تستی') !== false && stripos($ct, 'تشریحی') !== false) {
+                    $courseTypeLabel = 'تستی و تشریحی';
+                } elseif (stripos($ct, 'تستی') !== false) {
+                    $courseTypeLabel = 'تستی';
+                } elseif (stripos($ct, 'تشریحی') !== false) {
+                    $courseTypeLabel = 'تشریحی';
+                } else {
+                    $courseTypeLabel = $ct ?: '-';
+                }
                 $html .= '<tr>
                     <td>' . toPersianDigits($rowIndex) . '</td>
                     <td>' . toPersianDigits($courseData['min_seat']) . '</td>
@@ -2427,6 +2454,7 @@ function generateLocationLabels($pdo, $mpdf, $examDate, $examTime, $config)
                     <td>' . toPersianDigits($courseData['count']) . '</td>
                     <td>' . toPersianDigits($courseData['course_code']) . '</td>
                     <td class="course-name">' . $courseData['course_name'] . '</td>
+                    <td>' . $courseTypeLabel . '</td>
                     <td>...... / ......</td>
                 </tr>';
             }

@@ -1771,10 +1771,14 @@ document.addEventListener("DOMContentLoaded", () => {
 
     const safeExams = Array.isArray(exams) ? exams : [];
 
+    // Add 20-minute grace period: exams stay in "upcoming" for 20 mins after start
+    const GRACE_PERIOD_MS = 20 * 60 * 1000;
+
     const decorated = safeExams.map((exam, idx) => {
       const target = createExamDateTime(exam.exam_date, exam.exam_time);
       const timeValue = target ? target.getTime() : 0;
-      const isUpcoming = target ? timeValue > now : false;
+      // Consider exam as upcoming if it hasn't started OR started less than 20 mins ago
+      const isUpcoming = target ? timeValue + GRACE_PERIOD_MS > now : false;
       return { exam, idx, target, timeValue, isUpcoming };
     });
 
@@ -1857,11 +1861,37 @@ document.addEventListener("DOMContentLoaded", () => {
           const seatNum = exam.seat_number || "";
           const isNumericSeat = /^\d+$/.test(seatNum.toString().trim());
           const seatClass = isNumericSeat ? "seat-available" : "seat-hidden";
+          // Build location info for past exam cards with smart prefix handling
+          const buildingName = exam.building || "";
+          const className = exam.class_name || "";
+
+          // Check if building name already starts with "ساختمان"
+          const buildingPrefix = /^\s*ساختمان/i.test(buildingName)
+            ? ""
+            : "ساختمان ";
+          // Check if class name already starts with "کلاس" or "سالن"
+          const classPrefix = /^\s*(کلاس|سالن)/i.test(className) ? "" : "کلاس ";
+
+          let locationText = "";
+          if (buildingName && className) {
+            locationText = `<div class="exam-location" style="font-size:0.85em;color:#6b7280;margin-top:2px;">${classPrefix}${escapeHtml(
+              className
+            )} - ${buildingPrefix}${escapeHtml(buildingName)}</div>`;
+          } else if (className) {
+            locationText = `<div class="exam-location" style="font-size:0.85em;color:#6b7280;margin-top:2px;">${classPrefix}${escapeHtml(
+              className
+            )}</div>`;
+          } else if (buildingName) {
+            locationText = `<div class="exam-location" style="font-size:0.85em;color:#6b7280;margin-top:2px;">${buildingPrefix}${escapeHtml(
+              buildingName
+            )}</div>`;
+          }
           return `
                 <div class="exam-card ${seatClass} past" tabindex="0" data-exam-origin="${idx}" data-exam-status="past">
                     <div class="exam-title">
                         <span>${escapeHtml(exam.course_name)}</span>
                     </div>
+                    ${locationText}
                 </div>
             `;
         })
@@ -2011,6 +2041,32 @@ document.addEventListener("DOMContentLoaded", () => {
         const formattedDate = `${toPersianDigits(
           parts[2]
         )} ${getPersianMonthName(exam.exam_date)} ${toPersianDigits(parts[0])}`;
+
+        // Build seat location sentence
+        let seatLocationSentence = "";
+        if (/^\d+$/.test(exam.seat_number)) {
+          const seatNum = toPersianDigits(exam.seat_number);
+          const buildingName = escapeHtml(exam.building) || "";
+          const className = escapeHtml(exam.class_name) || "";
+
+          // Check if building name already starts with "ساختمان"
+          const buildingPrefix = /^\s*ساختمان/i.test(buildingName)
+            ? ""
+            : "ساختمان ";
+          // Check if class name already starts with "کلاس" or "سالن"
+          const classPrefix = /^\s*(کلاس|سالن)/i.test(className) ? "" : "کلاس ";
+
+          if (buildingName && className) {
+            seatLocationSentence = `<br><br><strong style="color: #007bff;">شماره صندلی شما ${seatNum} در ${classPrefix}${className} ${buildingPrefix}${buildingName} می‌باشد.</strong>`;
+          } else if (className) {
+            seatLocationSentence = `<br><br><strong style="color: #007bff;">شماره صندلی شما ${seatNum} در ${classPrefix}${className} می‌باشد.</strong>`;
+          } else if (buildingName) {
+            seatLocationSentence = `<br><br><strong style="color: #007bff;">شماره صندلی شما ${seatNum} در ${buildingPrefix}${buildingName} می‌باشد.</strong>`;
+          } else {
+            seatLocationSentence = `<br><br><strong style="color: #007bff;">شماره صندلی شما ${seatNum} می‌باشد.</strong>`;
+          }
+        }
+
         Swal.fire({
           title: `${toPersianDigits(exam.course_code)}`,
           html: `
@@ -2024,21 +2080,7 @@ document.addEventListener("DOMContentLoaded", () => {
             exam.exam_day
           } ${formattedDate} به شیوه ${escapeHtml(
             exam.exam_type
-          )} برگزار خواهد شد. ${
-            /^\d+$/.test(exam.seat_number)
-              ? `شماره صندلی شما ${toPersianDigits(exam.seat_number)} می‌باشد.`
-              : exam.seat_number
-          }${
-            /^\d+$/.test(exam.seat_number)
-              ? `<br><br>ساختمان: <span style="color: #007bff;">${
-                  escapeHtml(exam.building) || "-"
-                }</span><br>کلاس: <span style="color: #007bff;">${
-                  escapeHtml(exam.class_name) || "-"
-                }</span><br>ردیف: <span style="color: #007bff;">${
-                  toPersianDigits(exam.seat_row) || "-"
-                }</span>`
-              : ""
-          }
+          )} برگزار خواهد شد.${seatLocationSentence}
                         </div>
                     `,
           confirmButtonText: "بستن",
@@ -2345,13 +2387,15 @@ document.addEventListener("DOMContentLoaded", () => {
       return false;
     let needsReorder = false;
     const now = Date.now();
+    // 20-minute grace period for coworker sessions too
+    const GRACE_PERIOD_MS = 20 * 60 * 1000;
     coworkerSessions.forEach((session, idx) => {
       const card = examCards?.querySelector(
         `.exam-card[data-session-origin='${idx}']`
       );
       if (!card) return;
       const target = createExamDateTime(session.exam_date, session.exam_time);
-      const isPast = !target || target.getTime() <= now;
+      const isPast = !target || target.getTime() + GRACE_PERIOD_MS <= now;
 
       // Check if status changed from upcoming to past
       if (isPast && !card.classList.contains("past")) {

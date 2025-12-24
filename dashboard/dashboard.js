@@ -4427,57 +4427,74 @@ async function examEssentialsHandler() {
     }
   }
 
-  // Build dynamic button HTML with organized two-column layout
+  // Build dynamic button list
   const btnStyle = "padding:10px;font-size:0.95rem;font-weight:600;";
 
-  let buttonsHtml = `
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:0.8rem;">
-      <!-- Left Column -->
-      <div style="display:flex;flex-direction:column;gap:8px;">
-        <button class="btn btn-primary w-100" style="${btnStyle}" onclick="try{ startEssentialsPrint('session'); }catch(e){ console.error(e); }">
-          صورتجلسه آزمون
-        </button>
-        <button class="btn btn-primary w-100" style="${btnStyle}" onclick="try{ startEssentialsPrint('attendance'); }catch(e){ console.error(e); }">
-          فهرست حضور و غیاب
-        </button>
-        <button class="btn btn-primary w-100" style="${btnStyle}" onclick="try{ startEssentialsPrint('seat'); }catch(e){ console.error(e); }">
-          شماره‌ صندلی‌ آزمون
-        </button>
-        <button class="btn btn-primary w-100" style="${btnStyle}" onclick="try{ startEssentialsPrint('secretary'); }catch(e){ console.error(e); }">
-          ملزومات منشی جلسه
-        </button>
-        <button class="btn btn-primary w-100" style="${btnStyle}" onclick="try{ startEssentialsPrint('reproduction'); }catch(e){ console.error(e); }">
-          ملزومات اتاق تکثیر
-        </button>
-      </div>
-      
-      <!-- Right Column -->
-      <div style="display:flex;flex-direction:column;gap:8px;">`;
+  // Collect all buttons
+  const allButtons = [];
 
+  // Fixed buttons (always shown)
+  allButtons.push(
+    `<button class="btn btn-primary w-100" style="${btnStyle}" onclick="try{ startEssentialsPrint('session'); }catch(e){ console.error(e); }">صورتجلسه آزمون</button>`
+  );
+  allButtons.push(
+    `<button class="btn btn-primary w-100" style="${btnStyle}" onclick="try{ startEssentialsPrint('attendance'); }catch(e){ console.error(e); }">فهرست حضور و غیاب</button>`
+  );
+  allButtons.push(
+    `<button class="btn btn-primary w-100" style="${btnStyle}" onclick="try{ startEssentialsPrint('seat'); }catch(e){ console.error(e); }">شماره‌ صندلی‌ آزمون</button>`
+  );
+  allButtons.push(
+    `<button class="btn btn-primary w-100" style="${btnStyle}" onclick="try{ startEssentialsPrint('secretary'); }catch(e){ console.error(e); }">ملزومات منشی جلسه</button>`
+  );
+  allButtons.push(
+    `<button class="btn btn-primary w-100" style="${btnStyle}" onclick="try{ startEssentialsPrint('reproduction'); }catch(e){ console.error(e); }">ملزومات اتاق تکثیر</button>`
+  );
+
+  // Conditional buttons
   if (hasLocations) {
-    buttonsHtml += `
-        <button class="btn btn-primary w-100" style="${btnStyle}" onclick="try{ startEssentialsPrint('locationLabels'); }catch(e){ console.error(e); }">
-          برچسب پاکت سوالات
-        </button>`;
+    allButtons.push(
+      `<button class="btn btn-primary w-100" style="${btnStyle}" onclick="try{ startEssentialsPrint('locationLabels'); }catch(e){ console.error(e); }">برچسب پاکت سوالات</button>`
+    );
   }
-
   if (hasDescriptive) {
-    buttonsHtml += `
-        <button class="btn btn-primary w-100" style="${btnStyle}" onclick="try{ startEssentialsPrint('descriptive'); }catch(e){ console.error(e); }">
-          برچسب پاکت‌های تشریحی
-        </button>`;
+    allButtons.push(
+      `<button class="btn btn-primary w-100" style="${btnStyle}" onclick="try{ startEssentialsPrint('descriptive'); }catch(e){ console.error(e); }">برچسب پاکت‌های تشریحی</button>`
+    );
   }
-
   if (hasTest) {
-    buttonsHtml += `
-        <button class="btn btn-primary w-100" style="${btnStyle}" onclick="try{ startEssentialsPrint('testLabels'); }catch(e){ console.error(e); }">
-          برچسب پاکت اوراق تستی
-        </button>`;
+    allButtons.push(
+      `<button class="btn btn-primary w-100" style="${btnStyle}" onclick="try{ startEssentialsPrint('testLabels'); }catch(e){ console.error(e); }">برچسب پاکت اوراق تستی</button>`
+    );
   }
 
-  buttonsHtml += `
-      </div>
-    </div>`;
+  // Distribute buttons evenly in two columns
+  const total = allButtons.length;
+  const hasOdd = total % 2 === 1;
+  const pairsCount = Math.floor(total / 2);
+
+  // Build the grid HTML
+  let buttonsHtml = `<div style="display:flex;flex-direction:column;gap:10px;margin-top:0.8rem;">`;
+
+  // Create paired rows
+  for (let i = 0; i < pairsCount; i++) {
+    const leftIdx = i * 2;
+    const rightIdx = i * 2 + 1;
+    buttonsHtml += `
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+        <div>${allButtons[leftIdx]}</div>
+        <div>${allButtons[rightIdx]}</div>
+      </div>`;
+  }
+
+  // If odd number, add the last button centered
+  if (hasOdd) {
+    buttonsHtml += `
+      <div style="display:flex;justify-content:center;">
+        <div style="width:50%;">${allButtons[total - 1]}</div>
+      </div>`;
+  }
+
+  buttonsHtml += `</div>`;
 
   Swal.fire({
     icon: "info",
