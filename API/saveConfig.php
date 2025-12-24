@@ -31,6 +31,8 @@ $allowed = [
     'rptDownload',
     // WavesAnimation toggle (YES/NO) to enable/disable background waves animation
     'WavesAnimation',
+    // DailyTestLabels: 'YES' to generate daily A4 portrait scanned test envelope labels instead of per-session
+    'DailyTestLabels',
     // ReproductionReportMode: 'course' (default) or 'location' for reproduction room report style
     'ReproductionReportMode',
     // MultiExamMode: 'YES' to unify seat numbers for multi-exam students
@@ -46,7 +48,7 @@ foreach ($allowed as $k) {
     if (!array_key_exists($k, $input))
         continue; // skip keys not provided
 
-    if ($k === 'GroupByCourse' || $k === 'PaperSaving' || $k === 'WavesAnimation' || $k === 'MultiExamMode' || $k === 'QuickSessionView') {
+    if ($k === 'GroupByCourse' || $k === 'PaperSaving' || $k === 'WavesAnimation' || $k === 'MultiExamMode' || $k === 'QuickSessionView' || $k === 'DailyTestLabels') {
         // Normalize any value to strict YES/NO (default NO for most, YES for WavesAnimation)
         $raw = is_string($input[$k]) ? $input[$k] : '';
         $val = strtoupper(trim($raw));

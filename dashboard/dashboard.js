@@ -784,6 +784,8 @@ try {
       ).toLowerCase();
       const multiExamModeChecked =
         String(cfg.MultiExamMode || "NO").toUpperCase() === "YES";
+      const dailyTestLabelsChecked =
+        String(cfg.DailyTestLabels || "NO").toUpperCase() === "YES";
 
       // TODO: DEAD CODE - REMOVE - SMS variables no longer used
       let smsCreditValue = null;
@@ -867,6 +869,12 @@ try {
                                   wavesAnimationChecked ? "checked" : ""
                                 } style="width:1.15rem;height:1.15rem;">
                                 <label for="er_wavesAnimation" style="margin:0;cursor:pointer;">نمایش انیمیشن پس‌زمینه</label>
+                            </div>
+                            <div class="settings-option-item">
+                                <input id="er_dailyTestLabels" type="checkbox" ${
+                                  dailyTestLabelsChecked ? "checked" : ""
+                                } style="width:1.15rem;height:1.15rem;">
+                                <label for="er_dailyTestLabels" style="margin:0;cursor:pointer;">پاکت روزانه پاسخنامه‌های اسکن شده تستی</label>
                             </div>
                         </div>
                         <hr style="border:0;border-top:1px solid rgba(255,255,255,0.15);margin:14px 0;">
@@ -964,6 +972,10 @@ try {
             ?.checked
             ? "YES"
             : "NO";
+          const dailyTestLabels = document.getElementById("er_dailyTestLabels")
+            ?.checked
+            ? "YES"
+            : "NO";
           // return values to then handle save confirmation
           return {
             AdminNickName: admin.trim(),
@@ -977,6 +989,7 @@ try {
             WavesAnimation: wavesAnimation,
             ReproductionReportMode: reproductionMode,
             MultiExamMode: multiExamMode,
+            DailyTestLabels: dailyTestLabels,
           };
         },
       });
@@ -4414,48 +4427,57 @@ async function examEssentialsHandler() {
     }
   }
 
-  // Build dynamic button HTML
-  let buttonsHtml = `
-    <div style="display:flex;flex-direction:column;gap:12px;margin-top:1rem;">
-      <button id="essentialsPrintSessionBtn" class="btn btn-primary w-100" style="padding:12px;font-size:1rem;font-weight:600;" onclick="try{ startEssentialsPrint('session'); }catch(e){ console.error(e); }">
-        صورتجلسه آزمون
-      </button>
-      
-      <button id="essentialsAttendanceBtn" class="btn btn-primary w-100" style="padding:12px;font-size:1rem;font-weight:600;" onclick="try{ startEssentialsPrint('attendance'); }catch(e){ console.error(e); }">
-        فهرست حضور و غیاب
-      </button>
-      <button id="essentialsPrintSeatBtn" class="btn btn-primary w-100" style="padding:12px;font-size:1rem;font-weight:600;" onclick="try{ startEssentialsPrint('seat'); }catch(e){ console.error(e); }">
-        شماره‌ صندلی‌آزمون
-      </button>
-      <button id="essentialsSecretaryBtn" class="btn btn-primary w-100" style="padding:12px;font-size:1rem;font-weight:600;" onclick="try{ startEssentialsPrint('secretary'); }catch(e){ console.error(e); }">
-        ملزومات منشی جلسه
-      </button>
-      <button id="essentialsReproductionBtn" class="btn btn-primary w-100" style="padding:12px;font-size:1rem;font-weight:600;" onclick="try{ startEssentialsPrint('reproduction'); }catch(e){ console.error(e); }">
-        ملزومات اتاق تکثیر
-      </button>`;
+  // Build dynamic button HTML with organized two-column layout
+  const btnStyle = "padding:10px;font-size:0.95rem;font-weight:600;";
 
-  if (hasDescriptive) {
-    buttonsHtml += `
-      <button id="essentialsDescriptiveBtn" class="btn btn-primary w-100" style="padding:12px;font-size:1rem;font-weight:600;" onclick="try{ startEssentialsPrint('descriptive'); }catch(e){ console.error(e); }">
-        برچسب پاکت‌های تشریحی
-      </button>`;
-  }
+  let buttonsHtml = `
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:0.8rem;">
+      <!-- Left Column -->
+      <div style="display:flex;flex-direction:column;gap:8px;">
+        <button class="btn btn-primary w-100" style="${btnStyle}" onclick="try{ startEssentialsPrint('session'); }catch(e){ console.error(e); }">
+          صورتجلسه آزمون
+        </button>
+        <button class="btn btn-primary w-100" style="${btnStyle}" onclick="try{ startEssentialsPrint('attendance'); }catch(e){ console.error(e); }">
+          فهرست حضور و غیاب
+        </button>
+        <button class="btn btn-primary w-100" style="${btnStyle}" onclick="try{ startEssentialsPrint('seat'); }catch(e){ console.error(e); }">
+          شماره‌ صندلی‌ آزمون
+        </button>
+        <button class="btn btn-primary w-100" style="${btnStyle}" onclick="try{ startEssentialsPrint('secretary'); }catch(e){ console.error(e); }">
+          ملزومات منشی جلسه
+        </button>
+        <button class="btn btn-primary w-100" style="${btnStyle}" onclick="try{ startEssentialsPrint('reproduction'); }catch(e){ console.error(e); }">
+          ملزومات اتاق تکثیر
+        </button>
+      </div>
+      
+      <!-- Right Column -->
+      <div style="display:flex;flex-direction:column;gap:8px;">`;
 
   if (hasLocations) {
     buttonsHtml += `
-      <button id="essentialsLocationLabelsBtn" class="btn btn-primary w-100" style="padding:12px;font-size:1rem;font-weight:600;" onclick="try{ startEssentialsPrint('locationLabels'); }catch(e){ console.error(e); }">
-        برچسب پاکت سوالات
-      </button>`;
+        <button class="btn btn-primary w-100" style="${btnStyle}" onclick="try{ startEssentialsPrint('locationLabels'); }catch(e){ console.error(e); }">
+          برچسب پاکت سوالات
+        </button>`;
+  }
+
+  if (hasDescriptive) {
+    buttonsHtml += `
+        <button class="btn btn-primary w-100" style="${btnStyle}" onclick="try{ startEssentialsPrint('descriptive'); }catch(e){ console.error(e); }">
+          برچسب پاکت‌های تشریحی
+        </button>`;
   }
 
   if (hasTest) {
     buttonsHtml += `
-      <button id="essentialsTestLabelsBtn" class="btn btn-primary w-100" style="padding:12px;font-size:1rem;font-weight:600;" onclick="try{ startEssentialsPrint('testLabels'); }catch(e){ console.error(e); }">
-        برچسب پاکت اوراق تستی اسکن شده
-      </button>`;
+        <button class="btn btn-primary w-100" style="${btnStyle}" onclick="try{ startEssentialsPrint('testLabels'); }catch(e){ console.error(e); }">
+          برچسب پاکت اوراق تستی
+        </button>`;
   }
 
-  buttonsHtml += `</div>`;
+  buttonsHtml += `
+      </div>
+    </div>`;
 
   Swal.fire({
     icon: "info",
@@ -4463,6 +4485,7 @@ async function examEssentialsHandler() {
     html: buttonsHtml,
     showConfirmButton: false,
     showCancelButton: false,
+    width: 650,
     customClass: { popup: "swal2-rtl swal2-glass" },
   });
 }
@@ -4673,10 +4696,28 @@ async function printEssentialsTestLabels() {
       examDate = toEnglishDigits(String(examDate)).replace(/-/g, "/");
       examTime = toEnglishDigits(String(examTime));
 
-      const url = `../API/generatePDF.php?report_type=test_labels&exam_date=${encodeURIComponent(
+      // Check config for daily test labels mode
+      let reportType = "test_labels";
+      let reportTitle = "برچسب پاکت اوراق تستی اسکن شده";
+      try {
+        const cfgResp = await guardedFetch("../API/getConfig.php", {
+          cache: "no-store",
+        });
+        if (cfgResp && cfgResp.ok) {
+          const cfg = await cfgResp.json();
+          if (String(cfg.DailyTestLabels || "").toUpperCase() === "YES") {
+            reportType = "daily_test_labels";
+            reportTitle = "پاکت روزانه پاسخنامه‌های اسکن شده تستی";
+          }
+        }
+      } catch (e) {
+        console.warn("Could not load config for test labels mode", e);
+      }
+
+      const url = `../API/generatePDF.php?report_type=${reportType}&exam_date=${encodeURIComponent(
         examDate
       )}&exam_time=${encodeURIComponent(examTime)}&_t=${new Date().getTime()}`;
-      showReportModal(url, "برچسب پاکت اوراق تستی اسکن شده");
+      showReportModal(url, reportTitle);
     } else {
       Swal.fire({
         icon: "error",
