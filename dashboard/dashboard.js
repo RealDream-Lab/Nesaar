@@ -4469,7 +4469,7 @@ async function examEssentialsHandler() {
 
   // دکمه ثابت قرائت پاسخنامه تستی - همیشه آخرین آیتم
   allButtons.push(
-    `<button class="btn btn-primary w-100" style="${btnStyle}" onclick="try{ showTestAnswerSheetReaderInfo(); }catch(e){ console.error(e); }">قرائت پاسخنامه تستی</button>`
+    `<button class="btn btn-primary w-100" style="${btnStyle}" onclick="try{ showTestAnswerSheetReaderInfo(); }catch(e){ console.error(e); }">قرائت پاسخنامه تستی غایبین</button>`
   );
 
   // Distribute buttons evenly in two columns
