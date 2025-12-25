@@ -17,12 +17,14 @@ if (!$input || !is_array($input)) {
 
 // Allow only specific config keys to be written via this endpoint
 // Note: GroupByCourse is a YES/NO toggle used for report grouping preferences
+// Note: GroupAttendanceByCourse is a YES/NO toggle for grouping attendance sheet by course code
 $allowed = [
     'AdminNickName',
     'BossNickName',
     'HeadOfEDU',
     'Chairman',
     'GroupByCourse',
+    'GroupAttendanceByCourse',
     'PaperSaving',
     'ObserversLastCard',
     // Add SendSMS toggle (YES/NO) and SmsApiKey to allow storing SMS provider key
@@ -40,7 +42,13 @@ $allowed = [
     // QuickSessionView: 'YES' to skip modal and go directly to full report on calendar click
     'QuickSessionView',
     // PushReminderMinutes: minutes before exam to send push notification (30-180, default 30)
-    'PushReminderMinutes'
+    'PushReminderMinutes',
+    // SeatReportSortBy: 'seat_number' | 'student_id' | 'last_name' for seat report sorting
+    'SeatReportSortBy',
+    // SeatReportSeparateBuilding: YES/NO - separate pages per building in seat report
+    'SeatReportSeparateBuilding',
+    // SeatReportGroupByCourse: YES/NO - group by course before applying sort
+    'SeatReportGroupByCourse'
 ];
 
 $toSave = [];
@@ -48,7 +56,7 @@ foreach ($allowed as $k) {
     if (!array_key_exists($k, $input))
         continue; // skip keys not provided
 
-    if ($k === 'GroupByCourse' || $k === 'PaperSaving' || $k === 'WavesAnimation' || $k === 'MultiExamMode' || $k === 'QuickSessionView' || $k === 'DailyTestLabels') {
+    if ($k === 'GroupByCourse' || $k === 'PaperSaving' || $k === 'WavesAnimation' || $k === 'MultiExamMode' || $k === 'QuickSessionView' || $k === 'DailyTestLabels' || $k === 'GroupAttendanceByCourse' || $k === 'SeatReportSeparateBuilding' || $k === 'SeatReportGroupByCourse') {
         // Normalize any value to strict YES/NO (default NO for most, YES for WavesAnimation)
         $raw = is_string($input[$k]) ? $input[$k] : '';
         $val = strtoupper(trim($raw));
@@ -56,6 +64,17 @@ foreach ($allowed as $k) {
             $val = ($k === 'WavesAnimation') ? 'YES' : 'NO';
         }
         $toSave[$k] = $val; // always save toggle even if NO
+        continue;
+    }
+
+    if ($k === 'SeatReportSortBy') {
+        // Validate sort option
+        $raw          = is_string($input[$k]) ? strtolower(trim($input[$k])) : '';
+        $validOptions = ['seat_number', 'student_id', 'last_name'];
+        if (!in_array($raw, $validOptions, true)) {
+            $raw = 'last_name'; // default
+        }
+        $toSave[$k] = $raw;
         continue;
     }
 

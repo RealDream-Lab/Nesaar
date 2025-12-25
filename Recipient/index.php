@@ -152,7 +152,7 @@ $bodyClass = $wavesAnimationDisabled ? 'class="no-waves-animation"' : '';
         <!-- Reports Chart Card -->
         <div class="dashboard-card no-hover collapsible-card" id="reportsChartCard">
             <div class="card-header-collapsible" onclick="toggleCardCollapse(this)">
-                <h4 class="mb-0">نمودار جلسات آزمون</h4>
+                <h4 class="mb-0">نمودار جلسات باقی‌مانده آزمون</h4>
                 <span class="collapse-icon">▼</span>
             </div>
             <div class="card-body-collapsible">

@@ -542,6 +542,54 @@ function toEnglishDigits(value) {
   });
 }
 
+/**
+ * Check if report data exists before generating PDF
+ * @param {string} reportType - The type of report to check
+ * @param {string} examDate - The exam date
+ * @param {string} examTime - The exam time
+ * @returns {Promise<{available: boolean, message: string}>}
+ */
+async function checkReportDataAvailability(reportType, examDate, examTime) {
+  try {
+    const resp = await guardedFetch(
+      `../API/checkReportData.php?report_type=${encodeURIComponent(
+        reportType
+      )}&exam_date=${encodeURIComponent(
+        examDate
+      )}&exam_time=${encodeURIComponent(examTime)}`,
+      { cache: "no-store" }
+    );
+    if (resp && resp.ok) {
+      const result = await resp.json();
+      return {
+        available: result.available === true,
+        message: result.message || "",
+      };
+    }
+  } catch (e) {
+    console.warn("Could not check report data availability", e);
+  }
+  // On error, assume available to avoid blocking
+  return { available: true, message: "" };
+}
+
+/**
+ * Show SweetAlert warning for unavailable report data
+ * @param {string} message - The message to display
+ */
+function showNoDataWarning(message) {
+  Swal.fire({
+    icon: "warning",
+    title: "بدون داده",
+    text: message || "داده‌ای برای این گزارش یافت نشد.",
+    confirmButtonText: "متوجه شدم",
+    customClass: {
+      popup: "swal2-rtl swal2-glass",
+      confirmButton: "btn btn-primary",
+    },
+  });
+}
+
 function setLastExamContext(examDate, examTime) {
   if (!examDate || !examTime) return;
   const normalizedDate = toEnglishDigits(String(examDate))
@@ -770,8 +818,18 @@ try {
       const bossVal = cfg.BossNickName || "";
       const headVal = cfg.HeadOfEDU || "";
       const chairVal = cfg.Chairman || "";
-      const groupByCourseChecked =
-        String(cfg.GroupByCourse || "").toUpperCase() === "YES";
+      // Legacy GroupByCourse is now split into separate settings
+      const seatReportSortByVal = String(
+        cfg.SeatReportSortBy || "last_name"
+      ).toLowerCase();
+      const seatReportSeparateBuildingChecked =
+        String(cfg.SeatReportSeparateBuilding || "NO").toUpperCase() === "YES";
+      const seatReportGroupByCourseChecked =
+        String(
+          cfg.SeatReportGroupByCourse || cfg.GroupByCourse || "NO"
+        ).toUpperCase() === "YES";
+      const groupAttendanceByCourseChecked =
+        String(cfg.GroupAttendanceByCourse || "NO").toUpperCase() === "YES";
       const paperSavingChecked =
         String(cfg.PaperSaving || "").toUpperCase() === "YES";
       const quickSessionViewChecked =
@@ -809,7 +867,6 @@ try {
       const formHtml = `
                 <div style="text-align: right; direction: rtl;">
                     <div style="padding:8px; border-radius:6px;">
-                        <div style="margin-bottom:10px; font-weight:700; color:inherit;">ویرایش نقش‌ها و نام‌های امضا‌کننده</div>
                         <div style="display:flex;gap:12px;flex-wrap:wrap;">
                             <div style="${fieldWrapperStyle}">
                                 <label style="font-size:0.92rem;color:inherit;">نام نمایشی کاربر (نمایش در هدر)</label>
@@ -832,94 +889,142 @@ try {
       )}">
                             </div>
                             <div style="${fieldWrapperStyle}">
-                                <label style="font-size:0.92rem;color:inherit;">نام و نام خانوادگی مسئول جلسه</label>
+                                <label style="font-size:0.85rem;color:inherit;">نام و نام خانوادگی مسئول جلسه</label>
                                 <input id="er_chair" class="swal2-input" placeholder="مسئول جلسه" style="${sharedInputStyle}" value="${escapeHtml(
         chairVal
       )}">
                             </div>
                         </div>
-                        <hr style="border:0;border-top:1px solid rgba(255,255,255,0.15);margin:14px 0;">
-                        <div class="settings-options-grid">
-                            <div class="settings-option-item">
-                                <input id="er_groupByCourse" type="checkbox" ${
-                                  groupByCourseChecked ? "checked" : ""
-                                } style="width:1.15rem;height:1.15rem;">
-                                <label for="er_groupByCourse" style="margin:0;cursor:pointer;">مرتب‌سازی صندلی‌ها براساس درس</label>
-                            </div>
-                            <div class="settings-option-item">
+                        <hr style="border:0;border-top:1px solid rgba(255,255,255,0.15);margin:10px 0;">
+                        <div class="settings-options-grid" style="display:grid;grid-template-columns:repeat(3,1fr);gap:6px;">
+                            <div class="settings-option-item" style="display:flex;align-items:center;gap:4px;">
                                 <input id="er_paperSaving" type="checkbox" ${
                                   paperSavingChecked ? "checked" : ""
-                                } style="width:1.15rem;height:1.15rem;">
-                                <label for="er_paperSaving" style="margin:0;cursor:pointer;">صرفه‌جویی در مصرف کاغذ</label>
+                                } style="width:1rem;height:1rem;">
+                                <label for="er_paperSaving" style="margin:0;cursor:pointer;font-size:0.8rem;" data-tooltip="با فعال کردن این گزینه، صفحات گزارشات بهم پیوسته شده و تعداد صفحات کاهش می‌یابد">صرفه‌جویی در مصرف کاغذ</label>
                             </div>
-                            <div class="settings-option-item">
+                            <div class="settings-option-item" style="display:flex;align-items:center;gap:4px;">
                                 <input id="er_quickSessionView" type="checkbox" ${
                                   quickSessionViewChecked ? "checked" : ""
-                                } style="width:1.15rem;height:1.15rem;">
-                                <label for="er_quickSessionView" style="margin:0;cursor:pointer;">نمایش سریع جزئیات جلسه</label>
+                                } style="width:1rem;height:1rem;">
+                                <label for="er_quickSessionView" style="margin:0;cursor:pointer;font-size:0.8rem;" data-tooltip="با کلیک روی کارت جلسه در تقویم، جزئیات جلسه به صورت سریع نمایش داده می‌شود">نمایش سریع جزئیات جلسه</label>
                             </div>
-                            <div class="settings-option-item">
+                            <div class="settings-option-item" style="display:flex;align-items:center;gap:4px;">
                                 <input id="er_multiExamMode" type="checkbox" ${
                                   multiExamModeChecked ? "checked" : ""
-                                } style="width:1.15rem;height:1.15rem;">
-                                <label for="er_multiExamMode" style="margin:0;cursor:pointer;">مدیریت چندآزمونی</label>
+                                } style="width:1rem;height:1rem;">
+                                <label for="er_multiExamMode" style="margin:0;cursor:pointer;font-size:0.8rem;" data-tooltip="امکان شناسایی و نمایش دانشجویانی که در یک جلسه چند آزمون دارند">مدیریت چندآزمونی</label>
                             </div>
-                            <div class="settings-option-item">
+                            <div class="settings-option-item" style="display:flex;align-items:center;gap:4px;">
                                 <input id="er_wavesAnimation" type="checkbox" ${
                                   wavesAnimationChecked ? "checked" : ""
-                                } style="width:1.15rem;height:1.15rem;">
-                                <label for="er_wavesAnimation" style="margin:0;cursor:pointer;">نمایش انیمیشن پس‌زمینه</label>
+                                } style="width:1rem;height:1rem;">
+                                <label for="er_wavesAnimation" style="margin:0;cursor:pointer;font-size:0.8rem;" data-tooltip="نمایش انیمیشن موج در پس‌زمینه داشبورد - غیرفعال کردن می‌تواند عملکرد را بهبود دهد">نمایش انیمیشن پس‌زمینه</label>
                             </div>
-                            <div class="settings-option-item">
+                            <div class="settings-option-item" style="display:flex;align-items:center;gap:4px;">
                                 <input id="er_dailyTestLabels" type="checkbox" ${
                                   dailyTestLabelsChecked ? "checked" : ""
-                                } style="width:1.15rem;height:1.15rem;">
-                                <label for="er_dailyTestLabels" style="margin:0;cursor:pointer;">پاکت روزانه پاسخنامه‌های اسکن شده تستی</label>
+                                } style="width:1rem;height:1rem;">
+                                <label for="er_dailyTestLabels" style="margin:0;cursor:pointer;font-size:0.8rem;" data-tooltip="تولید برچسب پاکت تستی به صورت روزانه (همه جلسات یک روز در یک برچسب)">پاکت روزانه تستی</label>
+                            </div>
+                            <div class="settings-option-item" style="display:flex;align-items:center;gap:4px;">
+                                <input id="er_groupAttendanceByCourse" type="checkbox" ${
+                                  groupAttendanceByCourseChecked
+                                    ? "checked"
+                                    : ""
+                                } style="width:1rem;height:1rem;">
+                                <label for="er_groupAttendanceByCourse" style="margin:0;cursor:pointer;font-size:0.8rem;" data-tooltip="لیست حضور و غیاب به تفکیک هر درس در صفحات جداگانه تولید می‌شود">تفکیک حضورغیاب بر اساس درس</label>
                             </div>
                         </div>
-                        <hr style="border:0;border-top:1px solid rgba(255,255,255,0.15);margin:14px 0;">
-                        <div class="settings-radio-grid">
-                            <div class="settings-radio-group">
-                                <span style="font-size:0.92rem;color:inherit;">نحوه دریافت گزارشات:</span>
-                                <div class="settings-radio-options">
-                                    <div class="settings-radio-item">
+                        <hr style="border:0;border-top:1px solid rgba(255,255,255,0.15);margin:10px 0;">
+                        <div style="margin-bottom:6px;font-weight:600;font-size:0.85rem;color:inherit;">تنظیمات گزارش شماره صندلی:</div>
+                        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:6px;align-items:center;">
+                            <div style="display:flex;align-items:center;gap:4px;">
+                                <input type="radio" id="er_sortLastName" name="er_seatReportSort" value="last_name" ${
+                                  seatReportSortByVal === "last_name" ||
+                                  seatReportSortByVal === ""
+                                    ? "checked"
+                                    : ""
+                                } style="cursor:pointer;">
+                                <label for="er_sortLastName" style="margin:0;cursor:pointer;font-size:0.8rem;" data-tooltip="دانشجویان بر اساس نام خانوادگی به ترتیب الفبایی مرتب می‌شوند">مرتب‌سازی بر اساس نام خانوادگی</label>
+                            </div>
+                            <div style="display:flex;align-items:center;gap:4px;">
+                                <input type="radio" id="er_sortStudentId" name="er_seatReportSort" value="student_id" ${
+                                  seatReportSortByVal === "student_id"
+                                    ? "checked"
+                                    : ""
+                                } style="cursor:pointer;">
+                                <label for="er_sortStudentId" style="margin:0;cursor:pointer;font-size:0.8rem;" data-tooltip="دانشجویان بر اساس شماره دانشجویی به ترتیب عددی مرتب می‌شوند">مرتب‌سازی بر اساس شماره دانشجویی</label>
+                            </div>
+                            <div style="display:flex;align-items:center;gap:4px;">
+                                <input type="radio" id="er_sortSeatNumber" name="er_seatReportSort" value="seat_number" ${
+                                  seatReportSortByVal === "seat_number"
+                                    ? "checked"
+                                    : ""
+                                } style="cursor:pointer;">
+                                <label for="er_sortSeatNumber" style="margin:0;cursor:pointer;font-size:0.8rem;" data-tooltip="دانشجویان بر اساس شماره صندلی اختصاص داده شده مرتب می‌شوند">مرتب‌سازی بر اساس شماره صندلی</label>
+                            </div>
+                            <div style="display:flex;align-items:center;gap:4px;">
+                                <input id="er_seatReportSeparateBuilding" type="checkbox" ${
+                                  seatReportSeparateBuildingChecked
+                                    ? "checked"
+                                    : ""
+                                } style="width:1rem;height:1rem;">
+                                <label for="er_seatReportSeparateBuilding" style="margin:0;cursor:pointer;font-size:0.8rem;" data-tooltip="گزارش شماره صندلی برای هر ساختمان در صفحات جداگانه تولید می‌شود">تفکیک ساختمان</label>
+                            </div>
+                            <div style="display:flex;align-items:center;gap:4px;">
+                                <input id="er_seatReportGroupByCourse" type="checkbox" ${
+                                  seatReportGroupByCourseChecked
+                                    ? "checked"
+                                    : ""
+                                } style="width:1rem;height:1rem;">
+                                <label for="er_seatReportGroupByCourse" style="margin:0;cursor:pointer;font-size:0.8rem;" data-tooltip="دانشجویان در گزارش بر اساس درس گروه‌بندی می‌شوند">دسته بندی دروس</label>
+                            </div>
+                            <div></div>
+                        </div>
+                        <hr style="border:0;border-top:1px solid rgba(255,255,255,0.15);margin:10px 0;">
+                        <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:10px;">
+                            <div style="display:flex;align-items:center;gap:6px;">
+                                <span style="font-size:0.8rem;color:inherit;" data-tooltip="نحوه دریافت فایل‌های PDF گزارشات">دریافت گزارشات:</span>
+                                <div style="display:flex;gap:8px;">
+                                    <div style="display:flex;align-items:center;gap:3px;">
                                         <input type="radio" id="er_rptView" name="er_rptDownload" value="NO" ${
                                           rptDownloadVal !== "YES"
                                             ? "checked"
                                             : ""
                                         } style="cursor:pointer;">
-                                        <label for="er_rptView" style="margin:0;cursor:pointer;font-size:0.9rem;">مشاهده</label>
+                                        <label for="er_rptView" style="margin:0;cursor:pointer;font-size:0.8rem;" data-tooltip="گزارش در تب جدید مرورگر باز می‌شود">مشاهده</label>
                                     </div>
-                                    <div class="settings-radio-item">
+                                    <div style="display:flex;align-items:center;gap:3px;">
                                         <input type="radio" id="er_rptDownload" name="er_rptDownload" value="YES" ${
                                           rptDownloadVal === "YES"
                                             ? "checked"
                                             : ""
                                         } style="cursor:pointer;">
-                                        <label for="er_rptDownload" style="margin:0;cursor:pointer;font-size:0.9rem;">دانلود</label>
+                                        <label for="er_rptDownload" style="margin:0;cursor:pointer;font-size:0.8rem;" data-tooltip="فایل PDF مستقیماً دانلود می‌شود">دانلود</label>
                                     </div>
                                 </div>
                             </div>
-                            <div class="settings-radio-group">
-                                <span style="font-size:0.92rem;color:inherit;">گزارش ملزومات تکثیر:</span>
-                                <div class="settings-radio-options">
-                                    <div class="settings-radio-item">
+                            <div style="display:flex;align-items:center;gap:6px;">
+                                <span style="font-size:0.8rem;color:inherit;" data-tooltip="نحوه گروه‌بندی گزارش ملزومات اتاق تکثیر">ملزومات تکثیر:</span>
+                                <div style="display:flex;gap:8px;">
+                                    <div style="display:flex;align-items:center;gap:3px;">
                                         <input type="radio" id="er_reprCourse" name="er_reproductionMode" value="course" ${
                                           reproductionReportModeVal !==
                                           "location"
                                             ? "checked"
                                             : ""
                                         } style="cursor:pointer;">
-                                        <label for="er_reprCourse" style="margin:0;cursor:pointer;font-size:0.9rem;">بر اساس درس</label>
+                                        <label for="er_reprCourse" style="margin:0;cursor:pointer;font-size:0.8rem;" data-tooltip="گزارش بر اساس کد درس تفکیک می‌شود">بر اساس درس</label>
                                     </div>
-                                    <div class="settings-radio-item">
+                                    <div style="display:flex;align-items:center;gap:3px;">
                                         <input type="radio" id="er_reprLocation" name="er_reproductionMode" value="location" ${
                                           reproductionReportModeVal ===
                                           "location"
                                             ? "checked"
                                             : ""
                                         } style="cursor:pointer;">
-                                        <label for="er_reprLocation" style="margin:0;cursor:pointer;font-size:0.9rem;">بر اساس مکان</label>
+                                        <label for="er_reprLocation" style="margin:0;cursor:pointer;font-size:0.8rem;" data-tooltip="گزارش بر اساس ساختمان و کلاس تفکیک می‌شود">بر اساس مکان</label>
                                     </div>
                                 </div>
                             </div>
@@ -928,9 +1033,9 @@ try {
                 </div>`;
 
       const modalResult = await Swal.fire({
-        title: "ویرایش نقش‌ها و تنظیمات",
+        title: "ویرایش تنظیمات",
         html: formHtml,
-        width: 850,
+        width: 900,
         showCancelButton: true,
         confirmButtonText: "ذخیره",
         cancelButtonText: "انصراف",
@@ -941,13 +1046,34 @@ try {
           confirmButton: "btn btn-primary",
           cancelButton: "btn btn-cancel",
         },
+        didOpen: () => {
+          // Reinitialize tooltips for settings modal elements
+          if (typeof initHeaderTooltips === "function") {
+            initHeaderTooltips();
+          }
+        },
         preConfirm: () => {
           const admin = document.getElementById("er_admin")?.value || "";
           const boss = document.getElementById("er_boss")?.value || "";
           const head = document.getElementById("er_head")?.value || "";
           const chair = document.getElementById("er_chair")?.value || "";
-          const groupByCourse = document.getElementById("er_groupByCourse")
-            ?.checked
+          // New seat report settings
+          const seatReportSortBy =
+            document.querySelector('input[name="er_seatReportSort"]:checked')
+              ?.value || "last_name";
+          const seatReportSeparateBuilding = document.getElementById(
+            "er_seatReportSeparateBuilding"
+          )?.checked
+            ? "YES"
+            : "NO";
+          const seatReportGroupByCourse = document.getElementById(
+            "er_seatReportGroupByCourse"
+          )?.checked
+            ? "YES"
+            : "NO";
+          const groupAttendanceByCourse = document.getElementById(
+            "er_groupAttendanceByCourse"
+          )?.checked
             ? "YES"
             : "NO";
           const paperSaving = document.getElementById("er_paperSaving")?.checked
@@ -982,7 +1108,10 @@ try {
             BossNickName: boss.trim(),
             HeadOfEDU: head.trim(),
             Chairman: chair.trim(),
-            GroupByCourse: groupByCourse,
+            SeatReportSortBy: seatReportSortBy,
+            SeatReportSeparateBuilding: seatReportSeparateBuilding,
+            SeatReportGroupByCourse: seatReportGroupByCourse,
+            GroupAttendanceByCourse: groupAttendanceByCourse,
             PaperSaving: paperSaving,
             QuickSessionView: quickSessionView,
             rptDownload: rptDownload,
@@ -4312,6 +4441,17 @@ async function printSeatNumbersReport() {
     }
 
     if (examDate && examTime) {
+      // Check if data exists before generating PDF
+      const checkResult = await checkReportDataAvailability(
+        "seat",
+        examDate,
+        examTime
+      );
+      if (!checkResult.available) {
+        showNoDataWarning(checkResult.message);
+        return;
+      }
+
       const url = `../API/generatePDF.php?report_type=seat&exam_date=${encodeURIComponent(
         examDate
       )}&exam_time=${encodeURIComponent(examTime)}&_t=${new Date().getTime()}`;
@@ -4659,6 +4799,17 @@ async function printAttendanceSheet() {
       examDate = toEnglishDigits(String(examDate)).replace(/-/g, "/");
       examTime = toEnglishDigits(String(examTime));
 
+      // Check if data exists before generating PDF
+      const checkResult = await checkReportDataAvailability(
+        "attendance",
+        examDate,
+        examTime
+      );
+      if (!checkResult.available) {
+        showNoDataWarning(checkResult.message);
+        return;
+      }
+
       const url = `../API/generatePDF.php?report_type=attendance_sheet&exam_date=${encodeURIComponent(
         examDate
       )}&exam_time=${encodeURIComponent(examTime)}&_t=${new Date().getTime()}`;
@@ -4690,6 +4841,17 @@ async function printEssentialsDescriptive() {
       examDate = toEnglishDigits(String(examDate)).replace(/-/g, "/");
       examTime = toEnglishDigits(String(examTime));
 
+      // Check if data exists before generating PDF
+      const checkResult = await checkReportDataAvailability(
+        "descriptive",
+        examDate,
+        examTime
+      );
+      if (!checkResult.available) {
+        showNoDataWarning(checkResult.message);
+        return;
+      }
+
       const url = `../API/generatePDF.php?report_type=descriptive&exam_date=${encodeURIComponent(
         examDate
       )}&exam_time=${encodeURIComponent(examTime)}&_t=${new Date().getTime()}`;
@@ -4720,6 +4882,17 @@ async function printLocationLabels() {
     if (examDate && examTime) {
       examDate = toEnglishDigits(String(examDate)).replace(/-/g, "/");
       examTime = toEnglishDigits(String(examTime));
+
+      // Check if data exists before generating PDF
+      const checkResult = await checkReportDataAvailability(
+        "location_labels",
+        examDate,
+        examTime
+      );
+      if (!checkResult.available) {
+        showNoDataWarning(checkResult.message);
+        return;
+      }
 
       const url = `../API/generatePDF.php?report_type=location_labels&exam_date=${encodeURIComponent(
         examDate
@@ -4768,6 +4941,17 @@ async function printEssentialsTestLabels() {
         }
       } catch (e) {
         console.warn("Could not load config for test labels mode", e);
+      }
+
+      // Check if test data exists before generating PDF
+      const checkResult = await checkReportDataAvailability(
+        reportType,
+        examDate,
+        examTime
+      );
+      if (!checkResult.available) {
+        showNoDataWarning(checkResult.message);
+        return;
       }
 
       const url = `../API/generatePDF.php?report_type=${reportType}&exam_date=${encodeURIComponent(
@@ -6349,9 +6533,17 @@ function renderSessionCalendar() {
             ? toPersianDigits(session.exam_time)
             : session.exam_time;
 
+        // Check if exam has passed (start time + 90 minutes)
+        const nowTimestamp = Math.floor(Date.now() / 1000);
+        const examEndTimestamp = (session.timestamp || 0) + 90 * 60; // 90 minutes after start
+        const isPassed = session.timestamp && nowTimestamp > examEndTimestamp;
+        const passedStyle = isPassed
+          ? "opacity:0.45;filter:grayscale(50%);"
+          : "";
+
         tableHtml += `
           <div class="calendar-session-event" 
-               style="background:${color};"
+               style="background:${color};${passedStyle}"
                onclick="showSessionDetail('${session.exam_date}', '${session.exam_time}')">
             <div class="event-time">جلسه ${displayTime}</div>
           </div>
@@ -6544,6 +6736,13 @@ document.addEventListener("DOMContentLoaded", function () {
       loadSessionCalendar();
     }
   }, 500);
+
+  // Show version changelog modal on first login after update (after 1 second delay)
+  setTimeout(() => {
+    if (typeof showVersionChangelogModal === "function") {
+      showVersionChangelogModal();
+    }
+  }, 1000);
 });
 
 // =====================================================

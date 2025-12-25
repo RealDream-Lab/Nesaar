@@ -141,8 +141,9 @@ RUN mkdir -p /var/www/html/temp/mpdf/ttfontdata \
     && chmod -R 777 /var/www/html/temp \
     && chmod -R 777 /var/www/html/database
 
-# Setup cron job for push notifications (every 30 minutes at :00 and :30)
-RUN echo "0,30 * * * * www-data php /var/www/html/scripts/cron_push_notifications.php >> /var/log/push_cron.log 2>&1" > /etc/cron.d/push-notifications \
+# Setup cron job for push notifications (every minute to catch all exam times)
+# The script itself handles duplicate prevention via sent_notifications tracking
+RUN echo "* * * * * www-data php /var/www/html/scripts/cron_push_notifications.php >> /var/log/push_cron.log 2>&1" > /etc/cron.d/push-notifications \
     && chmod 0644 /etc/cron.d/push-notifications \
     && crontab -u www-data /etc/cron.d/push-notifications \
     && touch /var/log/push_cron.log \

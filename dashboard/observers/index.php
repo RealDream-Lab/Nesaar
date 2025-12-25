@@ -281,6 +281,7 @@ $bodyClass = $wavesAnimationDisabled ? 'class="no-waves-animation"' : '';
     <script src="/assets/bootstrap/bootstrap.bundle.min.js"></script>
     <script src="/assets/sweetalert2/sweetalert2.min.js"></script>
     <script src="/assets/app/version.js"></script>
+    <script src="/assets/app/changelog.js"></script>
     <script src="/assets/vendor/chartjs/chart.min.js"></script>
     <script src="observers.js"></script>
 

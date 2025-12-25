@@ -3,7 +3,7 @@
  * Cron Job: Send Exam Reminder Push Notifications
  * Sends notifications X minutes before exam starts (configurable via PushReminderMinutes in Config table, default 30)
  * 
- * Add to crontab (run every minute):
+ * Add to crontab (run every minute to catch all exam times):
  * * * * * * php /var/www/html/scripts/cron_push_notifications.php >> /var/log/push_cron.log 2>&1
  */
 
@@ -31,6 +31,17 @@ function pushLog($message)
 pushLog("Starting push notification cron job...");
 
 try {
+    // Ensure sent_push_notifications table exists for duplicate prevention
+    $pdo->exec("
+        CREATE TABLE IF NOT EXISTS sent_push_notifications (
+            id INT AUTO_INCREMENT PRIMARY KEY,
+            notification_key VARCHAR(255) NOT NULL UNIQUE,
+            sent_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            INDEX idx_notification_key (notification_key),
+            INDEX idx_sent_at (sent_at)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
+    ");
+
     // Get VAPID keys and Push Reminder config
     $stmt   = $pdo->query("SELECT ConfigName, ConfigValue FROM Config WHERE ConfigName IN ('VAPID_PUBLIC_KEY', 'VAPID_PRIVATE_KEY', 'VAPID_SUBJECT', 'PushReminderMinutes')");
     $config = [];
@@ -101,6 +112,19 @@ try {
     $totalSent    = 0;
     $totalFailed  = 0;
     $totalExpired = 0;
+    $totalSkipped = 0;
+
+    // Helper function to check if notification was already sent
+    $checkAndMarkSent = function ($notificationKey) use ($pdo) {
+        try {
+            // Try to insert - if duplicate key, it was already sent
+            $stmt = $pdo->prepare("INSERT IGNORE INTO sent_push_notifications (notification_key) VALUES (?)");
+            $stmt->execute([$notificationKey]);
+            return $stmt->rowCount() > 0; // Returns true if inserted (not duplicate)
+        } catch (Exception $e) {
+            return false;
+        }
+    };
 
     // Send in batches to avoid connection pool exhaustion
     // Collect all subscriptions first, then send in chunks
@@ -137,6 +161,15 @@ try {
 
             if (empty($subscriptions))
                 continue;
+
+            // Create unique key for duplicate prevention: student + course + date + time
+            $notificationKey = "student_{$student['student_id']}_{$exam['course_code']}_{$exam['exam_date']}_{$exam['exam_time']}";
+
+            // Check if already sent
+            if (!$checkAndMarkSent($notificationKey)) {
+                $totalSkipped++;
+                continue;
+            }
 
             $payload = json_encode([
                 'title' => '⏰ یادآوری آزمون - ' . $exam['course_name'],
@@ -188,6 +221,15 @@ try {
             if (empty($subscriptions))
                 continue;
 
+            // Create unique key for duplicate prevention: proctor + date + time
+            $notificationKey = "proctor_{$proctor['proctor_id']}_{$exam['exam_date']}_{$exam['exam_time']}";
+
+            // Check if already sent
+            if (!$checkAndMarkSent($notificationKey)) {
+                $totalSkipped++;
+                continue;
+            }
+
             $payload = json_encode([
                 'title' => '⏰ یادآوری مراقبت - ' . $exam['exam_time'],
                 'body' => "شیفت مراقبت شما ساعت {$exam['exam_time']} شروع می‌شود\nمکان: {$proctor['building']} - {$proctor['class_name']}",
@@ -213,7 +255,7 @@ try {
     // Send notifications in batches
     $batchSize          = 50;
     $totalNotifications = count($allNotifications);
-    pushLog("Total notifications to send: {$totalNotifications}");
+    pushLog("Total notifications to send: {$totalNotifications} (skipped {$totalSkipped} duplicates)");
 
     $chunks = array_chunk($allNotifications, $batchSize);
 
@@ -260,7 +302,7 @@ try {
         pushLog("Batch " . ($chunkIndex + 1) . "/" . count($chunks) . " completed");
     }
 
-    pushLog("Completed: Sent={$totalSent}, Failed={$totalFailed}, Expired={$totalExpired}");
+    pushLog("Completed: Sent={$totalSent}, Failed={$totalFailed}, Expired={$totalExpired}, Skipped={$totalSkipped}");
 
     // Cleanup: Delete inactive subscriptions older than 7 days
     $cleanupStmt = $pdo->prepare("DELETE FROM push_subscriptions WHERE is_active = 0 AND updated_at < DATE_SUB(NOW(), INTERVAL 7 DAY)");
@@ -268,6 +310,14 @@ try {
     $deletedCount = $cleanupStmt->rowCount();
     if ($deletedCount > 0) {
         pushLog("Cleanup: Deleted {$deletedCount} old inactive subscriptions");
+    }
+
+    // Cleanup: Delete old sent notification records (older than 3 days)
+    $cleanupSentStmt = $pdo->prepare("DELETE FROM sent_push_notifications WHERE sent_at < DATE_SUB(NOW(), INTERVAL 3 DAY)");
+    $cleanupSentStmt->execute();
+    $deletedSentCount = $cleanupSentStmt->rowCount();
+    if ($deletedSentCount > 0) {
+        pushLog("Cleanup: Deleted {$deletedSentCount} old sent notification records");
     }
 
 } catch (Throwable $e) {

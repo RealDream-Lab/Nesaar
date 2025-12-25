@@ -578,6 +578,22 @@ function generateSeatNumbersReport($pdo, $mpdf, $examDate, $examTime, $config)
     // Check MultiExamMode config
     $multiExamModeEnabled = isset($config['MultiExamMode']) && strtoupper($config['MultiExamMode']) === 'YES';
 
+    // Get new sorting and grouping settings
+    $seatReportSortBy           = isset($config['SeatReportSortBy']) ? strtolower(trim($config['SeatReportSortBy'])) : 'last_name';
+    $seatReportSeparateBuilding = isset($config['SeatReportSeparateBuilding']) && strtoupper($config['SeatReportSeparateBuilding']) === 'YES';
+    $seatReportGroupByCourse    = isset($config['SeatReportGroupByCourse']) && strtoupper($config['SeatReportGroupByCourse']) === 'YES';
+
+    // Legacy fallback: if old GroupByCourse is set and new settings are not, use old setting
+    if (!isset($config['SeatReportGroupByCourse']) && isset($config['GroupByCourse']) && strtoupper($config['GroupByCourse']) === 'YES') {
+        $seatReportGroupByCourse = true;
+    }
+
+    // Validate sort option
+    $validSortOptions = ['seat_number', 'student_id', 'last_name'];
+    if (!in_array($seatReportSortBy, $validSortOptions)) {
+        $seatReportSortBy = 'last_name';
+    }
+
     // Fetch Students with Seat Info
     $stmt = $pdo->prepare("SELECT course_code FROM courses WHERE exam_date = ? AND exam_time = ?");
     $stmt->execute([$examDate, $examTime]);
@@ -589,11 +605,30 @@ function generateSeatNumbersReport($pdo, $mpdf, $examDate, $examTime, $config)
 
     $placeholders = str_repeat('?,', count($courses) - 1) . '?';
 
-    // Determine Sort Order
-    $orderBy = 's.last_name, s.first_name';
-    if (isset($config['GroupByCourse']) && strtoupper($config['GroupByCourse']) === 'YES') {
-        $orderBy = 'c.course_name, s.last_name, s.first_name';
+    // Build ORDER BY clause based on settings
+    // Priority: 1. Building (if separate), 2. Course (if group by course), 3. Sort field
+    $orderParts = [];
+    if ($seatReportSeparateBuilding) {
+        $orderParts[] = 'es.building';
     }
+    if ($seatReportGroupByCourse) {
+        $orderParts[] = 'c.course_name';
+    }
+    // Add the main sort field
+    switch ($seatReportSortBy) {
+        case 'seat_number':
+            $orderParts[] = 'CAST(es.seat_number AS UNSIGNED)';
+            break;
+        case 'student_id':
+            $orderParts[] = 's.student_id';
+            break;
+        case 'last_name':
+        default:
+            $orderParts[] = 's.last_name';
+            $orderParts[] = 's.first_name';
+            break;
+    }
+    $orderBy = implode(', ', $orderParts);
 
     $stmt = $pdo->prepare("
         SELECT 
@@ -672,12 +707,6 @@ function generateSeatNumbersReport($pdo, $mpdf, $examDate, $examTime, $config)
     ]);
     $mpdf->SetDirectionality('rtl');
 
-    // Pagination: 22 rows per column, 2 columns = 44 per page
-    $perPage       = 44;
-    $chunks        = array_chunk($students, $perPage);
-    $totalPages    = count($chunks);
-    $totalStudents = count($students);
-
     $htmlStyle = '
     <style>
         body { font-family: vazir; font-size: 9pt; }
@@ -695,6 +724,16 @@ function generateSeatNumbersReport($pdo, $mpdf, $examDate, $examTime, $config)
             font-weight: bold;
             margin-bottom: 8px;
             color: #333;
+        }
+        .building-header {
+            text-align: center;
+            font-size: 12pt;
+            font-weight: bold;
+            margin-bottom: 6px;
+            color: #000;
+            background: #f0f0f0;
+            padding: 4px;
+            border-radius: 4px;
         }
         .main-container { width: 100%; }
         .two-col-table { 
@@ -753,70 +792,166 @@ function generateSeatNumbersReport($pdo, $mpdf, $examDate, $examTime, $config)
         .course-col { width: 47%; }
     </style>';
 
-    foreach ($chunks as $index => $chunk) {
-        if ($index > 0) {
-            $mpdf->AddPage('L');
+    // If separate by building, group students and render each building separately
+    if ($seatReportSeparateBuilding) {
+        // Group students by building
+        $buildingGroups = [];
+        foreach ($students as $s) {
+            $building = trim($s['building'] ?? '') ?: 'بدون ساختمان';
+            if (!isset($buildingGroups[$building])) {
+                $buildingGroups[$building] = [];
+            }
+            $buildingGroups[$building][] = $s;
         }
 
-        // Set footer for this page AFTER AddPage
-        $startNum    = ($index * $perPage) + 1;
-        $endNum      = min(($index + 1) * $perPage, $totalStudents);
-        $footerHtml  = '<div style="text-align:center;font-size:9pt;color:#333;border-top:1px solid #999;padding-top:3px;">';
-        $footerHtml .= 'ردیف ' . toPersianDigits($startNum) . ' تا ' . toPersianDigits($endNum);
-        $footerHtml .= ' از مجموع ' . toPersianDigits($totalStudents) . ' نفر';
-        $footerHtml .= ' | صفحه ' . toPersianDigits($index + 1) . ' از ' . toPersianDigits($totalPages);
-        $footerHtml .= '</div>';
-        $mpdf->SetHTMLFooter($footerHtml);
+        $perPage          = 44;
+        $isFirstPage      = true;
+        $globalPageNum    = 0;
+        $totalGlobalPages = 0;
 
-        $half = ceil(count($chunk) / 2);
-        $col1 = array_slice($chunk, 0, $half);
-        $col2 = array_slice($chunk, $half);
-
-        $html = $htmlStyle;
-
-        // Page Header with session info
-        $html .= '<div class="page-header">فهرست شماره صندلی دانشجویان</div>';
-        $html .= '<div class="session-info">تاریخ: ' . toPersianDigits($examDate) . ' | ساعت: ' . toPersianDigits($examTime) . '</div>';
-
-        $html .= '<div class="main-container">';
-        $html .= '<table class="two-col-table"><tr>';
-
-        // Column 1 (Right side in RTL)
-        $html .= '<td style="vertical-align: top;">';
-        $html .= '<table class="col-table">';
-        $html .= '<thead><tr><th class="name-col">نام و نام خانوادگی</th><th class="course-col">نام درس</th><th class="seat-col">صندلی</th></tr></thead>';
-        $html .= '<tbody>';
-        foreach ($col1 as $i => $s) {
-            $displaySeat  = $getDisplaySeat($s);
-            $html        .= '<tr>';
-            $html        .= '<td class="name-col">' . htmlspecialchars($s['last_name'] . ' ' . $s['first_name']) . '</td>';
-            $html        .= '<td class="course-col">' . htmlspecialchars($s['course_name']) . '</td>';
-            $html        .= '<td class="seat-col">' . toPersianDigits($displaySeat) . '</td>';
-            $html        .= '</tr>';
+        // Calculate total pages across all buildings
+        foreach ($buildingGroups as $buildingStudents) {
+            $totalGlobalPages += count(array_chunk($buildingStudents, $perPage));
         }
-        $html .= '</tbody></table>';
-        $html .= '</td>';
+        // Add 1 for Kroki page
+        $totalGlobalPages += 1;
 
-        // Column 2 (Left side in RTL)
-        $html .= '<td style="vertical-align: top;">';
-        $html .= '<table class="col-table">';
-        $html .= '<thead><tr><th class="name-col">نام و نام خانوادگی</th><th class="course-col">نام درس</th><th class="seat-col">صندلی</th></tr></thead>';
-        $html .= '<tbody>';
-        foreach ($col2 as $i => $s) {
-            $displaySeat  = $getDisplaySeat($s);
-            $html        .= '<tr>';
-            $html        .= '<td class="name-col">' . htmlspecialchars($s['last_name'] . ' ' . $s['first_name']) . '</td>';
-            $html        .= '<td class="course-col">' . htmlspecialchars($s['course_name']) . '</td>';
-            $html        .= '<td class="seat-col">' . toPersianDigits($displaySeat) . '</td>';
-            $html        .= '</tr>';
+        foreach ($buildingGroups as $building => $buildingStudents) {
+            $chunks                = array_chunk($buildingStudents, $perPage);
+            $buildingTotalPages    = count($chunks);
+            $buildingTotalStudents = count($buildingStudents);
+
+            foreach ($chunks as $pageIndex => $chunk) {
+                $globalPageNum++;
+
+                if (!$isFirstPage) {
+                    $mpdf->AddPage('L');
+                }
+                $isFirstPage = false;
+
+                // Set footer for this page (building-specific)
+                $startNum    = ($pageIndex * $perPage) + 1;
+                $endNum      = min(($pageIndex + 1) * $perPage, $buildingTotalStudents);
+                $footerHtml  = '<div style="text-align:center;font-size:9pt;color:#333;border-top:1px solid #999;padding-top:3px;">';
+                $footerHtml .= '<strong>' . $building . '</strong> | ';
+                $footerHtml .= 'ردیف ' . toPersianDigits($startNum) . ' تا ' . toPersianDigits($endNum);
+                $footerHtml .= ' از ' . toPersianDigits($buildingTotalStudents) . ' نفر';
+                $footerHtml .= ' | صفحه ' . toPersianDigits($pageIndex + 1) . ' از ' . toPersianDigits($buildingTotalPages);
+                $footerHtml .= ' (کل: ' . toPersianDigits($globalPageNum) . ' از ' . toPersianDigits($totalGlobalPages) . ')';
+                $footerHtml .= '</div>';
+                $mpdf->SetHTMLFooter($footerHtml);
+
+                $half = ceil(count($chunk) / 2);
+                $col1 = array_slice($chunk, 0, $half);
+                $col2 = array_slice($chunk, $half);
+
+                $html  = $htmlStyle;
+                $html .= '<div class="page-header">فهرست شماره صندلی دانشجویان</div>';
+                $html .= '<div class="session-info">تاریخ: ' . toPersianDigits($examDate) . ' | ساعت: ' . toPersianDigits($examTime) . '</div>';
+                $html .= '<div class="building-header">ساختمان: ' . $building . '</div>';
+
+                $html .= '<div class="main-container">';
+                $html .= '<table class="two-col-table"><tr>';
+
+                // Column 1
+                $html .= '<td style="vertical-align: top;">';
+                $html .= '<table class="col-table">';
+                $html .= '<thead><tr><th class="name-col">نام و نام خانوادگی</th><th class="course-col">نام درس</th><th class="seat-col">صندلی</th></tr></thead>';
+                $html .= '<tbody>';
+                foreach ($col1 as $s) {
+                    $displaySeat  = $getDisplaySeat($s);
+                    $html        .= '<tr>';
+                    $html        .= '<td class="name-col">' . htmlspecialchars($s['last_name'] . ' ' . $s['first_name']) . '</td>';
+                    $html        .= '<td class="course-col">' . htmlspecialchars($s['course_name']) . '</td>';
+                    $html        .= '<td class="seat-col">' . toPersianDigits($displaySeat) . '</td>';
+                    $html        .= '</tr>';
+                }
+                $html .= '</tbody></table></td>';
+
+                // Column 2
+                $html .= '<td style="vertical-align: top;">';
+                $html .= '<table class="col-table">';
+                $html .= '<thead><tr><th class="name-col">نام و نام خانوادگی</th><th class="course-col">نام درس</th><th class="seat-col">صندلی</th></tr></thead>';
+                $html .= '<tbody>';
+                foreach ($col2 as $s) {
+                    $displaySeat  = $getDisplaySeat($s);
+                    $html        .= '<tr>';
+                    $html        .= '<td class="name-col">' . htmlspecialchars($s['last_name'] . ' ' . $s['first_name']) . '</td>';
+                    $html        .= '<td class="course-col">' . htmlspecialchars($s['course_name']) . '</td>';
+                    $html        .= '<td class="seat-col">' . toPersianDigits($displaySeat) . '</td>';
+                    $html        .= '</tr>';
+                }
+                $html .= '</tbody></table></td>';
+
+                $html .= '</tr></table></div>';
+                $mpdf->WriteHTML($html);
+            }
         }
-        $html .= '</tbody></table>';
-        $html .= '</td>';
+    } else {
+        // Original behavior - all students together
+        $perPage       = 44;
+        $chunks        = array_chunk($students, $perPage);
+        $totalPages    = count($chunks);
+        $totalStudents = count($students);
 
-        $html .= '</tr></table>';
-        $html .= '</div>';
+        foreach ($chunks as $index => $chunk) {
+            if ($index > 0) {
+                $mpdf->AddPage('L');
+            }
 
-        $mpdf->WriteHTML($html);
+            $startNum    = ($index * $perPage) + 1;
+            $endNum      = min(($index + 1) * $perPage, $totalStudents);
+            $footerHtml  = '<div style="text-align:center;font-size:9pt;color:#333;border-top:1px solid #999;padding-top:3px;">';
+            $footerHtml .= 'ردیف ' . toPersianDigits($startNum) . ' تا ' . toPersianDigits($endNum);
+            $footerHtml .= ' از مجموع ' . toPersianDigits($totalStudents) . ' نفر';
+            $footerHtml .= ' | صفحه ' . toPersianDigits($index + 1) . ' از ' . toPersianDigits($totalPages);
+            $footerHtml .= '</div>';
+            $mpdf->SetHTMLFooter($footerHtml);
+
+            $half = ceil(count($chunk) / 2);
+            $col1 = array_slice($chunk, 0, $half);
+            $col2 = array_slice($chunk, $half);
+
+            $html  = $htmlStyle;
+            $html .= '<div class="page-header">فهرست شماره صندلی دانشجویان</div>';
+            $html .= '<div class="session-info">تاریخ: ' . toPersianDigits($examDate) . ' | ساعت: ' . toPersianDigits($examTime) . '</div>';
+
+            $html .= '<div class="main-container">';
+            $html .= '<table class="two-col-table"><tr>';
+
+            // Column 1
+            $html .= '<td style="vertical-align: top;">';
+            $html .= '<table class="col-table">';
+            $html .= '<thead><tr><th class="name-col">نام و نام خانوادگی</th><th class="course-col">نام درس</th><th class="seat-col">صندلی</th></tr></thead>';
+            $html .= '<tbody>';
+            foreach ($col1 as $s) {
+                $displaySeat  = $getDisplaySeat($s);
+                $html        .= '<tr>';
+                $html        .= '<td class="name-col">' . htmlspecialchars($s['last_name'] . ' ' . $s['first_name']) . '</td>';
+                $html        .= '<td class="course-col">' . htmlspecialchars($s['course_name']) . '</td>';
+                $html        .= '<td class="seat-col">' . toPersianDigits($displaySeat) . '</td>';
+                $html        .= '</tr>';
+            }
+            $html .= '</tbody></table></td>';
+
+            // Column 2
+            $html .= '<td style="vertical-align: top;">';
+            $html .= '<table class="col-table">';
+            $html .= '<thead><tr><th class="name-col">نام و نام خانوادگی</th><th class="course-col">نام درس</th><th class="seat-col">صندلی</th></tr></thead>';
+            $html .= '<tbody>';
+            foreach ($col2 as $s) {
+                $displaySeat  = $getDisplaySeat($s);
+                $html        .= '<tr>';
+                $html        .= '<td class="name-col">' . htmlspecialchars($s['last_name'] . ' ' . $s['first_name']) . '</td>';
+                $html        .= '<td class="course-col">' . htmlspecialchars($s['course_name']) . '</td>';
+                $html        .= '<td class="seat-col">' . toPersianDigits($displaySeat) . '</td>';
+                $html        .= '</tr>';
+            }
+            $html .= '</tbody></table></td>';
+
+            $html .= '</tr></table></div>';
+            $mpdf->WriteHTML($html);
+        }
     }
 
     // Kroki Page (Seat Map) - Add new page first, then clear footer
@@ -1055,7 +1190,9 @@ function generateSecretaryReport($pdo, $mpdf, $examDate, $examTime, $config)
     // Secretary List Header
     $html .= '<div class="header"><div class="title">لیست منشی جلسه</div><div class="meta">' . toPersianDigits($examTime) . ' | ' . toPersianDigits($examDate) . '</div></div>';
 
-    // Multi-Exam Students Section (if any)
+    // Multi-Exam Students Section will be added after main content
+    // Build multi-exam HTML separately for later insertion
+    $multiExamHtml = '';
     if (!empty($multiExamStudents)) {
         // Fetch student names
         $multiStudentIds      = array_keys($multiExamStudents);
@@ -1073,32 +1210,38 @@ function generateSecretaryReport($pdo, $mpdf, $examDate, $examTime, $config)
             $courseMap[$c['course_code']] = $c['course_name'];
         }
 
-        $html .= '<div class="multi-exam-section">';
-        $html .= '<div class="multi-exam-header">دانشجویان چند آزمونی (' . toPersianDigits(count($multiExamStudents)) . ' نفر)</div>';
-        $html .= '<table class="multi-exam-table"><thead><tr>';
-        $html .= '<th style="width: 6%;">ردیف</th>';
-        $html .= '<th style="width: 12%;">شماره دانشجویی</th>';
-        $html .= '<th style="width: 20%;">نام و نام خانوادگی</th>';
-        $html .= '<th style="width: 35%;">دروس</th>';
-        $html .= '<th style="width: 15%;">شماره صندلی‌ها</th>';
-        $html .= '<th style="width: 12%;">صندلی اصلی</th>';
-        $html .= '</tr></thead><tbody>';
+        $multiExamHtml .= '<div class="multi-exam-section">';
+        $multiExamHtml .= '<div class="multi-exam-header">دانشجویان چند آزمونی (' . toPersianDigits(count($multiExamStudents)) . ' نفر)</div>';
+        $multiExamHtml .= '<table class="multi-exam-table"><thead><tr>';
+        $multiExamHtml .= '<th style="width: 5%;">#</th>';
+        $multiExamHtml .= '<th style="width: 12%;">شماره دانشجویی</th>';
+        $multiExamHtml .= '<th style="width: 15%;">نام و نام خانوادگی</th>';
+        $multiExamHtml .= '<th style="width: 26%;">دروس</th>';
+        $multiExamHtml .= '<th style="width: 12%;">شماره صندلی‌ها</th>';
+        $multiExamHtml .= '<th style="width: 30%;">صندلی اصلی و محل استقرار</th>';
+        $multiExamHtml .= '</tr></thead><tbody>';
 
         $rowIndex = 0;
         foreach ($multiExamStudents as $sid => $exams) {
             $rowIndex++;
             $studentName = $studentNames[$sid] ?? 'نامشخص';
 
-            // Collect courses and seat numbers
-            $coursesList = [];
-            $seatNumbers = [];
+            // Collect courses, seat numbers, and location info
+            $coursesList   = [];
+            $seatNumbers   = [];
+            $seatLocations = []; // seat_number => ['building' => ..., 'class_name' => ...]
             foreach ($exams as $exam) {
                 $courseName    = $courseMap[$exam['course_code']] ?? $exam['course_code'];
                 $coursesList[] = $courseName;
                 // Parse seat number (get first number)
                 $raw = $exam['seat_number'];
                 if (preg_match('/(\d+)/', $raw, $m)) {
-                    $seatNumbers[$exam['course_code']] = (int)$m[1];
+                    $seatNum                           = (int)$m[1];
+                    $seatNumbers[$exam['course_code']] = $seatNum;
+                    $seatLocations[$seatNum]           = [
+                        'building' => $exam['building'] ?? '',
+                        'class_name' => $exam['class_name'] ?? ''
+                    ];
                 } else {
                     $seatNumbers[$exam['course_code']] = 0;
                 }
@@ -1107,6 +1250,14 @@ function generateSecretaryReport($pdo, $mpdf, $examDate, $examTime, $config)
             // Find primary seat (minimum)
             $primarySeat = min($seatNumbers);
 
+            // Get location info for primary seat
+            $primaryBuilding = isset($seatLocations[$primarySeat]) ? trim($seatLocations[$primarySeat]['building']) : '';
+            $primaryClass    = isset($seatLocations[$primarySeat]) ? trim($seatLocations[$primarySeat]['class_name']) : '';
+            $primaryLocation = '';
+            if (!empty($primaryBuilding) || !empty($primaryClass)) {
+                $primaryLocation = ' (' . $primaryBuilding . ($primaryBuilding && $primaryClass ? ' - ' : '') . $primaryClass . ')';
+            }
+
             // Format seat display (without star)
             $seatsDisplay = [];
             foreach ($exams as $exam) {
@@ -1114,18 +1265,18 @@ function generateSecretaryReport($pdo, $mpdf, $examDate, $examTime, $config)
                 $seatsDisplay[] = toPersianDigits($seatNum);
             }
 
-            $html .= '<tr>';
-            $html .= '<td>' . toPersianDigits($rowIndex) . '</td>';
-            $html .= '<td>' . toPersianDigits($sid) . '</td>';
-            $html .= '<td style="text-align: right;">' . $studentName . '</td>';
-            $html .= '<td style="text-align: right; font-size: 8pt;">' . implode(' | ', $coursesList) . '</td>';
-            $html .= '<td>' . implode(' - ', $seatsDisplay) . '</td>';
-            $html .= '<td style="font-weight: bold;">' . toPersianDigits($primarySeat) . '</td>';
-            $html .= '</tr>';
+            $multiExamHtml .= '<tr>';
+            $multiExamHtml .= '<td>' . toPersianDigits($rowIndex) . '</td>';
+            $multiExamHtml .= '<td>' . toPersianDigits($sid) . '</td>';
+            $multiExamHtml .= '<td style="text-align: right;">' . $studentName . '</td>';
+            $multiExamHtml .= '<td style="text-align: right; font-size: 8pt;">' . implode(' | ', $coursesList) . '</td>';
+            $multiExamHtml .= '<td>' . implode(' - ', $seatsDisplay) . '</td>';
+            $multiExamHtml .= '<td style="font-weight: bold; text-align: right;">' . toPersianDigits($primarySeat) . $primaryLocation . '</td>';
+            $multiExamHtml .= '</tr>';
         }
 
-        $html .= '</tbody></table>';
-        $html .= '</div>';
+        $multiExamHtml .= '</tbody></table>';
+        $multiExamHtml .= '</div>';
     }
 
     // Group Courses by Type
@@ -1248,6 +1399,20 @@ function generateSecretaryReport($pdo, $mpdf, $examDate, $examTime, $config)
     // ... logic for leftovers if needed ...
 
     $mpdf->WriteHTML($html);
+
+    // Multi-Exam Students Section (added after main content)
+    if (!empty($multiExamHtml)) {
+        $paperSavingMulti = isset($config['PaperSaving']) && strtoupper($config['PaperSaving']) === 'YES';
+
+        if (!$paperSavingMulti) {
+            // Add page break before multi-exam section when paper saving is disabled
+            $mpdf->AddPage('P');
+            // Add header for the new page
+            $multiExamHtml = '<div class="header"><div class="title">لیست منشی جلسه</div><div class="meta">' . toPersianDigits($examTime) . ' | ' . toPersianDigits($examDate) . '</div></div>' . $multiExamHtml;
+        }
+
+        $mpdf->WriteHTML($multiExamHtml);
+    }
 
     // Proctor Section (Moved to end)
     if (!empty($proctors)) {
@@ -1683,8 +1848,14 @@ function generateReproductionReport($pdo, $mpdf, $examDate, $examTime, $config)
                 return strcmp($a, $b);
             });
 
-            // Add page break and render multi-exam section
-            $mpdf->AddPage('P');
+            // Add page break only when paper saving is disabled
+            $paperSavingReproMulti = isset($config['PaperSaving']) && strtoupper($config['PaperSaving']) === 'YES';
+            if (!$paperSavingReproMulti) {
+                $mpdf->AddPage('P');
+            } else {
+                // Add a separator line when paper saving is enabled
+                $mpdf->WriteHTML('<div style="margin-top: 20px; margin-bottom: 20px; border-top: 2px dashed #dc3545;"></div>');
+            }
             $multiHtml = '
             <style>
                 body { font-family: vazir; font-size: 10pt; }
@@ -2125,8 +2296,14 @@ function generateLocationReport($pdo, $mpdf, $examDate, $examTime, $config)
                 return strcmp($a, $b);
             });
 
-            // Add page break and render multi-exam section
-            $mpdf->AddPage('P');
+            // Add page break only when paper saving is disabled
+            $paperSavingLocMulti = isset($config['PaperSaving']) && strtoupper($config['PaperSaving']) === 'YES';
+            if (!$paperSavingLocMulti) {
+                $mpdf->AddPage('P');
+            } else {
+                // Add a separator line when paper saving is enabled
+                $mpdf->WriteHTML('<div style="margin-top: 20px; margin-bottom: 20px; border-top: 2px dashed #dc3545;"></div>');
+            }
             $multiHtml = '
             <style>
                 body { font-family: vazir; font-size: 10pt; }
@@ -2599,16 +2776,17 @@ function generateDescriptiveLabels($pdo, $mpdf, $examDate, $examTime, $config)
 
 function generateTestLabels($pdo, $mpdf, $examDate, $examTime, $config)
 {
-    // Fetch Courses with Test type (تستی or تستی و تشریحی) with student count
+    // Fetch Courses with Test type (تستی or تستی و تشریحی) with exam_seats count (not distinct students)
     // Only count students with written exams (کتبی), not electronic (الکترونیکی)
+    // Use COUNT without DISTINCT to match table rows (one row per course per student)
     $stmt = $pdo->prepare("
         SELECT c.course_code, c.course_name, c.exam_date, c.exam_time, c.course_type,
-               COUNT(CASE WHEN es.exam_type = 'کتبی' THEN es.student_id END) as student_count
+               COUNT(CASE WHEN es.exam_type = 'کتبی' THEN 1 END) as seat_count
         FROM courses c
         LEFT JOIN exam_seats es ON c.course_code = es.course_code
         WHERE c.exam_date = ? AND c.exam_time = ? AND c.course_type LIKE '%تستی%'
         GROUP BY c.course_code, c.course_name, c.exam_date, c.exam_time, c.course_type
-        HAVING student_count > 0
+        HAVING seat_count > 0
         ORDER BY c.course_code
     ");
     $stmt->execute([$examDate, $examTime]);
@@ -2618,11 +2796,33 @@ function generateTestLabels($pdo, $mpdf, $examDate, $examTime, $config)
         die('هیچ درس تستی برای این جلسه یافت نشد.');
     }
 
-    // Calculate total students for test exams
-    $totalTestStudents = 0;
+    // Calculate total seats (exam_seats rows) for test exams - matches sum of table
+    $totalTestSeats = 0;
     foreach ($courses as $c) {
-        $totalTestStudents += (int)($c['student_count'] ?? 0);
+        $totalTestSeats += (int)($c['seat_count'] ?? 0);
     }
+
+    // Get building statistics for this session (test courses only)
+    // Count exam_seats rows (not distinct students) to match table totals
+    $courseCodes  = array_column($courses, 'course_code');
+    $placeholders = implode(',', array_fill(0, count($courseCodes), '?'));
+    $stmtBuilding = $pdo->prepare("
+        SELECT es.building, COUNT(*) as seat_count
+        FROM exam_seats es
+        WHERE es.course_code IN ($placeholders) AND es.exam_type = 'کتبی'
+        GROUP BY es.building
+        ORDER BY es.building
+    ");
+    $stmtBuilding->execute($courseCodes);
+    $buildingStats = $stmtBuilding->fetchAll(PDO::FETCH_ASSOC);
+
+    // Format building stats string
+    $buildingParts = [];
+    foreach ($buildingStats as $bs) {
+        $bName           = trim($bs['building'] ?? '') ?: 'نامشخص';
+        $buildingParts[] = $bName . ': ' . toPersianDigits($bs['seat_count']);
+    }
+    $buildingStatsStr = implode(' | ', $buildingParts);
 
     // A5 Landscape
     $mpdf = new \Mpdf\Mpdf([
@@ -2679,8 +2879,9 @@ function generateTestLabels($pdo, $mpdf, $examDate, $examTime, $config)
             <div class="info">
                 تاریخ: <strong>' . toPersianDigits($examDate) . '</strong> &nbsp;&nbsp;&nbsp;
                 ساعت: <strong>' . toPersianDigits($examTime) . '</strong> &nbsp;&nbsp;&nbsp;
-                کل دانشجویان تستی این جلسه: <strong>' . toPersianDigits($totalTestStudents) . '</strong>
+                کل پاسخنامه‌های تستی این جلسه: <strong>' . toPersianDigits($totalTestSeats) . '</strong>
             </div>
+            <div class="info" style="font-size: 9pt;">آمار به تفکیک ساختمان‌ها: ' . $buildingStatsStr . '</div>
 
             <table class="courses-table">
                 <thead>
@@ -2697,7 +2898,7 @@ function generateTestLabels($pdo, $mpdf, $examDate, $examTime, $config)
         $startRow = ($pageIndex * $perPage) + 1;
         foreach ($chunk as $i => $c) {
             $rowNum  = $startRow + $i;
-            $count   = $c['student_count'] ?? 0;
+            $count   = $c['seat_count'] ?? 0;
             $html   .= '<tr>
                 <td>' . toPersianDigits($rowNum) . '</td>
                 <td>' . toPersianDigits($c['course_code']) . '</td>
@@ -2769,6 +2970,38 @@ function generateDailyTestLabels($pdo, $mpdf, $examDate, $examTime, $config)
         $totalTestStudents += (int)($c['student_count'] ?? 0);
     }
 
+    // Fetch building statistics for test exams (written only)
+    $courseCodes   = array_column($courses, 'course_code');
+    $buildingStats = [];
+    if (!empty($courseCodes)) {
+        $placeholders = str_repeat('?,', count($courseCodes) - 1) . '?';
+        $stmtBuilding = $pdo->prepare("
+            SELECT es.building, COUNT(es.student_id) as student_count
+            FROM exam_seats es
+            JOIN courses c ON es.course_code = c.course_code
+            WHERE es.course_code IN ($placeholders) 
+              AND es.exam_type = 'کتبی'
+              AND c.course_type LIKE '%تستی%'
+            GROUP BY es.building
+            ORDER BY es.building
+        ");
+        $stmtBuilding->execute($courseCodes);
+        while ($row = $stmtBuilding->fetch(PDO::FETCH_ASSOC)) {
+            $buildingName                 = trim($row['building']) ?: 'بدون ساختمان';
+            $buildingStats[$buildingName] = (int)$row['student_count'];
+        }
+    }
+
+    // Build building stats display string
+    $buildingStatsStr = '';
+    if (!empty($buildingStats)) {
+        $buildingParts = [];
+        foreach ($buildingStats as $building => $count) {
+            $buildingParts[] = $building . ': ' . toPersianDigits($count) . ' نفر';
+        }
+        $buildingStatsStr = implode(' | ', $buildingParts);
+    }
+
     // A4 Portrait
     $mpdf = new \Mpdf\Mpdf([
         'mode' => 'utf-8',
@@ -2810,7 +3043,8 @@ function generateDailyTestLabels($pdo, $mpdf, $examDate, $examTime, $config)
         .page { padding: 5px; }
         .title { font-size: 14pt; font-weight: bold; text-align: center; margin-bottom: 8px; }
         .subtitle { font-size: 11pt; text-align: center; margin-bottom: 10px; }
-        .info { font-size: 10pt; text-align: center; margin-bottom: 8px; }
+        .info { font-size: 10pt; text-align: center; margin-bottom: 6px; }
+        .building-stats { font-size: 9pt; text-align: center; margin-bottom: 10px; color: #333; background: #f5f5f5; padding: 4px 8px; border-radius: 4px; }
         .courses-table { width: 100%; border-collapse: collapse; font-size: 9pt; }
         .courses-table th { background-color: #efefef; border: 1px solid #666; padding: 5px; font-weight: bold; }
         .courses-table td { border: 1px solid #666; padding: 4px; text-align: center; }
@@ -2819,7 +3053,7 @@ function generateDailyTestLabels($pdo, $mpdf, $examDate, $examTime, $config)
     </style>';
 
     // Pagination - more rows per page for A4
-    $perPage    = 30;
+    $perPage    = 28; // Slightly less to accommodate building stats
     $chunks     = array_chunk($courses, $perPage);
     $totalPages = count($chunks);
 
@@ -2835,8 +3069,14 @@ function generateDailyTestLabels($pdo, $mpdf, $examDate, $examTime, $config)
                 تاریخ: <strong>' . toPersianDigits($examDate) . '</strong> &nbsp;&nbsp;&nbsp;
                 ساعات: <strong>' . $sessionTimesStr . '</strong> &nbsp;&nbsp;&nbsp;
                 کل دانشجویان تستی کتبی: <strong>' . toPersianDigits($totalTestStudents) . '</strong>
-            </div>
+            </div>';
 
+        // Add building statistics if available
+        if (!empty($buildingStatsStr)) {
+            $html .= '<div class="building-stats">آمار به تفکیک ساختمان‌ها : ' . $buildingStatsStr . '</div>';
+        }
+
+        $html .= '
             <table class="courses-table">
                 <thead>
                     <tr>
@@ -3160,6 +3400,9 @@ function generateAttendanceSheet($pdo, $mpdf, $examDate, $examTime, $config)
     $logoPath   = __DIR__ . '/../assets/app/Pnulogo.png';
     $logoExists = file_exists($logoPath);
 
+    // Check if grouping by course is enabled
+    $groupByCourseEnabled = isset($config['GroupAttendanceByCourse']) && strtoupper($config['GroupAttendanceByCourse']) === 'YES';
+
     // First, count total pages across all locations for global page numbering
     $totalGlobalPages = 0;
     $locationData     = [];
@@ -3177,6 +3420,45 @@ function generateAttendanceSheet($pdo, $mpdf, $examDate, $examTime, $config)
 
     if (empty($locations)) {
         die('No exam data found for the specified date and time');
+    }
+
+    // If grouping by course is enabled, we need to restructure the grouping
+    // Build groups: if groupByCourse -> course_code + building + class_name, else building + class_name
+    $groupedData = [];
+
+    if ($groupByCourseEnabled) {
+        // Fetch all students grouped by course first, then by location
+        $stmt = $pdo->prepare("
+            SELECT DISTINCT c.course_code, c.course_name, es.building, es.class_name
+            FROM exam_seats es
+            JOIN courses c ON es.course_code = c.course_code
+            WHERE c.exam_date = ? AND c.exam_time = ?
+            ORDER BY c.course_code, es.building, es.class_name
+        ");
+        $stmt->execute([$examDate, $examTime]);
+        $courseLocations = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+        foreach ($courseLocations as $cl) {
+            $groupKey      = $cl['course_code'] . '||' . $cl['building'] . '||' . $cl['class_name'];
+            $groupedData[] = [
+                'course_code' => $cl['course_code'],
+                'course_name' => $cl['course_name'],
+                'building' => $cl['building'],
+                'class_name' => $cl['class_name'],
+                'group_key' => $groupKey
+            ];
+        }
+    } else {
+        // Original behavior - group by location only
+        foreach ($locations as $loc) {
+            $groupedData[] = [
+                'course_code' => null,
+                'course_name' => null,
+                'building' => $loc['building'],
+                'class_name' => $loc['class_name'],
+                'group_key' => $loc['building'] . '||' . $loc['class_name']
+            ];
+        }
     }
 
     // Check MultiExamMode config and build primary seat map
@@ -3216,55 +3498,90 @@ function generateAttendanceSheet($pdo, $mpdf, $examDate, $examTime, $config)
         }
     }
 
-    // Pre-calculate total pages for all locations
-    foreach ($locations as $location) {
-        $stmt = $pdo->prepare("
-            SELECT COUNT(*) as cnt
-            FROM exam_seats es
-            JOIN courses c ON es.course_code = c.course_code
-            WHERE c.exam_date = ? AND c.exam_time = ? AND es.building = ? AND es.class_name = ?
-        ");
-        $stmt->execute([$examDate, $examTime, $location['building'], $location['class_name']]);
-        $count             = $stmt->fetch(PDO::FETCH_ASSOC)['cnt'];
-        $pagesForLocation  = max(1, ceil($count / 18)); // 18 students per page
-        $totalGlobalPages += $pagesForLocation;
-        $locationData[]    = [
-            'building' => $location['building'],
-            'class_name' => $location['class_name'],
-            'pages' => $pagesForLocation
-        ];
+    // Pre-calculate total pages for all groups
+    foreach ($groupedData as $idx => $group) {
+        if ($groupByCourseEnabled && $group['course_code'] !== null) {
+            // Count students for this course + location
+            $stmt = $pdo->prepare("
+                SELECT COUNT(*) as cnt
+                FROM exam_seats es
+                JOIN courses c ON es.course_code = c.course_code
+                WHERE c.exam_date = ? AND c.exam_time = ? AND es.building = ? AND es.class_name = ? AND c.course_code = ?
+            ");
+            $stmt->execute([$examDate, $examTime, $group['building'], $group['class_name'], $group['course_code']]);
+        } else {
+            // Original query
+            $stmt = $pdo->prepare("
+                SELECT COUNT(*) as cnt
+                FROM exam_seats es
+                JOIN courses c ON es.course_code = c.course_code
+                WHERE c.exam_date = ? AND c.exam_time = ? AND es.building = ? AND es.class_name = ?
+            ");
+            $stmt->execute([$examDate, $examTime, $group['building'], $group['class_name']]);
+        }
+        $count                       = $stmt->fetch(PDO::FETCH_ASSOC)['cnt'];
+        $pagesForGroup               = max(1, ceil($count / 18)); // 18 students per page
+        $totalGlobalPages           += $pagesForGroup;
+        $groupedData[$idx]['pages']  = $pagesForGroup;
     }
 
     $globalPageNumber = 0;
 
-    // Process each location (building + class)
-    foreach ($locations as $location) {
-        $building  = $location['building'];
-        $className = $location['class_name'];
+    // Process each group
+    foreach ($groupedData as $group) {
+        $building   = $group['building'];
+        $className  = $group['class_name'];
+        $courseCode = $group['course_code'];
+        $courseName = $group['course_name'];
 
-        // Fetch all students for this specific location
-        $stmt = $pdo->prepare("
-            SELECT 
-                es.student_id, 
-                s.first_name, 
-                s.last_name,
-                s.national_id,
-                s.destination_center,
-                s.source_center,
-                src.Center AS source_center_name,
-                es.seat_number,
-                es.class_name,
-                es.exam_type,
-                c.course_code,
-                c.course_name
-            FROM exam_seats es
-            JOIN students s ON es.student_id = s.student_id
-            JOIN courses c ON es.course_code = c.course_code
-            LEFT JOIN Centers src ON s.source_center = src.CenterID
-            WHERE c.exam_date = ? AND c.exam_time = ? AND es.building = ? AND es.class_name = ?
-            ORDER BY es.seat_number ASC
-        ");
-        $stmt->execute([$examDate, $examTime, $building, $className]);
+        // Fetch all students for this specific group
+        if ($groupByCourseEnabled && $courseCode !== null) {
+            $stmt = $pdo->prepare("
+                SELECT 
+                    es.student_id, 
+                    s.first_name, 
+                    s.last_name,
+                    s.national_id,
+                    s.destination_center,
+                    s.source_center,
+                    src.Center AS source_center_name,
+                    es.seat_number,
+                    es.class_name,
+                    es.exam_type,
+                    c.course_code,
+                    c.course_name
+                FROM exam_seats es
+                JOIN students s ON es.student_id = s.student_id
+                JOIN courses c ON es.course_code = c.course_code
+                LEFT JOIN Centers src ON s.source_center = src.CenterID
+                WHERE c.exam_date = ? AND c.exam_time = ? AND es.building = ? AND es.class_name = ? AND c.course_code = ?
+                ORDER BY es.seat_number ASC
+            ");
+            $stmt->execute([$examDate, $examTime, $building, $className, $courseCode]);
+        } else {
+            $stmt = $pdo->prepare("
+                SELECT 
+                    es.student_id, 
+                    s.first_name, 
+                    s.last_name,
+                    s.national_id,
+                    s.destination_center,
+                    s.source_center,
+                    src.Center AS source_center_name,
+                    es.seat_number,
+                    es.class_name,
+                    es.exam_type,
+                    c.course_code,
+                    c.course_name
+                FROM exam_seats es
+                JOIN students s ON es.student_id = s.student_id
+                JOIN courses c ON es.course_code = c.course_code
+                LEFT JOIN Centers src ON s.source_center = src.CenterID
+                WHERE c.exam_date = ? AND c.exam_time = ? AND es.building = ? AND es.class_name = ?
+                ORDER BY es.seat_number ASC
+            ");
+            $stmt->execute([$examDate, $examTime, $building, $className]);
+        }
         $students = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
         if (empty($students)) {
@@ -3349,7 +3666,12 @@ function generateAttendanceSheet($pdo, $mpdf, $examDate, $examTime, $config)
                 $html .= '<img class="logo-float" src="' . $logoPath . '" />';
             }
             $html .= '<div class="university-name">' . $university . '</div>';
-            $html .= '<div class="exam-info">فهرست حضور و غیاب آزمون‌های <span class="dynamic-value">' . toPersianDigits($examTime) . '</span> | <span class="dynamic-value">' . $persianDateStr . '</span> مستقر در <span class="dynamic-value">' . $building . '</span> | <span class="dynamic-value">' . $className . '</span></div>';
+            // Build header info based on grouping mode
+            $headerInfo = 'فهرست حضور و غیاب آزمون‌های <span class="dynamic-value">' . toPersianDigits($examTime) . '</span> | <span class="dynamic-value">' . $persianDateStr . '</span> مستقر در <span class="dynamic-value">' . $building . '</span> | <span class="dynamic-value">' . $className . '</span>';
+            if ($groupByCourseEnabled && $courseName !== null) {
+                $headerInfo .= ' | <span style="font-weight:bold;">درس: ' . $courseName . ' (' . toPersianDigits($courseCode) . ')</span>';
+            }
+            $html .= '<div class="exam-info">' . $headerInfo . '</div>';
             $html .= '</div>';
 
             // Split students into 2 columns: first 9 go to right column, rest to left

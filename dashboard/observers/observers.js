@@ -1218,6 +1218,13 @@
   document.addEventListener("DOMContentLoaded", function () {
     hydrateObserversCardPreferenceFromLocalStorage();
 
+    // Show version changelog modal on first login after update (after 1 second delay)
+    setTimeout(() => {
+      if (typeof showVersionChangelogModal === "function") {
+        showVersionChangelogModal();
+      }
+    }, 1000);
+
     function ensureAtLeastOneCardVisible() {
       try {
         const cards = Array.from(

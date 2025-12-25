@@ -205,7 +205,7 @@ $bodyClass = $wavesAnimationDisabled ? 'class="no-waves-animation"' : '';
         <!-- Reports Chart Card -->
         <div class="dashboard-card no-hover collapsible-card" id="reportsChartCard">
             <div class="card-header-collapsible" onclick="toggleCardCollapse(this)">
-                <h4 class="mb-0">نمودار جلسات آزمون</h4>
+                <h4 class="mb-0">نمودار جلسات باقی‌مانده آزمون</h4>
                 <span class="collapse-icon">▼</span>
             </div>
             <div class="card-body-collapsible">
@@ -331,6 +331,7 @@ $bodyClass = $wavesAnimationDisabled ? 'class="no-waves-animation"' : '';
     <script src="../assets/bootstrap/bootstrap.bundle.min.js"></script>
     <script src="../assets/sweetalert2/sweetalert2.min.js"></script>
     <script src="../assets/app/version.js"></script>
+    <script src="../assets/app/changelog.js"></script>
     <!-- Local Chart.js (UMD) - load synchronously so window.Chart is available -->
     <script src="../assets/vendor/chartjs/chart.min.js"></script>
     <!-- Device check and SweetAlert moved to dashboard.js -->
