@@ -211,38 +211,23 @@ try {
     // Use default if config fetch fails
 }
 
+// Calculate current timestamp once for accurate comparison
+list($cjy, $cjm, $cjd) = explode('/', $current_persian_date);
+list($cgy, $cgm, $cgd) = jalali_to_gregorian($cjy, $cjm, $cjd);
+$currentTimestamp      = strtotime("$cgy-$cgm-$cgd $current_time");
+
 // بررسی زمان امتحان برای مخفی کردن اطلاعات
 foreach ($results as &$row) {
     if (!empty($row['exam_date']) && !empty($row['exam_time'])) {
-        // مقایسه ساده تاریخ امتحان با تاریخ جاری
-        if ($row['exam_date'] == $current_persian_date) {
-            // اگر امتحان امروز است، بررسی ساعت
-            $exam_time_parts    = explode(':', $row['exam_time']);
-            $current_time_parts = explode(':', $current_time);
+        // Calculate exam timestamp
+        list($ejy, $ejm, $ejd) = explode('/', $row['exam_date']);
+        list($egy, $egm, $egd) = jalali_to_gregorian($ejy, $ejm, $ejd);
+        $examTimestamp         = strtotime("$egy-$egm-$egd {$row['exam_time']}");
 
-            if (count($exam_time_parts) >= 2 && count($current_time_parts) >= 2) {
-                $exam_hour      = (int)$exam_time_parts[0];
-                $exam_minute    = (int)$exam_time_parts[1];
-                $current_hour   = (int)$current_time_parts[0];
-                $current_minute = (int)$current_time_parts[1];
+        $minutes_difference = ($examTimestamp - $currentTimestamp) / 60;
 
-                $exam_total_minutes    = ($exam_hour * 60) + $exam_minute;
-                $current_total_minutes = ($current_hour * 60) + $current_minute;
-                $minutes_difference    = $exam_total_minutes - $current_total_minutes;
-
-                // اگر بیشتر از X دقیقه تا امتحان باقی مانده (بر اساس تنظیمات)
-                if ($minutes_difference > $reminderMinutes) {
-                    $exam_datetime = DateTime::createFromFormat('H:i', $row['exam_time']);
-                    $exam_datetime->modify("-{$reminderMinutes} minutes");
-                    $visible_time       = $exam_datetime->format('H:i');
-                    $row['seat_number'] = 'شماره صندلی شما تا ساعت ' . $visible_time . ' همان روز مخفی می‌باشد.';
-                    $row['building']    = '';
-                    $row['class_name']  = '';
-                    $row['seat_row']    = '';
-                }
-            }
-        } elseif ($row['exam_date'] > $current_persian_date) {
-            // اگر امتحان در آینده است (تاریخ بعدی)
+        // اگر بیشتر از X دقیقه تا امتحان باقی مانده (بر اساس تنظیمات)
+        if ($minutes_difference > $reminderMinutes) {
             $exam_datetime = DateTime::createFromFormat('H:i', $row['exam_time']);
             $exam_datetime->modify("-{$reminderMinutes} minutes");
             $visible_time       = $exam_datetime->format('H:i');

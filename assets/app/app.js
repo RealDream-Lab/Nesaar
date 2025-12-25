@@ -2109,8 +2109,9 @@ document.addEventListener("DOMContentLoaded", () => {
 
         // Build seat location sentence
         let seatLocationSentence = "";
-        if (/^\d+$/.test(exam.seat_number)) {
-          const seatNum = toPersianDigits(exam.seat_number);
+        const seatValue = (exam.seat_number ?? "").toString().trim();
+        if (/^\d+$/.test(seatValue)) {
+          const seatNum = toPersianDigits(seatValue);
           const buildingName = escapeHtml(exam.building) || "";
           const className = escapeHtml(exam.class_name) || "";
 
@@ -2130,6 +2131,11 @@ document.addEventListener("DOMContentLoaded", () => {
           } else {
             seatLocationSentence = `<br><br><strong style="color: #007bff;">شماره صندلی شما ${seatNum} می‌باشد.</strong>`;
           }
+        } else if (seatValue) {
+          // Show the hidden seat message from server (e.g., "شماره صندلی شما تا ساعت 08:00 همان روز مخفی می‌باشد.")
+          seatLocationSentence = `<br><br><strong style="color: #ff7043;">${escapeHtml(
+            seatValue
+          )}</strong>`;
         }
 
         Swal.fire({

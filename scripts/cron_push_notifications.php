@@ -28,6 +28,13 @@ function pushLog($message)
     error_log("[Push Cron] {$message}");
 }
 
+function toPersianDigits($text)
+{
+    $persian = ['۰', '۱', '۲', '۳', '۴', '۵', '۶', '۷', '۸', '۹'];
+    $english = ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9'];
+    return str_replace($english, $persian, $text);
+}
+
 pushLog("Starting push notification cron job...");
 
 try {
@@ -172,8 +179,8 @@ try {
             }
 
             $payload = json_encode([
-                'title' => '⏰ یادآوری آزمون - ' . $exam['course_name'],
-                'body' => "آزمون شما ساعت {$exam['exam_time']} شروع می‌شود\nمکان: {$student['building']} - {$student['class_name']}\nشماره صندلی: {$student['seat_number']}",
+                'title' => '⏰ یادآوری آزمون - ' . toPersianDigits($exam['course_name']),
+                'body' => toPersianDigits("آزمون شما ساعت {$exam['exam_time']} شروع می‌شود\nمکان: {$student['building']} - {$student['class_name']}\nشماره صندلی: {$student['seat_number']}"),
                 'icon' => '/pwa-icons/icon-192.png',
                 'badge' => '/pwa-icons/icon-192.png',
                 'tag' => 'exam-' . $exam['course_code'],
@@ -231,8 +238,8 @@ try {
             }
 
             $payload = json_encode([
-                'title' => '⏰ یادآوری مراقبت - ' . $exam['exam_time'],
-                'body' => "شیفت مراقبت شما ساعت {$exam['exam_time']} شروع می‌شود\nمکان: {$proctor['building']} - {$proctor['class_name']}",
+                'title' => '⏰ یادآوری مراقبت - ' . toPersianDigits($exam['exam_time']),
+                'body' => toPersianDigits("شیفت مراقبت شما ساعت {$exam['exam_time']} شروع می‌شود\nمکان: {$proctor['building']} - {$proctor['class_name']}"),
                 'icon' => '/pwa-icons/icon-192.png',
                 'badge' => '/pwa-icons/icon-192.png',
                 'tag' => 'proctor-' . $exam['exam_date'] . '-' . $exam['exam_time'],
