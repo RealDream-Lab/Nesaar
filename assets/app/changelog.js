@@ -4,13 +4,16 @@
  */
 window.CHANGELOG = {
   "1.3.0": {
-    date: "۱۴۰۴/۱۰/۰۵",
+    date: "۱۴۰۴/۱۰/۰۴",
     changes: [
       "اضافه شدن مودال نمایش تغییرات نسخه در اولین ورود",
       "اضافه شدن راهنمای کوتاه (تولتیپ) برای گزینه‌های تنظیمات",
       "جداسازی صفحه دانشجویان چندآزمونی در گزارشات (وقتی صرفه‌جویی کاغذ غیرفعال است)",
       "بهبود سیستم ارسال خودکار نوتیفیکیشن - جلوگیری از ارسال تکراری",
-      "حفظ نسخه‌های قبلی ایمیج Docker",
+      "بهبود تقویم جلسات: نمایش کم‌رنگ آزمون‌های گذشته",
+      "اضافه شدن آمار ساختمان‌ها به برچسب پاکت تستی",
+      "بهبود تنظیمات گزارش شماره صندلی",
+      "اصلاح نمایش نام درس در فهرست حضور و غیاب",
     ],
   },
   "1.2.5": {
@@ -20,7 +23,6 @@ window.CHANGELOG = {
       "اضافه شدن چک داده قبل از تولید گزارشات PDF",
       "بهبود سیستم ارسال خودکار نوتیفیکیشن‌های یادآوری",
       "اضافه شدن آمار ساختمان‌ها به برچسب پاکت تستی",
-      "بهبود تنظیمات گزارش شماره صندلی",
       "اصلاح نمایش نام درس در فهرست حضور و غیاب",
     ],
   },
@@ -91,11 +93,12 @@ async function showVersionChangelogModal() {
     },
     didOpen: () => {
       const popup = Swal.getPopup();
-      
+
       // Create countdown element in top-left corner
       const countdownEl = document.createElement("div");
       countdownEl.className = "version-countdown";
-      countdownEl.style.cssText = "position:absolute;top:12px;left:12px;font-size:1.2rem;font-weight:bold;color:#94a3b8;font-family:monospace;min-width:2ch;text-align:center;";
+      countdownEl.style.cssText =
+        "position:absolute;top:12px;left:12px;font-size:1.2rem;font-weight:bold;color:#94a3b8;font-family:monospace;min-width:2ch;text-align:center;";
       countdownEl.textContent = remainingSeconds;
       popup?.appendChild(countdownEl);
 

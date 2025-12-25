@@ -993,7 +993,7 @@ try {
                                             ? "checked"
                                             : ""
                                         } style="cursor:pointer;">
-                                        <label for="er_rptView" style="margin:0;cursor:pointer;font-size:0.8rem;" data-tooltip="گزارش در تب جدید مرورگر باز می‌شود">مشاهده</label>
+                                        <label for="er_rptView" style="margin:0;cursor:pointer;font-size:0.8rem;" data-tooltip="گزارش در مودال نسار باز می‌شود">مشاهده</label>
                                     </div>
                                     <div style="display:flex;align-items:center;gap:3px;">
                                         <input type="radio" id="er_rptDownload" name="er_rptDownload" value="YES" ${
