@@ -1,5 +1,5 @@
-const CACHE_NAME = "exam-seat-v1.2.5";
-const VERSION = "1.2.5";
+const CACHE_NAME = "exam-seat-v1.3.0";
+const VERSION = "1.3.0";
 const urlsToCache = [
   "/",
   "/index.php",
@@ -16,6 +16,7 @@ const urlsToCache = [
   "/assets/crypto-js.min.js",
   "/assets/app/app.js",
   "/assets/app/version.js",
+  "/assets/app/changelog.js",
   "/assets/app/push-notifications.js",
   "/assets/vendor/chartjs/chart.min.js",
   "/dashboard/dashboard.js",
