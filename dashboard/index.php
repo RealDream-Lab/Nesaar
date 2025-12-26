@@ -79,19 +79,26 @@ $bodyClass = $wavesAnimationDisabled ? 'class="no-waves-animation"' : '';
                             onclick="window.location.href='/dashboard';">
                             <img src="/dashboard/home.png" alt="بازگشت به داشبورد"
                                 style="width:40px;height:40px;object-fit:contain;display:block;">
-                        </button> <!-- 
+                        </button>
 
                         <button id="absentBtn" class="btn btn-icon p-0" type="button" data-tooltip="ثبت غیبت"
                             aria-label="ثبت غیبت"
                             style="background:transparent;border:none;margin-inline-end:8px;padding:0;">
                             <img src="/assets/app/absent.png" alt="ثبت غیبت"
                                 style="width:40px;height:40px;object-fit:contain;display:block;padding-bottom: 3px;">
-                        </button> -->
+                        </button>
                         <button id="proctorProfilesBtn" class="btn btn-icon p-0" type="button"
                             data-tooltip="ماژول مراقبین و عوامل اجرائی" aria-label="ماژول مراقبین و عوامل اجرائی"
                             style="background:transparent;border:none;margin-inline-end:8px;padding:0;">
                             <img src="/dashboard/observers/users.png" alt="مشخصات مراقبین"
                                 style="width:40px;height:40px;object-fit:contain;display:block;margin-bottom: 5px;">
+                        </button>
+                        <button id="manageLocationsBtn" class="btn btn-icon p-0" type="button"
+                            data-tooltip="معرفی و ویرایش مکان‌های برگزاری آزمون"
+                            aria-label="معرفی و ویرایش مکان‌های برگزاری آزمون"
+                            style="background:transparent;border:none;margin-inline-end:8px;padding:0;">
+                            <img src="/assets/app/building.png" alt="معرفی و ویرایش مکان‌ها"
+                                style="width:40px;height:40px;object-fit:contain;display:block; margin-top: 3px !important ;padding-top: 2px;padding-bottom: 2px;">
                         </button>
                         <button id="proctorNoticeBtn" class="btn btn-icon p-0" type="button"
                             data-tooltip="ابلاغ مراقبین" aria-label="ابلاغ مراقبین"

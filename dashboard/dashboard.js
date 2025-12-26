@@ -1408,6 +1408,18 @@ try {
       window.location.href = "/dashboard/observers/";
     });
   }
+  // Header shortcut: معرفی و ویرایش مکان‌های برگزاری آزمون (به زودی)
+  const manageLocationsBtn = document.getElementById("manageLocationsBtn");
+  if (manageLocationsBtn) {
+    manageLocationsBtn.addEventListener("click", () => {
+      try {
+        // Reuse the existing coming-soon modal helper
+        showAnswerSheetGeneratorComingSoon("locations");
+      } catch (e) {
+        console.error("manageLocationsBtn click failed:", e);
+      }
+    });
+  }
 } catch (e) {
   console.warn("Failed to init proctor profiles button", e);
 }
@@ -1419,14 +1431,22 @@ try {
     absentBtn.addEventListener("click", () => {
       try {
         Swal.fire({
-          toast: true,
-          position: "top-end",
           icon: "info",
-          title: "ثبت غیبت پس از هماهنگی با پشتیبانی گلستان فعال خواهد شد.",
-          showConfirmButton: false,
-          timer: 2200,
-          timerProgressBar: true,
-          customClass: { popup: "swal2-rtl swal2-glass swal2-toast" },
+          title: "قرائت پاسخنامه تستی غایبین",
+          html: `
+      <div style="text-align:justify;direction:rtl;line-height:2.2;font-size:1rem;color:#e0e0e0;">
+        <p style="margin-bottom:1rem;">
+          این قابلیت امکان خواندن پاسخنامه‌های تستی اسکن‌شده را فراهم کرده 
+          و خروجی مناسب برای ثبت در سامانه گلستان تولید می‌نماید.
+        </p>
+        <p style="color:#f8d775;">
+          در حال حاضر این امکان در انتظار هماهنگی و مذاکره با تیم توسعه سامانه گلستان است 
+          و پس از نهایی شدن توافقات، فعال خواهد شد.
+        </p>
+      </div>
+    `,
+          confirmButtonText: "متوجه شدم",
+          customClass: { popup: "swal2-rtl swal2-glass" },
         });
       } catch (err) {
         console.warn("Failed to show absent toast", err);
@@ -4607,10 +4627,13 @@ async function examEssentialsHandler() {
     );
   }
 
-  // دکمه ثابت قرائت پاسخنامه تستی - همیشه آخرین آیتم
-  allButtons.push(
-    `<button class="btn btn-primary w-100" style="${btnStyle}" onclick="try{ showTestAnswerSheetReaderInfo(); }catch(e){ console.error(e); }">قرائت پاسخنامه تستی غایبین</button>`
-  );
+  // دو گزینه جدید برای پاسخنامه‌های تستی
+  //allButtons.push(
+  //`<button class="btn btn-primary w-100" style="${btnStyle}" onclick="try{ showAnswerSheetGeneratorComingSoon('mcq'); }catch(e){ console.error(e); }">تولید پاسخنامه تستی</button>`
+  //);
+  //allButtons.push(
+  // `<button class="btn btn-primary w-100" style="${btnStyle}" onclick="try{ showAnswerSheetGeneratorComingSoon('descriptive'); }catch(e){ console.error(e); }">تولید پاسخنامه تشریحی</button>`
+  // );
 
   // Distribute buttons evenly in two columns
   const total = allButtons.length;
@@ -4674,36 +4697,38 @@ function startEssentialsPrint(kind) {
 }
 
 /**
- * نمایش اطلاعات قرائت پاسخنامه تستی
- * این قابلیت پس از هماهنگی با سامانه گلستان فعال خواهد شد
+ * نمایش پیام "به زودی" برای تولید پاسخنامه‌های تستی و تشریحی
  */
-function showTestAnswerSheetReaderInfo() {
+function showAnswerSheetGeneratorComingSoon(type) {
+  const titles = {
+    mcq: "تولید پاسخنامه تستی",
+    descriptive: "تولید پاسخنامه تشریحی",
+    locations: "معرفی و ویرایش مکان‌های آزمون",
+  };
+
   Swal.fire({
     icon: "info",
-    title: "قرائت پاسخنامه تستی غایبین",
+    title: titles[type] || "تولید پاسخنامه",
     html: `
       <div style="text-align:justify;direction:rtl;line-height:2.2;font-size:1rem;color:#e0e0e0;">
-        <p style="margin-bottom:1rem;">
-          این قابلیت امکان خواندن پاسخنامه‌های تستی اسکن‌شده را فراهم کرده 
-          و خروجی مناسب برای ثبت در سامانه گلستان تولید می‌نماید.
-        </p>
         <p style="color:#f8d775;">
-          در حال حاضر این امکان در انتظار هماهنگی و مذاکره با تیم توسعه سامانه گلستان است 
-          و پس از نهایی شدن توافقات، فعال خواهد شد.
+          این امکان در نسخه ۲ نسار منتشر در دسترس کاربران قرار خواهد گرفت.
         </p>
       </div>
     `,
     confirmButtonText: "متوجه شدم",
     customClass: { popup: "swal2-rtl swal2-glass" },
   }).then(() => {
-    // بازگشت به منوی ملزومات آزمون
-    setTimeout(() => {
-      try {
-        examEssentialsHandler();
-      } catch (e) {
-        console.error("Failed to reopen essentials menu:", e);
-      }
-    }, 100);
+    // Only reopen the essentials menu for non-location types
+    if (type !== "locations") {
+      setTimeout(() => {
+        try {
+          examEssentialsHandler();
+        } catch (e) {
+          console.error("Failed to reopen essentials menu:", e);
+        }
+      }, 100);
+    }
   });
 }
 
