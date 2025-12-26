@@ -1232,7 +1232,7 @@ function generateSecretaryReport($pdo, $mpdf, $examDate, $examTime, $config)
             $seatLocations = []; // seat_number => ['building' => ..., 'class_name' => ...]
             foreach ($exams as $exam) {
                 $courseName    = $courseMap[$exam['course_code']] ?? $exam['course_code'];
-                $coursesList[] = $courseName;
+                $coursesList[] = toPersianDigits($exam['course_code']) . ' - ' . $courseName;
                 // Parse seat number (get first number)
                 $raw = $exam['seat_number'];
                 if (preg_match('/(\d+)/', $raw, $m)) {
@@ -1269,7 +1269,7 @@ function generateSecretaryReport($pdo, $mpdf, $examDate, $examTime, $config)
             $multiExamHtml .= '<td>' . toPersianDigits($rowIndex) . '</td>';
             $multiExamHtml .= '<td>' . toPersianDigits($sid) . '</td>';
             $multiExamHtml .= '<td style="text-align: right;">' . $studentName . '</td>';
-            $multiExamHtml .= '<td style="text-align: right; font-size: 8pt;">' . implode(' | ', $coursesList) . '</td>';
+            $multiExamHtml .= '<td style="text-align: right; font-size: 8pt;">' . implode('<br>', $coursesList) . '</td>';
             $multiExamHtml .= '<td>' . implode(' - ', $seatsDisplay) . '</td>';
             $multiExamHtml .= '<td style="font-weight: bold; text-align: right;">' . toPersianDigits($primarySeat) . $primaryLocation . '</td>';
             $multiExamHtml .= '</tr>';
@@ -1924,7 +1924,7 @@ function generateReproductionReport($pdo, $mpdf, $examDate, $examTime, $config)
                             $isFirstRow  = false;
                         }
 
-                        $multiHtml .= '<td style="text-align: right;">' . $examDetail['course_name'] . '</td>';
+                        $multiHtml .= '<td style="text-align: right;">' . toPersianDigits($examDetail['course_code']) . ' - ' . $examDetail['course_name'] . '</td>';
                         $multiHtml .= '<td>' . toPersianDigits($examDetail['seat_number']) . '</td>';
                         $multiHtml .= '<td style="text-align: right; font-size: 7pt;">' . $examDetail['location'] . '</td>';
 
@@ -2372,7 +2372,7 @@ function generateLocationReport($pdo, $mpdf, $examDate, $examTime, $config)
                             $isFirstRow  = false;
                         }
 
-                        $multiHtml .= '<td style="text-align: right;">' . $examDetail['course_name'] . '</td>';
+                        $multiHtml .= '<td style="text-align: right;">' . toPersianDigits($examDetail['course_code']) . ' - ' . $examDetail['course_name'] . '</td>';
                         $multiHtml .= '<td>' . toPersianDigits($examDetail['seat_number']) . '</td>';
                         $multiHtml .= '<td style="text-align: right; font-size: 7pt;">' . $examDetail['location'] . '</td>';
 
@@ -2400,6 +2400,8 @@ function generateLocationLabels($pdo, $mpdf, $examDate, $examTime, $config)
     $stmt = $pdo->prepare("
         SELECT 
             es.student_id,
+            s.first_name,
+            s.last_name,
             es.seat_number,
             es.building,
             es.class_name,
@@ -2408,6 +2410,7 @@ function generateLocationLabels($pdo, $mpdf, $examDate, $examTime, $config)
             c.course_name,
             c.course_type
         FROM exam_seats es
+        JOIN students s ON es.student_id = s.student_id
         JOIN courses c ON es.course_code = c.course_code
         WHERE c.exam_date = ? AND c.exam_time = ? AND es.exam_type = 'کتبی'
         ORDER BY es.building, es.class_name, es.course_code
@@ -2417,6 +2420,47 @@ function generateLocationLabels($pdo, $mpdf, $examDate, $examTime, $config)
 
     if (empty($allStudents)) {
         die('No written exam students found for this session.');
+    }
+
+    // Check MultiExamMode config
+    $multiExamModeEnabled = isset($config['MultiExamMode']) && strtoupper($config['MultiExamMode']) === 'YES';
+    $multiExamMap         = [];
+
+    if ($multiExamModeEnabled) {
+        // Identify Multi-Exam Students
+        $studentExams = [];
+        foreach ($allStudents as $s) {
+            $sid = $s['student_id'];
+            if (!isset($studentExams[$sid])) {
+                $studentExams[$sid] = [];
+            }
+            $studentExams[$sid][] = $s;
+        }
+
+        foreach ($studentExams as $sid => $exams) {
+            if (count($exams) > 1) {
+                // Find primary seat
+                $minSeat    = null;
+                $primaryLoc = '';
+                foreach ($exams as $e) {
+                    $seat = 0;
+                    if (preg_match('/(\d+)/', $e['seat_number'], $m)) {
+                        $seat = (int)$m[1];
+                    }
+                    if ($minSeat === null || $seat < $minSeat) {
+                        $minSeat    = $seat;
+                        $b          = trim($e['building'] ?? '') ?: 'بدون ساختمان';
+                        $c          = trim($e['class_name'] ?? '') ?: 'بدون کلاس';
+                        $primaryLoc = $b . '||' . $c;
+                    }
+                }
+                $multiExamMap[$sid] = [
+                    'primary_seat' => $minSeat,
+                    'primary_loc_key' => $primaryLoc,
+                    'exams' => $exams
+                ];
+            }
+        }
     }
 
     // Group students by location (building || class_name), then by course
@@ -2600,8 +2644,8 @@ function generateLocationLabels($pdo, $mpdf, $examDate, $examTime, $config)
             <th style="width: 8%;">از شماره</th>
             <th style="width: 8%;">تا شماره</th>
             <th style="width: 6%;">تعداد</th>
-            <th style="width: 8%;">کد درس</th>
-            <th style="width: 32%;">نام درس</th>
+            <th style="width: 9%;">کد درس</th>
+            <th style="width: 31%;">نام درس</th>
             <th style="width: 13%;">نوع درس</th>
             <th style="width: 20%;">حاضرین / غایبین</th>
         </tr></thead><tbody>';
@@ -2637,7 +2681,125 @@ function generateLocationLabels($pdo, $mpdf, $examDate, $examTime, $config)
             }
         }
 
-        $html .= '</tbody></table>';
+        $html .= '</tbody>';
+
+        if ($multiExamModeEnabled) {
+            // Check for Multi-Exam Students in this location
+            $residentMulti = [];
+            $movedMulti    = [];
+
+            $seenStudents = [];
+            foreach ($loc['students'] as $s) {
+                $sid = $s['student_id'];
+                if (isset($seenStudents[$sid]))
+                    continue;
+                $seenStudents[$sid] = true;
+
+                if (isset($multiExamMap[$sid])) {
+                    $mData = $multiExamMap[$sid];
+                    if ($mData['primary_loc_key'] === $key) {
+                        $residentMulti[] = [
+                            'student' => $s,
+                            'data' => $mData
+                        ];
+                    } else {
+                        $movedMulti[] = [
+                            'student' => $s,
+                            'data' => $mData
+                        ];
+                    }
+                }
+            }
+
+            // Render Resident Multi-Exam Students - add courses that came to this location (green rows in same table)
+            if (!empty($residentMulti)) {
+                foreach ($residentMulti as $item) {
+                    // Find exams that are NOT the primary (i.e., additional exams that came to this seat)
+                    foreach ($item['data']['exams'] as $e) {
+                        $eSeat = 0;
+                        if (preg_match('/(\d+)/', $e['seat_number'], $m)) {
+                            $eSeat = (int)$m[1];
+                        }
+                        // Skip the primary seat exam (already shown above)
+                        if ($eSeat == $item['data']['primary_seat'])
+                            continue;
+
+                        // Determine course type label
+                        $courseTypeLabel = '';
+                        $ct              = $e['course_type'] ?? '';
+                        if (stripos($ct, 'تستی') !== false && stripos($ct, 'تشریحی') !== false) {
+                            $courseTypeLabel = 'تستی و تشریحی';
+                        } elseif (stripos($ct, 'تستی') !== false) {
+                            $courseTypeLabel = 'تستی';
+                        } elseif (stripos($ct, 'تشریحی') !== false) {
+                            $courseTypeLabel = 'تشریحی';
+                        } else {
+                            $courseTypeLabel = $ct ?: '-';
+                        }
+
+                        $html .= '<tr style="background-color: #d4edda;">
+                            <td style="font-weight: bold; font-size: 12pt;">+</td>
+                            <td colspan="3">صندلی ' . toPersianDigits($item['data']['primary_seat']) . '</td>
+                            <td>' . toPersianDigits($e['course_code']) . '</td>
+                            <td class="course-name">' . $e['course_name'] . '</td>
+                            <td>' . $courseTypeLabel . '</td>
+                            <td>...... / ......</td>
+                        </tr>';
+                    }
+                }
+            }
+
+            // Render Moved Multi-Exam Students - seats whose exams moved to primary seat (red rows in same table)
+            if (!empty($movedMulti)) {
+                foreach ($movedMulti as $item) {
+                    $s         = $item['student'];
+                    $pSeat     = $item['data']['primary_seat'];
+                    $pLocParts = explode('||', $item['data']['primary_loc_key']);
+                    $pLocStr   = $pLocParts[0] . ' - ' . $pLocParts[1];
+
+                    // Find the exam in THIS location (secondary seat)
+                    foreach ($item['data']['exams'] as $e) {
+                        $eB      = trim($e['building'] ?? '') ?: 'بدون ساختمان';
+                        $eC      = trim($e['class_name'] ?? '') ?: 'بدون کلاس';
+                        $eLocKey = $eB . '||' . $eC;
+
+                        if ($eLocKey === $key) {
+                            // Determine course type label
+                            $courseTypeLabel = '';
+                            $ct              = $e['course_type'] ?? '';
+                            if (stripos($ct, 'تستی') !== false && stripos($ct, 'تشریحی') !== false) {
+                                $courseTypeLabel = 'تستی و تشریحی';
+                            } elseif (stripos($ct, 'تستی') !== false) {
+                                $courseTypeLabel = 'تستی';
+                            } elseif (stripos($ct, 'تشریحی') !== false) {
+                                $courseTypeLabel = 'تشریحی';
+                            } else {
+                                $courseTypeLabel = $ct ?: '-';
+                            }
+
+                            $html .= '<tr style="background-color: #f8d7da;">
+                                <td style="font-weight: bold; font-size: 12pt;">−</td>
+                                <td colspan="3">صندلی اصلی ' . toPersianDigits($pSeat) . '</td>
+                                <td>' . toPersianDigits($e['course_code']) . '</td>
+                                <td class="course-name">' . $e['course_name'] . '</td>
+                                <td>' . $courseTypeLabel . '</td>
+                                <td>' . $pLocStr . '</td>
+                            </tr>';
+                        }
+                    }
+                }
+
+                // Add footer note row
+                $html .= '<tr style="background-color: #f8d7da;">
+                    <td colspan="8" style="text-align: right; font-size: 8pt; font-weight: bold;">
+                        توجه: سطرهای با علامت (−) سوالاتشان به صندلی اصلی ارسال شده است. لطفاً پاسخنامه‌های این دانشجویان را به رابط یا مسئول جلسه تحویل دهید تا به صندلی اصلی منتقل شود.
+                    </td>
+                </tr>';
+            }
+        }
+
+        $html .= '</table>';
+
         $html .= '</div>';
 
         $mpdf->WriteHTML($html);
