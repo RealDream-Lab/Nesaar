@@ -112,7 +112,7 @@ async function showVersionChangelogModal() {
       const countdownEl = document.createElement("div");
       countdownEl.className = "version-countdown";
       countdownEl.style.cssText =
-        "position:absolute;top:12px;left:12px;font-size:1.2rem;font-weight:bold;color:#94a3b8;font-family:monospace;min-width:2ch;text-align:center;";
+        "position:absolute;top:12px;left:12px;font-size:1.2rem;font-weight:bold;color:#94a3b8;font-family:'Vazir', Tahoma, Arial, sans-serif;min-width:2ch;text-align:center;";
       countdownEl.textContent = remainingSeconds;
       popup?.appendChild(countdownEl);
 
