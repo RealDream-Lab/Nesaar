@@ -1673,6 +1673,13 @@ body.login-active #loginRow {
   box-shadow: 0 8px 24px rgba(59, 130, 246, 0.3);
 }
 
+.session-photo-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: 50%;
+}
+
 .session-card .session-logout-btn:focus-visible {
   outline: 2px solid rgba(123, 213, 255, 0.9);
   outline-offset: 3px;

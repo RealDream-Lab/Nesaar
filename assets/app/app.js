@@ -1877,7 +1877,17 @@ document.addEventListener("DOMContentLoaded", () => {
                         <button type="button" class="session-photo-btn" data-student-id="${escapeHtml(
                           resolvedStudentId
                         )}" title="آپلود/تغییر عکس">
-                            📷
+                            ${(() => {
+                              const saadCode =
+                                appConfig && appConfig.SaadCode
+                                  ? String(appConfig.SaadCode).trim()
+                                  : "";
+                              if (saadCode && resolvedStudentId) {
+                                const photoUrl = `pic/${saadCode}/${resolvedStudentId}.jpg`;
+                                return `<img src="${photoUrl}" alt="عکس" class="session-photo-img" onerror="this.parentElement.innerHTML='📷';">`;
+                              }
+                              return "📷";
+                            })()}
                         </button>
                         <button type="button" class="session-logout-btn">
                             <span class="session-logout-text">خروج</span>

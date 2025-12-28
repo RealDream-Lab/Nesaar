@@ -122,6 +122,8 @@ if ($reportType === 'session') {
     generateProctorNotices($pdo, $mpdf, $config, $filterProctorIds);
 } elseif ($reportType === 'attendance_sheet') {
     generateAttendanceSheet($pdo, $mpdf, $examDate, $examTime, $config);
+} elseif ($reportType === 'session_summary') {
+    generateSessionSummaryReport($pdo, $mpdf, $examDate, $examTime, $config);
 } else {
     die('Unknown report type');
 }
@@ -187,6 +189,37 @@ function generateSessionReport($pdo, $mpdf, $examDate, $examTime, $config)
         return strcmp($typeA, $typeB);
     });
 
+    // Calculate answer sheet counts for summary table
+    $testCount               = 0;
+    $descriptiveCount        = 0;
+    $testDescriptiveCount    = 0;
+    $electronicTestCount     = 0;
+    $electronicTestDescCount = 0;
+
+    foreach ($courses as $course) {
+        $ct           = $course['course_type'] ?? '';
+        $count        = (int)($course['student_count'] ?? 0);
+        $isElectronic = ($course['exam_type'] ?? '') === 'الکترونیکی';
+
+        if (stripos($ct, 'تستی') !== false && stripos($ct, 'تشریحی') !== false) {
+            $testDescriptiveCount += $count;
+            if ($isElectronic) {
+                $electronicTestDescCount += $count;
+            }
+        } elseif (stripos($ct, 'تستی') !== false) {
+            $testCount += $count;
+            if ($isElectronic) {
+                $electronicTestCount += $count;
+            }
+        } elseif (stripos($ct, 'تشریحی') !== false) {
+            $descriptiveCount += $count;
+        }
+    }
+
+    // Total answer sheets (subtract electronic exams from test sheets - they don't have physical answer sheets)
+    $totalTestSheets        = $testCount + $testDescriptiveCount - $electronicTestCount - $electronicTestDescCount;
+    $totalDescriptiveSheets = $descriptiveCount + $testDescriptiveCount;
+
     // Calculate Semester/Year
     $semesterLabel = "نامشخص";
     $partsDate     = explode('/', toEnglishDigits($examDate));
@@ -223,8 +256,22 @@ function generateSessionReport($pdo, $mpdf, $examDate, $examTime, $config)
     $headName   = $config['HeadOfEDU'] ?? '________________';
     $chairName  = $config['Chairman'] ?? '________________';
 
-    // Pagination
-    $perPage    = 15;
+    // Pagination - ensure last page has at least some courses, not just footer
+    $perPage      = 15;
+    $totalCourses = count($courses);
+
+    // Calculate if last page would be empty or have very few courses
+    // Footer (summary + signatures) needs about 8 rows worth of space
+    // We want at least 2 courses on the last page
+    $lastPageItems = $totalCourses % $perPage;
+    if ($lastPageItems === 0 && $totalCourses > $perPage) {
+        // All pages are full, last page would have no courses
+        $perPage = 14; // Reduce to push some courses to last page
+    } elseif ($lastPageItems > 0 && $lastPageItems < 3 && $totalCourses > $perPage) {
+        // Last page has very few items, redistribute
+        $perPage = 14;
+    }
+
     $chunks     = array_chunk($courses, $perPage);
     $totalPages = count($chunks);
 
@@ -240,6 +287,10 @@ function generateSessionReport($pdo, $mpdf, $examDate, $examTime, $config)
         .courses-table th { background-color: #efefef; border: 1px solid #ccc; padding: 5px; font-weight: bold; }
         .courses-table td { border: 1px solid #ccc; padding: 8px 5px; text-align: center; }
         .courses-table td.name { text-align: right; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .courses-table tr.electronic { background-color: #e8f5e9; }
+        .summary-table { width: 100%; border-collapse: collapse; font-size: 9pt; margin-top: 15px; margin-bottom: 15px; }
+        .summary-table th, .summary-table td { border: 1px solid #ccc; padding: 6px; text-align: center; }
+        .summary-table th { background-color: #efefef; font-weight: bold; }
         .footer-signs { position: fixed; bottom: 15mm; left: 0; right: 0; width: 100%; }
         .sign-row { width: 100%; margin-bottom: 20px; }
         .sign-label { text-align: right; float: right; width: 80%; }
@@ -289,11 +340,15 @@ function generateSessionReport($pdo, $mpdf, $examDate, $examTime, $config)
             </thead>
             <tbody>';
 
-        $startRow = ($index * $perPage) + 1;
+        $startRow   = ($index * $perPage) + 1;
+        $isLastPage = ($index === $totalPages - 1);
+
         foreach ($chunk as $i => $course) {
-            $rowNum    = $startRow + $i;
-            $count     = $course['student_count'] ?? 0;
-            $pageHtml .= '<tr>
+            $rowNum        = $startRow + $i;
+            $count         = $course['student_count'] ?? 0;
+            $isElectronic  = ($course['exam_type'] ?? '') === 'الکترونیکی';
+            $rowClass      = $isElectronic ? ' class="electronic"' : '';
+            $pageHtml     .= '<tr' . $rowClass . '>
                 <td>' . toPersianDigits($rowNum) . '</td>
                 <td>' . ($course['course_type'] ?? '') . '</td>
                 <td>' . toPersianDigits($course['course_code']) . '</td>
@@ -303,6 +358,33 @@ function generateSessionReport($pdo, $mpdf, $examDate, $examTime, $config)
             </tr>';
         }
         $pageHtml .= '</tbody></table>';
+
+        // Summary table and signatures only on last page
+        if ($isLastPage) {
+            // Answer sheet summary table
+            $pageHtml .= '
+            <table class="summary-table">
+                <thead>
+                    <tr>
+                        <th style="width: 40%;">عنوان</th>
+                        <th style="width: 20%;">تعداد کل</th>
+                        <th style="width: 40%;">مجموع حاضرین / مجموع غایبین</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>پاسخنامه‌های تستی</td>
+                        <td>' . toPersianDigits($totalTestSheets) . '</td>
+                        <td>___________ / ___________</td>
+                    </tr>
+                    <tr>
+                        <td>پاسخنامه‌های تشریحی</td>
+                        <td>' . toPersianDigits($totalDescriptiveSheets) . '</td>
+                        <td>___________ / ___________</td>
+                    </tr>
+                </tbody>
+            </table>';
+        }
 
         // Footer Signatures
         $pageHtml .= '<div class="footer-signs">
@@ -443,6 +525,10 @@ function generateSessionReportByLocation($pdo, $mpdf, $examDate, $examTime, $con
         .courses-table th { background-color: #efefef; border: 1px solid #ccc; padding: 5px; font-weight: bold; }
         .courses-table td { border: 1px solid #ccc; padding: 8px 5px; text-align: center; }
         .courses-table td.name { text-align: right; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .courses-table tr.electronic { background-color: #e8f5e9; }
+        .summary-table { width: 100%; border-collapse: collapse; font-size: 9pt; margin-top: 15px; margin-bottom: 15px; }
+        .summary-table th, .summary-table td { border: 1px solid #ccc; padding: 6px; text-align: center; }
+        .summary-table th { background-color: #efefef; font-weight: bold; }
         .footer-signs { position: fixed; bottom: 15mm; left: 0; right: 0; width: 100%; }
         .page-footer { position: fixed; bottom: 0; width: 100%; text-align: center; font-size: 9pt; background-color: #444; color: #fff; padding: 5px; }
     </style>
@@ -472,8 +558,48 @@ function generateSessionReportByLocation($pdo, $mpdf, $examDate, $examTime, $con
             return strcmp($typeA, $typeB);
         });
 
-        // Pagination for this location
-        $perPage    = 15;
+        // Calculate answer sheet counts for this location
+        $testCount               = 0;
+        $descriptiveCount        = 0;
+        $testDescriptiveCount    = 0;
+        $electronicTestCount     = 0;
+        $electronicTestDescCount = 0;
+
+        foreach ($courses as $course) {
+            $ct           = $course['course_type'] ?? '';
+            $count        = (int)($course['student_count'] ?? 0);
+            $isElectronic = ($course['exam_type'] ?? '') === 'الکترونیکی';
+
+            if (stripos($ct, 'تستی') !== false && stripos($ct, 'تشریحی') !== false) {
+                $testDescriptiveCount += $count;
+                if ($isElectronic) {
+                    $electronicTestDescCount += $count;
+                }
+            } elseif (stripos($ct, 'تستی') !== false) {
+                $testCount += $count;
+                if ($isElectronic) {
+                    $electronicTestCount += $count;
+                }
+            } elseif (stripos($ct, 'تشریحی') !== false) {
+                $descriptiveCount += $count;
+            }
+        }
+
+        // Total answer sheets for this location (subtract electronic exams - they don't have physical answer sheets)
+        $totalTestSheets        = $testCount + $testDescriptiveCount - $electronicTestCount - $electronicTestDescCount;
+        $totalDescriptiveSheets = $descriptiveCount + $testDescriptiveCount;
+
+        // Pagination for this location - ensure last page has courses
+        $perPage      = 15;
+        $totalCourses = count($courses);
+
+        $lastPageItems = $totalCourses % $perPage;
+        if ($lastPageItems === 0 && $totalCourses > $perPage) {
+            $perPage = 14;
+        } elseif ($lastPageItems > 0 && $lastPageItems < 3 && $totalCourses > $perPage) {
+            $perPage = 14;
+        }
+
         $chunks     = array_chunk($courses, $perPage);
         $totalPages = count($chunks);
 
@@ -518,11 +644,15 @@ function generateSessionReportByLocation($pdo, $mpdf, $examDate, $examTime, $con
                 </thead>
                 <tbody>';
 
-            $startRow = ($pageIndex * $perPage) + 1;
+            $startRow   = ($pageIndex * $perPage) + 1;
+            $isLastPage = ($pageIndex === $totalPages - 1);
+
             foreach ($chunk as $i => $course) {
-                $rowNum    = $startRow + $i;
-                $count     = $course['student_count'] ?? 0;
-                $pageHtml .= '<tr>
+                $rowNum        = $startRow + $i;
+                $count         = $course['student_count'] ?? 0;
+                $isElectronic  = ($course['exam_type'] ?? '') === 'الکترونیکی';
+                $rowClass      = $isElectronic ? ' class="electronic"' : '';
+                $pageHtml     .= '<tr' . $rowClass . '>
                     <td>' . toPersianDigits($rowNum) . '</td>
                     <td>' . ($course['course_type'] ?? '') . '</td>
                     <td>' . toPersianDigits($course['course_code']) . '</td>
@@ -532,6 +662,33 @@ function generateSessionReportByLocation($pdo, $mpdf, $examDate, $examTime, $con
                 </tr>';
             }
             $pageHtml .= '</tbody></table>';
+
+            // Summary table and signatures only on last page of this location
+            if ($isLastPage) {
+                // Answer sheet summary table
+                $pageHtml .= '
+                <table class="summary-table">
+                    <thead>
+                        <tr>
+                            <th style="width: 40%;">عنوان</th>
+                            <th style="width: 20%;">تعداد کل</th>
+                            <th style="width: 40%;">مجموع حاضرین / مجموع غایبین</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>پاسخنامه‌های تستی</td>
+                            <td>' . toPersianDigits($totalTestSheets) . '</td>
+                            <td>___________ / ___________</td>
+                        </tr>
+                        <tr>
+                            <td>پاسخنامه‌های تشریحی</td>
+                            <td>' . toPersianDigits($totalDescriptiveSheets) . '</td>
+                            <td>___________ / ___________</td>
+                        </tr>
+                    </tbody>
+                </table>';
+            }
 
             // Footer Signatures
             $pageHtml .= '<div class="footer-signs">
@@ -2602,13 +2759,11 @@ function generateLocationLabels($pdo, $mpdf, $examDate, $examTime, $config)
         </div>
     ');
 
+    // Maximum rows per page for A5 Landscape (considering header and footer space)
+    $maxRowsPerPage = 10;
+
     $pageIndex = 0;
     foreach ($locationGroups as $key => $loc) {
-        if ($pageIndex > 0) {
-            $mpdf->AddPage('L');
-        }
-        $pageIndex++;
-
         $totalStudents = count($loc['students']);
 
         // Sort courses by minimum seat number
@@ -2628,63 +2783,39 @@ function generateLocationLabels($pdo, $mpdf, $examDate, $examTime, $config)
             return $a['min_seat'] - $b['min_seat'];
         });
 
-        $html  = '<style>' . $css . '</style>';
-        $html .= '<div class="label-page">';
+        // Build all rows for this location (regular courses + multi-exam rows)
+        $allRows = [];
 
-        // Location title (building | class)
-        $html .= '<div class="location-title">' . $loc['building'] . ' — ' . $loc['class_name'] . '</div>';
-
-        // Meta info (date, time, total)
-        $html .= '<div class="meta-info">' . toPersianDigits($examDate) . ' | ساعت ' . toPersianDigits($examTime) . ' | مجموع: ' . toPersianDigits($totalStudents) . ' نفر</div>';
-
-        // Courses table
-        $html .= '<table class="courses-table">';
-        $html .= '<thead><tr>
-            <th style="width: 5%;">#</th>
-            <th style="width: 8%;">از شماره</th>
-            <th style="width: 8%;">تا شماره</th>
-            <th style="width: 6%;">تعداد</th>
-            <th style="width: 9%;">کد درس</th>
-            <th style="width: 31%;">نام درس</th>
-            <th style="width: 13%;">نوع درس</th>
-            <th style="width: 20%;">حاضرین / غایبین</th>
-        </tr></thead><tbody>';
-
-        if (empty($sortedCourses)) {
-            $html .= '<tr><td colspan="8">بدون اطلاعات</td></tr>';
-        } else {
-            $rowIndex = 0;
-            foreach ($sortedCourses as $courseData) {
-                $rowIndex++;
-                // Determine course type label
-                $courseTypeLabel = '';
-                $ct              = $courseData['course_type'] ?? '';
-                if (stripos($ct, 'تستی') !== false && stripos($ct, 'تشریحی') !== false) {
-                    $courseTypeLabel = 'تستی و تشریحی';
-                } elseif (stripos($ct, 'تستی') !== false) {
-                    $courseTypeLabel = 'تستی';
-                } elseif (stripos($ct, 'تشریحی') !== false) {
-                    $courseTypeLabel = 'تشریحی';
-                } else {
-                    $courseTypeLabel = $ct ?: '-';
-                }
-                $html .= '<tr>
-                    <td>' . toPersianDigits($rowIndex) . '</td>
-                    <td>' . toPersianDigits($courseData['min_seat']) . '</td>
-                    <td>' . toPersianDigits($courseData['max_seat']) . '</td>
-                    <td>' . toPersianDigits($courseData['count']) . '</td>
-                    <td>' . toPersianDigits($courseData['course_code']) . '</td>
-                    <td class="course-name">' . $courseData['course_name'] . '</td>
-                    <td>' . $courseTypeLabel . '</td>
-                    <td>...... / ......</td>
-                </tr>';
+        // Add regular course rows
+        $rowIndex = 0;
+        foreach ($sortedCourses as $courseData) {
+            $rowIndex++;
+            $courseTypeLabel = '';
+            $ct              = $courseData['course_type'] ?? '';
+            if (stripos($ct, 'تستی') !== false && stripos($ct, 'تشریحی') !== false) {
+                $courseTypeLabel = 'تستی و تشریحی';
+            } elseif (stripos($ct, 'تستی') !== false) {
+                $courseTypeLabel = 'تستی';
+            } elseif (stripos($ct, 'تشریحی') !== false) {
+                $courseTypeLabel = 'تشریحی';
+            } else {
+                $courseTypeLabel = $ct ?: '-';
             }
+
+            $allRows[] = [
+                'type' => 'regular',
+                'rowNum' => $rowIndex,
+                'min_seat' => $courseData['min_seat'],
+                'max_seat' => $courseData['max_seat'],
+                'count' => $courseData['count'],
+                'course_code' => $courseData['course_code'],
+                'course_name' => $courseData['course_name'],
+                'course_type_label' => $courseTypeLabel
+            ];
         }
 
-        $html .= '</tbody>';
-
+        // Add multi-exam rows if enabled
         if ($multiExamModeEnabled) {
-            // Check for Multi-Exam Students in this location
             $residentMulti = [];
             $movedMulti    = [];
 
@@ -2711,20 +2842,55 @@ function generateLocationLabels($pdo, $mpdf, $examDate, $examTime, $config)
                 }
             }
 
-            // Render Resident Multi-Exam Students - add courses that came to this location (green rows in same table)
-            if (!empty($residentMulti)) {
-                foreach ($residentMulti as $item) {
-                    // Find exams that are NOT the primary (i.e., additional exams that came to this seat)
-                    foreach ($item['data']['exams'] as $e) {
-                        $eSeat = 0;
-                        if (preg_match('/(\d+)/', $e['seat_number'], $m)) {
-                            $eSeat = (int)$m[1];
-                        }
-                        // Skip the primary seat exam (already shown above)
-                        if ($eSeat == $item['data']['primary_seat'])
-                            continue;
+            // Add green rows (courses that came to this location)
+            foreach ($residentMulti as $item) {
+                foreach ($item['data']['exams'] as $e) {
+                    $eSeat = 0;
+                    if (preg_match('/(\d+)/', $e['seat_number'], $m)) {
+                        $eSeat = (int)$m[1];
+                    }
+                    if ($eSeat == $item['data']['primary_seat'])
+                        continue;
 
-                        // Determine course type label
+                    $courseTypeLabel = '';
+                    $ct              = $e['course_type'] ?? '';
+                    if (stripos($ct, 'تستی') !== false && stripos($ct, 'تشریحی') !== false) {
+                        $courseTypeLabel = 'تستی و تشریحی';
+                    } elseif (stripos($ct, 'تستی') !== false) {
+                        $courseTypeLabel = 'تستی';
+                    } elseif (stripos($ct, 'تشریحی') !== false) {
+                        $courseTypeLabel = 'تشریحی';
+                    } else {
+                        $courseTypeLabel = $ct ?: '-';
+                    }
+
+                    $allRows[] = [
+                        'type' => 'green',
+                        'primary_seat' => $item['data']['primary_seat'],
+                        'course_code' => $e['course_code'],
+                        'course_name' => $e['course_name'],
+                        'course_type_label' => $courseTypeLabel
+                    ];
+                }
+            }
+
+            // Add red rows (courses moved to primary seat)
+            foreach ($movedMulti as $item) {
+                $pSeat     = $item['data']['primary_seat'];
+                $pLocParts = explode('||', $item['data']['primary_loc_key']);
+                $pLocStr   = $pLocParts[0] . ' - ' . $pLocParts[1];
+
+                foreach ($item['data']['exams'] as $e) {
+                    $eB      = trim($e['building'] ?? '') ?: 'بدون ساختمان';
+                    $eC      = trim($e['class_name'] ?? '') ?: 'بدون کلاس';
+                    $eLocKey = $eB . '||' . $eC;
+
+                    if ($eLocKey === $key) {
+                        $currentSeat = 0;
+                        if (preg_match('/(\d+)/', $e['seat_number'], $m)) {
+                            $currentSeat = (int)$m[1];
+                        }
+
                         $courseTypeLabel = '';
                         $ct              = $e['course_type'] ?? '';
                         if (stripos($ct, 'تستی') !== false && stripos($ct, 'تشریحی') !== false) {
@@ -2737,72 +2903,121 @@ function generateLocationLabels($pdo, $mpdf, $examDate, $examTime, $config)
                             $courseTypeLabel = $ct ?: '-';
                         }
 
-                        $html .= '<tr style="background-color: #d4edda;">
-                            <td style="font-weight: bold; font-size: 12pt;">+</td>
-                            <td colspan="3">صندلی ' . toPersianDigits($item['data']['primary_seat']) . '</td>
-                            <td>' . toPersianDigits($e['course_code']) . '</td>
-                            <td class="course-name">' . $e['course_name'] . '</td>
-                            <td>' . $courseTypeLabel . '</td>
-                            <td>...... / ......</td>
-                        </tr>';
+                        $allRows[] = [
+                            'type' => 'red',
+                            'current_seat' => $currentSeat,
+                            'primary_seat' => $pSeat,
+                            'primary_loc_str' => $pLocStr,
+                            'course_code' => $e['course_code'],
+                            'course_name' => $e['course_name'],
+                            'course_type_label' => $courseTypeLabel
+                        ];
                     }
                 }
             }
+        }
 
-            // Render Moved Multi-Exam Students - seats whose exams moved to primary seat (red rows in same table)
-            if (!empty($movedMulti)) {
-                foreach ($movedMulti as $item) {
-                    $s         = $item['student'];
-                    $pSeat     = $item['data']['primary_seat'];
-                    $pLocParts = explode('||', $item['data']['primary_loc_key']);
-                    $pLocStr   = $pLocParts[0] . ' - ' . $pLocParts[1];
+        // Check if we have any red rows to add the footer note
+        $hasRedRows = false;
+        foreach ($allRows as $row) {
+            if ($row['type'] === 'red') {
+                $hasRedRows = true;
+                break;
+            }
+        }
 
-                    // Find the exam in THIS location (secondary seat)
-                    foreach ($item['data']['exams'] as $e) {
-                        $eB      = trim($e['building'] ?? '') ?: 'بدون ساختمان';
-                        $eC      = trim($e['class_name'] ?? '') ?: 'بدون کلاس';
-                        $eLocKey = $eB . '||' . $eC;
+        // Paginate rows
+        $totalRows = count($allRows);
+        if ($totalRows === 0) {
+            $allRows[] = ['type' => 'empty'];
+        }
 
-                        if ($eLocKey === $key) {
-                            // Determine course type label
-                            $courseTypeLabel = '';
-                            $ct              = $e['course_type'] ?? '';
-                            if (stripos($ct, 'تستی') !== false && stripos($ct, 'تشریحی') !== false) {
-                                $courseTypeLabel = 'تستی و تشریحی';
-                            } elseif (stripos($ct, 'تستی') !== false) {
-                                $courseTypeLabel = 'تستی';
-                            } elseif (stripos($ct, 'تشریحی') !== false) {
-                                $courseTypeLabel = 'تشریحی';
-                            } else {
-                                $courseTypeLabel = $ct ?: '-';
-                            }
+        $rowChunks          = array_chunk($allRows, $maxRowsPerPage);
+        $totalLocationPages = count($rowChunks);
 
-                            $html .= '<tr style="background-color: #f8d7da;">
-                                <td style="font-weight: bold; font-size: 12pt;">−</td>
-                                <td colspan="3">صندلی اصلی ' . toPersianDigits($pSeat) . '</td>
-                                <td>' . toPersianDigits($e['course_code']) . '</td>
-                                <td class="course-name">' . $e['course_name'] . '</td>
-                                <td>' . $courseTypeLabel . '</td>
-                                <td>' . $pLocStr . '</td>
-                            </tr>';
-                        }
-                    }
+        foreach ($rowChunks as $chunkIndex => $rowChunk) {
+            if ($pageIndex > 0) {
+                $mpdf->AddPage('L');
+            }
+            $pageIndex++;
+
+            $isLastPageOfLocation = ($chunkIndex === $totalLocationPages - 1);
+
+            $html  = '<style>' . $css . '</style>';
+            $html .= '<div class="label-page">';
+
+            // Location title (building | class)
+            $locationTitle = $loc['building'] . ' — ' . $loc['class_name'];
+            if ($totalLocationPages > 1) {
+                $locationTitle .= ' (صفحه ' . toPersianDigits($chunkIndex + 1) . ' از ' . toPersianDigits($totalLocationPages) . ')';
+            }
+            $html .= '<div class="location-title">' . $locationTitle . '</div>';
+
+            // Meta info (date, time, total)
+            $html .= '<div class="meta-info">' . toPersianDigits($examDate) . ' | ساعت ' . toPersianDigits($examTime) . ' | مجموع: ' . toPersianDigits($totalStudents) . ' نفر</div>';
+
+            // Courses table
+            $html .= '<table class="courses-table">';
+            $html .= '<thead><tr>
+                <th style="width: 5%;">#</th>
+                <th style="width: 8%;">از شماره</th>
+                <th style="width: 8%;">تا شماره</th>
+                <th style="width: 6%;">تعداد</th>
+                <th style="width: 9%;">کد درس</th>
+                <th style="width: 31%;">نام درس</th>
+                <th style="width: 13%;">نوع درس</th>
+                <th style="width: 20%;">حاضرین / غایبین</th>
+            </tr></thead><tbody>';
+
+            foreach ($rowChunk as $row) {
+                if ($row['type'] === 'empty') {
+                    $html .= '<tr><td colspan="8">بدون اطلاعات</td></tr>';
+                } elseif ($row['type'] === 'regular') {
+                    $html .= '<tr>
+                        <td>' . toPersianDigits($row['rowNum']) . '</td>
+                        <td>' . toPersianDigits($row['min_seat']) . '</td>
+                        <td>' . toPersianDigits($row['max_seat']) . '</td>
+                        <td>' . toPersianDigits($row['count']) . '</td>
+                        <td>' . toPersianDigits($row['course_code']) . '</td>
+                        <td class="course-name">' . $row['course_name'] . '</td>
+                        <td>' . $row['course_type_label'] . '</td>
+                        <td>...... / ......</td>
+                    </tr>';
+                } elseif ($row['type'] === 'green') {
+                    $html .= '<tr style="background-color: #d4edda;">
+                        <td style="font-weight: bold; font-size: 12pt;">+</td>
+                        <td colspan="3">صندلی ' . toPersianDigits($row['primary_seat']) . '</td>
+                        <td>' . toPersianDigits($row['course_code']) . '</td>
+                        <td class="course-name">' . $row['course_name'] . '</td>
+                        <td>' . $row['course_type_label'] . '</td>
+                        <td>...... / ......</td>
+                    </tr>';
+                } elseif ($row['type'] === 'red') {
+                    $html .= '<tr style="background-color: #f8d7da;">
+                        <td style="font-weight: bold; font-size: 12pt;">−</td>
+                        <td colspan="3">از ' . toPersianDigits($row['current_seat']) . ' به ' . toPersianDigits($row['primary_seat']) . '</td>
+                        <td>' . toPersianDigits($row['course_code']) . '</td>
+                        <td class="course-name">' . $row['course_name'] . '</td>
+                        <td>' . $row['course_type_label'] . '</td>
+                        <td>' . $row['primary_loc_str'] . '</td>
+                    </tr>';
                 }
+            }
 
-                // Add footer note row
+            // Add footer note on last page of location if there are red rows
+            if ($isLastPageOfLocation && $hasRedRows) {
                 $html .= '<tr style="background-color: #f8d7da;">
                     <td colspan="8" style="text-align: right; font-size: 8pt; font-weight: bold;">
                         توجه: سطرهای با علامت (−) سوالاتشان به صندلی اصلی ارسال شده است. لطفاً پاسخنامه‌های این دانشجویان را به رابط یا مسئول جلسه تحویل دهید تا به صندلی اصلی منتقل شود.
                     </td>
                 </tr>';
             }
+
+            $html .= '</tbody></table>';
+            $html .= '</div>';
+
+            $mpdf->WriteHTML($html);
         }
-
-        $html .= '</table>';
-
-        $html .= '</div>';
-
-        $mpdf->WriteHTML($html);
     }
 
     $filename   = 'LocationLabels_' . str_replace(['/', '\\'], '-', $examDate) . '.pdf';
@@ -3590,12 +3805,13 @@ function generateAttendanceSheet($pdo, $mpdf, $examDate, $examTime, $config)
 
     if ($groupByCourseEnabled) {
         // Fetch all students grouped by course first, then by location
+        // Sort by building, class_name first so all courses from same class appear together
         $stmt = $pdo->prepare("
             SELECT DISTINCT c.course_code, c.course_name, es.building, es.class_name
             FROM exam_seats es
             JOIN courses c ON es.course_code = c.course_code
             WHERE c.exam_date = ? AND c.exam_time = ?
-            ORDER BY c.course_code, es.building, es.class_name
+            ORDER BY es.building, es.class_name, c.course_code
         ");
         $stmt->execute([$examDate, $examTime]);
         $courseLocations = $stmt->fetchAll(PDO::FETCH_ASSOC);
@@ -4017,4 +4233,664 @@ function renderAttendanceStudentRow($student, $picBaseDir, $saadCode, $primarySe
     $html .= '</tr>';
 
     return $html;
+}
+
+/**
+ * Generate session summary report with "شروع از" column and footer only on last page
+ * Also includes answer sheet summary table
+ */
+function generateSessionSummaryReport($pdo, $mpdf, $examDate, $examTime, $config)
+{
+    // Check if location-based report mode is enabled
+    $locationMode = isset($config['ReproductionReportMode']) && strtolower($config['ReproductionReportMode']) === 'location';
+
+    if ($locationMode) {
+        generateSessionSummaryReportByLocation($pdo, $mpdf, $examDate, $examTime, $config);
+        return;
+    }
+
+    // Default: course-based report
+    // Fetch Courses with min class (for "شروع از" column)
+    $stmt = $pdo->prepare("
+        SELECT 
+            c.course_code, 
+            c.course_name, 
+            c.exam_date, 
+            c.exam_time, 
+            MAX(es.exam_type) AS exam_type, 
+            c.course_type,
+            COUNT(es.student_id) as student_count,
+            MIN(es.class_name) as min_class
+        FROM courses c
+        LEFT JOIN exam_seats es ON c.course_code = es.course_code
+        WHERE c.exam_date = ? AND c.exam_time = ?
+        GROUP BY c.course_code, c.course_name, c.exam_date, c.exam_time, c.course_type
+        ORDER BY c.course_code
+    ");
+    $stmt->execute([$examDate, $examTime]);
+    $courses = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+    if (empty($courses)) {
+        die('No courses found for this session.');
+    }
+
+    // Sort logic (Electronic first)
+    usort($courses, function ($a, $b) {
+        $typeA = $a['exam_type'] ?? '';
+        $typeB = $b['exam_type'] ?? '';
+        if ($typeA === $typeB) {
+            return (int)$a['course_code'] - (int)$b['course_code'];
+        }
+        if ($typeA === 'الکترونیکی')
+            return -1;
+        if ($typeB === 'الکترونیکی')
+            return 1;
+        return strcmp($typeA, $typeB);
+    });
+
+    // Calculate answer sheet counts
+    $testCount               = 0;
+    $descriptiveCount        = 0;
+    $testDescriptiveCount    = 0;
+    $electronicTestCount     = 0;
+    $electronicTestDescCount = 0;
+
+    foreach ($courses as $course) {
+        $ct           = $course['course_type'] ?? '';
+        $count        = (int)($course['student_count'] ?? 0);
+        $isElectronic = ($course['exam_type'] ?? '') === 'الکترونیکی';
+
+        if (stripos($ct, 'تستی') !== false && stripos($ct, 'تشریحی') !== false) {
+            $testDescriptiveCount += $count;
+            if ($isElectronic) {
+                $electronicTestDescCount += $count;
+            }
+        } elseif (stripos($ct, 'تستی') !== false) {
+            $testCount += $count;
+            if ($isElectronic) {
+                $electronicTestCount += $count;
+            }
+        } elseif (stripos($ct, 'تشریحی') !== false) {
+            $descriptiveCount += $count;
+        }
+    }
+
+    // Total answer sheets (subtract electronic exams from test sheets - they don't have physical answer sheets)
+    $totalTestSheets        = $testCount + $testDescriptiveCount - $electronicTestCount - $electronicTestDescCount;
+    $totalDescriptiveSheets = $descriptiveCount + $testDescriptiveCount;
+
+    // Calculate Semester/Year
+    $semesterLabel = "نامشخص";
+    $partsDate     = explode('/', toEnglishDigits($examDate));
+    $year          = isset($partsDate[0]) ? (int)$partsDate[0] : 0;
+    $month         = isset($partsDate[1]) ? (int)$partsDate[1] : 0;
+
+    if (in_array($month, [9, 10]))
+        $semesterLabel = "نیمسال اول";
+    elseif (in_array($month, [2, 3]))
+        $semesterLabel = "نیمسال دوم";
+    elseif (in_array($month, [5, 6]))
+        $semesterLabel = "دوره تابستان";
+    else {
+        if ($month >= 7 && $month <= 12)
+            $semesterLabel = "نیمسال اول";
+        elseif ($month >= 1 && $month <= 4)
+            $semesterLabel = "نیمسال دوم";
+    }
+
+    if ($semesterLabel === "نیمسال اول") {
+        $acadStart = $year;
+        $acadEnd   = $year + 1;
+    } else {
+        $acadStart = $year - 1;
+        $acadEnd   = $year;
+    }
+    $acadYearStr = toPersianDigits($acadEnd) . '-' . toPersianDigits($acadStart);
+
+    // Config Values
+    $university = $config['University'] ?? 'دانشگاه پیام نور';
+    $university = trim(preg_replace('/^نسار\s*-\s*/u', '', $university));
+    $bossName   = $config['BossNickName'] ?? '________________';
+    $headName   = $config['HeadOfEDU'] ?? '________________';
+    $chairName  = $config['Chairman'] ?? '________________';
+
+    // Pagination - calculate proper rows per page
+    // Footer (summary table + signatures) needs about 8 rows of space
+    // Normal pages can have 22 rows, last page needs fewer to fit footer
+    $perPageNormal = 22;
+    $perPageLast   = 12;  // Reduced to make room for footer without overlap
+    $totalCourses  = count($courses);
+
+    // Calculate chunks with different sizes for last page
+    $chunks    = [];
+    $remaining = $totalCourses;
+    $offset    = 0;
+
+    while ($remaining > 0) {
+        // If remaining courses can fit on one page with footer, this is the last chunk
+        if ($remaining <= $perPageLast) {
+            $chunks[] = array_slice($courses, $offset, $remaining);
+            break;
+        }
+        // If remaining would leave very few on last page, adjust
+        if ($remaining <= $perPageNormal && $remaining > $perPageLast) {
+            // Split into two pages more evenly
+            $splitSize  = (int)ceil($remaining / 2);
+            $chunks[]   = array_slice($courses, $offset, $splitSize);
+            $offset    += $splitSize;
+            $remaining -= $splitSize;
+        } else {
+            // Normal full page
+            $chunks[]   = array_slice($courses, $offset, $perPageNormal);
+            $offset    += $perPageNormal;
+            $remaining -= $perPageNormal;
+        }
+    }
+
+    if (empty($chunks)) {
+        $chunks = [$courses];
+    }
+
+    $totalPages = count($chunks);
+
+    $baseStyle = '
+    <style>
+        body { font-family: vazir; font-size: 10pt; }
+        .header { width: 100%; border-bottom: 1px solid #000; padding-bottom: 10px; margin-bottom: 10px; }
+        .header-table { width: 100%; }
+        .logo { width: 80px; }
+        .title { font-size: 16pt; font-weight: bold; padding-bottom: 20px; margin-bottom: 20px; }
+        .meta { text-align: right; margin-bottom: 10px; font-size: 10pt; }
+        .courses-table { width: 100%; border-collapse: collapse; font-size: 9pt; table-layout: fixed; }
+        .courses-table th { background-color: #efefef; border: 1px solid #ccc; padding: 5px; font-weight: bold; }
+        .courses-table td { border: 1px solid #ccc; padding: 6px 4px; text-align: center; }
+        .courses-table td.name { text-align: right; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .courses-table tr.electronic { background-color: #e8f5e9; }
+        .summary-table { width: 100%; border-collapse: collapse; font-size: 9pt; margin-top: 10px; margin-bottom: 10px; }
+        .summary-table th, .summary-table td { border: 1px solid #ccc; padding: 5px; text-align: center; }
+        .summary-table th { background-color: #efefef; font-weight: bold; }
+        .footer-signs { width: 100%; margin-top: 8px; }
+        .bottom-section { width: 100%; margin-top: 15px; }
+    </style>
+    ';
+
+    foreach ($chunks as $index => $chunk) {
+        if ($index > 0)
+            $mpdf->AddPage();
+
+        $isLastPage = ($index === $totalPages - 1);
+
+        $pageHtml = $baseStyle;
+
+        // Header
+        $pageHtml .= '
+        <div class="header">
+            <table class="header-table">
+                <tr>
+                    <td style="width: 20%; text-align: center; border: none;">
+                        <img src="../assets/app/Pnulogo.png" class="logo"><br>
+                        <span style="font-size: 9pt; font-weight: bold;">مرکز سنجش و آزمون</span>
+                    </td>
+                    <td style="width: 60%; text-align: center; border: none;">
+                        <div class="title">صورتجلسه آزمون</div>
+                        <br>
+                        <div style="font-size: 12pt;">' . $university . '</div>
+                    </td>
+                    <td style="width: 20%; border: none;"></td>
+                </tr>
+            </table>
+        </div>';
+
+        $pageHtml .= '<div class="meta">آزمون دروس زیر در ' . $semesterLabel . ' سالتحصیلی ' . $acadYearStr . ' با حضور امضاء کنندگان زیر در ساعت ' . toPersianDigits($examTime) . ' مورخ ' . toPersianDigits($examDate) . ' شروع گردید. (نمونه سوال ضمیمه می باشد)</div>';
+
+        // Table with "شروع از" column
+        $pageHtml .= '<table class="courses-table">
+            <thead>
+                <tr>
+                    <th style="width: 5%;">#</th>
+                    <th style="width: 12%;">نوع درس</th>
+                    <th style="width: 13%;">شروع از</th>
+                    <th style="width: 10%;">کد درس</th>
+                    <th style="width: 40%;">نام درس</th>
+                    <th style="width: 8%;">تعداد</th>
+                    <th style="width: 12%;">حاضر / غایب</th>
+                </tr>
+            </thead>
+            <tbody>';
+
+        // Calculate startRow based on previous chunks
+        $startRow = 1;
+        for ($ci = 0; $ci < $index; $ci++) {
+            $startRow += count($chunks[$ci]);
+        }
+        foreach ($chunk as $i => $course) {
+            $rowNum        = $startRow + $i;
+            $count         = $course['student_count'] ?? 0;
+            $minClass      = $course['min_class'] ?? '-';
+            $isElectronic  = ($course['exam_type'] ?? '') === 'الکترونیکی';
+            $rowClass      = $isElectronic ? ' class="electronic"' : '';
+            $pageHtml     .= '<tr' . $rowClass . '>
+                <td>' . toPersianDigits($rowNum) . '</td>
+                <td>' . ($course['course_type'] ?? '') . '</td>
+                <td>' . $minClass . '</td>
+                <td>' . toPersianDigits($course['course_code']) . '</td>
+                <td class="name">' . ($course['course_name']) . '</td>
+                <td>' . toPersianDigits($count) . '</td>
+                <td> ___ / ___ </td>
+            </tr>';
+        }
+        $pageHtml .= '</tbody></table>';
+
+        // Footer only on last page
+        if ($isLastPage) {
+            // Answer sheet summary table and signatures - fixed to bottom
+            $pageHtml .= '<div class="bottom-section">
+            <table class="summary-table">
+                <thead>
+                    <tr>
+                        <th style="width: 40%;">عنوان</th>
+                        <th style="width: 20%;">تعداد کل</th>
+                        <th style="width: 40%;">مجموع حاضرین / مجموع غایبین</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>پاسخنامه‌های تستی</td>
+                        <td>' . toPersianDigits($totalTestSheets) . '</td>
+                        <td>___________ / ___________</td>
+                    </tr>
+                    <tr>
+                        <td>پاسخنامه‌های تشریحی</td>
+                        <td>' . toPersianDigits($totalDescriptiveSheets) . '</td>
+                        <td>___________ / ___________</td>
+                    </tr>
+                </tbody>
+            </table>';
+
+            // Footer Signatures
+            $pageHtml .= '<div class="footer-signs">
+                <div style="border-bottom: 1px solid #000; padding-bottom: 5px; margin-bottom: 8px; text-align: center; font-size: 9pt;">پس از انقضای مهلت آزمون، پاسخنامه‌ها جمع‌آوری و بعد از شمارش و کنترل با لیست حضور و غیاب و تایید، تحویل ستاد امتحانات گردید.</div>
+                
+                <table style="width: 100%; border: none; font-size: 9pt;">
+                    <tr>
+                        <td style="border: none; text-align: right; padding: 6px;">نام و نام خانوادگی رئیس مرکز/ معاون مرکز/ سرپرست واحد: ' . $bossName . '</td>
+                        <td style="border: none; text-align: left; padding: 6px;">امضاء</td>
+                    </tr>
+                    <tr>
+                        <td style="border: none; text-align: right; padding: 6px;">نام و نام خانوادگی رئیس اداره آموزش: ' . $headName . '</td>
+                        <td style="border: none; text-align: left; padding: 6px;">امضاء</td>
+                    </tr>
+                    <tr>
+                        <td style="border: none; text-align: right; padding: 6px;">نام و نام خانوادگی مسئول جلسه: ' . $chairName . '</td>
+                        <td style="border: none; text-align: left; padding: 6px;">امضاء</td>
+                    </tr>
+                    <tr>
+                        <td style="border: none; text-align: right; padding: 6px;">نام و نام خانوادگی ناظران/مراقبان جلسه:</td>
+                        <td style="border: none; text-align: left; padding: 6px;">امضاء</td>
+                    </tr>
+                    <tr>
+                        <td style="border: none; text-align: right; padding: 6px;">نام و نام خانوادگی بازرس اعزامی از استان/سازمان مرکزی:</td>
+                        <td style="border: none; text-align: left; padding: 6px;">امضاء</td>
+                    </tr>
+                </table>
+            </div>
+            </div>';
+        }
+
+        // Page Number
+        $mpdf->SetHTMLFooter('<div style="background-color: #444; color: #fff; text-align: center; padding: 5px; font-size: 9pt;">صفحه ' . toPersianDigits($index + 1) . ' از ' . toPersianDigits($totalPages) . '</div>');
+
+        $mpdf->WriteHTML($pageHtml);
+    }
+}
+
+/**
+ * Generate session summary report grouped by building (location mode)
+ */
+function generateSessionSummaryReportByLocation($pdo, $mpdf, $examDate, $examTime, $config)
+{
+    // Fetch all exam seats with course info for this session
+    $stmt = $pdo->prepare("
+        SELECT 
+            es.course_code,
+            es.building,
+            es.class_name,
+            es.student_id,
+            c.course_name,
+            c.course_type,
+            es.exam_type
+        FROM exam_seats es
+        JOIN courses c ON es.course_code = c.course_code
+        WHERE c.exam_date = ? AND c.exam_time = ?
+    ");
+    $stmt->execute([$examDate, $examTime]);
+    $allSeats = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+    if (empty($allSeats)) {
+        die('No exam seats found for this session.');
+    }
+
+    // Group by building
+    $buildings = [];
+    foreach ($allSeats as $seat) {
+        $building = trim($seat['building'] ?? '') ?: 'بدون ساختمان';
+
+        if (!isset($buildings[$building])) {
+            $buildings[$building] = [
+                'building' => $building,
+                'courses' => [],
+                'seats' => []
+            ];
+        }
+
+        $courseCode = $seat['course_code'];
+        if (!isset($buildings[$building]['courses'][$courseCode])) {
+            $buildings[$building]['courses'][$courseCode] = [
+                'course_code' => $courseCode,
+                'course_name' => $seat['course_name'],
+                'course_type' => $seat['course_type'],
+                'exam_type' => $seat['exam_type'],
+                'student_count' => 0,
+                'classes' => []
+            ];
+        }
+        $buildings[$building]['courses'][$courseCode]['student_count']++;
+
+        // Track classes for this course
+        $className = $seat['class_name'] ?? '';
+        if ($className && !in_array($className, $buildings[$building]['courses'][$courseCode]['classes'])) {
+            $buildings[$building]['courses'][$courseCode]['classes'][] = $className;
+        }
+    }
+
+    // Sort buildings by name
+    uksort($buildings, 'strcmp');
+
+    // Calculate Semester/Year
+    $semesterLabel = "نامشخص";
+    $partsDate     = explode('/', toEnglishDigits($examDate));
+    $year          = isset($partsDate[0]) ? (int)$partsDate[0] : 0;
+    $month         = isset($partsDate[1]) ? (int)$partsDate[1] : 0;
+
+    if (in_array($month, [9, 10]))
+        $semesterLabel = "نیمسال اول";
+    elseif (in_array($month, [2, 3]))
+        $semesterLabel = "نیمسال دوم";
+    elseif (in_array($month, [5, 6]))
+        $semesterLabel = "دوره تابستان";
+    else {
+        if ($month >= 7 && $month <= 12)
+            $semesterLabel = "نیمسال اول";
+        elseif ($month >= 1 && $month <= 4)
+            $semesterLabel = "نیمسال دوم";
+    }
+
+    if ($semesterLabel === "نیمسال اول") {
+        $acadStart = $year;
+        $acadEnd   = $year + 1;
+    } else {
+        $acadStart = $year - 1;
+        $acadEnd   = $year;
+    }
+    $acadYearStr = toPersianDigits($acadEnd) . '-' . toPersianDigits($acadStart);
+
+    // Config Values
+    $university = $config['University'] ?? 'دانشگاه پیام نور';
+    $university = trim(preg_replace('/^نسار\s*-\s*/u', '', $university));
+    $bossName   = $config['BossNickName'] ?? '________________';
+    $headName   = $config['HeadOfEDU'] ?? '________________';
+    $chairName  = $config['Chairman'] ?? '________________';
+
+    $baseStyle = '
+    <style>
+        body { font-family: vazir; font-size: 10pt; }
+        .header { width: 100%; border-bottom: 1px solid #000; padding-bottom: 10px; margin-bottom: 10px; }
+        .header-table { width: 100%; }
+        .logo { width: 80px; }
+        .title { font-size: 16pt; font-weight: bold; margin-bottom: 8px; }
+        .university-name { font-size: 12pt; margin-bottom: 6px; }
+        .location-name { font-size: 10pt; font-weight: bold; color: #333; margin-top: 4px; }
+        .meta { text-align: right; margin-bottom: 10px; font-size: 10pt; }
+        .courses-table { width: 100%; border-collapse: collapse; font-size: 9pt; table-layout: fixed; }
+        .courses-table th { background-color: #efefef; border: 1px solid #ccc; padding: 5px; font-weight: bold; }
+        .courses-table td { border: 1px solid #ccc; padding: 6px 4px; text-align: center; }
+        .courses-table td.name { text-align: right; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .courses-table tr.electronic { background-color: #e8f5e9; }
+        .summary-table { width: 100%; border-collapse: collapse; font-size: 9pt; margin-top: 10px; margin-bottom: 10px; }
+        .summary-table th, .summary-table td { border: 1px solid #ccc; padding: 5px; text-align: center; }
+        .summary-table th { background-color: #efefef; font-weight: bold; }
+        .footer-signs { width: 100%; margin-top: 8px; }
+        .bottom-section { width: 100%; margin-top: 15px; }
+    </style>
+    ';
+
+    $locationIndex  = 0;
+    $totalLocations = count($buildings);
+
+    foreach ($buildings as $buildingName => $buildingData) {
+        $locationIndex++;
+        $locationLabel = $buildingData['building'];
+
+        // Convert courses array to indexed array and sort
+        $courses = array_values($buildingData['courses']);
+
+        // Sort logic (Electronic first)
+        usort($courses, function ($a, $b) {
+            $typeA = $a['exam_type'] ?? '';
+            $typeB = $b['exam_type'] ?? '';
+            if ($typeA === $typeB) {
+                return (int)$a['course_code'] - (int)$b['course_code'];
+            }
+            if ($typeA === 'الکترونیکی')
+                return -1;
+            if ($typeB === 'الکترونیکی')
+                return 1;
+            return strcmp($typeA, $typeB);
+        });
+
+        // Find min class for each course
+        foreach ($courses as &$course) {
+            sort($course['classes']);
+            $course['min_class'] = !empty($course['classes']) ? $course['classes'][0] : '-';
+        }
+        unset($course);
+
+        // Calculate answer sheet counts for this building
+        $testCount               = 0;
+        $descriptiveCount        = 0;
+        $testDescriptiveCount    = 0;
+        $electronicTestCount     = 0;
+        $electronicTestDescCount = 0;
+
+        foreach ($courses as $course) {
+            $ct           = $course['course_type'] ?? '';
+            $count        = (int)($course['student_count'] ?? 0);
+            $isElectronic = ($course['exam_type'] ?? '') === 'الکترونیکی';
+
+            if (stripos($ct, 'تستی') !== false && stripos($ct, 'تشریحی') !== false) {
+                $testDescriptiveCount += $count;
+                if ($isElectronic) {
+                    $electronicTestDescCount += $count;
+                }
+            } elseif (stripos($ct, 'تستی') !== false) {
+                $testCount += $count;
+                if ($isElectronic) {
+                    $electronicTestCount += $count;
+                }
+            } elseif (stripos($ct, 'تشریحی') !== false) {
+                $descriptiveCount += $count;
+            }
+        }
+
+        // Total answer sheets (subtract electronic exams - they don't have physical answer sheets)
+        $totalTestSheets        = $testCount + $testDescriptiveCount - $electronicTestCount - $electronicTestDescCount;
+        $totalDescriptiveSheets = $descriptiveCount + $testDescriptiveCount;
+
+        // Pagination for this location - calculate proper rows per page
+        // Footer (summary table + signatures) needs about 8 rows of space
+        $perPageNormal = 22;
+        $perPageLast   = 12;  // Reduced to make room for footer
+        $totalCourses  = count($courses);
+
+        // Calculate chunks with different sizes for last page
+        $chunks    = [];
+        $remaining = $totalCourses;
+        $offset    = 0;
+
+        while ($remaining > 0) {
+            if ($remaining <= $perPageLast) {
+                $chunks[] = array_slice($courses, $offset, $remaining);
+                break;
+            }
+            if ($remaining <= $perPageNormal && $remaining > $perPageLast) {
+                $splitSize  = (int)ceil($remaining / 2);
+                $chunks[]   = array_slice($courses, $offset, $splitSize);
+                $offset    += $splitSize;
+                $remaining -= $splitSize;
+            } else {
+                $chunks[]   = array_slice($courses, $offset, $perPageNormal);
+                $offset    += $perPageNormal;
+                $remaining -= $perPageNormal;
+            }
+        }
+
+        if (empty($chunks)) {
+            $chunks = [$courses];
+        }
+
+        $totalPages = count($chunks);
+
+        foreach ($chunks as $pageIndex => $chunk) {
+            if ($locationIndex > 1 || $pageIndex > 0)
+                $mpdf->AddPage();
+
+            $isLastPage = ($pageIndex === $totalPages - 1);
+
+            $pageHtml = $baseStyle;
+
+            // Header with location name
+            $pageHtml .= '
+            <div class="header">
+                <table class="header-table">
+                    <tr>
+                        <td style="width: 20%; text-align: center; border: none;">
+                            <img src="../assets/app/Pnulogo.png" class="logo"><br>
+                            <span style="font-size: 9pt; font-weight: bold;">مرکز سنجش و آزمون</span>
+                        </td>
+                        <td style="width: 60%; text-align: center; border: none;">
+                            <div class="title">صورتجلسه آزمون</div>
+                            <div class="university-name">' . $university . '</div>
+                            <div class="location-name">' . $locationLabel . '</div>
+                        </td>
+                        <td style="width: 20%; border: none;"></td>
+                    </tr>
+                </table>
+            </div>';
+
+            $pageHtml .= '<div class="meta">آزمون دروس زیر در ' . $semesterLabel . ' سالتحصیلی ' . $acadYearStr . ' با حضور امضاء کنندگان زیر در ساعت ' . toPersianDigits($examTime) . ' مورخ ' . toPersianDigits($examDate) . ' شروع گردید. (نمونه سوال ضمیمه می باشد)</div>';
+
+            // Table with "شروع از" column
+            $pageHtml .= '<table class="courses-table">
+                <thead>
+                    <tr>
+                        <th style="width: 5%;">#</th>
+                        <th style="width: 12%;">نوع درس</th>
+                        <th style="width: 13%;">شروع از</th>
+                        <th style="width: 10%;">کد درس</th>
+                        <th style="width: 40%;">نام درس</th>
+                        <th style="width: 8%;">تعداد</th>
+                        <th style="width: 12%;">حاضر / غایب</th>
+                    </tr>
+                </thead>
+                <tbody>';
+
+            // Calculate startRow based on previous chunks within this building
+            $startRow = 1;
+            for ($ci = 0; $ci < $pageIndex; $ci++) {
+                $startRow += count($chunks[$ci]);
+            }
+            foreach ($chunk as $i => $course) {
+                $rowNum        = $startRow + $i;
+                $count         = $course['student_count'] ?? 0;
+                $minClass      = $course['min_class'] ?? '-';
+                $isElectronic  = ($course['exam_type'] ?? '') === 'الکترونیکی';
+                $rowClass      = $isElectronic ? ' class="electronic"' : '';
+                $pageHtml     .= '<tr' . $rowClass . '>
+                    <td>' . toPersianDigits($rowNum) . '</td>
+                    <td>' . ($course['course_type'] ?? '') . '</td>
+                    <td>' . $minClass . '</td>
+                    <td>' . toPersianDigits($course['course_code']) . '</td>
+                    <td class="name">' . ($course['course_name']) . '</td>
+                    <td>' . toPersianDigits($count) . '</td>
+                    <td> ___ / ___ </td>
+                </tr>';
+            }
+            $pageHtml .= '</tbody></table>';
+
+            // Footer only on last page of this building
+            if ($isLastPage) {
+                // Answer sheet summary table and signatures - fixed to bottom
+                $pageHtml .= '<div class="bottom-section">
+                <table class="summary-table">
+                    <thead>
+                        <tr>
+                            <th style="width: 40%;">عنوان</th>
+                            <th style="width: 20%;">تعداد کل</th>
+                            <th style="width: 40%;">مجموع حاضرین / مجموع غایبین</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>پاسخنامه‌های تستی</td>
+                            <td>' . toPersianDigits($totalTestSheets) . '</td>
+                            <td>___________ / ___________</td>
+                        </tr>
+                        <tr>
+                            <td>پاسخنامه‌های تشریحی</td>
+                            <td>' . toPersianDigits($totalDescriptiveSheets) . '</td>
+                            <td>___________ / ___________</td>
+                        </tr>
+                    </tbody>
+                </table>';
+
+                // Footer Signatures
+                $pageHtml .= '<div class="footer-signs">
+                    <div style="border-bottom: 1px solid #000; padding-bottom: 5px; margin-bottom: 8px; text-align: center; font-size: 9pt;">پس از انقضای مهلت آزمون، پاسخنامه‌ها جمع‌آوری و بعد از شمارش و کنترل با لیست حضور و غیاب و تایید، تحویل ستاد امتحانات گردید.</div>
+                    
+                    <table style="width: 100%; border: none; font-size: 9pt;">
+                        <tr>
+                            <td style="border: none; text-align: right; padding: 6px;">نام و نام خانوادگی رئیس مرکز/ معاون مرکز/ سرپرست واحد: ' . $bossName . '</td>
+                            <td style="border: none; text-align: left; padding: 6px;">امضاء</td>
+                        </tr>
+                        <tr>
+                            <td style="border: none; text-align: right; padding: 6px;">نام و نام خانوادگی رئیس اداره آموزش: ' . $headName . '</td>
+                            <td style="border: none; text-align: left; padding: 6px;">امضاء</td>
+                        </tr>
+                        <tr>
+                            <td style="border: none; text-align: right; padding: 6px;">نام و نام خانوادگی مسئول جلسه: ' . $chairName . '</td>
+                            <td style="border: none; text-align: left; padding: 6px;">امضاء</td>
+                        </tr>
+                        <tr>
+                            <td style="border: none; text-align: right; padding: 6px;">نام و نام خانوادگی ناظران/مراقبان جلسه:</td>
+                            <td style="border: none; text-align: left; padding: 6px;">امضاء</td>
+                        </tr>
+                        <tr>
+                            <td style="border: none; text-align: right; padding: 6px;">نام و نام خانوادگی بازرس اعزامی از استان/سازمان مرکزی:</td>
+                            <td style="border: none; text-align: left; padding: 6px;">امضاء</td>
+                        </tr>
+                    </table>
+                </div>
+                </div>';
+            }
+
+            // Page Number with location info
+            $footerText = 'مکان ' . toPersianDigits($locationIndex) . ' از ' . toPersianDigits($totalLocations);
+            if ($totalPages > 1) {
+                $footerText .= ' | صفحه ' . toPersianDigits($pageIndex + 1) . ' از ' . toPersianDigits($totalPages);
+            }
+            $mpdf->SetHTMLFooter('<div style="background-color: #444; color: #fff; text-align: center; padding: 5px; font-size: 9pt;">' . $footerText . '</div>');
+
+            $mpdf->WriteHTML($pageHtml);
+        }
+    }
 }

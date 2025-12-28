@@ -527,6 +527,64 @@ async function printSessionReport() {
   }
 }
 
+async function printSessionSummaryReport() {
+  try {
+    let context =
+      window._overrideExamContext && window._overrideExamContext.active
+        ? window._overrideExamContext
+        : window._lastExamContext;
+    let examDate = context?.exam_date;
+    let examTime = context?.exam_time;
+
+    if (!examDate || !examTime) {
+      const nextExamDateTimeText =
+        document.getElementById("nextExamDateTime")?.textContent || "";
+      if (
+        !nextExamDateTimeText ||
+        nextExamDateTimeText === "بارگذاری..." ||
+        nextExamDateTimeText === "آزمونی یافت نشد"
+      ) {
+        return Swal.fire({
+          icon: "info",
+          title: "اطلاعات",
+          text: "آزمون بعدی یافت نشد",
+          confirmButtonText: "باشه",
+          customClass: {
+            popup: "swal2-rtl swal2-glass",
+            confirmButton: "btn btn-primary",
+          },
+        });
+      }
+      const parts = nextExamDateTimeText.split("|").map((s) => s.trim());
+      if (parts.length !== 2) {
+        return Swal.fire({
+          icon: "error",
+          title: "خطا",
+          text: "فرمت تاریخ و ساعت نامعتبر است",
+          confirmButtonText: "باشه",
+          customClass: {
+            popup: "swal2-rtl swal2-glass",
+            confirmButton: "btn btn-primary",
+          },
+        });
+      }
+      examTime = toEnglishDigits(parts[0]);
+      examDate = toEnglishDigits(parts[1]).replace(/-/g, "/");
+      setLastExamContext(examDate, examTime);
+    } else {
+      examTime = toEnglishDigits(examTime);
+      examDate = toEnglishDigits(examDate).replace(/-/g, "/");
+      setLastExamContext(examDate, examTime);
+    }
+    const url = `../API/generatePDF.php?report_type=session_summary&exam_date=${encodeURIComponent(
+      examDate
+    )}&exam_time=${encodeURIComponent(examTime)}&_t=${new Date().getTime()}`;
+    showReportModal(url, "صورتجلسه تفضیلی آزمون");
+  } catch (e) {
+    console.error(e);
+  }
+}
+
 function toPersianDigits(num) {
   return String(num).replace(/[0-9]/g, (d) => "۰۱۲۳۴۵۶۷۸۹"[d]);
 }
@@ -1006,7 +1064,7 @@ try {
                                 </div>
                             </div>
                             <div style="display:flex;align-items:center;gap:6px;">
-                                <span style="font-size:0.8rem;color:inherit;" data-tooltip="نحوه گروه‌بندی گزارش ملزومات اتاق تکثیر">ملزومات تکثیر:</span>
+                                <span style="font-size:0.8rem;color:inherit;" data-tooltip="نحوه گروه‌بندی گزارش ملزومات اتاق تکثیر">ملزومات تکثیر و صورتجلسه آزمون:</span>
                                 <div style="display:flex;gap:8px;">
                                     <div style="display:flex;align-items:center;gap:3px;">
                                         <input type="radio" id="er_reprCourse" name="er_reproductionMode" value="course" ${
@@ -4598,6 +4656,9 @@ async function examEssentialsHandler() {
     `<button class="btn btn-primary w-100" style="${btnStyle}" onclick="try{ startEssentialsPrint('session'); }catch(e){ console.error(e); }">صورتجلسه آزمون</button>`
   );
   allButtons.push(
+    `<button class="btn btn-primary w-100" style="${btnStyle}" onclick="try{ startEssentialsPrint('sessionSummary'); }catch(e){ console.error(e); }">صورتجلسه تفضیلی آزمون</button>`
+  );
+  allButtons.push(
     `<button class="btn btn-primary w-100" style="${btnStyle}" onclick="try{ startEssentialsPrint('attendance'); }catch(e){ console.error(e); }">فهرست حضور و غیاب</button>`
   );
   allButtons.push(
@@ -4690,6 +4751,7 @@ function startEssentialsPrint(kind) {
       else if (kind === "locationLabels") printLocationLabels();
       else if (kind === "testLabels") printEssentialsTestLabels();
       else if (kind === "test") printEssentialsTest();
+      else if (kind === "sessionSummary") printSessionSummaryReport();
     } catch (e) {
       console.error("startEssentialsPrint error:", e);
     }
