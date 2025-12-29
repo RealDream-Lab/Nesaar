@@ -1488,7 +1488,7 @@ try {
   if (absentBtn) {
     absentBtn.addEventListener("click", () => {
       try {
-        Swal.fire({
+        SwalFlip({
           icon: "info",
           title: "قرائت پاسخنامه تستی غایبین",
           html: `
@@ -4725,7 +4725,7 @@ async function examEssentialsHandler() {
 
   buttonsHtml += `</div>`;
 
-  Swal.fire({
+  SwalFlip({
     icon: "info",
     title: "ملزومات جلسه آزمون",
     html: buttonsHtml,

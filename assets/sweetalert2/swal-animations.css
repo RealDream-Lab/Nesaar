@@ -1,0 +1,68 @@
+.swal2-flip-in {
+  animation: swal2-flip-in 0.62s cubic-bezier(0.2, 0.9, 0.2, 1) both;
+  transform-origin: center;
+}
+@keyframes swal2-flip-in {
+  0% {
+    transform: rotateX(90deg) translateY(20%);
+    opacity: 0;
+  }
+  60% {
+    transform: rotateX(-10deg) translateY(-6%);
+    opacity: 1;
+  }
+  100% {
+    transform: rotateX(0) translateY(0);
+    opacity: 1;
+  }
+}
+.swal2-flip-out {
+  animation: swal2-flip-out 0.45s cubic-bezier(0.4, 0, 0.2, 1) both;
+  transform-origin: center;
+}
+@keyframes swal2-flip-out {
+  0% {
+    transform: rotateX(0);
+    opacity: 1;
+  }
+  100% {
+    transform: rotateX(90deg) translateY(10%);
+    opacity: 0;
+  }
+}
+
+.swal2-slide-in {
+  animation: swal2-slide-in 0.45s cubic-bezier(0.2, 0.9, 0.2, 1) both;
+}
+@keyframes swal2-slide-in {
+  0% {
+    transform: translateY(20px) scale(0.98);
+    opacity: 0;
+  }
+  60% {
+    transform: translateY(-6px) scale(1.01);
+    opacity: 1;
+  }
+  100% {
+    transform: translateY(0) scale(1);
+    opacity: 1;
+  }
+}
+.swal2-slide-out {
+  animation: swal2-slide-out 0.32s cubic-bezier(0.4, 0, 0.2, 1) both;
+}
+@keyframes swal2-slide-out {
+  0% {
+    transform: translateY(0);
+    opacity: 1;
+  }
+  100% {
+    transform: translateY(18px) scale(0.98);
+    opacity: 0;
+  }
+}
+
+/* Ensure animations play on the popup element */
+.swal2-popup {
+  backface-visibility: hidden;
+}
