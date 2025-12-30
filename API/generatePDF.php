@@ -366,7 +366,7 @@ function generateSessionReport($pdo, $mpdf, $examDate, $examTime, $config)
             <table class="summary-table">
                 <thead>
                     <tr>
-                        <th style="width: 40%;">عنوان</th>
+                        <th style="width: 40%;"></th>
                         <th style="width: 20%;">تعداد کل</th>
                         <th style="width: 40%;">مجموع حاضرین / مجموع غایبین</th>
                     </tr>
@@ -670,7 +670,7 @@ function generateSessionReportByLocation($pdo, $mpdf, $examDate, $examTime, $con
                 <table class="summary-table">
                     <thead>
                         <tr>
-                            <th style="width: 40%;">عنوان</th>
+                            <th style="width: 40%;"></th>
                             <th style="width: 20%;">تعداد کل</th>
                             <th style="width: 40%;">مجموع حاضرین / مجموع غایبین</th>
                         </tr>
@@ -4488,7 +4488,7 @@ function generateSessionSummaryReport($pdo, $mpdf, $examDate, $examTime, $config
             <table class="summary-table">
                 <thead>
                     <tr>
-                        <th style="width: 40%;">عنوان</th>
+                        <th style="width: 40%;"></th>
                         <th style="width: 20%;">تعداد کل</th>
                         <th style="width: 40%;">مجموع حاضرین / مجموع غایبین</th>
                     </tr>
@@ -4834,7 +4834,7 @@ function generateSessionSummaryReportByLocation($pdo, $mpdf, $examDate, $examTim
                 <table class="summary-table">
                     <thead>
                         <tr>
-                            <th style="width: 40%;">عنوان</th>
+                            <th style="width: 40%;"></th>
                             <th style="width: 20%;">تعداد کل</th>
                             <th style="width: 40%;">مجموع حاضرین / مجموع غایبین</th>
                         </tr>

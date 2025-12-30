@@ -121,10 +121,9 @@ document.addEventListener("DOMContentLoaded", () => {
       if (event.data?.type === "show-notification-alert") {
         const { title, body } = event.data;
 
-        // Build HTML content
-        const htmlContent = `<div style="text-align:justify;direction:rtl;line-height:1.8;color:#fff;">${
-          body || ""
-        }</div>`;
+        // Build safe HTML content: escape then convert newlines to <br>
+        const safeBody = escapeHtml(body || "").replace(/\n/g, "<br>");
+        const htmlContent = `<div style="text-align:justify;direction:rtl;line-height:1.8;color:#fff;">${safeBody}</div>`;
 
         Swal.fire({
           title: title || "اعلان نسار",

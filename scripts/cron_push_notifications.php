@@ -166,8 +166,11 @@ try {
             $subStmt->execute([$student['student_id']]);
             $subscriptions = $subStmt->fetchAll();
 
-            if (empty($subscriptions))
+
+            if (empty($subscriptions)) {
+                pushLog("No active push subscription for student_id={$student['student_id']} ({$student['first_name']} {$student['last_name']})");
                 continue;
+            }
 
             // Create unique key for duplicate prevention: student + course + date + time
             $notificationKey = "student_{$student['student_id']}_{$exam['course_code']}_{$exam['exam_date']}_{$exam['exam_time']}";
@@ -196,6 +199,7 @@ try {
             ], JSON_UNESCAPED_UNICODE);
 
             foreach ($subscriptions as $sub) {
+                pushLog("Queueing push for student_id={$student['student_id']} endpoint=" . substr($sub['endpoint'], 0, 40));
                 $allNotifications[] = ['sub' => $sub, 'payload' => $payload];
             }
         }
@@ -216,20 +220,58 @@ try {
         $proctors = $stmt->fetchAll();
 
         foreach ($proctors as $proctor) {
+            // Map internal proctor id to national_id stored in push_subscriptions.user_id
+            $pNational = null;
+            try {
+                $pStmt = $pdo->prepare("SELECT national_id FROM Proctors WHERE id = ? LIMIT 1");
+                $pStmt->execute([$proctor['proctor_id']]);
+                $pRow = $pStmt->fetch();
+                if ($pRow && !empty($pRow['national_id'])) {
+                    $pNational = $pRow['national_id'];
+                } else {
+                    pushLog("No national_id found for proctor_id={$proctor['proctor_id']} ({$proctor['proctor_name']})");
+                    continue;
+                }
+            } catch (Throwable $e) {
+                pushLog("Error fetching proctor national_id for proctor_id={$proctor['proctor_id']}: " . $e->getMessage());
+                continue;
+            }
             $subStmt = $pdo->prepare("
-                SELECT * FROM push_subscriptions 
-                WHERE user_type = 'proctor' 
-                AND user_id = ? 
-                AND is_active = 1
-            ");
-            $subStmt->execute([$proctor['proctor_id']]);
+                    SELECT * FROM push_subscriptions 
+                    WHERE user_type = 'proctor' 
+                    AND user_id = ? 
+                    AND is_active = 1
+                ");
+            $subStmt->execute([$pNational]);
             $subscriptions = $subStmt->fetchAll();
 
             if (empty($subscriptions))
                 continue;
+            try {
+                $pStmt = $pdo->prepare("SELECT national_id FROM Proctors WHERE id = ? LIMIT 1");
+                $pStmt->execute([$proctor['proctor_id']]);
+                $pRow = $pStmt->fetch();
+                if ($pRow && !empty($pRow['national_id'])) {
+                    $pNational = $pRow['national_id'];
+                } else {
+                    pushLog("No national_id found for proctor_id={$proctor['proctor_id']} ({$proctor['proctor_name']})");
+                    continue;
+                }
+            } catch (Throwable $e) {
+                pushLog("Error fetching proctor national_id for proctor_id={$proctor['proctor_id']}: " . $e->getMessage());
+                continue;
+            }
 
-            // Create unique key for duplicate prevention: proctor + date + time
-            $notificationKey = "proctor_{$proctor['proctor_id']}_{$exam['exam_date']}_{$exam['exam_time']}";
+            $subStmt = $pdo->prepare("
+                    SELECT * FROM push_subscriptions 
+                    WHERE user_type = 'proctor' 
+                    AND user_id = ? 
+                    AND is_active = 1
+                ");
+            $subStmt->execute([$pNational]);
+            $subscriptions = $subStmt->fetchAll();
+
+            $notificationKey = "proctor_{$pNational}_{$exam['exam_date']}_{$exam['exam_time']}";
 
             // Check if already sent
             if (!$checkAndMarkSent($notificationKey)) {
@@ -239,7 +281,7 @@ try {
 
             $payload = json_encode([
                 'title' => '⏰ یادآوری مراقبت - ' . toPersianDigits($exam['exam_time']),
-                'body' => toPersianDigits("شیفت مراقبت شما ساعت {$exam['exam_time']} شروع می‌شود\nمکان: {$proctor['building']} - {$proctor['class_name']}"),
+                'body' => toPersianDigits("شیفت مراقبت شما ساعت {$exam['exam_time']} شروع می‌شود.\n\n  برای مکان استقرار خود با مسئول جلسه هماهنگ کنید."),
                 'icon' => '/pwa-icons/icon-192.png',
                 'badge' => '/pwa-icons/icon-192.png',
                 'tag' => 'proctor-' . $exam['exam_date'] . '-' . $exam['exam_time'],
