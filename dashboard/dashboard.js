@@ -4793,7 +4793,7 @@ function showAnswerSheetGeneratorComingSoon(type) {
     html: `
       <div style="text-align:justify;direction:rtl;line-height:2.2;font-size:1rem;color:#e0e0e0;">
         <p style="color:#f8d775;">
-          این امکان در نسخه ۲ نسار منتشر در دسترس کاربران قرار خواهد گرفت.
+          این امکان در نسخه ۲ نسار منتشر و در دسترس کاربران قرار خواهد گرفت.
         </p>
       </div>
     `,
