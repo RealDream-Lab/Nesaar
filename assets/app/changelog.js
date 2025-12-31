@@ -87,7 +87,7 @@ async function showVersionChangelogModal() {
 
   // Build changelog HTML
   let changesHtml = `
-    <div style="text-align:right;direction:rtl;line-height:1.9;">
+    <div style="text-align:right;direction:rtl;line-height:1.9;font-size:0.9rem;">
       <div style="font-size:1.1em;margin-bottom:12px;color:#60a5fa;">
         نسخه <strong>${currentVersion}</strong> ${
     changelog.date ? `- ${changelog.date}` : ""
@@ -110,7 +110,7 @@ async function showVersionChangelogModal() {
   await Swal.fire({
     title: "✨ به‌روزرسانی جدید",
     html: changesHtml,
-    width: 550,
+    width: 650,
     showCloseButton: false,
     showConfirmButton: false,
     allowOutsideClick: false,
