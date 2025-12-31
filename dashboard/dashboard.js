@@ -3531,31 +3531,50 @@ async function showStudentReport() {
       const student = data.student;
       const exams = data.exams;
 
+      // Prepare photo URL using configured SaadCode (if available)
+      const saadCode =
+        window.appConfig && window.appConfig.SaadCode
+          ? String(window.appConfig.SaadCode).trim()
+          : "";
+      const photoUrl =
+        saadCode && student.student_id
+          ? `/pic/${saadCode}/${student.student_id}.jpg`
+          : "/assets/app/nophoto.png";
+
       let html = `
-				<div class="mb-4">
-					<h5 class="text-primary mb-3">مشخصات دانشجو</h5>
-					<div class="table-responsive">
-						<table class="table table-bordered">
-							<tr>
-								<th style="width: 30%;">شماره دانشجویی</th>
-								<td>${student.student_id}</td>
-							</tr>
-							<tr>
-								<th>نام و نام خانوادگی</th>
-								<td>${student.first_name} ${student.last_name}</td>
-							</tr>
-							<tr>
-								<th>کد ملی</th>
-								<td>${student.national_id}</td>
-							</tr>
-							<tr>
-								<th>مقطع تحصیلی</th>
-								<td>${student.degree}</td>
-							</tr>
-						</table>
-					</div>
-				</div>
-			`;
+            <div class="mb-4">
+              <h5 class="text-primary mb-3">مشخصات دانشجو</h5>
+              <div class="table-responsive">
+                <table class="table table-bordered">
+                  <tr>
+                    <td style="width:140px; vertical-align:middle; text-align:center;">
+                      <img src="${photoUrl}" alt="عکس دانشجو" style="max-width:120px; max-height:160px; object-fit:cover; border-radius:6px;" onerror="this.onerror=null;this.src='/assets/app/nophoto.png';">
+                    </td>
+                    <td>
+                      <table class="table table-borderless mb-0" style="margin-bottom:0;">
+                        <tr>
+                          <th style="width: 30%;">شماره دانشجویی</th>
+                          <td>${student.student_id}</td>
+                        </tr>
+                        <tr>
+                          <th>نام و نام خانوادگی</th>
+                          <td>${student.first_name} ${student.last_name}</td>
+                        </tr>
+                        <tr>
+                          <th>کد ملی</th>
+                          <td>${student.national_id}</td>
+                        </tr>
+                        <tr>
+                          <th>مقطع تحصیلی</th>
+                          <td>${student.degree}</td>
+                        </tr>
+                      </table>
+                    </td>
+                  </tr>
+                </table>
+              </div>
+            </div>
+          `;
 
       if (exams && exams.length > 0) {
         html += `
