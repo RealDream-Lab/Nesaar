@@ -86,7 +86,7 @@ $bodyClass = $wavesAnimationDisabled ? 'class="no-waves-animation"' : '';
                             aria-label="ثبت غیبت"
                             style="background:transparent;border:none;margin-inline-end:8px;padding:0;">
                             <img src="/assets/app/absent.png" alt="ثبت غیبت"
-                                style="width:40px;height:40px;object-fit:contain;display:block;padding-bottom: 1px;padding-top: 2px;">
+                                style="width:40px;height:40px;object-fit:contain;display:block;padding-bottom: 2px;padding-top: 3px;">
                         </button>
                         <button id="proctorProfilesBtn" class="btn btn-icon p-0" type="button"
                             data-tooltip="ماژول مراقبین و عوامل اجرائی" aria-label="ماژول مراقبین و عوامل اجرائی"
