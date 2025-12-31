@@ -54,6 +54,7 @@ $bodyClass = $wavesAnimationDisabled ? 'class="no-waves-animation"' : '';
     <link rel="stylesheet" href="../assets/bootstrap/bootstrap.min.css">
     <link rel="stylesheet" href="../assets/fonts/vazir/vazir.css">
     <link rel="stylesheet" href="../assets/sweetalert2/sweetalert2.min.css">
+    <link rel="stylesheet" href="../assets/sweetalert2/swal-animations.css">
     <link rel="stylesheet" href="../assets/app/style.css">
 </head>
 
@@ -197,6 +198,7 @@ $bodyClass = $wavesAnimationDisabled ? 'class="no-waves-animation"' : '';
     <script src="../assets/sweetalert2/sweetalert2.min.js"></script>
     <script src="../assets/app/version.js"></script>
     <script src="../assets/vendor/chartjs/chart.min.js"></script>
+    <script src="../assets/app/swal-helper.js"></script>
     <script src="dashboard.js"></script>
     <script src="../dashboard/dashboard.js"></script>
 </body>
