@@ -266,10 +266,10 @@ function generateSessionReport($pdo, $mpdf, $examDate, $examTime, $config)
     $lastPageItems = $totalCourses % $perPage;
     if ($lastPageItems === 0 && $totalCourses > $perPage) {
         // All pages are full, last page would have no courses
-        $perPage = 14; // Reduce to push some courses to last page
+        $perPage = 15; // Reduce to push some courses to last page
     } elseif ($lastPageItems > 0 && $lastPageItems < 3 && $totalCourses > $perPage) {
         // Last page has very few items, redistribute
-        $perPage = 14;
+        $perPage = 15;
     }
 
     $chunks     = array_chunk($courses, $perPage);
@@ -291,8 +291,8 @@ function generateSessionReport($pdo, $mpdf, $examDate, $examTime, $config)
         .summary-table { width: 100%; border-collapse: collapse; font-size: 9pt; margin-top: 15px; margin-bottom: 15px; }
         .summary-table th, .summary-table td { border: 1px solid #ccc; padding: 6px; text-align: center; }
         .summary-table th { background-color: #efefef; font-weight: bold; }
-        .footer-signs { position: fixed; bottom: 15mm; left: 0; right: 0; width: 100%; }
-        .sign-row { width: 100%; margin-bottom: 20px; }
+        .footer-signs { position: fixed; bottom: 8mm; left: 0; right: 0; width: 100%; }
+        .sign-row { width: 100%; margin-bottom: 8px; }
         .sign-label { text-align: right; float: right; width: 80%; }
         .sign-place { text-align: left; float: left; width: 20%; }
         .page-footer { position: fixed; bottom: 0; width: 100%; text-align: center; font-size: 9pt; background-color: #444; color: #fff; padding: 5px; }
@@ -388,28 +388,28 @@ function generateSessionReport($pdo, $mpdf, $examDate, $examTime, $config)
 
         // Footer Signatures
         $pageHtml .= '<div class="footer-signs">
-            <div style="border-bottom: 1px solid #000; padding-bottom: 5px; margin-bottom: 15px; text-align: center; font-size: 9pt;">پس از انقضای مهلت آزمون، پاسخنامه‌ها جمع‌آوری و بعد از شمارش و کنترل با لیست حضور و غیاب و تایید، تحویل ستاد امتحانات گردید.</div>
+            <div style="border-bottom: 1px solid #000; padding-bottom: 5px; margin-bottom: 8px; text-align: center; font-size: 9pt;">پس از انقضای مهلت آزمون، پاسخنامه‌ها جمع‌آوری و بعد از شمارش و کنترل با لیست حضور و غیاب و تایید، تحویل ستاد امتحانات گردید.</div>
             
             <table style="width: 100%; border: none;">
                 <tr>
-                    <td style="border: none; text-align: right; padding: 10px;">نام و نام خانوادگی رئیس مرکز/ معاون مرکز/ سرپرست واحد: ' . $bossName . '</td>
-                    <td style="border: none; text-align: left; padding: 10px;">امضاء</td>
+                    <td style="border: none; text-align: right; padding: 6px;">نام و نام خانوادگی رئیس مرکز/ معاون مرکز/ سرپرست واحد: ' . $bossName . '</td>
+                    <td style="border: none; text-align: left; padding: 6px;">امضاء</td>
                 </tr>
                 <tr>
-                    <td style="border: none; text-align: right; padding: 10px;">نام و نام خانوادگی رئیس اداره آموزش: ' . $headName . '</td>
-                    <td style="border: none; text-align: left; padding: 10px;">امضاء</td>
+                    <td style="border: none; text-align: right; padding: 6px;">نام و نام خانوادگی رئیس اداره آموزش: ' . $headName . '</td>
+                    <td style="border: none; text-align: left; padding: 6px;">امضاء</td>
                 </tr>
                 <tr>
-                    <td style="border: none; text-align: right; padding: 10px;">نام و نام خانوادگی مسئول جلسه: ' . $chairName . '</td>
-                    <td style="border: none; text-align: left; padding: 10px;">امضاء</td>
+                    <td style="border: none; text-align: right; padding: 6px;">نام و نام خانوادگی مسئول جلسه: ' . $chairName . '</td>
+                    <td style="border: none; text-align: left; padding: 6px;">امضاء</td>
                 </tr>
                 <tr>
-                    <td style="border: none; text-align: right; padding: 10px;">نام و نام خانوادگی ناظران/مراقبان جلسه:</td>
-                    <td style="border: none; text-align: left; padding: 10px;">امضاء</td>
+                    <td style="border: none; text-align: right; padding: 6px;">نام و نام خانوادگی ناظران/مراقبان جلسه:</td>
+                    <td style="border: none; text-align: left; padding: 6px;">امضاء</td>
                 </tr>
                 <tr>
-                    <td style="border: none; text-align: right; padding: 10px;">نام و نام خانوادگی بازرس اعزامی از استان/سازمان مرکزی:</td>
-                    <td style="border: none; text-align: left; padding: 10px;">امضاء</td>
+                    <td style="border: none; text-align: right; padding: 6px;">نام و نام خانوادگی بازرس اعزامی از استان/سازمان مرکزی:</td>
+                    <td style="border: none; text-align: left; padding: 6px;">امضاء</td>
                 </tr>
             </table>
         </div>';
@@ -529,7 +529,7 @@ function generateSessionReportByLocation($pdo, $mpdf, $examDate, $examTime, $con
         .summary-table { width: 100%; border-collapse: collapse; font-size: 9pt; margin-top: 15px; margin-bottom: 15px; }
         .summary-table th, .summary-table td { border: 1px solid #ccc; padding: 6px; text-align: center; }
         .summary-table th { background-color: #efefef; font-weight: bold; }
-        .footer-signs { position: fixed; bottom: 15mm; left: 0; right: 0; width: 100%; }
+        .footer-signs { position: fixed; bottom: 8mm; left: 0; right: 0; width: 100%; }
         .page-footer { position: fixed; bottom: 0; width: 100%; text-align: center; font-size: 9pt; background-color: #444; color: #fff; padding: 5px; }
     </style>
     ';
@@ -595,9 +595,9 @@ function generateSessionReportByLocation($pdo, $mpdf, $examDate, $examTime, $con
 
         $lastPageItems = $totalCourses % $perPage;
         if ($lastPageItems === 0 && $totalCourses > $perPage) {
-            $perPage = 14;
+            $perPage = 15;
         } elseif ($lastPageItems > 0 && $lastPageItems < 3 && $totalCourses > $perPage) {
-            $perPage = 14;
+            $perPage = 15;
         }
 
         $chunks     = array_chunk($courses, $perPage);
@@ -692,28 +692,28 @@ function generateSessionReportByLocation($pdo, $mpdf, $examDate, $examTime, $con
 
             // Footer Signatures
             $pageHtml .= '<div class="footer-signs">
-                <div style="border-bottom: 1px solid #000; padding-bottom: 5px; margin-bottom: 15px; text-align: center; font-size: 9pt;">پس از انقضای مهلت آزمون، پاسخنامه‌ها جمع‌آوری و بعد از شمارش و کنترل با لیست حضور و غیاب و تایید، تحویل ستاد امتحانات گردید.</div>
+                <div style="border-bottom: 1px solid #000; padding-bottom: 5px; margin-bottom: 8px; text-align: center; font-size: 9pt;">پس از انقضای مهلت آزمون، پاسخنامه‌ها جمع‌آوری و بعد از شمارش و کنترل با لیست حضور و غیاب و تایید، تحویل ستاد امتحانات گردید.</div>
                 
                 <table style="width: 100%; border: none;">
                     <tr>
-                        <td style="border: none; text-align: right; padding: 10px;">نام و نام خانوادگی رئیس مرکز/ معاون مرکز/ سرپرست واحد: ' . $bossName . '</td>
-                        <td style="border: none; text-align: left; padding: 10px;">امضاء</td>
+                        <td style="border: none; text-align: right; padding: 6px;">نام و نام خانوادگی رئیس مرکز/ معاون مرکز/ سرپرست واحد: ' . $bossName . '</td>
+                        <td style="border: none; text-align: left; padding: 6px;">امضاء</td>
                     </tr>
                     <tr>
-                        <td style="border: none; text-align: right; padding: 10px;">نام و نام خانوادگی رئیس اداره آموزش: ' . $headName . '</td>
-                        <td style="border: none; text-align: left; padding: 10px;">امضاء</td>
+                        <td style="border: none; text-align: right; padding: 6px;">نام و نام خانوادگی رئیس اداره آموزش: ' . $headName . '</td>
+                        <td style="border: none; text-align: left; padding: 6px;">امضاء</td>
                     </tr>
                     <tr>
-                        <td style="border: none; text-align: right; padding: 10px;">نام و نام خانوادگی مسئول جلسه: ' . $chairName . '</td>
-                        <td style="border: none; text-align: left; padding: 10px;">امضاء</td>
+                        <td style="border: none; text-align: right; padding: 6px;">نام و نام خانوادگی مسئول جلسه: ' . $chairName . '</td>
+                        <td style="border: none; text-align: left; padding: 6px;">امضاء</td>
                     </tr>
                     <tr>
-                        <td style="border: none; text-align: right; padding: 10px;">نام و نام خانوادگی ناظران/مراقبان جلسه:</td>
-                        <td style="border: none; text-align: left; padding: 10px;">امضاء</td>
+                        <td style="border: none; text-align: right; padding: 6px;">نام و نام خانوادگی ناظران/مراقبان جلسه:</td>
+                        <td style="border: none; text-align: left; padding: 6px;">امضاء</td>
                     </tr>
                     <tr>
-                        <td style="border: none; text-align: right; padding: 10px;">نام و نام خانوادگی بازرس اعزامی از استان/سازمان مرکزی:</td>
-                        <td style="border: none; text-align: left; padding: 10px;">امضاء</td>
+                        <td style="border: none; text-align: right; padding: 6px;">نام و نام خانوادگی بازرس اعزامی از استان/سازمان مرکزی:</td>
+                        <td style="border: none; text-align: left; padding: 6px;">امضاء</td>
                     </tr>
                 </table>
             </div>';
