@@ -5362,6 +5362,18 @@ function renderInsightCards(stats) {
       showEmptyBtn: true,
       persianDigits: true,
     });
+    // Prevent manual typing/pasting into the schedule field
+    try {
+      scheduleDateTimeInput.setAttribute('readonly', 'readonly');
+      scheduleDateTimeInput.addEventListener('keydown', (e) => e.preventDefault());
+      scheduleDateTimeInput.addEventListener('paste', (e) => e.preventDefault());
+      scheduleDateTimeInput.addEventListener('input', (e) => {
+        // Force revert to last value if any script tries to change it
+        e.target.value = e.target.value; // no-op but prevents uncontrolled mutations
+      });
+    } catch (err) {
+      // ignore
+    }
   }
 
   // Toggle scheduled container

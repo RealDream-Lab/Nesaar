@@ -55,19 +55,20 @@ $scheduledAt = str_replace(
     $scheduledAt
 );
 
-// Parse date and time
-if (preg_match('/^(\d{4})\/(\d{1,2})\/(\d{1,2})\s+(\d{1,2}):(\d{2})$/', $scheduledAt, $matches)) {
+// Parse date and time. Accept formats with or without seconds: YYYY/MM/DD HH:MM or YYYY/MM/DD HH:MM:SS
+if (preg_match('/^(\d{4})\/(\d{1,2})\/(\d{1,2})\s+(\d{1,2}):(\d{2})(?::(\d{2}))?$/', $scheduledAt, $matches)) {
     $jYear  = (int)$matches[1];
     $jMonth = (int)$matches[2];
     $jDay   = (int)$matches[3];
     $hour   = (int)$matches[4];
     $minute = (int)$matches[5];
+    $second = isset($matches[6]) && $matches[6] !== '' ? (int)$matches[6] : 0;
 
     // Convert Jalali to Gregorian
     list($gYear, $gMonth, $gDay) = jalali_to_gregorian($jYear, $jMonth, $jDay);
 
-    // Create datetime string
-    $scheduledDatetime = sprintf('%04d-%02d-%02d %02d:%02d:00', $gYear, $gMonth, $gDay, $hour, $minute);
+    // Create datetime string including seconds
+    $scheduledDatetime = sprintf('%04d-%02d-%02d %02d:%02d:%02d', $gYear, $gMonth, $gDay, $hour, $minute, $second);
 
     // Validate the datetime is in the future
     $scheduledTimestamp = strtotime($scheduledDatetime);

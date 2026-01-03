@@ -23,6 +23,18 @@ jdp-container * {
   font-family: "Vazir", sans-serif !important;
 }
 
+/* Improve contrast for time selects inside JalaliDatePicker */
+.jdp-time-container .jdp-time select {
+  background: #ffffff !important;
+  color: #0b1220 !important;
+  padding: 8px 10px !important;
+  border-radius: 6px !important;
+  border: 1px solid rgba(15, 23, 42, 0.08) !important;
+}
+.jdp-time-container .jdp-time select option {
+  color: #0b1220 !important;
+}
+
 html,
 body {
   overscroll-behavior-y: contain;
