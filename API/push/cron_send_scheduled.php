@@ -32,15 +32,15 @@ try {
     require_once __DIR__ . '/../../vendor/autoload.php';
 
     // Get VAPID keys from config
-    $configStmt = $pdo->prepare("SELECT ConfigName, ConfigValue FROM Config WHERE ConfigName IN ('VapidPublicKey', 'VapidPrivateKey')");
+    $configStmt = $pdo->prepare("SELECT ConfigName, ConfigValue FROM Config WHERE ConfigName IN ('VAPID_PUBLIC_KEY', 'VAPID_PRIVATE_KEY')");
     $configStmt->execute();
     $config = [];
     while ($row = $configStmt->fetch(PDO::FETCH_ASSOC)) {
         $config[$row['ConfigName']] = $row['ConfigValue'];
     }
 
-    $vapidPublicKey  = $config['VapidPublicKey'] ?? '';
-    $vapidPrivateKey = $config['VapidPrivateKey'] ?? '';
+    $vapidPublicKey  = $config['VAPID_PUBLIC_KEY'] ?? '';
+    $vapidPrivateKey = $config['VAPID_PRIVATE_KEY'] ?? '';
 
     if (empty($vapidPublicKey) || empty($vapidPrivateKey)) {
         error_log('[Push Cron] VAPID keys not configured');
@@ -74,7 +74,7 @@ try {
             $subStmt = $pdo->prepare("
                 SELECT * FROM push_subscriptions 
                 WHERE user_type = ? 
-                AND expires_at > NOW()
+                AND is_active = 1
             ");
             $subStmt->execute([$userType]);
             $subscriptions = $subStmt->fetchAll(PDO::FETCH_ASSOC);
@@ -84,7 +84,7 @@ try {
                     $subscription = \Minishlink\WebPush\Subscription::create([
                         'endpoint' => $sub['endpoint'],
                         'publicKey' => $sub['p256dh'],
-                        'authToken' => $sub['auth_key'],
+                        'authToken' => $sub['auth'],
                     ]);
 
                     $payload = json_encode([
