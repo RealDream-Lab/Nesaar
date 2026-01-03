@@ -66,13 +66,39 @@ try {
     ];
 
     if ($fullList) {
-        // Sort by last_name, then first_name
+        // Sort by student_id with priority for older students (89, 88, etc. first)
         usort($studentsWithoutPhoto, function ($a, $b) {
-            $cmp = strcmp($a['last_name'], $b['last_name']);
-            if ($cmp === 0) {
-                return strcmp($a['first_name'], $b['first_name']);
+            $idA = $a['student_id'];
+            $idB = $b['student_id'];
+
+            // Extract first two digits (year code)
+            $yearA = intval(substr($idA, 0, 2));
+            $yearB = intval(substr($idB, 0, 2));
+
+            // Years starting with 8 or 9 are older (1389, 1388, etc.)
+            // Years starting with 0, 1, 2, 3, 4 are newer (1400, 1401, etc.)
+            $isOldA = $yearA >= 80;
+            $isOldB = $yearB >= 80;
+
+            // Old students (80-99) come before new students (00-79)
+            if ($isOldA && !$isOldB)
+                return -1;
+            if (!$isOldA && $isOldB)
+                return 1;
+
+            // If both are old or both are new, sort by year descending then by full ID
+            if ($isOldA && $isOldB) {
+                // Both old: lower number = older (89 < 98 means 1389 < 1398)
+                if ($yearA !== $yearB)
+                    return $yearA - $yearB;
+            } else {
+                // Both new: lower number = older (00 < 04 means 1400 < 1404)
+                if ($yearA !== $yearB)
+                    return $yearA - $yearB;
             }
-            return $cmp;
+
+            // Same year, sort by full student_id
+            return strcmp($idA, $idB);
         });
         $response['students'] = $studentsWithoutPhoto;
     }

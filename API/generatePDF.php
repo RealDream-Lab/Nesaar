@@ -4903,6 +4903,13 @@ function generateExamBookletReport($pdo, $mpdf, $config)
     // Sort dates
     ksort($groupedByDate);
 
+    // Set page footer with dark background
+    $mpdf->SetHTMLFooter('
+        <div style="text-align:center;background:#1a365d;color:#fff;padding:8px 0;font-size:9pt;margin:0 -15mm;width:calc(100% + 30mm);">
+            صفحه {PAGENO} از {nbpg}
+        </div>
+    ');
+
     $css = '
     <style>
         body { font-family: vazir; direction: rtl; font-size: 9pt; }
@@ -5151,7 +5158,6 @@ function generateSeatLabelsReport($pdo, $mpdf, $config)
                     $html    .= '<td>
                         <div class="label-header">' . htmlspecialchars($universityName) . '</div>
                         <div class="seat-number">' . toPersianDigits($seatNum) . '</div>
-                        <div class="label-footer">شماره صندلی</div>
                     </td>';
                     $labelIndex++;
                 } else {

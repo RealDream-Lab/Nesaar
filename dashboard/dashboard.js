@@ -6085,10 +6085,13 @@ if (navigator.serviceWorker) {
         return;
       }
 
+      // Store data for Excel download
+      window._studentsWithoutPhotoData = data.students;
+
       // Build table
       let tableHtml = `
         <style>.no-photo-list::-webkit-scrollbar{display:none;}</style>
-        <div class="no-photo-list" style="max-height:400px;overflow-y:auto;scrollbar-width:none;-ms-overflow-style:none;direction:rtl;">
+        <div class="no-photo-list" style="max-height:350px;overflow-y:auto;scrollbar-width:none;-ms-overflow-style:none;direction:rtl;">
           <table style="width:100%;border-collapse:collapse;font-size:14px;">
             <thead style="position:sticky;top:0;background:#1e293b;">
               <tr>
@@ -6118,6 +6121,15 @@ if (navigator.serviceWorker) {
 
       tableHtml += `</tbody></table></div>`;
 
+      // Add download button
+      tableHtml += `
+        <div style="margin-top:15px;text-align:center;">
+          <button id="downloadWithoutPhotoExcel" class="btn btn-success" style="padding:8px 20px;">
+            <span style="margin-left:5px;">📥</span> دانلود فایل اکسل
+          </button>
+        </div>
+      `;
+
       Swal.fire({
         title: `دانشجویان بدون عکس (${toPersianDigits(data.withoutPhoto)} نفر)`,
         html: tableHtml,
@@ -6127,6 +6139,18 @@ if (navigator.serviceWorker) {
         customClass: {
           popup: "swal2-rtl swal2-glass",
           confirmButton: "btn btn-primary",
+        },
+        didOpen: () => {
+          // Add click handler for download button
+          const downloadBtn = document.getElementById(
+            "downloadWithoutPhotoExcel"
+          );
+          if (downloadBtn) {
+            downloadBtn.addEventListener(
+              "click",
+              downloadStudentsWithoutPhotoExcel
+            );
+          }
         },
         didClose: () => {
           // Reopen the upload modal so user can continue uploading
@@ -6146,6 +6170,56 @@ if (navigator.serviceWorker) {
         },
       });
     }
+  }
+
+  // Download students without photo as Excel
+  function downloadStudentsWithoutPhotoExcel() {
+    const students = window._studentsWithoutPhotoData;
+    if (!students || students.length === 0) {
+      Swal.fire({
+        icon: "warning",
+        title: "داده‌ای وجود ندارد",
+        text: "لیست دانشجویان بدون عکس خالی است.",
+        confirmButtonText: "باشه",
+        customClass: {
+          popup: "swal2-rtl swal2-glass",
+          confirmButton: "btn btn-primary",
+        },
+      });
+      return;
+    }
+
+    // Create CSV content (Excel compatible with UTF-8 BOM)
+    let csvContent = "\uFEFF"; // UTF-8 BOM for Excel
+    csvContent += "ردیف,شماره دانشجویی,نام,نام خانوادگی\n";
+
+    students.forEach((student, index) => {
+      csvContent += `${index + 1},${student.student_id},${student.first_name},${
+        student.last_name
+      }\n`;
+    });
+
+    // Create and download file
+    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+    const link = document.createElement("a");
+    const url = URL.createObjectURL(blob);
+    link.setAttribute("href", url);
+    link.setAttribute("download", "students_without_photo.csv");
+    link.style.visibility = "hidden";
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+
+    // Show success toast
+    Swal.fire({
+      toast: true,
+      position: "top-end",
+      icon: "success",
+      title: "فایل دانلود شد",
+      showConfirmButton: false,
+      timer: 2000,
+    });
   }
 })();
 

@@ -9,11 +9,11 @@ if (session_status() === PHP_SESSION_NONE) {
 }
 
 require_once __DIR__ . '/../includes/license_guard.php';
-require_once __DIR__ . '/../includes/admin_session.php';
+require_once __DIR__ . '/../includes/privileged_session.php';
 require_once __DIR__ . '/db_init.php';
 
 license_guard_enforce_api();
-admin_session_require($pdo);
+privileged_session_require($pdo);
 
 try {
     // Check if ProctorsBackup table exists

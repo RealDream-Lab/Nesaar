@@ -60,6 +60,13 @@
     return d.innerHTML;
   }
 
+  // Helper to get correct dashboard URL based on user actor type
+  function getDashboardUrl() {
+    return window._observersUserActor === "recipient"
+      ? "/Recipient"
+      : "/dashboard";
+  }
+
   function getCsrfToken() {
     const metaTag = document.querySelector('meta[name="csrf-token"]');
     return metaTag ? metaTag.getAttribute("content") : null;
@@ -67,6 +74,8 @@
 
   function csrfFetch(input, init = {}) {
     const opts = { ...(init || {}) };
+    // Ensure cookies are sent with requests
+    opts.credentials = opts.credentials || "same-origin";
     const method = (opts.method || "GET").toUpperCase();
     if (["POST", "PUT", "DELETE", "PATCH"].includes(method)) {
       const token = getCsrfToken();
@@ -560,7 +569,8 @@
       }, 8000);
     }
     try {
-      const sessionResp = await csrfFetch("/API/adminSession.php", {
+      // Use privilegedSession to allow both admin and recipient access
+      const sessionResp = await csrfFetch("/API/privilegedSession.php", {
         cache: "no-store",
       });
       if (!sessionResp || !sessionResp.ok) {
@@ -569,6 +579,15 @@
       }
 
       const session = await sessionResp.json();
+      // Store actor type for proper redirects (admin vs recipient)
+      window._observersUserActor = session.actor || "admin";
+
+      // Hide reassign button for recipient users (they can only view, not modify)
+      if (window._observersUserActor === "recipient") {
+        const reassignBtn = document.getElementById("reassignProctorBtn");
+        if (reassignBtn) reassignBtn.style.display = "none";
+      }
+
       let displayName = session.displayName || session.username || "";
 
       try {
@@ -974,7 +993,7 @@
           } catch (persistErr) {
             /* best effort */
           }
-          window.location.href = "/dashboard";
+          window.location.href = getDashboardUrl();
           return;
         }
         try {
@@ -1182,7 +1201,7 @@
           } catch (persistErr) {
             /* ignore */
           }
-          window.location.href = "/dashboard";
+          window.location.href = getDashboardUrl();
           return;
         }
         try {
@@ -1335,7 +1354,7 @@
                 },
               });
               // navigate to dashboard after confirmation
-              window.location.href = "/dashboard";
+              window.location.href = getDashboardUrl();
             } else {
               // Load and render locations list
               try {
@@ -2380,7 +2399,7 @@
     const backBtn = document.getElementById("backToDashboardBtn");
     if (backBtn)
       backBtn.addEventListener("click", () => {
-        window.location.href = "/dashboard";
+        window.location.href = getDashboardUrl();
       });
 
     // Reusable flow to reveal the locations card with confirmation, load data and scroll to it.
@@ -2791,7 +2810,7 @@
     const goHome = document.getElementById("goHomeBtn");
     if (goHome)
       goHome.addEventListener("click", () => {
-        window.location.href = "/dashboard";
+        window.location.href = getDashboardUrl();
       });
 
     // Global "ذخیره" button (under the card) — enabled when any row has pending changes

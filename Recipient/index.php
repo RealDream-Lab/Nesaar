@@ -78,6 +78,11 @@ $bodyClass = $wavesAnimationDisabled ? 'class="no-waves-animation"' : '';
                             <img src="/dashboard/home.png" alt="بازگشت به داشبورد"
                                 style="width:40px;height:40px;object-fit:contain;display:block;">
                         </button>
+                        <button id="proctorProfilesBtn" class="btn btn-icon p-0" type="button" title="ماژول مراقبین"
+                            style="background:transparent;border:none;margin-inline-end:8px;padding:0;display:none;">
+                            <img src="/dashboard/observers/users.png" alt="مشخصات مراقبین"
+                                style="width:40px;height:40px;object-fit:contain;display:block;margin-bottom: 5px;">
+                        </button>
                         <button id="proctorNoticeBtn" class="btn btn-icon p-0" type="button" title="ابلاغ مراقبین"
                             style="background:transparent;border:none;margin-inline-end:8px;padding:0;">
                             <img src="/dashboard/observers/calendar.png" alt="ابلاغ مراقبین"
@@ -161,6 +166,24 @@ $bodyClass = $wavesAnimationDisabled ? 'class="no-waves-animation"' : '';
                     <div class="chart-wrapper">
                         <canvas id="reportsChart" aria-label="نمودار جلسات آینده" role="img"></canvas>
                     </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Quick Action Cards Row -->
+        <div class="row mt-4" id="quickActionCardsContainer">
+            <div class="col-md-4 mb-3">
+                <div class="quick-action-card" id="examBookletCard" data-action="exam-booklet">
+                    <div class="quick-action-icon">📋</div>
+                    <div class="quick-action-title">دفترچه کلی آزمون‌ها</div>
+                    <div class="quick-action-desc">گزارش کامل آمار آزمون‌ها به تفکیک جلسه</div>
+                </div>
+            </div>
+            <div class="col-md-4 mb-3">
+                <div class="quick-action-card" id="seatNumbersCard" data-action="seat-numbers">
+                    <div class="quick-action-icon">🪑</div>
+                    <div class="quick-action-title">شماره‌گذاری صندلی‌ها</div>
+                    <div class="quick-action-desc">برچسب شماره صندلی برای دسته‌ها</div>
                 </div>
             </div>
         </div>

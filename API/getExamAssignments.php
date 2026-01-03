@@ -5,7 +5,7 @@ if (session_status() === PHP_SESSION_NONE)
     session_start();
 require_once __DIR__ . '/../includes/license_guard.php';
 require_once __DIR__ . '/../includes/csrf_protection.php';
-require_once __DIR__ . '/../includes/admin_session.php';
+require_once __DIR__ . '/../includes/privileged_session.php';
 require_once __DIR__ . '/db_init.php';
 
 $licenseStatus = license_guard_validate();
@@ -15,7 +15,20 @@ if ($licenseStatus['valid'] !== true) {
     exit;
 }
 
-$session = admin_session_require($pdo);
+$session = privileged_session_require($pdo);
+
+// Quick check mode - just verify if any assignments exist
+$checkOnly = isset($_GET['check_only']) && $_GET['check_only'] === '1';
+if ($checkOnly) {
+    try {
+        $stmt  = $pdo->query('SELECT COUNT(*) FROM `ExamAssignments` WHERE TRIM(IFNULL(proctor_name, "")) != ""');
+        $count = (int)$stmt->fetchColumn();
+        echo json_encode(['success' => true, 'hasAssignments' => $count > 0, 'count' => $count], JSON_UNESCAPED_UNICODE);
+    } catch (Exception $e) {
+        echo json_encode(['success' => false, 'hasAssignments' => false], JSON_UNESCAPED_UNICODE);
+    }
+    exit;
+}
 
 $examDate = $_GET['exam_date'] ?? '';
 $examTime = $_GET['exam_time'] ?? '';

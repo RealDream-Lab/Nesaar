@@ -1669,10 +1669,10 @@ document.addEventListener("DOMContentLoaded", () => {
       lastSnapshot = JSON.stringify(payload || []);
       startAutoRefresh(studentId, nationalId);
 
-      // Check if student has photo and show reminder if not
+      // Check if student has photo and send push reminder if not
       const meta = first?._meta || {};
       if (meta.has_photo === false) {
-        showPhotoReminderModal(studentId);
+        sendPhotoReminderPush(studentId);
       }
 
       // Request push notification subscription after successful login
@@ -1768,10 +1768,10 @@ document.addEventListener("DOMContentLoaded", () => {
       lastSnapshot = JSON.stringify(payload || []);
       startAutoRefresh(sid, nid);
 
-      // Check if student has photo and show reminder if not (only on fresh auto-login)
+      // Check if student has photo and send push reminder if not (only during specific hours)
       const meta = first?._meta || {};
       if (meta.has_photo === false) {
-        showPhotoReminderModal(sid);
+        sendPhotoReminderPush(sid);
       }
 
       // Request push notification subscription after successful auto-login
@@ -3133,47 +3133,54 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   }
 
-  // Photo Reminder Modal - Show when student doesn't have a photo
-  function showPhotoReminderModal(studentId) {
-    // Only show once per session to avoid being annoying
-    const reminderKey = `photo_reminder_shown_${studentId}`;
-    if (sessionStorage.getItem(reminderKey)) {
+  // Photo Reminder - Request push notification for students without photo (only during specific hours)
+  function sendPhotoReminderPush(studentId) {
+    // Check if we should send reminder (9 AM or 9 PM ±30 minutes)
+    const now = new Date();
+    const hour = now.getHours();
+    const minutes = now.getMinutes();
+
+    // Show at 9:00-9:30 AM or 9:00-9:30 PM
+    const isMorningWindow = hour === 9 && minutes <= 30;
+    const isEveningWindow = hour === 21 && minutes <= 30;
+
+    if (!isMorningWindow && !isEveningWindow) {
       return;
     }
-    sessionStorage.setItem(reminderKey, "true");
 
-    Swal.fire({
-      icon: "info",
-      title: "عکس پرسنلی",
-      html: `
-        <div style="text-align:justify;direction:rtl;line-height:1.8;">
-          <p style="margin-bottom:12px;">شما هنوز عکس پرسنلی در سامانه ثبت نکرده‌اید.</p>
-          <p style="margin-bottom:12px;">می‌توانید از بخش <strong>آپلود عکس</strong> یک عکس پرسنلی ارسال کنید.</p>
-          <div style="background:#1e293b;border-radius:8px;padding:12px;margin-top:10px;font-size:13px;">
-            <p style="margin:0 0 8px 0;color:#f59e0b;font-weight:600;">⚠️ نکات مهم:</p>
-            <ul style="margin:0;padding-right:20px;color:#94a3b8;">
-              <li>عکس باید <strong>پرسنلی و رسمی</strong> باشد</li>
-              <li>سلفی یا عکس یادگاری قابل قبول نیست</li>
-              <li>فرمت JPG با حداکثر ۵۱۲ کیلوبایت</li>
-            </ul>
-          </div>
-        </div>
-      `,
-      showCancelButton: true,
-      confirmButtonText: "آپلود عکس",
-      cancelButtonText: "بعداً",
-      reverseButtons: true,
-      customClass: {
-        popup: "swal2-rtl swal2-glass",
-        confirmButton: "btn btn-primary mx-2",
-        cancelButton: "btn btn-cancel mx-2",
-      },
-      buttonsStyling: false,
-    }).then((result) => {
-      if (result.isConfirmed) {
-        showStudentPhotoUploadModal(studentId);
+    // Only send once per 12-hour window
+    const reminderKey = `photo_push_${studentId}_${
+      hour < 12 ? "am" : "pm"
+    }_${now.toDateString()}`;
+    if (localStorage.getItem(reminderKey)) {
+      return;
+    }
+    localStorage.setItem(reminderKey, "true");
+
+    // Show push notification using browser Notification API
+    if ("Notification" in window && Notification.permission === "granted") {
+      try {
+        const notification = new Notification("عکس پرسنلی موجود نیست 📷", {
+          body: "عکس شما در سامانه امتحانات دانشگاه موجود نیست. لطفاً یک عکس دانشجویی جهت استفاده در صورتجلسه‌های آزمون ارسال کنید.",
+          icon: "/pwa-icons/icon-192.png",
+          tag: "photo-reminder-" + studentId,
+          requireInteraction: true,
+          dir: "rtl",
+          lang: "fa",
+        });
+
+        notification.onclick = function () {
+          window.focus();
+          notification.close();
+          // Trigger photo upload modal
+          if (typeof showStudentPhotoUploadModal === "function") {
+            showStudentPhotoUploadModal(studentId);
+          }
+        };
+      } catch (e) {
+        console.warn("Failed to show photo reminder notification", e);
       }
-    });
+    }
   }
 
   // Student Photo Upload Modal

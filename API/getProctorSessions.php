@@ -6,7 +6,7 @@ if (session_status() === PHP_SESSION_NONE) {
 
 require_once __DIR__ . '/../includes/license_guard.php';
 require_once __DIR__ . '/../includes/csrf_protection.php';
-require_once __DIR__ . '/../includes/admin_session.php';
+require_once __DIR__ . '/../includes/privileged_session.php';
 require_once __DIR__ . '/db_init.php';
 require_once __DIR__ . '/jdf.php';
 
@@ -22,9 +22,9 @@ try {
         exit;
     }
 
-    $sessionData = admin_session_require($pdo);
+    $sessionData = privileged_session_require($pdo);
 
-    $proctorId = isset($_GET['proctor_id']) ? (int) $_GET['proctor_id'] : 0;
+    $proctorId = isset($_GET['proctor_id']) ? (int)$_GET['proctor_id'] : 0;
     if ($proctorId <= 0) {
         echo json_encode([
             'success' => false,
@@ -49,12 +49,12 @@ try {
     }
 
     $timezone = new DateTimeZone('Asia/Tehran');
-    $now = new DateTimeImmutable('now', $timezone);
+    $now      = new DateTimeImmutable('now', $timezone);
 
     $sessions = [];
     foreach ($rows as $row) {
-        $examDate = trim((string) ($row['exam_date'] ?? ''));
-        $examTime = trim((string) ($row['exam_time'] ?? ''));
+        $examDate = trim((string)($row['exam_date'] ?? ''));
+        $examTime = trim((string)($row['exam_time'] ?? ''));
         if ($examDate === '') {
             continue;
         }
@@ -62,28 +62,28 @@ try {
             $examTime = '00:00';
         }
 
-        $status = 'unknown';
+        $status           = 'unknown';
         $sessionTimestamp = null;
 
         $dateParts = explode('/', $examDate);
         $timeParts = explode(':', $examTime);
         if (count($dateParts) === 3) {
-            $jYear = (int) $dateParts[0];
-            $jMonth = (int) $dateParts[1];
-            $jDay = (int) $dateParts[2];
-            $hour = isset($timeParts[0]) ? (int) $timeParts[0] : 0;
-            $minute = isset($timeParts[1]) ? (int) $timeParts[1] : 0;
+            $jYear     = (int)$dateParts[0];
+            $jMonth    = (int)$dateParts[1];
+            $jDay      = (int)$dateParts[2];
+            $hour      = isset($timeParts[0]) ? (int)$timeParts[0] : 0;
+            $minute    = isset($timeParts[1]) ? (int)$timeParts[1] : 0;
             $gregorian = jalali_to_gregorian($jYear, $jMonth, $jDay);
             if (is_array($gregorian) && count($gregorian) === 3) {
                 [$gYear, $gMonth, $gDay] = $gregorian;
-                $sessionDateTime = DateTimeImmutable::createFromFormat(
+                $sessionDateTime         = DateTimeImmutable::createFromFormat(
                     'Y-m-d H:i',
                     sprintf('%04d-%02d-%02d %02d:%02d', $gYear, $gMonth, $gDay, $hour, $minute),
                     $timezone
                 );
                 if ($sessionDateTime instanceof DateTimeImmutable) {
                     $sessionTimestamp = $sessionDateTime->getTimestamp();
-                    $status = $sessionTimestamp < $now->getTimestamp() ? 'past' : 'upcoming';
+                    $status           = $sessionTimestamp < $now->getTimestamp() ? 'past' : 'upcoming';
                 }
             }
         }
@@ -96,7 +96,7 @@ try {
         ];
     }
 
-    $proctorName = trim((string) ($rows[0]['proctor_name'] ?? ''));
+    $proctorName = trim((string)($rows[0]['proctor_name'] ?? ''));
 
     echo json_encode([
         'success' => true,
