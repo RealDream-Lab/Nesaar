@@ -7260,7 +7260,8 @@ document.addEventListener("DOMContentLoaded", function () {
   const examBookletCard = document.getElementById("examBookletCard");
   if (examBookletCard) {
     examBookletCard.addEventListener("click", function () {
-      window.open("../API/generatePDF.php?report_type=exam_booklet", "_blank");
+      const url = `../API/generatePDF.php?report_type=exam_booklet&_t=${new Date().getTime()}`;
+      showReportModal(url, "دفترچه کلی آزمون‌ها");
     });
   }
 
@@ -7268,37 +7269,8 @@ document.addEventListener("DOMContentLoaded", function () {
   const seatNumbersCard = document.getElementById("seatNumbersCard");
   if (seatNumbersCard) {
     seatNumbersCard.addEventListener("click", function () {
-      // Show prompt for total capacity
-      Swal.fire({
-        title: "شماره‌گذاری صندلی‌ها",
-        html: `
-          <div class="form-group">
-            <label class="form-label">تعداد کل صندلی‌ها</label>
-            <input type="number" id="totalSeats" class="swal2-input" value="100" min="1" />
-          </div>
-        `,
-        showCancelButton: true,
-        confirmButtonText: "تولید برچسب",
-        cancelButtonText: "انصراف",
-        customClass: {
-          popup: "swal2-rtl swal2-glass",
-        },
-        preConfirm: () => {
-          const totalSeats = document.getElementById("totalSeats").value;
-          if (!totalSeats || totalSeats < 1) {
-            Swal.showValidationMessage("لطفاً تعداد صندلی‌ها را وارد کنید");
-            return false;
-          }
-          return totalSeats;
-        },
-      }).then((result) => {
-        if (result.isConfirmed) {
-          window.open(
-            `../API/generatePDF.php?report_type=seat_labels&total=${result.value}`,
-            "_blank"
-          );
-        }
-      });
+      const url = `../API/generatePDF.php?report_type=seat_labels&_t=${new Date().getTime()}`;
+      showReportModal(url, "برچسب شماره صندلی‌ها");
     });
   }
 });

@@ -56,7 +56,7 @@ $bodyClass = $wavesAnimationDisabled ? 'class="no-waves-animation"' : '';
     <link rel="stylesheet" href="../assets/fonts/vazir/vazir.css">
     <link rel="stylesheet" href="../assets/sweetalert2/sweetalert2.min.css">
     <link rel="stylesheet" href="../assets/sweetalert2/swal-animations.css">
-    <link rel="stylesheet" href="../assets/vendor/jalalidatepicker/jalali-date-picker.css">
+    <link rel="stylesheet" href="../assets/vendor/jalalidatepicker/jalalidatepicker.min.css">
     <link rel="stylesheet" href="../assets/app/style.css">
 </head>
 
@@ -396,7 +396,7 @@ $bodyClass = $wavesAnimationDisabled ? 'class="no-waves-animation"' : '';
     <!-- Local Chart.js (UMD) - load synchronously so window.Chart is available -->
     <script src="../assets/vendor/chartjs/chart.min.js"></script>
     <!-- JalaliDatePicker for scheduled push notifications -->
-    <script src="../assets/vendor/jalalidatepicker/jalali-date-picker.js"></script>
+    <script src="../assets/vendor/jalalidatepicker/jalalidatepicker.min.js"></script>
     <!-- Device check and SweetAlert moved to dashboard.js -->
     <script>
         window.DASHBOARD_CONTEXT = { role: 'admin' };

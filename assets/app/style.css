@@ -15,6 +15,14 @@
   --danger-accent: rgba(255, 112, 67, 0.4);
 }
 
+/* JalaliDatePicker Custom Styles */
+jdp-container {
+  font-family: "Vazir", sans-serif !important;
+}
+jdp-container * {
+  font-family: "Vazir", sans-serif !important;
+}
+
 html,
 body {
   overscroll-behavior-y: contain;

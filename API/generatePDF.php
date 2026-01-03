@@ -127,8 +127,7 @@ if ($reportType === 'session') {
 } elseif ($reportType === 'exam_booklet') {
     generateExamBookletReport($pdo, $mpdf, $config);
 } elseif ($reportType === 'seat_labels') {
-    $total = isset($_GET['total']) ? intval($_GET['total']) : 100;
-    generateSeatLabelsReport($mpdf, $config, $total);
+    generateSeatLabelsReport($pdo, $mpdf, $config);
 } else {
     die('Unknown report type');
 }
@@ -4854,9 +4853,9 @@ function generateSessionSummaryReportByLocation($pdo, $mpdf, $examDate, $examTim
 function generateExamBookletReport($pdo, $mpdf, $config)
 {
     $universityName = $config['university_name'] ?? 'دانشگاه';
-    
+
     // Fetch all courses with student counts, grouped by session
-    $stmt = $pdo->query("
+    $stmt       = $pdo->query("
         SELECT 
             c.course_code, 
             c.course_name, 
@@ -4901,7 +4900,8 @@ function generateExamBookletReport($pdo, $mpdf, $config)
         table { width: 100%; border-collapse: collapse; margin-bottom: 15px; }
         th, td { border: 1px solid #333; padding: 5px 8px; text-align: center; white-space: nowrap; }
         th { background: #2d3748; color: #fff; }
-        tr.electronic { background: #d4edda; }
+        td.course-name { text-align: right; }
+        tr.electronic { background: #f5f5f5; }
         tr.written { background: #fff; }
         tr.total-row { background: #e2e8f0; font-weight: bold; }
         tr.daily-total { background: #4a5568; color: #fff; font-weight: bold; }
@@ -4920,25 +4920,23 @@ function generateExamBookletReport($pdo, $mpdf, $config)
     </div>';
     $mpdf->WriteHTML($headerHtml);
 
-    $rowNum = 0;
-
     foreach ($groupedByDate as $examDate => $sessions) {
         // Convert to Jalali
         $dateParts = explode('-', $examDate);
         if (count($dateParts) === 3) {
             list($jalaliYear, $jalaliMonth, $jalaliDay) = gregorian_to_jalali(intval($dateParts[0]), intval($dateParts[1]), intval($dateParts[2]));
-            $jalaliDateStr = sprintf('%04d/%02d/%02d', $jalaliYear, $jalaliMonth, $jalaliDay);
+            $jalaliDateStr                              = sprintf('%04d/%02d/%02d', $jalaliYear, $jalaliMonth, $jalaliDay);
         } else {
             $jalaliDateStr = $examDate;
         }
 
         // Daily totals
-        $dailyTotal = 0;
-        $dailyTest = 0;
-        $dailyDesc = 0;
-        $dailyTestDesc = 0;
+        $dailyTotal      = 0;
+        $dailyTest       = 0;
+        $dailyDesc       = 0;
+        $dailyTestDesc   = 0;
         $dailyElectronic = 0;
-        $dailyWritten = 0;
+        $dailyWritten    = 0;
 
         $dateHtml = '<div class="date-header">📅 تاریخ: ' . toPersianDigits($jalaliDateStr) . '</div>';
         $mpdf->WriteHTML($dateHtml);
@@ -4947,21 +4945,20 @@ function generateExamBookletReport($pdo, $mpdf, $config)
 
         foreach ($sessions as $examTime => $courses) {
             // Session totals
-            $sessionTotal = 0;
-            $sessionTest = 0;
-            $sessionDesc = 0;
-            $sessionTestDesc = 0;
+            $sessionTotal      = 0;
+            $sessionTest       = 0;
+            $sessionDesc       = 0;
+            $sessionTestDesc   = 0;
             $sessionElectronic = 0;
-            $sessionWritten = 0;
+            $sessionWritten    = 0;
 
-            $sessionHtml = '<div class="session-header">⏰ ساعت: ' . toPersianDigits($examTime) . '</div>';
+            $sessionHtml  = '<div class="session-header">⏰ ساعت: ' . toPersianDigits($examTime) . '</div>';
             $sessionHtml .= '<table>
                 <thead>
                     <tr>
                         <th>ردیف</th>
                         <th>کد درس</th>
                         <th>نام درس</th>
-                        <th>نوع آزمون</th>
                         <th>نوع ارزشیابی</th>
                         <th>تعداد</th>
                     </tr>
@@ -4969,24 +4966,28 @@ function generateExamBookletReport($pdo, $mpdf, $config)
                 <tbody>';
 
             // Sort: electronic first
-            usort($courses, function($a, $b) {
+            usort($courses, function ($a, $b) {
                 $typeA = $a['exam_type'] ?? '';
                 $typeB = $b['exam_type'] ?? '';
-                if ($typeA === 'الکترونیکی' && $typeB !== 'الکترونیکی') return -1;
-                if ($typeA !== 'الکترونیکی' && $typeB === 'الکترونیکی') return 1;
+                if ($typeA === 'الکترونیکی' && $typeB !== 'الکترونیکی')
+                    return -1;
+                if ($typeA !== 'الکترونیکی' && $typeB === 'الکترونیکی')
+                    return 1;
                 return strcmp($a['course_code'], $b['course_code']);
             });
 
+            // Reset row number for each session
+            $sessionRowNum = 0;
             foreach ($courses as $course) {
-                $rowNum++;
-                $examType = $course['exam_type'] ?? 'کتبی';
-                $courseType = $course['course_type'] ?? '-';
+                $sessionRowNum++;
+                $examType     = $course['exam_type'] ?? 'کتبی';
+                $courseType   = $course['course_type'] ?? '-';
                 $studentCount = intval($course['student_count']);
                 $isElectronic = ($examType === 'الکترونیکی');
-                $rowClass = $isElectronic ? 'electronic' : 'written';
+                $rowClass     = $isElectronic ? 'electronic' : 'written';
 
                 $sessionTotal += $studentCount;
-                
+
                 if ($isElectronic) {
                     $sessionElectronic += $studentCount;
                 } else {
@@ -5002,10 +5003,9 @@ function generateExamBookletReport($pdo, $mpdf, $config)
                 }
 
                 $sessionHtml .= '<tr class="' . $rowClass . '">
-                    <td>' . toPersianDigits($rowNum) . '</td>
+                    <td>' . toPersianDigits($sessionRowNum) . '</td>
                     <td>' . htmlspecialchars($course['course_code']) . '</td>
-                    <td>' . htmlspecialchars($course['course_name']) . '</td>
-                    <td>' . htmlspecialchars($examType) . '</td>
+                    <td class="course-name">' . htmlspecialchars($course['course_name']) . '</td>
                     <td>' . htmlspecialchars($courseType) . '</td>
                     <td>' . toPersianDigits($studentCount) . '</td>
                 </tr>';
@@ -5014,7 +5014,7 @@ function generateExamBookletReport($pdo, $mpdf, $config)
             // Session total row
             $sessionHtml .= '<tr class="total-row">
                 <td colspan="2">جمع جلسه</td>
-                <td colspan="4">
+                <td colspan="3">
                     کل: ' . toPersianDigits($sessionTotal) . ' | 
                     تستی: ' . toPersianDigits($sessionTest) . ' | 
                     تشریحی: ' . toPersianDigits($sessionDesc) . ' | 
@@ -5028,18 +5028,18 @@ function generateExamBookletReport($pdo, $mpdf, $config)
             $mpdf->WriteHTML($sessionHtml);
 
             // Accumulate daily totals
-            $dailyTotal += $sessionTotal;
-            $dailyTest += $sessionTest;
-            $dailyDesc += $sessionDesc;
-            $dailyTestDesc += $sessionTestDesc;
+            $dailyTotal      += $sessionTotal;
+            $dailyTest       += $sessionTest;
+            $dailyDesc       += $sessionDesc;
+            $dailyTestDesc   += $sessionTestDesc;
             $dailyElectronic += $sessionElectronic;
-            $dailyWritten += $sessionWritten;
+            $dailyWritten    += $sessionWritten;
         }
 
         // Daily total row
         $dailyHtml = '<table><tbody><tr class="daily-total">
             <td colspan="2">جمع روز ' . toPersianDigits($jalaliDateStr) . '</td>
-            <td colspan="4">
+            <td colspan="3">
                 کل: ' . toPersianDigits($dailyTotal) . ' | 
                 تستی: ' . toPersianDigits($dailyTest) . ' | 
                 تشریحی: ' . toPersianDigits($dailyDesc) . ' | 
@@ -5054,105 +5054,110 @@ function generateExamBookletReport($pdo, $mpdf, $config)
 
 /**
  * Generate Seat Labels Report
- * 8 labels per A4 page, numbered starting from appropriate base
+ * 8 labels per A4 page (2 columns x 4 rows), numbered starting from appropriate base
+ * Total is calculated from max students in any session
  */
-function generateSeatLabelsReport($mpdf, $config, $total)
+function generateSeatLabelsReport($pdo, $mpdf, $config)
 {
     $universityName = $config['university_name'] ?? 'دانشگاه';
+
+    // Get max students in any session from database
+    $stmt = $pdo->query("
+        SELECT exam_date, exam_time, COUNT(*) as student_count
+        FROM exam_seats
+        GROUP BY exam_date, exam_time
+        ORDER BY student_count DESC
+        LIMIT 1
+    ");
+    $maxSession = $stmt->fetch(PDO::FETCH_ASSOC);
     
+    $total = $maxSession ? intval($maxSession['student_count']) : 100;
+
     // Determine starting number based on total
+    // Start from 11 for <90, 101 for <900, 1001 for <9000
     if ($total < 90) {
-        $startNum = 10;
+        $startNum = 11;
     } elseif ($total < 900) {
-        $startNum = 100;
+        $startNum = 101;
     } elseif ($total < 9000) {
-        $startNum = 1000;
+        $startNum = 1001;
     } else {
-        $startNum = 10000;
+        $startNum = 10001;
     }
 
+    // CSS for 8 labels per page (2x4 grid)
     $css = '
     <style>
-        @page { margin: 10mm; }
-        body { font-family: vazir; direction: rtl; }
-        .labels-container { width: 100%; }
-        .label-row { display: flex; flex-wrap: wrap; justify-content: space-between; }
-        .label {
-            width: 48%;
-            height: 85mm;
+        @page { margin: 5mm; }
+        body { font-family: vazir; direction: rtl; margin: 0; padding: 0; }
+        table.labels-table {
+            width: 100%;
+            border-collapse: collapse;
+            table-layout: fixed;
+        }
+        table.labels-table td {
+            width: 50%;
+            height: 68mm;
             border: 2px solid #000;
-            margin-bottom: 8mm;
-            box-sizing: border-box;
-            display: inline-block;
-            vertical-align: top;
             text-align: center;
-            padding: 10px;
-            page-break-inside: avoid;
+            vertical-align: middle;
+            padding: 8px;
         }
         .label-header {
-            font-size: 11pt;
+            font-size: 12pt;
             font-weight: bold;
-            border-bottom: 1px solid #666;
-            padding-bottom: 8px;
-            margin-bottom: 15px;
+            border-bottom: 1px solid #999;
+            padding-bottom: 6px;
+            margin-bottom: 10px;
         }
         .seat-number {
-            font-size: 72pt;
+            font-size: 64pt;
             font-weight: bold;
             color: #000;
-            margin: 30px 0;
-            line-height: 1;
+            line-height: 1.2;
         }
         .label-footer {
-            font-size: 9pt;
-            color: #666;
-            margin-top: 15px;
+            font-size: 10pt;
+            color: #333;
+            margin-top: 10px;
         }
     </style>';
 
     $mpdf->WriteHTML($css);
 
-    // Generate labels
+    // Generate labels - 8 per page (4 rows x 2 columns)
     $labelsPerPage = 8;
-    $labelsPerRow = 2;
-    $totalLabels = $total;
-    
-    $labelCount = 0;
-    $html = '<div class="labels-container">';
-    
-    for ($i = 0; $i < $totalLabels; $i++) {
-        $seatNum = $startNum + $i;
-        
-        if ($labelCount % $labelsPerRow === 0) {
-            if ($labelCount > 0) {
-                $html .= '</div>'; // Close previous row
+    $totalLabels   = $total;
+    $labelIndex    = 0;
+
+    while ($labelIndex < $totalLabels) {
+        // Start new table for each page
+        $html = '<table class="labels-table">';
+
+        for ($row = 0; $row < 4; $row++) {
+            $html .= '<tr>';
+            for ($col = 0; $col < 2; $col++) {
+                if ($labelIndex < $totalLabels) {
+                    $seatNum = $startNum + $labelIndex;
+                    $html .= '<td>
+                        <div class="label-header">' . htmlspecialchars($universityName) . '</div>
+                        <div class="seat-number">' . toPersianDigits($seatNum) . '</div>
+                        <div class="label-footer">شماره صندلی</div>
+                    </td>';
+                    $labelIndex++;
+                } else {
+                    $html .= '<td></td>';
+                }
             }
-            $html .= '<div class="label-row">';
+            $html .= '</tr>';
         }
-        
-        $html .= '<div class="label">
-            <div class="label-header">' . htmlspecialchars($universityName) . '</div>
-            <div class="seat-number">' . toPersianDigits($seatNum) . '</div>
-            <div class="label-footer">شماره صندلی</div>
-        </div>';
-        
-        $labelCount++;
-        
-        // Add page break after 8 labels
-        if ($labelCount % $labelsPerPage === 0 && $i < $totalLabels - 1) {
-            $html .= '</div></div>'; // Close row and container
-            $mpdf->WriteHTML($html);
+
+        $html .= '</table>';
+        $mpdf->WriteHTML($html);
+
+        // Add new page if more labels remain
+        if ($labelIndex < $totalLabels) {
             $mpdf->AddPage();
-            $html = '<div class="labels-container">';
-            $labelCount = 0;
         }
     }
-    
-    // Close any open tags
-    if ($labelCount % $labelsPerRow !== 0) {
-        $html .= '</div>'; // Close row
-    }
-    $html .= '</div>'; // Close container
-    
-    $mpdf->WriteHTML($html);
 }
