@@ -86,50 +86,59 @@ $mpdf = new \Mpdf\Mpdf([
 
 $mpdf->SetDirectionality('rtl');
 
-if ($reportType === 'session') {
-    generateSessionReport($pdo, $mpdf, $examDate, $examTime, $config);
-} elseif ($reportType === 'seat') {
-    generateSeatNumbersReport($pdo, $mpdf, $examDate, $examTime, $config);
-} elseif ($reportType === 'secretary') {
-    generateSecretaryReport($pdo, $mpdf, $examDate, $examTime, $config);
-} elseif ($reportType === 'reproduction') {
-    generateReproductionReport($pdo, $mpdf, $examDate, $examTime, $config);
-} elseif ($reportType === 'location') {
-    generateLocationReport($pdo, $mpdf, $examDate, $examTime, $config);
-} elseif ($reportType === 'location_labels') {
-    generateLocationLabels($pdo, $mpdf, $examDate, $examTime, $config);
-} elseif ($reportType === 'descriptive') {
-    generateDescriptiveLabels($pdo, $mpdf, $examDate, $examTime, $config);
-} elseif ($reportType === 'test_labels') {
-    generateTestLabels($pdo, $mpdf, $examDate, $examTime, $config);
-} elseif ($reportType === 'daily_test_labels') {
-    generateDailyTestLabels($pdo, $mpdf, $examDate, $examTime, $config);
-} elseif ($reportType === 'proctor_notice') {
-    // Parse optional proctor_ids parameter for filtered notice generation
-    $filterProctorIds = null;
-    if (!empty($_GET['proctor_ids'])) {
-        $idsStr = trim($_GET['proctor_ids']);
-        if ($idsStr !== '') {
-            $filterProctorIds = array_map('intval', explode(',', $idsStr));
-            $filterProctorIds = array_filter($filterProctorIds, function ($id) {
-                return $id > 0;
-            });
-            if (empty($filterProctorIds)) {
-                $filterProctorIds = null;
+try {
+    if ($reportType === 'session') {
+        generateSessionReport($pdo, $mpdf, $examDate, $examTime, $config);
+    } elseif ($reportType === 'seat') {
+        generateSeatNumbersReport($pdo, $mpdf, $examDate, $examTime, $config);
+    } elseif ($reportType === 'secretary') {
+        generateSecretaryReport($pdo, $mpdf, $examDate, $examTime, $config);
+    } elseif ($reportType === 'reproduction') {
+        generateReproductionReport($pdo, $mpdf, $examDate, $examTime, $config);
+    } elseif ($reportType === 'location') {
+        generateLocationReport($pdo, $mpdf, $examDate, $examTime, $config);
+    } elseif ($reportType === 'location_labels') {
+        generateLocationLabels($pdo, $mpdf, $examDate, $examTime, $config);
+    } elseif ($reportType === 'descriptive') {
+        generateDescriptiveLabels($pdo, $mpdf, $examDate, $examTime, $config);
+    } elseif ($reportType === 'test_labels') {
+        generateTestLabels($pdo, $mpdf, $examDate, $examTime, $config);
+    } elseif ($reportType === 'daily_test_labels') {
+        generateDailyTestLabels($pdo, $mpdf, $examDate, $examTime, $config);
+    } elseif ($reportType === 'proctor_notice') {
+        // Parse optional proctor_ids parameter for filtered notice generation
+        $filterProctorIds = null;
+        if (!empty($_GET['proctor_ids'])) {
+            $idsStr = trim($_GET['proctor_ids']);
+            if ($idsStr !== '') {
+                $filterProctorIds = array_map('intval', explode(',', $idsStr));
+                $filterProctorIds = array_filter($filterProctorIds, function ($id) {
+                    return $id > 0;
+                });
+                if (empty($filterProctorIds)) {
+                    $filterProctorIds = null;
+                }
             }
         }
+        generateProctorNotices($pdo, $mpdf, $config, $filterProctorIds);
+    } elseif ($reportType === 'attendance_sheet') {
+        generateAttendanceSheet($pdo, $mpdf, $examDate, $examTime, $config);
+    } elseif ($reportType === 'session_summary') {
+        generateSessionSummaryReport($pdo, $mpdf, $examDate, $examTime, $config);
+    } elseif ($reportType === 'exam_booklet') {
+        generateExamBookletReport($pdo, $mpdf, $config);
+    } elseif ($reportType === 'seat_labels') {
+        generateSeatLabelsReport($pdo, $mpdf, $config);
+    } else {
+        die('Unknown report type');
     }
-    generateProctorNotices($pdo, $mpdf, $config, $filterProctorIds);
-} elseif ($reportType === 'attendance_sheet') {
-    generateAttendanceSheet($pdo, $mpdf, $examDate, $examTime, $config);
-} elseif ($reportType === 'session_summary') {
-    generateSessionSummaryReport($pdo, $mpdf, $examDate, $examTime, $config);
-} elseif ($reportType === 'exam_booklet') {
-    generateExamBookletReport($pdo, $mpdf, $config);
-} elseif ($reportType === 'seat_labels') {
-    generateSeatLabelsReport($pdo, $mpdf, $config);
-} else {
-    die('Unknown report type');
+} catch (Throwable $e) {
+    $logFile = __DIR__ . '/../temp/generatePDF_error.log';
+    $msg = date('c') . " - Exception: " . $e->getMessage() . "\n" . $e->getTraceAsString() . "\n\n";
+    @file_put_contents($logFile, $msg, FILE_APPEND | LOCK_EX);
+    header('Content-Type: text/plain; charset=utf-8', true, 500);
+    echo "Internal Server Error: " . $e->getMessage();
+    exit;
 }
 
 $filename = $reportType . '_' . date('Y-m-d_H-i-s') . '.pdf';
@@ -5061,16 +5070,17 @@ function generateSeatLabelsReport($pdo, $mpdf, $config)
 {
     $universityName = $config['University'] ?? 'دانشگاه';
 
-    // Get max students in any session from database
-    $stmt       = $pdo->query("
-        SELECT exam_date, exam_time, COUNT(*) as student_count
-        FROM exam_seats
-        GROUP BY exam_date, exam_time
+    // Get max students in any session from database (join courses to get date/time)
+    $stmt = $pdo->query(
+        "SELECT c.exam_date, c.exam_time, COUNT(es.student_id) as student_count
+        FROM exam_seats es
+        JOIN courses c ON es.course_code = c.course_code
+        GROUP BY c.exam_date, c.exam_time
         ORDER BY student_count DESC
-        LIMIT 1
-    ");
-    $maxSession = $stmt->fetch(PDO::FETCH_ASSOC);
+        LIMIT 1"
+    );
 
+    $maxSession = $stmt ? $stmt->fetch(PDO::FETCH_ASSOC) : null;
     $total = $maxSession ? intval($maxSession['student_count']) : 100;
 
     // Determine starting number based on total
