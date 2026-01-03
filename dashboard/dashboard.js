@@ -5332,11 +5332,15 @@ function renderInsightCards(stats) {
 // =====================================================
 (function initPushNotificationAdmin() {
   const sendBtn = document.getElementById("sendPushBtn");
+  const sendBtnText = document.getElementById("sendPushBtnText");
   const titleInput = document.getElementById("pushTitle");
   const bodyInput = document.getElementById("pushBody");
   const studentsCheckbox = document.getElementById("pushStudents");
   const proctorsCheckbox = document.getElementById("pushProctors");
   const resultDiv = document.getElementById("pushResult");
+  const scheduledCheckbox = document.getElementById("scheduledPush");
+  const scheduledContainer = document.getElementById("scheduledPushContainer");
+  const scheduleDateTimeInput = document.getElementById("pushScheduleDateTime");
 
   if (
     !sendBtn ||
@@ -5346,6 +5350,32 @@ function renderInsightCards(stats) {
     !proctorsCheckbox
   ) {
     return; // Not on admin dashboard
+  }
+
+  // Initialize JalaliDatePicker
+  if (typeof jalaliDatepicker !== "undefined" && scheduleDateTimeInput) {
+    jalaliDatepicker.startWatch({
+      minDate: "today",
+      time: true,
+      autoHide: true,
+      showTodayBtn: true,
+      showEmptyBtn: true,
+      persianDigits: true,
+    });
+  }
+
+  // Toggle scheduled container
+  if (scheduledCheckbox && scheduledContainer) {
+    scheduledCheckbox.addEventListener("change", () => {
+      if (scheduledCheckbox.checked) {
+        scheduledContainer.classList.remove("d-none");
+        if (sendBtnText) sendBtnText.textContent = "زمان‌بندی ارسال";
+      } else {
+        scheduledContainer.classList.add("d-none");
+        if (sendBtnText) sendBtnText.textContent = "ارسال اعلان";
+        if (scheduleDateTimeInput) scheduleDateTimeInput.value = "";
+      }
+    });
   }
 
   // Fetch subscriber counts
@@ -5389,6 +5419,10 @@ function renderInsightCards(stats) {
     const body = bodyInput.value.trim();
     const sendToStudents = studentsCheckbox.checked;
     const sendToProctors = proctorsCheckbox.checked;
+    const isScheduled = scheduledCheckbox && scheduledCheckbox.checked;
+    const scheduleDateTime = scheduleDateTimeInput
+      ? scheduleDateTimeInput.value.trim()
+      : "";
 
     if (!title) {
       showPushResult("danger", "لطفاً عنوان پیام را وارد کنید.");
@@ -5402,6 +5436,11 @@ function renderInsightCards(stats) {
 
     if (!sendToStudents && !sendToProctors) {
       showPushResult("danger", "لطفاً حداقل یک گروه گیرنده را انتخاب کنید.");
+      return;
+    }
+
+    if (isScheduled && !scheduleDateTime) {
+      showPushResult("danger", "لطفاً تاریخ و ساعت ارسال را انتخاب کنید.");
       return;
     }
 
@@ -5419,17 +5458,26 @@ function renderInsightCards(stats) {
       userTypes = ["proctor"];
     }
 
+    // Build confirmation message
+    let confirmHtml = `<div style="text-align:right;direction:rtl;">
+        <p><strong>عنوان:</strong> ${escapeHtml(title)}</p>
+        <p><strong>متن:</strong> ${escapeHtml(body)}</p>
+        <p><strong>گیرندگان:</strong> ${recipientsText}</p>`;
+
+    if (isScheduled) {
+      confirmHtml += `<p><strong>زمان ارسال:</strong> ${escapeHtml(
+        scheduleDateTime
+      )}</p>`;
+    }
+    confirmHtml += `</div>`;
+
     // Confirm before sending
     const confirmation = await Swal.fire({
       icon: "question",
-      title: "ارسال اعلان؟",
-      html: `<div style="text-align:right;direction:rtl;">
-        <p><strong>عنوان:</strong> ${escapeHtml(title)}</p>
-        <p><strong>متن:</strong> ${escapeHtml(body)}</p>
-        <p><strong>گیرندگان:</strong> ${recipientsText}</p>
-      </div>`,
+      title: isScheduled ? "زمان‌بندی ارسال اعلان؟" : "ارسال اعلان؟",
+      html: confirmHtml,
       showCancelButton: true,
-      confirmButtonText: "بله، ارسال کن",
+      confirmButtonText: isScheduled ? "بله، زمان‌بندی کن" : "بله، ارسال کن",
       cancelButtonText: "انصراف",
       reverseButtons: true,
       customClass: {
@@ -5450,21 +5498,17 @@ function renderInsightCards(stats) {
     if (spinner) spinner.classList.remove("d-none");
 
     try {
-      let totalSent = 0;
-      let totalFailed = 0;
-      let totalExpired = 0;
-
-      // Send to each user type
-      for (const userType of userTypes) {
+      // Handle scheduled push
+      if (isScheduled) {
         const payload = {
           title: title,
           body: body,
           icon: "/pwa-icons/icon-192.png",
-          tag: "admin-broadcast-" + Date.now(),
-          user_type: userType,
+          user_types: userTypes,
+          scheduled_at: scheduleDateTime,
         };
 
-        const response = await guardedFetch("/API/push/send.php", {
+        const response = await guardedFetch("/API/push/schedule.php", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(payload),
@@ -5473,19 +5517,59 @@ function renderInsightCards(stats) {
         const result = await response.json();
 
         if (result.success) {
-          totalSent += result.sent || 0;
-          totalFailed += result.failed || 0;
-          totalExpired += result.expired || 0;
+          showPushResult(
+            "success",
+            `اعلان با موفقیت زمان‌بندی شد برای ${escapeHtml(scheduleDateTime)}`
+          );
+          // Clear form
+          titleInput.value = "";
+          bodyInput.value = "";
+          if (scheduleDateTimeInput) scheduleDateTimeInput.value = "";
+          if (scheduledCheckbox) scheduledCheckbox.checked = false;
+          if (scheduledContainer) scheduledContainer.classList.add("d-none");
+          if (sendBtnText) sendBtnText.textContent = "ارسال اعلان";
+        } else {
+          showPushResult("danger", result.error || "خطا در زمان‌بندی اعلان");
         }
-      }
+      } else {
+        // Immediate send
+        let totalSent = 0;
+        let totalFailed = 0;
+        let totalExpired = 0;
 
-      showPushResult(
-        "success",
-        `اعلان با موفقیت ارسال شد! ارسال: ${totalSent}، ناموفق: ${totalFailed}، منقضی: ${totalExpired}`
-      );
-      // Clear form
-      titleInput.value = "";
-      bodyInput.value = "";
+        // Send to each user type
+        for (const userType of userTypes) {
+          const payload = {
+            title: title,
+            body: body,
+            icon: "/pwa-icons/icon-192.png",
+            tag: "admin-broadcast-" + Date.now(),
+            user_type: userType,
+          };
+
+          const response = await guardedFetch("/API/push/send.php", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(payload),
+          });
+
+          const result = await response.json();
+
+          if (result.success) {
+            totalSent += result.sent || 0;
+            totalFailed += result.failed || 0;
+            totalExpired += result.expired || 0;
+          }
+        }
+
+        showPushResult(
+          "success",
+          `اعلان با موفقیت ارسال شد! ارسال: ${totalSent}، ناموفق: ${totalFailed}، منقضی: ${totalExpired}`
+        );
+        // Clear form
+        titleInput.value = "";
+        bodyInput.value = "";
+      }
     } catch (error) {
       console.error("Push send error:", error);
       showPushResult("danger", "خطا در ارتباط با سرور");
@@ -7167,3 +7251,54 @@ function showProctorReport(proctor, sessions, summary) {
     reportCard.scrollIntoView({ behavior: "smooth", block: "start" });
   }, 100);
 }
+
+// =====================================================
+// Quick Action Cards - Event Handlers
+// =====================================================
+document.addEventListener("DOMContentLoaded", function () {
+  // Exam Booklet Card
+  const examBookletCard = document.getElementById("examBookletCard");
+  if (examBookletCard) {
+    examBookletCard.addEventListener("click", function () {
+      window.open("../API/generatePDF.php?report_type=exam_booklet", "_blank");
+    });
+  }
+
+  // Seat Numbers Card
+  const seatNumbersCard = document.getElementById("seatNumbersCard");
+  if (seatNumbersCard) {
+    seatNumbersCard.addEventListener("click", function () {
+      // Show prompt for total capacity
+      Swal.fire({
+        title: "شماره‌گذاری صندلی‌ها",
+        html: `
+          <div class="form-group">
+            <label class="form-label">تعداد کل صندلی‌ها</label>
+            <input type="number" id="totalSeats" class="swal2-input" value="100" min="1" />
+          </div>
+        `,
+        showCancelButton: true,
+        confirmButtonText: "تولید برچسب",
+        cancelButtonText: "انصراف",
+        customClass: {
+          popup: "swal2-rtl swal2-glass",
+        },
+        preConfirm: () => {
+          const totalSeats = document.getElementById("totalSeats").value;
+          if (!totalSeats || totalSeats < 1) {
+            Swal.showValidationMessage("لطفاً تعداد صندلی‌ها را وارد کنید");
+            return false;
+          }
+          return totalSeats;
+        },
+      }).then((result) => {
+        if (result.isConfirmed) {
+          window.open(
+            `../API/generatePDF.php?report_type=seat_labels&total=${result.value}`,
+            "_blank"
+          );
+        }
+      });
+    });
+  }
+});

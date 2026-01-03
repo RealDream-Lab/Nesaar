@@ -56,6 +56,7 @@ $bodyClass = $wavesAnimationDisabled ? 'class="no-waves-animation"' : '';
     <link rel="stylesheet" href="../assets/fonts/vazir/vazir.css">
     <link rel="stylesheet" href="../assets/sweetalert2/sweetalert2.min.css">
     <link rel="stylesheet" href="../assets/sweetalert2/swal-animations.css">
+    <link rel="stylesheet" href="../assets/vendor/jalalidatepicker/jalali-date-picker.css">
     <link rel="stylesheet" href="../assets/app/style.css">
 </head>
 
@@ -228,6 +229,38 @@ $bodyClass = $wavesAnimationDisabled ? 'class="no-waves-animation"' : '';
         <!-- Insight Cards Row - DISABLED -->
         <!-- <div class="row mt-4" id="insightCardsContainer"></div> -->
 
+        <!-- Quick Action Cards Row -->
+        <div class="row mt-4" id="quickActionCardsContainer">
+            <div class="col-md-3 mb-3">
+                <div class="quick-action-card" id="examBookletCard" data-action="exam-booklet">
+                    <div class="quick-action-icon">📋</div>
+                    <div class="quick-action-title">دفترچه کلی آزمون‌ها</div>
+                    <div class="quick-action-desc">گزارش کامل آمار آزمون‌ها به تفکیک جلسه</div>
+                </div>
+            </div>
+            <div class="col-md-3 mb-3">
+                <div class="quick-action-card" id="seatNumbersCard" data-action="seat-numbers">
+                    <div class="quick-action-icon">🪑</div>
+                    <div class="quick-action-title">شماره‌گذاری صندلی‌ها</div>
+                    <div class="quick-action-desc">برچسب شماره صندلی برای دسته‌ها</div>
+                </div>
+            </div>
+            <div class="col-md-3 mb-3">
+                <div class="quick-action-card disabled" id="card3" data-action="card3">
+                    <div class="quick-action-icon">📊</div>
+                    <div class="quick-action-title">کارت شماره سه</div>
+                    <div class="quick-action-desc">به زودی...</div>
+                </div>
+            </div>
+            <div class="col-md-3 mb-3">
+                <div class="quick-action-card disabled" id="card4" data-action="card4">
+                    <div class="quick-action-icon">📈</div>
+                    <div class="quick-action-title">کارت شماره چهار</div>
+                    <div class="quick-action-desc">به زودی...</div>
+                </div>
+            </div>
+        </div>
+
         <!-- Push Notification Management Card -->
         <div class="dashboard-card no-hover collapsible-card" id="pushNotificationCard">
             <div class="card-header-collapsible" onclick="toggleCardCollapse(this)">
@@ -270,10 +303,29 @@ $bodyClass = $wavesAnimationDisabled ? 'class="no-waves-animation"' : '';
                         <textarea class="form-control" id="pushBody" rows="3" placeholder="متن پیام را وارد کنید..."
                             maxlength="500"></textarea>
                     </div>
+                    <div class="col-12">
+                        <div class="d-flex align-items-center gap-3 mb-2">
+                            <div class="form-check form-switch">
+                                <input class="form-check-input" type="checkbox" id="scheduledPush" role="switch">
+                                <label class="form-check-label" for="scheduledPush"
+                                    style="color:#1e293b;font-weight:600;">ارسال زمان‌بندی شده</label>
+                            </div>
+                        </div>
+                        <div id="scheduledPushContainer" class="d-none">
+                            <div class="row g-2">
+                                <div class="col-12 col-md-6">
+                                    <label class="form-label">تاریخ و ساعت ارسال</label>
+                                    <input type="text" class="form-control" id="pushScheduleDateTime" data-jdp
+                                        data-jdp-time="true" data-jdp-min-date="today" placeholder="انتخاب تاریخ و ساعت"
+                                        readonly>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
                     <div class="col-12 col-md-12">
                         <button class="btn btn-upload-blue w-100" id="sendPushBtn">
                             <span class="spinner-border spinner-border-sm d-none" role="status"></span>
-                            ارسال اعلان
+                            <span id="sendPushBtnText">ارسال اعلان</span>
                         </button>
                     </div>
                     <div class="col-12">
@@ -343,6 +395,8 @@ $bodyClass = $wavesAnimationDisabled ? 'class="no-waves-animation"' : '';
     <script src="../assets/app/changelog.js"></script>
     <!-- Local Chart.js (UMD) - load synchronously so window.Chart is available -->
     <script src="../assets/vendor/chartjs/chart.min.js"></script>
+    <!-- JalaliDatePicker for scheduled push notifications -->
+    <script src="../assets/vendor/jalalidatepicker/jalali-date-picker.js"></script>
     <!-- Device check and SweetAlert moved to dashboard.js -->
     <script>
         window.DASHBOARD_CONTEXT = { role: 'admin' };

@@ -178,6 +178,61 @@ try {
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci";
     $pdo->exec($createLocations);
 
+    // Create locations_backup table if not exists (for preserving capacity data)
+    $createLocationsBackup = "CREATE TABLE IF NOT EXISTS `locations_backup` (
+        `id` INT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
+        `building` VARCHAR(255) DEFAULT '' COLLATE utf8mb4_unicode_ci,
+        `class_name` VARCHAR(255) DEFAULT '' COLLATE utf8mb4_unicode_ci,
+        `capacity` INT UNSIGNED NOT NULL DEFAULT 0,
+        `required_proctors` INT UNSIGNED NOT NULL DEFAULT 0,
+        `updated_at` DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+        UNIQUE KEY `ux_locations_backup_building_class` (`building`,`class_name`)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci";
+    $pdo->exec($createLocationsBackup);
+
+    // Calculate and backup location capacities BEFORE clearing data
+    try {
+        write_progress('backup_locations', 'در حال محاسبه و پشتیبان‌گیری ظرفیت مکان‌ها...', 8);
+
+        // Get max seat_number per building/class from current exam_seats
+        $capacityStmt = $pdo->query("
+            SELECT building, class_name, MAX(seat_number) AS max_capacity
+            FROM exam_seats
+            WHERE building IS NOT NULL AND building != ''
+            GROUP BY building, class_name
+        ");
+        $capacities   = $capacityStmt->fetchAll(PDO::FETCH_ASSOC);
+
+        foreach ($capacities as $loc) {
+            $building    = $loc['building'];
+            $className   = $loc['class_name'];
+            $newCapacity = (int)$loc['max_capacity'];
+
+            if (empty($building) && empty($className))
+                continue;
+
+            // Check if exists in backup
+            $checkStmt = $pdo->prepare("SELECT capacity FROM locations_backup WHERE building = ? AND class_name = ?");
+            $checkStmt->execute([$building, $className]);
+            $existingCapacity = $checkStmt->fetchColumn();
+
+            if ($existingCapacity !== false) {
+                // Only update if new capacity is greater
+                if ($newCapacity > (int)$existingCapacity) {
+                    $updateStmt = $pdo->prepare("UPDATE locations_backup SET capacity = ? WHERE building = ? AND class_name = ?");
+                    $updateStmt->execute([$newCapacity, $building, $className]);
+                }
+            } else {
+                // Insert new record
+                $insertStmt = $pdo->prepare("INSERT INTO locations_backup (building, class_name, capacity) VALUES (?, ?, ?)");
+                $insertStmt->execute([$building, $className, $newCapacity]);
+            }
+        }
+    } catch (Throwable $e) {
+        error_log('Locations backup failed: ' . $e->getMessage());
+        // Continue with the update even if backup fails
+    }
+
     // Backup/Update ProctorsBackup table BEFORE transaction (DDL commits implicitly)
     try {
         // Create backup table if not exists with same structure
