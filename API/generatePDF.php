@@ -4852,7 +4852,7 @@ function generateSessionSummaryReportByLocation($pdo, $mpdf, $examDate, $examTim
  */
 function generateExamBookletReport($pdo, $mpdf, $config)
 {
-    $universityName = $config['university_name'] ?? 'دانشگاه';
+    $universityName = $config['University'] ?? 'دانشگاه';
 
     // Fetch all courses with student counts, grouped by session
     $stmt       = $pdo->query("
@@ -4901,13 +4901,13 @@ function generateExamBookletReport($pdo, $mpdf, $config)
         th, td { border: 1px solid #333; padding: 5px 8px; text-align: center; white-space: nowrap; }
         th { background: #2d3748; color: #fff; }
         td.course-name { text-align: right; }
-        tr.electronic { background: #f5f5f5; }
+        tr.electronic { background: #d8f8a4ff; }
         tr.written { background: #fff; }
         tr.total-row { background: #e2e8f0; font-weight: bold; }
-        tr.daily-total { background: #4a5568; color: #fff; font-weight: bold; }
+        tr.daily-total { background: #e2e8f0; color: #000; font-weight: bold; }
         .page-header { text-align: center; margin-bottom: 15px; }
         .page-header h2 { margin: 0; font-size: 14pt; }
-        .session-header { background: #1a365d; color: #fff; padding: 8px; text-align: center; font-weight: bold; margin-top: 20px; margin-bottom: 5px; }
+        .session-header { background: #1a365d; color: #fff; padding: 8px; text-align: center; font-weight: bold; margin-top: 20px; margin-bottom: 5px;  font-size: 12pt;}
         .date-header { background: #2c5282; color: #fff; padding: 10px; text-align: center; font-size: 12pt; font-weight: bold; margin-top: 25px; }
     </style>';
 
@@ -4938,8 +4938,8 @@ function generateExamBookletReport($pdo, $mpdf, $config)
         $dailyElectronic = 0;
         $dailyWritten    = 0;
 
-        $dateHtml = '<div class="date-header">📅 تاریخ: ' . toPersianDigits($jalaliDateStr) . '</div>';
-        $mpdf->WriteHTML($dateHtml);
+        //$dateHtml = '<div class="date-header">تاریخ: ' . toPersianDigits($jalaliDateStr) . '</div>';
+        //$mpdf->WriteHTML($dateHtml);
 
         ksort($sessions); // Sort by time
 
@@ -4952,15 +4952,15 @@ function generateExamBookletReport($pdo, $mpdf, $config)
             $sessionElectronic = 0;
             $sessionWritten    = 0;
 
-            $sessionHtml  = '<div class="session-header">⏰ ساعت: ' . toPersianDigits($examTime) . '</div>';
+            $sessionHtml  = '<div class="session-header">' . toPersianDigits($examTime) . ' | ' . toPersianDigits($jalaliDateStr) . '</div>';
             $sessionHtml .= '<table>
                 <thead>
                     <tr>
-                        <th>ردیف</th>
-                        <th>کد درس</th>
-                        <th>نام درس</th>
-                        <th>نوع ارزشیابی</th>
-                        <th>تعداد</th>
+                        <th style="width: 7%;">#</th>
+                        <th style="width: 8%;">کد درس</th>
+                        <th style="width: 60%;">نام درس</th>
+                        <th style="width: 15%;">نوع ارزشیابی</th>
+                        <th style="width: 10%;">تعداد</th>
                     </tr>
                 </thead>
                 <tbody>';
@@ -5059,10 +5059,10 @@ function generateExamBookletReport($pdo, $mpdf, $config)
  */
 function generateSeatLabelsReport($pdo, $mpdf, $config)
 {
-    $universityName = $config['university_name'] ?? 'دانشگاه';
+    $universityName = $config['University'] ?? 'دانشگاه';
 
     // Get max students in any session from database
-    $stmt = $pdo->query("
+    $stmt       = $pdo->query("
         SELECT exam_date, exam_time, COUNT(*) as student_count
         FROM exam_seats
         GROUP BY exam_date, exam_time
@@ -5070,7 +5070,7 @@ function generateSeatLabelsReport($pdo, $mpdf, $config)
         LIMIT 1
     ");
     $maxSession = $stmt->fetch(PDO::FETCH_ASSOC);
-    
+
     $total = $maxSession ? intval($maxSession['student_count']) : 100;
 
     // Determine starting number based on total
@@ -5138,8 +5138,8 @@ function generateSeatLabelsReport($pdo, $mpdf, $config)
             $html .= '<tr>';
             for ($col = 0; $col < 2; $col++) {
                 if ($labelIndex < $totalLabels) {
-                    $seatNum = $startNum + $labelIndex;
-                    $html .= '<td>
+                    $seatNum  = $startNum + $labelIndex;
+                    $html    .= '<td>
                         <div class="label-header">' . htmlspecialchars($universityName) . '</div>
                         <div class="seat-number">' . toPersianDigits($seatNum) . '</div>
                         <div class="label-footer">شماره صندلی</div>
