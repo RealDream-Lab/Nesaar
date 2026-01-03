@@ -4368,7 +4368,7 @@ function generateSessionSummaryReport($pdo, $mpdf, $examDate, $examTime, $config
     $chairName  = $config['Chairman'] ?? '________________';
 
     // Pagination - 15 items per page like regular session report
-    $perPage      = 15;
+    $perPage      = 18;
     $totalCourses = count($courses);
     $chunks       = array_chunk($courses, $perPage);
 
@@ -4710,7 +4710,7 @@ function generateSessionSummaryReportByLocation($pdo, $mpdf, $examDate, $examTim
         $totalDescriptiveSheets = $descriptiveCount + $testDescriptiveCount;
 
         // Pagination - 15 items per page like regular session report
-        $perPage      = 15;
+        $perPage      = 18;
         $totalCourses = count($courses);
         $chunks       = array_chunk($courses, $perPage);
 
