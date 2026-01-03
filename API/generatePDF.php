@@ -5127,7 +5127,7 @@ function generateSeatLabelsReport($pdo, $mpdf, $config)
             margin-bottom: 10px;
         }
         .seat-number {
-            font-size: 64pt;
+            font-size: 90pt;
             font-weight: bold;
             color: #000;
             line-height: 1.2;

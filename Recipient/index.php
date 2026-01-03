@@ -182,8 +182,8 @@ $bodyClass = $wavesAnimationDisabled ? 'class="no-waves-animation"' : '';
             <div class="col-md-4 mb-3">
                 <div class="quick-action-card" id="seatNumbersCard" data-action="seat-numbers">
                     <div class="quick-action-icon">🪑</div>
-                    <div class="quick-action-title">شماره‌گذاری صندلی‌ها</div>
-                    <div class="quick-action-desc">برچسب شماره صندلی برای دسته‌ها</div>
+                    <div class="quick-action-title">چاپ شماره‌ صندلی‌</div>
+                    <div class="quick-action-desc">برچسب شماره صندلی برای الصاق روی صندلی‌ها</div>
                 </div>
             </div>
         </div>
