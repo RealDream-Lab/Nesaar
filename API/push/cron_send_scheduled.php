@@ -4,6 +4,9 @@
  * Run every minute: * * * * * php /var/www/html/API/push/cron_send_scheduled.php
  */
 
+// Set timezone to Iran
+date_default_timezone_set('Asia/Tehran');
+
 // Prevent web access
 if (php_sapi_name() !== 'cli') {
     http_response_code(403);

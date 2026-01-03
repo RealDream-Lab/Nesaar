@@ -5,6 +5,9 @@
  */
 header('Content-Type: application/json; charset=utf-8');
 
+// Set timezone to Iran for correct time comparison
+date_default_timezone_set('Asia/Tehran');
+
 require_once __DIR__ . '/../../includes/privileged_session.php';
 require_once __DIR__ . '/../db_init.php';
 require_once __DIR__ . '/../jdf.php';
