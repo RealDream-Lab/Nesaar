@@ -134,7 +134,7 @@ try {
     }
 } catch (Throwable $e) {
     $logFile = __DIR__ . '/../temp/generatePDF_error.log';
-    $msg = date('c') . " - Exception: " . $e->getMessage() . "\n" . $e->getTraceAsString() . "\n\n";
+    $msg     = date('c') . " - Exception: " . $e->getMessage() . "\n" . $e->getTraceAsString() . "\n\n";
     @file_put_contents($logFile, $msg, FILE_APPEND | LOCK_EX);
     header('Content-Type: text/plain; charset=utf-8', true, 500);
     echo "Internal Server Error: " . $e->getMessage();
@@ -4910,7 +4910,7 @@ function generateExamBookletReport($pdo, $mpdf, $config)
         th, td { border: 1px solid #333; padding: 5px 8px; text-align: center; white-space: nowrap; }
         th { background: #2d3748; color: #fff; }
         td.course-name { text-align: right; }
-        tr.electronic { background: #d8f8a4ff; }
+        tr.electronic { background: #E8F5E9; }
         tr.written { background: #fff; }
         tr.total-row { background: #e2e8f0; font-weight: bold; }
         tr.daily-total { background: #e2e8f0; color: #000; font-weight: bold; }
@@ -5047,7 +5047,6 @@ function generateExamBookletReport($pdo, $mpdf, $config)
 
         // Daily total row
         $dailyHtml = '<table><tbody><tr class="daily-total">
-            <td colspan="2">جمع روز ' . toPersianDigits($jalaliDateStr) . '</td>
             <td colspan="3">
                 کل: ' . toPersianDigits($dailyTotal) . ' | 
                 تستی: ' . toPersianDigits($dailyTest) . ' | 
@@ -5081,7 +5080,7 @@ function generateSeatLabelsReport($pdo, $mpdf, $config)
     );
 
     $maxSession = $stmt ? $stmt->fetch(PDO::FETCH_ASSOC) : null;
-    $total = $maxSession ? intval($maxSession['student_count']) : 100;
+    $total      = $maxSession ? intval($maxSession['student_count']) : 100;
 
     // Determine starting number based on total
     // Start from 11 for <90, 101 for <900, 1001 for <9000
