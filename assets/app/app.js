@@ -1669,6 +1669,12 @@ document.addEventListener("DOMContentLoaded", () => {
       lastSnapshot = JSON.stringify(payload || []);
       startAutoRefresh(studentId, nationalId);
 
+      // Check if student has photo and show reminder if not
+      const meta = first?._meta || {};
+      if (meta.has_photo === false) {
+        showPhotoReminderModal(studentId);
+      }
+
       // Request push notification subscription after successful login
       initPushNotificationForStudent(studentId);
     } catch (error) {
@@ -1761,6 +1767,12 @@ document.addEventListener("DOMContentLoaded", () => {
       renderResults(payload, fullName, sid);
       lastSnapshot = JSON.stringify(payload || []);
       startAutoRefresh(sid, nid);
+
+      // Check if student has photo and show reminder if not (only on fresh auto-login)
+      const meta = first?._meta || {};
+      if (meta.has_photo === false) {
+        showPhotoReminderModal(sid);
+      }
 
       // Request push notification subscription after successful auto-login
       initPushNotificationForStudent(sid);
@@ -3119,6 +3131,49 @@ document.addEventListener("DOMContentLoaded", () => {
     } catch (error) {
       console.error("[Push] Error:", error);
     }
+  }
+
+  // Photo Reminder Modal - Show when student doesn't have a photo
+  function showPhotoReminderModal(studentId) {
+    // Only show once per session to avoid being annoying
+    const reminderKey = `photo_reminder_shown_${studentId}`;
+    if (sessionStorage.getItem(reminderKey)) {
+      return;
+    }
+    sessionStorage.setItem(reminderKey, "true");
+
+    Swal.fire({
+      icon: "info",
+      title: "عکس پرسنلی",
+      html: `
+        <div style="text-align:justify;direction:rtl;line-height:1.8;">
+          <p style="margin-bottom:12px;">شما هنوز عکس پرسنلی در سامانه ثبت نکرده‌اید.</p>
+          <p style="margin-bottom:12px;">می‌توانید از بخش <strong>آپلود عکس</strong> یک عکس پرسنلی ارسال کنید.</p>
+          <div style="background:#1e293b;border-radius:8px;padding:12px;margin-top:10px;font-size:13px;">
+            <p style="margin:0 0 8px 0;color:#f59e0b;font-weight:600;">⚠️ نکات مهم:</p>
+            <ul style="margin:0;padding-right:20px;color:#94a3b8;">
+              <li>عکس باید <strong>پرسنلی و رسمی</strong> باشد</li>
+              <li>سلفی یا عکس یادگاری قابل قبول نیست</li>
+              <li>فرمت JPG با حداکثر ۵۱۲ کیلوبایت</li>
+            </ul>
+          </div>
+        </div>
+      `,
+      showCancelButton: true,
+      confirmButtonText: "آپلود عکس",
+      cancelButtonText: "بعداً",
+      reverseButtons: true,
+      customClass: {
+        popup: "swal2-rtl swal2-glass",
+        confirmButton: "btn btn-primary mx-2",
+        cancelButton: "btn btn-cancel mx-2",
+      },
+      buttonsStyling: false,
+    }).then((result) => {
+      if (result.isConfirmed) {
+        showStudentPhotoUploadModal(studentId);
+      }
+    });
   }
 
   // Student Photo Upload Modal

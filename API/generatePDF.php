@@ -284,9 +284,9 @@ function generateSessionReport($pdo, $mpdf, $examDate, $examTime, $config)
         .title { font-size: 16pt; font-weight: bold; padding-bottom: 20px; margin-bottom: 20px; }
         .meta { text-align: right; margin-bottom: 10px; font-size: 10pt; }
         .courses-table { width: 100%; border-collapse: collapse; font-size: 9pt; table-layout: fixed; }
-        .courses-table th { background-color: #efefef; border: 1px solid #ccc; padding: 5px; font-weight: bold; }
-        .courses-table td { border: 1px solid #ccc; padding: 8px 5px; text-align: center; }
-        .courses-table td.name { text-align: right; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .courses-table th { background-color: #efefef; border: 1px solid #ccc; padding: 5px; font-weight: bold; white-space: nowrap; overflow: hidden; }
+        .courses-table td { border: 1px solid #ccc; padding: 8px 5px; text-align: center; white-space: nowrap; overflow: hidden; }
+        .courses-table td.name { text-align: right; }
         .courses-table tr.electronic { background-color: #e8f5e9; }
         .summary-table { width: 100%; border-collapse: collapse; font-size: 9pt; margin-top: 15px; margin-bottom: 15px; }
         .summary-table th, .summary-table td { border: 1px solid #ccc; padding: 6px; text-align: center; }
@@ -522,9 +522,9 @@ function generateSessionReportByLocation($pdo, $mpdf, $examDate, $examTime, $con
         .location-name { font-size: 10pt; font-weight: bold; color: #333; margin-top: 4px; }
         .meta { text-align: right; margin-bottom: 10px; font-size: 10pt; }
         .courses-table { width: 100%; border-collapse: collapse; font-size: 9pt; table-layout: fixed; }
-        .courses-table th { background-color: #efefef; border: 1px solid #ccc; padding: 5px; font-weight: bold; }
-        .courses-table td { border: 1px solid #ccc; padding: 8px 5px; text-align: center; }
-        .courses-table td.name { text-align: right; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .courses-table th { background-color: #efefef; border: 1px solid #ccc; padding: 5px; font-weight: bold; white-space: nowrap; overflow: hidden; }
+        .courses-table td { border: 1px solid #ccc; padding: 8px 5px; text-align: center; white-space: nowrap; overflow: hidden; }
+        .courses-table td.name { text-align: right; }
         .courses-table tr.electronic { background-color: #e8f5e9; }
         .summary-table { width: 100%; border-collapse: collapse; font-size: 9pt; margin-top: 15px; margin-bottom: 15px; }
         .summary-table th, .summary-table td { border: 1px solid #ccc; padding: 6px; text-align: center; }
@@ -4354,38 +4354,10 @@ function generateSessionSummaryReport($pdo, $mpdf, $examDate, $examTime, $config
     $headName   = $config['HeadOfEDU'] ?? '________________';
     $chairName  = $config['Chairman'] ?? '________________';
 
-    // Pagination - calculate proper rows per page
-    // Footer (summary table + signatures) needs about 8 rows of space
-    // Normal pages can have 22 rows, last page needs fewer to fit footer
-    $perPageNormal = 22;
-    $perPageLast   = 12;  // Reduced to make room for footer without overlap
-    $totalCourses  = count($courses);
-
-    // Calculate chunks with different sizes for last page
-    $chunks    = [];
-    $remaining = $totalCourses;
-    $offset    = 0;
-
-    while ($remaining > 0) {
-        // If remaining courses can fit on one page with footer, this is the last chunk
-        if ($remaining <= $perPageLast) {
-            $chunks[] = array_slice($courses, $offset, $remaining);
-            break;
-        }
-        // If remaining would leave very few on last page, adjust
-        if ($remaining <= $perPageNormal && $remaining > $perPageLast) {
-            // Split into two pages more evenly
-            $splitSize  = (int)ceil($remaining / 2);
-            $chunks[]   = array_slice($courses, $offset, $splitSize);
-            $offset    += $splitSize;
-            $remaining -= $splitSize;
-        } else {
-            // Normal full page
-            $chunks[]   = array_slice($courses, $offset, $perPageNormal);
-            $offset    += $perPageNormal;
-            $remaining -= $perPageNormal;
-        }
-    }
+    // Pagination - 15 items per page like regular session report
+    $perPage      = 15;
+    $totalCourses = count($courses);
+    $chunks       = array_chunk($courses, $perPage);
 
     if (empty($chunks)) {
         $chunks = [$courses];
@@ -4402,9 +4374,9 @@ function generateSessionSummaryReport($pdo, $mpdf, $examDate, $examTime, $config
         .title { font-size: 16pt; font-weight: bold; padding-bottom: 20px; margin-bottom: 20px; }
         .meta { text-align: right; margin-bottom: 10px; font-size: 10pt; }
         .courses-table { width: 100%; border-collapse: collapse; font-size: 9pt; table-layout: fixed; }
-        .courses-table th { background-color: #efefef; border: 1px solid #ccc; padding: 5px; font-weight: bold; }
-        .courses-table td { border: 1px solid #ccc; padding: 6px 4px; text-align: center; }
-        .courses-table td.name { text-align: right; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .courses-table th { background-color: #efefef; border: 1px solid #ccc; padding: 5px; font-weight: bold; white-space: nowrap; overflow: hidden; }
+        .courses-table td { border: 1px solid #ccc; padding: 6px 4px; text-align: center; white-space: nowrap; overflow: hidden; }
+        .courses-table td.name { text-align: right; }
         .courses-table tr.electronic { background-color: #e8f5e9; }
         .summary-table { width: 100%; border-collapse: collapse; font-size: 9pt; margin-top: 10px; margin-bottom: 10px; }
         .summary-table th, .summary-table td { border: 1px solid #ccc; padding: 5px; text-align: center; }
@@ -4481,10 +4453,9 @@ function generateSessionSummaryReport($pdo, $mpdf, $examDate, $examTime, $config
         }
         $pageHtml .= '</tbody></table>';
 
-        // Footer only on last page
+        // Summary table only on last page
         if ($isLastPage) {
-            // Answer sheet summary table and signatures - fixed to bottom
-            $pageHtml .= '<div class="bottom-section">
+            $pageHtml .= '
             <table class="summary-table">
                 <thead>
                     <tr>
@@ -4506,39 +4477,38 @@ function generateSessionSummaryReport($pdo, $mpdf, $examDate, $examTime, $config
                     </tr>
                 </tbody>
             </table>';
-
-            // Footer Signatures
-            $pageHtml .= '<div class="footer-signs">
-                <div style="border-bottom: 1px solid #000; padding-bottom: 5px; margin-bottom: 8px; text-align: center; font-size: 9pt;">پس از انقضای مهلت آزمون، پاسخنامه‌ها جمع‌آوری و بعد از شمارش و کنترل با لیست حضور و غیاب و تایید، تحویل ستاد امتحانات گردید.</div>
-                
-                <table style="width: 100%; border: none; font-size: 9pt;">
-                    <tr>
-                        <td style="border: none; text-align: right; padding: 6px;">نام و نام خانوادگی رئیس مرکز/ معاون مرکز/ سرپرست واحد: ' . $bossName . '</td>
-                        <td style="border: none; text-align: left; padding: 6px;">امضاء</td>
-                    </tr>
-                    <tr>
-                        <td style="border: none; text-align: right; padding: 6px;">نام و نام خانوادگی رئیس اداره آموزش: ' . $headName . '</td>
-                        <td style="border: none; text-align: left; padding: 6px;">امضاء</td>
-                    </tr>
-                    <tr>
-                        <td style="border: none; text-align: right; padding: 6px;">نام و نام خانوادگی مسئول جلسه: ' . $chairName . '</td>
-                        <td style="border: none; text-align: left; padding: 6px;">امضاء</td>
-                    </tr>
-                    <tr>
-                        <td style="border: none; text-align: right; padding: 6px;">نام و نام خانوادگی ناظران/مراقبان جلسه:</td>
-                        <td style="border: none; text-align: left; padding: 6px;">امضاء</td>
-                    </tr>
-                    <tr>
-                        <td style="border: none; text-align: right; padding: 6px;">نام و نام خانوادگی بازرس اعزامی از استان/سازمان مرکزی:</td>
-                        <td style="border: none; text-align: left; padding: 6px;">امضاء</td>
-                    </tr>
-                </table>
-            </div>
-            </div>';
         }
 
+        // Signature HTML for footer (on every page)
+        $signatureHtml = '<div style="border-bottom: 1px solid #000; padding-bottom: 5px; margin-bottom: 8px; text-align: center; font-size: 9pt;">پس از انقضای مهلت آزمون، پاسخنامه‌ها جمع‌آوری و بعد از شمارش و کنترل با لیست حضور و غیاب و تایید، تحویل ستاد امتحانات گردید.</div>' .
+            '<table style="width: 100%; border: none;">' .
+            '<tr>' .
+            '<td style="border: none; text-align: right; padding: 6px;">نام و نام خانوادگی رئیس مرکز/ معاون مرکز/ سرپرست واحد: ' . $bossName . '</td>' .
+            '<td style="border: none; text-align: left; padding: 6px;">امضاء</td>' .
+            '</tr>' .
+            '<tr>' .
+            '<td style="border: none; text-align: right; padding: 6px;">نام و نام خانوادگی رئیس اداره آموزش: ' . $headName . '</td>' .
+            '<td style="border: none; text-align: left; padding: 6px;">امضاء</td>' .
+            '</tr>' .
+            '<tr>' .
+            '<td style="border: none; text-align: right; padding: 6px;">نام و نام خانوادگی مسئول جلسه: ' . $chairName . '</td>' .
+            '<td style="border: none; text-align: left; padding: 6px;">امضاء</td>' .
+            '</tr>' .
+            '<tr>' .
+            '<td style="border: none; text-align: right; padding: 6px;">نام و نام خانوادگی ناظران/مراقبان جلسه:</td>' .
+            '<td style="border: none; text-align: left; padding: 6px;">امضاء</td>' .
+            '</tr>' .
+            '<tr>' .
+            '<td style="border: none; text-align: right; padding: 6px;">نام و نام خانوادگی بازرس اعزامی از استان/سازمان مرکزی:</td>' .
+            '<td style="border: none; text-align: left; padding: 6px;">امضاء</td>' .
+            '</tr>' .
+            '</table>';
+
         // Page Number
-        $mpdf->SetHTMLFooter('<div style="background-color: #444; color: #fff; text-align: center; padding: 5px; font-size: 9pt;">صفحه ' . toPersianDigits($index + 1) . ' از ' . toPersianDigits($totalPages) . '</div>');
+        $pageNumberHtml = '<div style="background-color: #444; color: #fff; text-align: center; padding: 5px; font-size: 9pt; margin-top: 15px;">صفحه ' . toPersianDigits($index + 1) . ' از ' . toPersianDigits($totalPages) . '</div>';
+
+        // Signatures on every page, page number below
+        $mpdf->SetHTMLFooter($signatureHtml . $pageNumberHtml);
 
         $mpdf->WriteHTML($pageHtml);
     }
@@ -4652,9 +4622,9 @@ function generateSessionSummaryReportByLocation($pdo, $mpdf, $examDate, $examTim
         .location-name { font-size: 10pt; font-weight: bold; color: #333; margin-top: 4px; }
         .meta { text-align: right; margin-bottom: 10px; font-size: 10pt; }
         .courses-table { width: 100%; border-collapse: collapse; font-size: 9pt; table-layout: fixed; }
-        .courses-table th { background-color: #efefef; border: 1px solid #ccc; padding: 5px; font-weight: bold; }
-        .courses-table td { border: 1px solid #ccc; padding: 6px 4px; text-align: center; }
-        .courses-table td.name { text-align: right; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .courses-table th { background-color: #efefef; border: 1px solid #ccc; padding: 5px; font-weight: bold; white-space: nowrap; overflow: hidden; }
+        .courses-table td { border: 1px solid #ccc; padding: 6px 4px; text-align: center; white-space: nowrap; overflow: hidden; }
+        .courses-table td.name { text-align: right; }
         .courses-table tr.electronic { background-color: #e8f5e9; }
         .summary-table { width: 100%; border-collapse: collapse; font-size: 9pt; margin-top: 10px; margin-bottom: 10px; }
         .summary-table th, .summary-table td { border: 1px solid #ccc; padding: 5px; text-align: center; }
@@ -4726,33 +4696,10 @@ function generateSessionSummaryReportByLocation($pdo, $mpdf, $examDate, $examTim
         $totalTestSheets        = $testCount + $testDescriptiveCount - $electronicTestCount - $electronicTestDescCount;
         $totalDescriptiveSheets = $descriptiveCount + $testDescriptiveCount;
 
-        // Pagination for this location - calculate proper rows per page
-        // Footer (summary table + signatures) needs about 8 rows of space
-        $perPageNormal = 22;
-        $perPageLast   = 12;  // Reduced to make room for footer
-        $totalCourses  = count($courses);
-
-        // Calculate chunks with different sizes for last page
-        $chunks    = [];
-        $remaining = $totalCourses;
-        $offset    = 0;
-
-        while ($remaining > 0) {
-            if ($remaining <= $perPageLast) {
-                $chunks[] = array_slice($courses, $offset, $remaining);
-                break;
-            }
-            if ($remaining <= $perPageNormal && $remaining > $perPageLast) {
-                $splitSize  = (int)ceil($remaining / 2);
-                $chunks[]   = array_slice($courses, $offset, $splitSize);
-                $offset    += $splitSize;
-                $remaining -= $splitSize;
-            } else {
-                $chunks[]   = array_slice($courses, $offset, $perPageNormal);
-                $offset    += $perPageNormal;
-                $remaining -= $perPageNormal;
-            }
-        }
+        // Pagination - 15 items per page like regular session report
+        $perPage      = 15;
+        $totalCourses = count($courses);
+        $chunks       = array_chunk($courses, $perPage);
 
         if (empty($chunks)) {
             $chunks = [$courses];
@@ -4827,10 +4774,9 @@ function generateSessionSummaryReportByLocation($pdo, $mpdf, $examDate, $examTim
             }
             $pageHtml .= '</tbody></table>';
 
-            // Footer only on last page of this building
+            // Summary table only on last page of this building
             if ($isLastPage) {
-                // Answer sheet summary table and signatures - fixed to bottom
-                $pageHtml .= '<div class="bottom-section">
+                $pageHtml .= '
                 <table class="summary-table">
                     <thead>
                         <tr>
@@ -4852,43 +4798,42 @@ function generateSessionSummaryReportByLocation($pdo, $mpdf, $examDate, $examTim
                         </tr>
                     </tbody>
                 </table>';
-
-                // Footer Signatures
-                $pageHtml .= '<div class="footer-signs">
-                    <div style="border-bottom: 1px solid #000; padding-bottom: 5px; margin-bottom: 8px; text-align: center; font-size: 9pt;">پس از انقضای مهلت آزمون، پاسخنامه‌ها جمع‌آوری و بعد از شمارش و کنترل با لیست حضور و غیاب و تایید، تحویل ستاد امتحانات گردید.</div>
-                    
-                    <table style="width: 100%; border: none; font-size: 9pt;">
-                        <tr>
-                            <td style="border: none; text-align: right; padding: 6px;">نام و نام خانوادگی رئیس مرکز/ معاون مرکز/ سرپرست واحد: ' . $bossName . '</td>
-                            <td style="border: none; text-align: left; padding: 6px;">امضاء</td>
-                        </tr>
-                        <tr>
-                            <td style="border: none; text-align: right; padding: 6px;">نام و نام خانوادگی رئیس اداره آموزش: ' . $headName . '</td>
-                            <td style="border: none; text-align: left; padding: 6px;">امضاء</td>
-                        </tr>
-                        <tr>
-                            <td style="border: none; text-align: right; padding: 6px;">نام و نام خانوادگی مسئول جلسه: ' . $chairName . '</td>
-                            <td style="border: none; text-align: left; padding: 6px;">امضاء</td>
-                        </tr>
-                        <tr>
-                            <td style="border: none; text-align: right; padding: 6px;">نام و نام خانوادگی ناظران/مراقبان جلسه:</td>
-                            <td style="border: none; text-align: left; padding: 6px;">امضاء</td>
-                        </tr>
-                        <tr>
-                            <td style="border: none; text-align: right; padding: 6px;">نام و نام خانوادگی بازرس اعزامی از استان/سازمان مرکزی:</td>
-                            <td style="border: none; text-align: left; padding: 6px;">امضاء</td>
-                        </tr>
-                    </table>
-                </div>
-                </div>';
             }
+
+            // Signature HTML for footer (on every page)
+            $signatureHtml = '<div style="border-bottom: 1px solid #000; padding-bottom: 5px; margin-bottom: 8px; text-align: center; font-size: 9pt;">پس از انقضای مهلت آزمون، پاسخنامه‌ها جمع‌آوری و بعد از شمارش و کنترل با لیست حضور و غیاب و تایید، تحویل ستاد امتحانات گردید.</div>' .
+                '<table style="width: 100%; border: none;">' .
+                '<tr>' .
+                '<td style="border: none; text-align: right; padding: 6px;">نام و نام خانوادگی رئیس مرکز/ معاون مرکز/ سرپرست واحد: ' . $bossName . '</td>' .
+                '<td style="border: none; text-align: left; padding: 6px;">امضاء</td>' .
+                '</tr>' .
+                '<tr>' .
+                '<td style="border: none; text-align: right; padding: 6px;">نام و نام خانوادگی رئیس اداره آموزش: ' . $headName . '</td>' .
+                '<td style="border: none; text-align: left; padding: 6px;">امضاء</td>' .
+                '</tr>' .
+                '<tr>' .
+                '<td style="border: none; text-align: right; padding: 6px;">نام و نام خانوادگی مسئول جلسه: ' . $chairName . '</td>' .
+                '<td style="border: none; text-align: left; padding: 6px;">امضاء</td>' .
+                '</tr>' .
+                '<tr>' .
+                '<td style="border: none; text-align: right; padding: 6px;">نام و نام خانوادگی ناظران/مراقبان جلسه:</td>' .
+                '<td style="border: none; text-align: left; padding: 6px;">امضاء</td>' .
+                '</tr>' .
+                '<tr>' .
+                '<td style="border: none; text-align: right; padding: 6px;">نام و نام خانوادگی بازرس اعزامی از استان/سازمان مرکزی:</td>' .
+                '<td style="border: none; text-align: left; padding: 6px;">امضاء</td>' .
+                '</tr>' .
+                '</table>';
 
             // Page Number with location info
             $footerText = 'مکان ' . toPersianDigits($locationIndex) . ' از ' . toPersianDigits($totalLocations);
             if ($totalPages > 1) {
                 $footerText .= ' | صفحه ' . toPersianDigits($pageIndex + 1) . ' از ' . toPersianDigits($totalPages);
             }
-            $mpdf->SetHTMLFooter('<div style="background-color: #444; color: #fff; text-align: center; padding: 5px; font-size: 9pt;">' . $footerText . '</div>');
+            $pageNumberHtml = '<div style="background-color: #444; color: #fff; text-align: center; padding: 5px; font-size: 9pt; margin-top: 15px;">' . $footerText . '</div>';
+
+            // Signatures on every page, page number below
+            $mpdf->SetHTMLFooter($signatureHtml . $pageNumberHtml);
 
             $mpdf->WriteHTML($pageHtml);
         }

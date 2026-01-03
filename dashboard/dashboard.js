@@ -2047,12 +2047,12 @@ async function loadDashboardData() {
       }
     }
 
-    // Render insight cards
-    try {
-      if (typeof renderInsightCards === "function") renderInsightCards(stats);
-    } catch (e) {
-      console.warn("Insight cards render failed", e);
-    }
+    // Render insight cards - DISABLED
+    // try {
+    //   if (typeof renderInsightCards === "function") renderInsightCards(stats);
+    // } catch (e) {
+    //   console.warn("Insight cards render failed", e);
+    // }
 
     try {
       renderReportsChart();

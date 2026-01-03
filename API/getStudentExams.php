@@ -260,6 +260,27 @@ function getPersianDayOfWeek($jalali_date)
     return $days[$day] ?? '';
 }
 
+// Check if student has a photo
+$hasPhoto = false;
+try {
+    $saadCodeStmt = $pdo->prepare("SELECT ConfigValue FROM Config WHERE ConfigName = 'SaadCode'");
+    $saadCodeStmt->execute();
+    $saadCode = trim($saadCodeStmt->fetchColumn() ?: '');
+    if ($saadCode && $student_id) {
+        $photoPath = __DIR__ . '/../pic/' . $saadCode . '/' . $student_id . '.jpg';
+        $hasPhoto  = file_exists($photoPath);
+    }
+} catch (Exception $e) {
+    // Ignore photo check errors
+}
+
+// Add meta info to first result (for frontend to consume)
+if (!empty($results)) {
+    $results[0]['_meta'] = [
+        'has_photo' => $hasPhoto
+    ];
+}
+
 // خروجی JSON
 echo json_encode($results, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES);
 ?>

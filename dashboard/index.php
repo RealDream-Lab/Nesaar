@@ -225,8 +225,8 @@ $bodyClass = $wavesAnimationDisabled ? 'class="no-waves-animation"' : '';
             </div>
         </div>
 
-        <!-- Insight Cards Row -->
-        <div class="row mt-4" id="insightCardsContainer"></div>
+        <!-- Insight Cards Row - DISABLED -->
+        <!-- <div class="row mt-4" id="insightCardsContainer"></div> -->
 
         <!-- Push Notification Management Card -->
         <div class="dashboard-card no-hover collapsible-card" id="pushNotificationCard">
