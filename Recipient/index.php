@@ -132,16 +132,6 @@ $bodyClass = $wavesAnimationDisabled ? 'class="no-waves-animation"' : '';
                 </div>
             </div>
         </div>
-
-        <!-- Latest Request Report -->
-        <div class="dashboard-card no-hover" id="reportCard" style="display: none;">
-            <h4 class="mb-3">آخرین گزارش درخواستی</h4>
-            <div id="reportContent"></div>
-            <div class="text-center mt-3">
-                <button class="btn btn-danger" onclick="clearReport()">پاک کردن گزارش</button>
-            </div>
-        </div>
-
         <!-- Session Calendar Card -->
         <div class="dashboard-card no-hover collapsible-card" id="sessionCalendarCard">
             <div class="card-header-collapsible" onclick="toggleCardCollapse(this)">
@@ -154,6 +144,16 @@ $bodyClass = $wavesAnimationDisabled ? 'class="no-waves-animation"' : '';
                 </div>
             </div>
         </div>
+        <!-- Latest Request Report -->
+        <div class="dashboard-card no-hover" id="reportCard" style="display: none;">
+            <h4 class="mb-3">آخرین گزارش درخواستی</h4>
+            <div id="reportContent"></div>
+            <div class="text-center mt-3">
+                <button class="btn btn-danger" onclick="clearReport()">پاک کردن گزارش</button>
+            </div>
+        </div>
+
+
 
         <!-- Reports Chart Card -->
         <div class="dashboard-card no-hover collapsible-card" id="reportsChartCard">

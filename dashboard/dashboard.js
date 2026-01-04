@@ -7335,9 +7335,77 @@ document.addEventListener("DOMContentLoaded", function () {
   // Exam Booklet Card
   const examBookletCard = document.getElementById("examBookletCard");
   if (examBookletCard) {
-    examBookletCard.addEventListener("click", function () {
-      const url = `../API/generatePDF.php?report_type=exam_booklet&_t=${new Date().getTime()}`;
-      showReportModal(url, "دفترچه کلی آزمون‌ها");
+    examBookletCard.addEventListener("click", async function () {
+      const result = await Swal.fire({
+        title: "دفترچه کلی آزمون‌ها",
+        html: `
+          <div style="text-align: right; direction: rtl; padding: 10px;">
+            <div style="margin-bottom: 20px;">
+              <label style="display: block; margin-bottom: 10px; font-weight: 600;">نوع دروس:</label>
+              <div style="display: flex; flex-direction: column; gap: 8px; align-items: flex-start;">
+                <label style="cursor: pointer; display: flex; align-items: center; gap: 8px;">
+                  <input type="radio" name="bookletFilter" value="all" checked style="width: 18px; height: 18px;">
+                  <span>همه دروس</span>
+                </label>
+                <label style="cursor: pointer; display: flex; align-items: center; gap: 8px;">
+                  <input type="radio" name="bookletFilter" value="electronic" style="width: 18px; height: 18px;">
+                  <span>فقط دروس الکترونیکی</span>
+                </label>
+                <label style="cursor: pointer; display: flex; align-items: center; gap: 8px;">
+                  <input type="radio" name="bookletFilter" value="written" style="width: 18px; height: 18px;">
+                  <span>فقط دروس کتبی</span>
+                </label>
+              </div>
+            </div>
+            
+            <div style="border-top: 1px solid #ddd; padding-top: 20px; margin-top: 20px;">
+              <label style="display: block; margin-bottom: 10px; font-weight: 600;">فرمت خروجی:</label>
+              <div style="display: flex; flex-direction: column; gap: 8px; align-items: flex-start;">
+                <label style="cursor: pointer; display: flex; align-items: center; gap: 8px;">
+                  <input type="radio" name="bookletFormat" value="pdf" checked style="width: 18px; height: 18px;">
+                  <span>گزارش PDF</span>
+                </label>
+                <label style="cursor: pointer; display: flex; align-items: center; gap: 8px;">
+                  <input type="radio" name="bookletFormat" value="excel" style="width: 18px; height: 18px;">
+                  <span>فایل Excel</span>
+                </label>
+              </div>
+            </div>
+          </div>
+        `,
+        showCancelButton: true,
+        confirmButtonText: "تولید گزارش",
+        cancelButtonText: "انصراف",
+        width: 500,
+        customClass: {
+          popup: "swal2-rtl swal2-glass",
+          confirmButton: "btn btn-primary",
+          cancelButton: "btn btn-cancel",
+        },
+        preConfirm: () => {
+          const filter =
+            document.querySelector('input[name="bookletFilter"]:checked')
+              ?.value || "all";
+          const format =
+            document.querySelector('input[name="bookletFormat"]:checked')
+              ?.value || "pdf";
+          return { filter, format };
+        },
+      });
+
+      if (result.isConfirmed && result.value) {
+        const { filter, format } = result.value;
+
+        if (format === "excel") {
+          // Excel download
+          const url = `../API/generateExamBookletExcel.php?filter=${filter}&_t=${new Date().getTime()}`;
+          window.location.href = url;
+        } else {
+          // PDF report with filter
+          const url = `../API/generatePDF.php?report_type=exam_booklet&filter=${filter}&_t=${new Date().getTime()}`;
+          showReportModal(url, "دفترچه کلی آزمون‌ها");
+        }
+      }
     });
   }
 

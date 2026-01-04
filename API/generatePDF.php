@@ -126,7 +126,8 @@ try {
     } elseif ($reportType === 'session_summary') {
         generateSessionSummaryReport($pdo, $mpdf, $examDate, $examTime, $config);
     } elseif ($reportType === 'exam_booklet') {
-        generateExamBookletReport($pdo, $mpdf, $config);
+        $bookletFilter = $_GET['filter'] ?? 'all';
+        generateExamBookletReport($pdo, $mpdf, $config, $bookletFilter);
     } elseif ($reportType === 'seat_labels') {
         generateSeatLabelsReport($pdo, $mpdf, $config);
     } else {
@@ -958,8 +959,10 @@ function generateSeatNumbersReport($pdo, $mpdf, $examDate, $examTime, $config)
             font-size: 11pt;
             background-color: #e8f4e8 !important;
         }
-        .name-col { width: 35%; }
-        .course-col { width: 47%; }
+        .id-col { width: 12%; text-align: center; vertical-align: middle; }
+        .col-table th.id-col, .col-table td.id-col { text-align: center; vertical-align: middle; }
+        .name-col { width: 33%; }
+        .course-col { width: 37%; }
     </style>';
 
     // If separate by building, group students and render each building separately
@@ -1026,12 +1029,13 @@ function generateSeatNumbersReport($pdo, $mpdf, $examDate, $examTime, $config)
                 // Column 1
                 $html .= '<td style="vertical-align: top;">';
                 $html .= '<table class="col-table">';
-                $html .= '<thead><tr><th class="name-col">نام و نام خانوادگی</th><th class="course-col">نام درس</th><th class="seat-col">صندلی</th></tr></thead>';
+                $html .= '<thead><tr><th class="id-col">شماره دانشجویی</th><th class="name-col">نام و نام خانوادگی</th><th class="course-col">نام درس</th><th class="seat-col">صندلی</th></tr></thead>';
                 $html .= '<tbody>';
                 foreach ($col1 as $s) {
                     $displaySeat  = $getDisplaySeat($s);
                     $html        .= '<tr>';
-                    $html        .= '<td class="name-col">' . htmlspecialchars($s['last_name'] . ' ' . $s['first_name']) . '</td>';
+                    $html        .= '<td class="id-col" style="white-space: nowrap;">' . toPersianDigits($s['student_id']) . '</td>';
+                    $html        .= '<td class="name-col" style="white-space: nowrap;">' . htmlspecialchars($s['last_name'] . ' ' . $s['first_name']) . '</td>';
                     $html        .= '<td class="course-col">' . htmlspecialchars($s['course_name']) . '</td>';
                     $html        .= '<td class="seat-col">' . toPersianDigits($displaySeat) . '</td>';
                     $html        .= '</tr>';
@@ -1041,12 +1045,13 @@ function generateSeatNumbersReport($pdo, $mpdf, $examDate, $examTime, $config)
                 // Column 2
                 $html .= '<td style="vertical-align: top;">';
                 $html .= '<table class="col-table">';
-                $html .= '<thead><tr><th class="name-col">نام و نام خانوادگی</th><th class="course-col">نام درس</th><th class="seat-col">صندلی</th></tr></thead>';
+                $html .= '<thead><tr><th class="id-col">شماره دانشجویی</th><th class="name-col">نام و نام خانوادگی</th><th class="course-col">نام درس</th><th class="seat-col">صندلی</th></tr></thead>';
                 $html .= '<tbody>';
                 foreach ($col2 as $s) {
                     $displaySeat  = $getDisplaySeat($s);
                     $html        .= '<tr>';
-                    $html        .= '<td class="name-col">' . htmlspecialchars($s['last_name'] . ' ' . $s['first_name']) . '</td>';
+                    $html        .= '<td class="id-col" style="white-space: nowrap;">' . toPersianDigits($s['student_id']) . '</td>';
+                    $html        .= '<td class="name-col" style="white-space: nowrap;">' . htmlspecialchars($s['last_name'] . ' ' . $s['first_name']) . '</td>';
                     $html        .= '<td class="course-col">' . htmlspecialchars($s['course_name']) . '</td>';
                     $html        .= '<td class="seat-col">' . toPersianDigits($displaySeat) . '</td>';
                     $html        .= '</tr>';
@@ -1092,11 +1097,12 @@ function generateSeatNumbersReport($pdo, $mpdf, $examDate, $examTime, $config)
             // Column 1
             $html .= '<td style="vertical-align: top;">';
             $html .= '<table class="col-table">';
-            $html .= '<thead><tr><th class="name-col">نام و نام خانوادگی</th><th class="course-col">نام درس</th><th class="seat-col">صندلی</th></tr></thead>';
+            $html .= '<thead><tr><th class="id-col">شماره دانشجویی</th><th class="name-col">نام و نام خانوادگی</th><th class="course-col">نام درس</th><th class="seat-col">صندلی</th></tr></thead>';
             $html .= '<tbody>';
             foreach ($col1 as $s) {
                 $displaySeat  = $getDisplaySeat($s);
                 $html        .= '<tr>';
+                $html        .= '<td class="id-col">' . toPersianDigits($s['student_id']) . '</td>';
                 $html        .= '<td class="name-col">' . htmlspecialchars($s['last_name'] . ' ' . $s['first_name']) . '</td>';
                 $html        .= '<td class="course-col">' . htmlspecialchars($s['course_name']) . '</td>';
                 $html        .= '<td class="seat-col">' . toPersianDigits($displaySeat) . '</td>';
@@ -1107,11 +1113,12 @@ function generateSeatNumbersReport($pdo, $mpdf, $examDate, $examTime, $config)
             // Column 2
             $html .= '<td style="vertical-align: top;">';
             $html .= '<table class="col-table">';
-            $html .= '<thead><tr><th class="name-col">نام و نام خانوادگی</th><th class="course-col">نام درس</th><th class="seat-col">صندلی</th></tr></thead>';
+            $html .= '<thead><tr><th class="id-col">شماره دانشجویی</th><th class="name-col">نام و نام خانوادگی</th><th class="course-col">نام درس</th><th class="seat-col">صندلی</th></tr></thead>';
             $html .= '<tbody>';
             foreach ($col2 as $s) {
                 $displaySeat  = $getDisplaySeat($s);
                 $html        .= '<tr>';
+                $html        .= '<td class="id-col">' . toPersianDigits($s['student_id']) . '</td>';
                 $html        .= '<td class="name-col">' . htmlspecialchars($s['last_name'] . ' ' . $s['first_name']) . '</td>';
                 $html        .= '<td class="course-col">' . htmlspecialchars($s['course_name']) . '</td>';
                 $html        .= '<td class="seat-col">' . toPersianDigits($displaySeat) . '</td>';
@@ -4858,13 +4865,34 @@ function generateSessionSummaryReportByLocation($pdo, $mpdf, $examDate, $examTim
  * Electronic courses first (green), then written courses
  * Session totals: تستی، تشریحی، تستی‌تشریحی، الکترونیکی، کتبی، کل
  * Daily totals at end of each day
+ * @param string $filter - 'all', 'electronic', 'written'
  */
-function generateExamBookletReport($pdo, $mpdf, $config)
+function generateExamBookletReport($pdo, $mpdf, $config, $filter = 'all')
 {
     $universityName = $config['University'] ?? 'دانشگاه';
 
+    // Check if exam_type exists in exam_seats
+    $hasExamType = false;
+    try {
+        $colStmt = $pdo->prepare("SELECT COLUMN_NAME FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'exam_seats' AND COLUMN_NAME = 'exam_type'");
+        $colStmt->execute();
+        $hasExamType = (bool)$colStmt->fetchColumn();
+    } catch (Exception $e) {
+    }
+
+    // Build HAVING clause for filter
+    $having      = "";
+    $havingParam = [];
+    if ($hasExamType && $filter === 'electronic') {
+        $having      = "HAVING MAX(es.exam_type) = ?";
+        $havingParam = ['الکترونیکی'];
+    } elseif ($hasExamType && $filter === 'written') {
+        $having      = "HAVING MAX(es.exam_type) = ?";
+        $havingParam = ['کتبی'];
+    }
+
     // Fetch all courses with student counts, grouped by session
-    $stmt       = $pdo->query("
+    $sql  = "
         SELECT 
             c.course_code, 
             c.course_name, 
@@ -4876,10 +4904,13 @@ function generateExamBookletReport($pdo, $mpdf, $config)
         FROM courses c
         LEFT JOIN exam_seats es ON c.course_code = es.course_code
         GROUP BY c.course_code, c.course_name, c.exam_date, c.exam_time, c.course_type
+        $having
         ORDER BY c.exam_date ASC, c.exam_time ASC, 
             CASE WHEN MAX(es.exam_type) = 'الکترونیکی' THEN 0 ELSE 1 END,
             c.course_code ASC
-    ");
+    ";
+    $stmt = $pdo->prepare($sql);
+    $stmt->execute($havingParam);
     $allCourses = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
     if (empty($allCourses)) {
@@ -4975,7 +5006,7 @@ function generateExamBookletReport($pdo, $mpdf, $config)
                         <th style="width: 7%;">#</th>
                         <th style="width: 8%;">کد درس</th>
                         <th style="width: 60%;">نام درس</th>
-                        <th style="width: 15%;">نوع ارزشیابی</th>
+                        <th style="width: 15%;">نوع درس</th>
                         <th style="width: 10%;">تعداد</th>
                     </tr>
                 </thead>

@@ -2280,6 +2280,9 @@ document.addEventListener("DOMContentLoaded", () => {
                     }
                 </div>
                 <div class="session-actions">
+                    <button type="button" class="session-logout-btn" data-role="coworker-search-seat" title="جستجوی صندلی دانشجو">
+                        <span class="session-logout-text">جستجوی صندلی</span>
+                    </button>
                     <button type="button" class="session-logout-btn session-stats-btn" data-role="coworker-stats">
                         <span class="session-logout-text">آمار جلسات</span>
                     </button>
@@ -2361,12 +2364,202 @@ document.addEventListener("DOMContentLoaded", () => {
       });
     }
 
+    const searchSeatButton = examCards.querySelector(
+      '[data-role="coworker-search-seat"]'
+    );
+    if (searchSeatButton) {
+      searchSeatButton.addEventListener("click", async (event) => {
+        event.preventDefault();
+        await openSearchStudentSeatModal();
+      });
+    }
+
     const cards = examCards.querySelectorAll(".exam-card[data-session-origin]");
     cards.forEach((card) => {
       const origin = parseInt(card.getAttribute("data-session-origin"), 10);
       if (Number.isNaN(origin) || !coworkerSessions[origin]) return;
       // Removed click handler for SweetAlert modal
     });
+  }
+
+  /**
+   * Open modal to search for a student's seat by student ID
+   * Only shows results for active exams (30 min before to 30 min after)
+   */
+  async function openSearchStudentSeatModal() {
+    const inputResult = await Swal.fire({
+      title: "جستجوی صندلی دانشجو",
+      html: `
+        <div style="text-align: right; direction: rtl; padding: 10px;">
+          <label for="seatSearchStudentId" style="display: block; margin-bottom: 8px; font-weight: 600;">شماره دانشجویی:</label>
+          <input 
+            type="text" 
+            id="seatSearchStudentId" 
+            class="swal2-input" 
+            inputmode="numeric" 
+            pattern="[0-9]*"
+            maxlength="9"
+            placeholder="حداکثر ۹ رقم"
+            style="text-align: center; font-size: 1.2rem; direction: ltr;"
+            autocomplete="off"
+          >
+          <p style="margin-top: 12px; font-size: 0.85rem; color: var(--text-muted);">
+            شماره صندلی از ۳۰ دقیقه قبل تا ۳۰ دقیقه بعد از شروع آزمون قابل مشاهده است.
+          </p>
+        </div>
+      `,
+      showCancelButton: true,
+      confirmButtonText: "جستجو",
+      cancelButtonText: "انصراف",
+      customClass: {
+        popup: "swal2-rtl swal2-glass",
+        confirmButton: "btn btn-primary",
+        cancelButton: "btn btn-cancel",
+      },
+      didOpen: () => {
+        const input = document.getElementById("seatSearchStudentId");
+        if (input) {
+          input.focus();
+          input.addEventListener("input", (e) => {
+            e.target.value = toEnglishDigits(e.target.value)
+              .replace(/\D/g, "")
+              .slice(0, 9);
+          });
+          input.addEventListener("keydown", (e) => {
+            if (e.key === "Enter") {
+              e.preventDefault();
+              Swal.clickConfirm();
+            }
+          });
+        }
+      },
+      preConfirm: () => {
+        const input = document.getElementById("seatSearchStudentId");
+        const value = input ? toEnglishDigits(input.value).trim() : "";
+        if (!value || !/^\d{1,9}$/.test(value)) {
+          Swal.showValidationMessage("لطفاً شماره دانشجویی معتبر وارد کنید");
+          return false;
+        }
+        return value;
+      },
+    });
+
+    if (!inputResult.isConfirmed || !inputResult.value) {
+      return;
+    }
+
+    const studentId = inputResult.value;
+
+    Swal.fire({
+      title: "در حال جستجو...",
+      allowOutsideClick: false,
+      showConfirmButton: false,
+      didOpen: () => {
+        try {
+          Swal.showLoading();
+        } catch (e) {}
+      },
+      customClass: { popup: "swal2-rtl swal2-glass" },
+    });
+
+    try {
+      const resp = await secureFetch(
+        `/API/searchStudentSeat.php?student_id=${encodeURIComponent(
+          studentId
+        )}`,
+        { cache: "no-store" }
+      );
+      const data = await resp.json();
+
+      if (!data.success) {
+        Swal.fire({
+          icon: "warning",
+          title: "نتیجه‌ای یافت نشد",
+          html: `<div style="text-align: center; line-height: 1.8;">${escapeHtml(
+            data.error || "خطا در جستجو"
+          )}</div>`,
+          customClass: { popup: "swal2-rtl swal2-glass" },
+        });
+        return;
+      }
+
+      const student = data.student;
+      const exams = data.exams || [];
+      const seatNumber = data.seat_number;
+      const isMultiExam = data.is_multi_exam;
+
+      let examsHtml = exams
+        .map(
+          (exam) => `
+        <div style="background: rgba(255,255,255,0.85); border-radius: 10px; padding: 12px; margin-bottom: 10px; border: 1px solid rgba(0,0,0,0.1); box-shadow: 0 2px 8px rgba(0,0,0,0.05);">
+          <div style="font-weight: 600; color: #0d5a8c; margin-bottom: 6px; font-size: 1rem;">
+            ${escapeHtml(exam.course_name)}
+          </div>
+          <div style="font-size: 0.9rem; color: #1a1a1a;">
+            <span style="margin-left: 15px;">🕐 ساعت: ${toPersianDigits(
+              exam.exam_time
+            )}</span>
+            <span>📍 ${escapeHtml(exam.location)}</span>
+          </div>
+        </div>
+      `
+        )
+        .join("");
+
+      let resultHtml = `
+        <div style="text-align: center; direction: rtl;">
+          <div style="background: linear-gradient(135deg, #1a6fa6 0%, #0d5a8c 100%); 
+                      border-radius: 16px; padding: 20px; margin-bottom: 15px;
+                      border: 2px solid #0d5a8c; box-shadow: 0 8px 32px rgba(0,0,0,0.15);">
+            <div style="font-size: 3.5rem; font-weight: bold; color: #ffffff; margin-bottom: 8px; text-shadow: 0 2px 4px rgba(0,0,0,0.2);">
+              ${toPersianDigits(seatNumber)}
+            </div>
+            <div style="font-size: 0.9rem; color: rgba(255,255,255,0.9);">شماره صندلی</div>
+          </div>
+          
+          <div style="background: rgba(255,255,255,0.9); border-radius: 12px; padding: 15px; margin-bottom: 15px; border: 1px solid rgba(0,0,0,0.1); box-shadow: 0 2px 8px rgba(0,0,0,0.05);">
+            <div style="font-weight: 600; font-size: 1.15rem; color: #1a1a1a; margin-bottom: 4px;">
+              ${escapeHtml(student.full_name)}
+            </div>
+            <div style="font-size: 0.95rem; color: #333;">
+              شماره دانشجویی: ${toPersianDigits(student.student_id)}
+            </div>
+            ${
+              isMultiExam
+                ? '<div style="margin-top: 8px; padding: 4px 10px; background: #ffc107; color: #1a1a1a; border-radius: 20px; display: inline-block; font-size: 0.8rem; font-weight: 600;">دانشجوی چندآزمونی</div>'
+                : ""
+            }
+          </div>
+          
+          <div style="text-align: right;">
+            <div style="font-weight: 600; margin-bottom: 10px; color: #1a1a1a; font-size: 1rem;">درس${
+              exams.length > 1 ? "‌ها" : ""
+            }:</div>
+            ${examsHtml}
+          </div>
+        </div>
+      `;
+
+      Swal.fire({
+        title: "نتیجه جستجو",
+        html: resultHtml,
+        width: 500,
+        showConfirmButton: true,
+        confirmButtonText: "بستن",
+        customClass: {
+          popup: "swal2-rtl swal2-glass",
+          confirmButton: "btn btn-primary",
+        },
+      });
+    } catch (err) {
+      console.warn("searchStudentSeat error", err);
+      Swal.fire({
+        icon: "error",
+        title: "خطا",
+        text: "خطا در ارتباط با سرور",
+        customClass: { popup: "swal2-rtl swal2-glass" },
+      });
+    }
   }
 
   function handleCoworkerLogout() {
