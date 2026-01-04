@@ -4758,13 +4758,26 @@ async function examEssentialsHandler() {
 
   buttonsHtml += `</div>`;
 
-  SwalFlip({
+  Swal.fire({
     icon: "info",
     title: "ملزومات جلسه آزمون",
     html: buttonsHtml,
     showConfirmButton: false,
     showCancelButton: false,
     width: 650,
+    // prevent page jump: avoid adding scrollbar padding and avoid auto-focusing
+    scrollbarPadding: false,
+    focusConfirm: false,
+    didOpen: () => {
+      try {
+        if (
+          document.activeElement &&
+          typeof document.activeElement.blur === "function"
+        ) {
+          document.activeElement.blur();
+        }
+      } catch (e) {}
+    },
     customClass: { popup: "swal2-rtl swal2-glass" },
   });
 }
