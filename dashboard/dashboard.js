@@ -43,6 +43,11 @@ try {
           return;
 
         const _orig = Swal.fire.bind(Swal);
+        // Expose original fire implementation so helpers (swal-helper.js)
+        // can call it and avoid recursion when we replace `Swal.fire` below.
+        try {
+          window._SwalOriginalFire = _orig;
+        } catch (e) {}
         Swal.fire = function (opts) {
           try {
             if (typeof opts === "object" && opts !== null) {
@@ -87,6 +92,15 @@ try {
               if (isToast && opts.heightAuto !== undefined) {
                 opts = Object.assign({}, opts);
                 delete opts.heightAuto;
+              }
+
+              // Use the flip animation helper for non-toast modals (preserves toasts)
+              if (!isToast) {
+                if (typeof window.showSwalWithEffect === "function") {
+                  return window.showSwalWithEffect(opts, "flip");
+                }
+                // Fallback to original if helper missing
+                return _orig(opts);
               }
             }
           } catch (e) {}

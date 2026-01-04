@@ -1003,10 +1003,29 @@ function generateSeatNumbersReport($pdo, $mpdf, $examDate, $examTime, $config)
                 $isFirstPage = false;
 
                 // Set footer for this page (building-specific)
-                $startNum    = ($pageIndex * $perPage) + 1;
-                $endNum      = min(($pageIndex + 1) * $perPage, $buildingTotalStudents);
-                $footerHtml  = '<div style="text-align:center;font-size:9pt;color:#333;border-top:1px solid #999;padding-top:3px;">';
-                $footerHtml .= '<strong>' . $building . '</strong> | ';
+                $startNum = ($pageIndex * $perPage) + 1;
+                $endNum   = min(($pageIndex + 1) * $perPage, $buildingTotalStudents);
+                // Collect unique class names present on this page
+                $pageClasses = [];
+                foreach ($chunk as $stu) {
+                    $cn = trim($stu['class_name'] ?? '');
+                    if ($cn !== '') {
+                        $pageClasses[$cn] = true;
+                    }
+                }
+                $classList = array_keys($pageClasses);
+                $classStr  = '';
+                if (!empty($classList)) {
+                    $classStr = implode('، ', array_map('htmlspecialchars', $classList));
+                }
+
+                $footerHtml = '<div style="text-align:center;font-size:9pt;color:#333;border-top:1px solid #999;padding-top:3px;">';
+                // Building first, then class list (no prefix)
+                $footerHtml .= '<strong>' . htmlspecialchars($building) . '</strong>';
+                if ($classStr !== '') {
+                    $footerHtml .= ' | ' . $classStr;
+                }
+                $footerHtml .= ' | ';
                 $footerHtml .= 'ردیف ' . toPersianDigits($startNum) . ' تا ' . toPersianDigits($endNum);
                 $footerHtml .= ' از ' . toPersianDigits($buildingTotalStudents) . ' نفر';
                 $footerHtml .= ' | صفحه ' . toPersianDigits($pageIndex + 1) . ' از ' . toPersianDigits($buildingTotalPages);
@@ -1074,9 +1093,34 @@ function generateSeatNumbersReport($pdo, $mpdf, $examDate, $examTime, $config)
                 $mpdf->AddPage('L');
             }
 
-            $startNum    = ($index * $perPage) + 1;
-            $endNum      = min(($index + 1) * $perPage, $totalStudents);
-            $footerHtml  = '<div style="text-align:center;font-size:9pt;color:#333;border-top:1px solid #999;padding-top:3px;">';
+            $startNum = ($index * $perPage) + 1;
+            $endNum   = min(($index + 1) * $perPage, $totalStudents);
+            // Collect unique class names present on this page
+            $pageClasses = [];
+            foreach ($chunk as $stu) {
+                $cn = trim($stu['class_name'] ?? '');
+                if ($cn !== '') {
+                    $pageClasses[$cn] = true;
+                }
+            }
+            $classList = array_keys($pageClasses);
+            $classStr  = '';
+            if (!empty($classList)) {
+                $classStr = implode('، ', array_map('htmlspecialchars', $classList));
+            }
+
+            $footerHtml = '<div style="text-align:center;font-size:9pt;color:#333;border-top:1px solid #999;padding-top:3px;">';
+            // Building name followed by class list (only include parts that are non-empty)
+            $parts = [];
+            if (!empty($building)) {
+                $parts[] = htmlspecialchars($building);
+            }
+            if ($classStr !== '') {
+                $parts[] = $classStr;
+            }
+            if (!empty($parts)) {
+                $footerHtml .= implode(' | ', $parts) . ' | ';
+            }
             $footerHtml .= 'ردیف ' . toPersianDigits($startNum) . ' تا ' . toPersianDigits($endNum);
             $footerHtml .= ' از مجموع ' . toPersianDigits($totalStudents) . ' نفر';
             $footerHtml .= ' | صفحه ' . toPersianDigits($index + 1) . ' از ' . toPersianDigits($totalPages);

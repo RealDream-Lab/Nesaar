@@ -26,6 +26,12 @@
     const opts = Object.assign({}, options);
     if (!opts.showClass) opts.showClass = chosen.showClass;
     if (!opts.hideClass) opts.hideClass = chosen.hideClass;
+    // If the dashboard has saved the original Swal.fire before it was wrapped,
+    // use that to avoid recursion when the dashboard wrapper routes non-toast
+    // modals through this helper.
+    if (typeof window._SwalOriginalFire === "function") {
+      return window._SwalOriginalFire(opts);
+    }
     return Swal.fire(opts);
   };
 
