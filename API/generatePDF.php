@@ -979,19 +979,6 @@ function generateSeatNumbersReport($pdo, $mpdf, $examDate, $examTime, $config)
         .col-table th.id-col, .col-table td.id-col { text-align: center; vertical-align: middle; }
         .name-col { width: 33%; }
         .course-col { width: 37%; }
-        .exam-type-header {
-            text-align: center;
-            font-size: 14pt;
-            font-weight: bold;
-            margin-bottom: 8px;
-            color: #fff;
-            background: #1976d2;
-            padding: 8px;
-            border-radius: 6px;
-        }
-        .exam-type-header.written {
-            background: #388e3c;
-        }
     </style>';
 
     // Helper function to render students (used for both exam type separated and non-separated modes)
@@ -1039,14 +1026,8 @@ function generateSeatNumbersReport($pdo, $mpdf, $examDate, $examTime, $config)
                         $classStr = implode('، ', array_map('htmlspecialchars', $classList));
                     }
 
-                    $footerHtml = '<div style="text-align:center;font-size:9pt;color:#333;border-top:1px solid #999;padding-top:3px;">';
-                    if ($examTypeLabel) {
-                        $footerHtml .= '<strong style="color:#1976d2;">' . htmlspecialchars($examTypeLabel) . '</strong> | ';
-                    }
+                    $footerHtml  = '<div style="text-align:center;font-size:9pt;color:#333;border-top:1px solid #999;padding-top:3px;">';
                     $footerHtml .= '<strong>' . htmlspecialchars($building) . '</strong>';
-                    if ($classStr !== '') {
-                        $footerHtml .= ' | ' . $classStr;
-                    }
                     $footerHtml .= ' | ';
                     $footerHtml .= 'ردیف ' . toPersianDigits($startNum) . ' تا ' . toPersianDigits($endNum);
                     $footerHtml .= ' از ' . toPersianDigits($buildingTotalStudents) . ' نفر';
@@ -1059,13 +1040,13 @@ function generateSeatNumbersReport($pdo, $mpdf, $examDate, $examTime, $config)
                     $col1 = array_slice($chunk, 0, $half);
                     $col2 = array_slice($chunk, $half);
 
-                    $html  = $htmlStyle;
-                    $html .= '<div class="page-header">فهرست شماره صندلی دانشجویان</div>';
-                    $html .= '<div class="session-info">تاریخ: ' . toPersianDigits($examDate) . ' | ساعت: ' . toPersianDigits($examTime) . '</div>';
-                    if ($examTypeLabel && $pageIndex === 0) {
-                        $typeClass  = ($examTypeLabel === 'کتبی') ? 'written' : '';
-                        $html      .= '<div class="exam-type-header ' . $typeClass . '">' . htmlspecialchars($examTypeLabel) . '</div>';
+                    $html              = $htmlStyle;
+                    $html             .= '<div class="page-header">فهرست شماره صندلی دانشجویان</div>';
+                    $sessionInfoParts  = ['تاریخ: ' . toPersianDigits($examDate), 'ساعت: ' . toPersianDigits($examTime)];
+                    if ($classStr !== '') {
+                        $sessionInfoParts[] = $classStr;
                     }
+                    $html .= '<div class="session-info">' . implode(' | ', $sessionInfoParts) . '</div>';
                     $html .= '<div class="building-header">ساختمان: ' . $building . '</div>';
 
                     $html .= '<div class="main-container">';
@@ -1078,8 +1059,8 @@ function generateSeatNumbersReport($pdo, $mpdf, $examDate, $examTime, $config)
                     $html .= '<tbody>';
                     foreach ($col1 as $s) {
                         $displaySeat  = $getDisplaySeat($s);
-                        $studentName  = truncateText($s['last_name'] . ' ' . $s['first_name'], 22);
-                        $courseName   = truncateText($s['course_name'], 28);
+                        $studentName  = truncateText($s['last_name'] . ' ' . $s['first_name'], 30);
+                        $courseName   = truncateText($s['course_name'], 40);
                         $html        .= '<tr>';
                         $html        .= '<td class="id-col" style="white-space: nowrap;">' . toPersianDigits($s['student_id']) . '</td>';
                         $html        .= '<td class="name-col" style="white-space: nowrap;">' . htmlspecialchars($studentName) . '</td>';
@@ -1096,8 +1077,8 @@ function generateSeatNumbersReport($pdo, $mpdf, $examDate, $examTime, $config)
                     $html .= '<tbody>';
                     foreach ($col2 as $s) {
                         $displaySeat  = $getDisplaySeat($s);
-                        $studentName  = truncateText($s['last_name'] . ' ' . $s['first_name'], 22);
-                        $courseName   = truncateText($s['course_name'], 28);
+                        $studentName  = truncateText($s['last_name'] . ' ' . $s['first_name'], 30);
+                        $courseName   = truncateText($s['course_name'], 40);
                         $html        .= '<tr>';
                         $html        .= '<td class="id-col" style="white-space: nowrap;">' . toPersianDigits($s['student_id']) . '</td>';
                         $html        .= '<td class="name-col" style="white-space: nowrap;">' . htmlspecialchars($studentName) . '</td>';
@@ -1141,17 +1122,7 @@ function generateSeatNumbersReport($pdo, $mpdf, $examDate, $examTime, $config)
                     $classStr = implode('، ', array_map('htmlspecialchars', $classList));
                 }
 
-                $footerHtml = '<div style="text-align:center;font-size:9pt;color:#333;border-top:1px solid #999;padding-top:3px;">';
-                if ($examTypeLabel) {
-                    $footerHtml .= '<strong style="color:#1976d2;">' . htmlspecialchars($examTypeLabel) . '</strong> | ';
-                }
-                $parts = [];
-                if ($classStr !== '') {
-                    $parts[] = $classStr;
-                }
-                if (!empty($parts)) {
-                    $footerHtml .= implode(' | ', $parts) . ' | ';
-                }
+                $footerHtml  = '<div style="text-align:center;font-size:9pt;color:#333;border-top:1px solid #999;padding-top:3px;">';
                 $footerHtml .= 'ردیف ' . toPersianDigits($startNum) . ' تا ' . toPersianDigits($endNum);
                 $footerHtml .= ' از مجموع ' . toPersianDigits($totalStudents) . ' نفر';
                 $footerHtml .= ' | صفحه ' . toPersianDigits($index + 1) . ' از ' . toPersianDigits($totalPages);
@@ -1165,13 +1136,13 @@ function generateSeatNumbersReport($pdo, $mpdf, $examDate, $examTime, $config)
                 $col1 = array_slice($chunk, 0, $half);
                 $col2 = array_slice($chunk, $half);
 
-                $html  = $htmlStyle;
-                $html .= '<div class="page-header">فهرست شماره صندلی دانشجویان</div>';
-                $html .= '<div class="session-info">تاریخ: ' . toPersianDigits($examDate) . ' | ساعت: ' . toPersianDigits($examTime) . '</div>';
-                if ($examTypeLabel && $index === 0) {
-                    $typeClass  = ($examTypeLabel === 'کتبی') ? 'written' : '';
-                    $html      .= '<div class="exam-type-header ' . $typeClass . '">' . htmlspecialchars($examTypeLabel) . '</div>';
+                $html              = $htmlStyle;
+                $html             .= '<div class="page-header">فهرست شماره صندلی دانشجویان</div>';
+                $sessionInfoParts  = ['تاریخ: ' . toPersianDigits($examDate), 'ساعت: ' . toPersianDigits($examTime)];
+                if ($classStr !== '') {
+                    $sessionInfoParts[] = $classStr;
                 }
+                $html .= '<div class="session-info">' . implode(' | ', $sessionInfoParts) . '</div>';
 
                 $html .= '<div class="main-container">';
                 $html .= '<table class="two-col-table"><tr>';
@@ -1183,8 +1154,8 @@ function generateSeatNumbersReport($pdo, $mpdf, $examDate, $examTime, $config)
                 $html .= '<tbody>';
                 foreach ($col1 as $s) {
                     $displaySeat  = $getDisplaySeat($s);
-                    $studentName  = truncateText($s['last_name'] . ' ' . $s['first_name'], 22);
-                    $courseName   = truncateText($s['course_name'], 28);
+                    $studentName  = truncateText($s['last_name'] . ' ' . $s['first_name'], 30);
+                    $courseName   = truncateText($s['course_name'], 40);
                     $html        .= '<tr>';
                     $html        .= '<td class="id-col">' . toPersianDigits($s['student_id']) . '</td>';
                     $html        .= '<td class="name-col">' . htmlspecialchars($studentName) . '</td>';
@@ -1201,8 +1172,8 @@ function generateSeatNumbersReport($pdo, $mpdf, $examDate, $examTime, $config)
                 $html .= '<tbody>';
                 foreach ($col2 as $s) {
                     $displaySeat  = $getDisplaySeat($s);
-                    $studentName  = truncateText($s['last_name'] . ' ' . $s['first_name'], 22);
-                    $courseName   = truncateText($s['course_name'], 28);
+                    $studentName  = truncateText($s['last_name'] . ' ' . $s['first_name'], 30);
+                    $courseName   = truncateText($s['course_name'], 40);
                     $html        .= '<tr>';
                     $html        .= '<td class="id-col">' . toPersianDigits($s['student_id']) . '</td>';
                     $html        .= '<td class="name-col">' . htmlspecialchars($studentName) . '</td>';

@@ -285,43 +285,50 @@ $bodyClass = $wavesAnimationDisabled ? 'class="no-waves-animation"' : '';
                             </div>
                         </div>
                     </div>
-                    
+
                     <!-- Student Targeting Options -->
                     <div class="col-12" id="studentTargetingContainer" style="display:none;">
-                        <div class="card" style="background:rgba(25,118,210,0.08);border:1px solid rgba(25,118,210,0.2);border-radius:8px;">
+                        <div class="card"
+                            style="background:rgba(25,118,210,0.08);border:1px solid rgba(25,118,210,0.2);border-radius:8px;">
                             <div class="card-body p-3">
                                 <div class="d-flex align-items-center gap-2 mb-3">
                                     <span style="font-weight:600;color:#1976d2;">🎯 فیلتر دانشجویان</span>
-                                    <small style="color:#666;">(انتخاب کنید که پیام به کدام گروه از دانشجویان ارسال شود)</small>
+                                    <small style="color:#666;">(انتخاب کنید که پیام به کدام گروه از دانشجویان ارسال
+                                        شود)</small>
                                 </div>
                                 <div class="row g-2">
                                     <div class="col-12 col-md-4">
                                         <label class="form-label" style="font-size:0.85rem;">تاریخ آزمون</label>
-                                        <select class="form-select form-select-sm" id="pushFilterDates" multiple style="height:100px;">
+                                        <select class="form-select form-select-sm" id="pushFilterDates" multiple
+                                            style="height:100px;">
                                         </select>
                                         <small class="text-muted">Ctrl+Click برای انتخاب چندتایی</small>
                                     </div>
                                     <div class="col-12 col-md-4">
                                         <label class="form-label" style="font-size:0.85rem;">جلسه آزمون</label>
-                                        <select class="form-select form-select-sm" id="pushFilterSessions" multiple style="height:100px;">
+                                        <select class="form-select form-select-sm" id="pushFilterSessions" multiple
+                                            style="height:100px;">
                                         </select>
                                         <small class="text-muted">Ctrl+Click برای انتخاب چندتایی</small>
                                     </div>
                                     <div class="col-12 col-md-4">
                                         <label class="form-label" style="font-size:0.85rem;">درس</label>
-                                        <select class="form-select form-select-sm" id="pushFilterCourses" multiple style="height:100px;">
+                                        <select class="form-select form-select-sm" id="pushFilterCourses" multiple
+                                            style="height:100px;">
                                         </select>
                                         <small class="text-muted">Ctrl+Click برای انتخاب چندتایی</small>
                                     </div>
                                 </div>
                                 <div class="mt-2">
-                                    <button type="button" class="btn btn-sm btn-outline-secondary" id="clearPushFilters">پاک کردن فیلترها</button>
-                                    <span id="pushFilterCount" class="ms-2" style="color:#1976d2;font-weight:600;"></span>
+                                    <button type="button" class="btn btn-sm btn-outline-secondary"
+                                        id="clearPushFilters">پاک کردن فیلترها</button>
+                                    <span id="pushFilterCount" class="ms-2"
+                                        style="color:#1976d2;font-weight:600;"></span>
                                 </div>
                             </div>
                         </div>
                     </div>
-                    
+
                     <div class="col-12">
                         <label class="form-label">متن پیام</label>
                         <textarea class="form-control" id="pushBody" rows="3" placeholder="متن پیام را وارد کنید..."

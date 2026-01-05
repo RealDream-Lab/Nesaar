@@ -5557,31 +5557,41 @@ function renderInsightCards(stats) {
     if (filterCountSpan) {
       if (total > 0) {
         filterCountSpan.innerHTML = `<span class="spinner-border spinner-border-sm me-1" role="status"></span>`;
-        
+
         // Build query params for API
         const params = new URLSearchParams();
         if (selectedDates.length === 1) {
-          params.append('date', selectedDates[0]);
+          params.append("date", selectedDates[0]);
         }
         if (selectedSessions.length === 1) {
-          const [date, time] = selectedSessions[0].split('|');
-          params.append('date', date);
-          params.append('session', time);
+          const [date, time] = selectedSessions[0].split("|");
+          params.append("date", date);
+          params.append("session", time);
         }
         if (selectedCourses.length === 1) {
-          params.append('course', selectedCourses[0]);
+          params.append("course", selectedCourses[0]);
         }
-        
+
         try {
-          const resp = await guardedFetch(`../API/getPushSubscribersCount.php?${params.toString()}`);
+          const resp = await guardedFetch(
+            `../API/getPushSubscribersCount.php?${params.toString()}`
+          );
           const data = await resp.json();
           if (data.success && data.filtered_students !== undefined) {
-            filterCountSpan.innerHTML = `${toPersianDigits(total)} فیلتر انتخاب شده - <strong>${toPersianDigits(data.filtered_students)}</strong> مشترک`;
+            filterCountSpan.innerHTML = `${toPersianDigits(
+              total
+            )} فیلتر انتخاب شده - <strong>${toPersianDigits(
+              data.filtered_students
+            )}</strong> مشترک`;
           } else {
-            filterCountSpan.textContent = `${toPersianDigits(total)} فیلتر انتخاب شده`;
+            filterCountSpan.textContent = `${toPersianDigits(
+              total
+            )} فیلتر انتخاب شده`;
           }
         } catch (e) {
-          filterCountSpan.textContent = `${toPersianDigits(total)} فیلتر انتخاب شده`;
+          filterCountSpan.textContent = `${toPersianDigits(
+            total
+          )} فیلتر انتخاب شده`;
         }
       } else {
         filterCountSpan.textContent = "";
