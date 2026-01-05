@@ -5384,28 +5384,6 @@ function renderInsightCards(stats) {
   const scheduledContainer = document.getElementById("scheduledPushContainer");
   const scheduleDateTimeInput = document.getElementById("pushScheduleDateTime");
 
-  // Student targeting elements
-  const studentTargetingContainer = document.getElementById(
-    "studentTargetingContainer"
-  );
-  const filterDatesSelect = document.getElementById("pushFilterDates");
-  const filterSessionsSelect = document.getElementById("pushFilterSessions");
-  const filterCoursesSelect = document.getElementById("pushFilterCourses");
-  const clearFiltersBtn = document.getElementById("clearPushFilters");
-  const filterCountSpan = document.getElementById("pushFilterCount");
-
-  // New UI elements for filter modes
-  const filterModeSession = document.getElementById("pushFilterModeSession");
-  const filterModeCourse = document.getElementById("pushFilterModeCourse");
-  const sessionModeContainer = document.getElementById(
-    "pushSessionModeContainer"
-  );
-  const courseModeContainer = document.getElementById(
-    "pushCourseModeContainer"
-  );
-  const targetCountDiv = document.getElementById("pushTargetCount");
-  const targetNumberSpan = document.getElementById("pushTargetNumber");
-
   if (
     !sendBtn ||
     !titleInput ||
@@ -5414,281 +5392,6 @@ function renderInsightCards(stats) {
     !proctorsCheckbox
   ) {
     return; // Not on admin dashboard
-  }
-
-  // Cache for filter data
-  let filterData = { dates: [], sessions: [], courses: [] };
-  // Map of date -> sessions for that date
-  let dateSessionsMap = {};
-
-  // Load filter options when students checkbox changes
-  async function loadFilterOptions() {
-    try {
-      // Load sessions/dates
-      const response = await guardedFetch("../API/getSessionCalendarData.php", {
-        cache: "no-store",
-      });
-      const data = await response.json();
-
-      if (!data.success || !data.sessions) {
-        return;
-      }
-
-      // Extract unique dates and build date->sessions map
-      const datesSet = new Set();
-      dateSessionsMap = {};
-
-      data.sessions.forEach((session) => {
-        if (session.exam_date) {
-          datesSet.add(session.exam_date);
-          if (!dateSessionsMap[session.exam_date]) {
-            dateSessionsMap[session.exam_date] = [];
-          }
-          if (session.exam_time) {
-            dateSessionsMap[session.exam_date].push(session.exam_time);
-          }
-        }
-      });
-
-      // Sort dates
-      filterData.dates = Array.from(datesSet).sort();
-
-      // Populate dates select
-      if (filterDatesSelect) {
-        filterDatesSelect.innerHTML = filterData.dates
-          .map(
-            (d) =>
-              `<option value="${escapeHtml(d)}">${toPersianDigits(d)}</option>`
-          )
-          .join("");
-      }
-
-      // Load courses
-      try {
-        const coursesResp = await guardedFetch("../API/getCoursesForPush.php", {
-          cache: "no-store",
-        });
-        const coursesData = await coursesResp.json();
-        if (coursesData.success && coursesData.courses) {
-          filterData.courses = coursesData.courses.map((c) => ({
-            code: c.course_code,
-            name: c.course_name || c.course_code,
-          }));
-
-          // Populate courses select
-          if (filterCoursesSelect) {
-            filterCoursesSelect.innerHTML = filterData.courses
-              .map(
-                (c) =>
-                  `<option value="${escapeHtml(c.code)}">${escapeHtml(
-                    c.name
-                  )} (${toPersianDigits(c.code)})</option>`
-              )
-              .join("");
-          }
-        }
-      } catch (e) {
-        console.warn("Could not load courses for push filter", e);
-      }
-
-      // Initial target count
-      updateTargetCount();
-    } catch (e) {
-      console.warn("Failed to load push filter options", e);
-    }
-  }
-
-  // Update sessions dropdown based on selected dates
-  function updateSessionsForSelectedDates() {
-    if (!filterSessionsSelect || !filterDatesSelect) return;
-
-    const selectedDates = Array.from(filterDatesSelect.selectedOptions).map(
-      (o) => o.value
-    );
-
-    // Collect all sessions for selected dates
-    const sessions = [];
-    selectedDates.forEach((date) => {
-      if (dateSessionsMap[date]) {
-        dateSessionsMap[date].forEach((time) => {
-          sessions.push({ date, time });
-        });
-      }
-    });
-
-    // Sort by date then time
-    sessions.sort((a, b) => {
-      if (a.date !== b.date) return a.date.localeCompare(b.date);
-      return a.time.localeCompare(b.time);
-    });
-
-    // Populate sessions select
-    filterSessionsSelect.innerHTML = sessions
-      .map(
-        (s) =>
-          `<option value="${escapeHtml(s.date)}|${escapeHtml(
-            s.time
-          )}">${toPersianDigits(s.date)} - ${toPersianDigits(s.time)}</option>`
-      )
-      .join("");
-  }
-
-  // Show/hide student targeting based on checkbox state
-  function updateTargetingVisibility() {
-    const showTargeting = studentsCheckbox.checked && !proctorsCheckbox.checked;
-    if (studentTargetingContainer) {
-      studentTargetingContainer.style.display = showTargeting
-        ? "block"
-        : "none";
-      if (showTargeting && filterData.dates.length === 0) {
-        loadFilterOptions();
-      }
-    }
-  }
-
-  // Toggle between session and course filter modes
-  function updateFilterMode() {
-    const isSessionMode = filterModeSession?.checked ?? true;
-    if (sessionModeContainer) {
-      sessionModeContainer.style.display = isSessionMode ? "flex" : "none";
-    }
-    if (courseModeContainer) {
-      courseModeContainer.style.display = isSessionMode ? "none" : "flex";
-    }
-    // Clear selections when switching modes
-    clearAllFilters();
-  }
-
-  // Clear all filter selections
-  function clearAllFilters() {
-    if (filterDatesSelect) {
-      Array.from(filterDatesSelect.options).forEach(
-        (o) => (o.selected = false)
-      );
-    }
-    if (filterSessionsSelect) {
-      filterSessionsSelect.innerHTML = "";
-    }
-    if (filterCoursesSelect) {
-      Array.from(filterCoursesSelect.options).forEach(
-        (o) => (o.selected = false)
-      );
-    }
-    if (filterCountSpan) filterCountSpan.textContent = "";
-    updateTargetCount();
-  }
-
-  // Fetch and display target audience count
-  async function updateTargetCount() {
-    if (!targetCountDiv || !targetNumberSpan) return;
-
-    const isSessionMode = filterModeSession?.checked ?? true;
-    const selectedDates = filterDatesSelect
-      ? Array.from(filterDatesSelect.selectedOptions).map((o) => o.value)
-      : [];
-    const selectedSessions = filterSessionsSelect
-      ? Array.from(filterSessionsSelect.selectedOptions).map((o) => o.value)
-      : [];
-    const selectedCourses = filterCoursesSelect
-      ? Array.from(filterCoursesSelect.selectedOptions).map((o) => o.value)
-      : [];
-
-    // Build API params
-    const params = new URLSearchParams();
-    params.append("mode", isSessionMode ? "session" : "course");
-
-    if (isSessionMode) {
-      if (selectedDates.length > 0) {
-        params.append("dates", selectedDates.join(","));
-      }
-      if (selectedSessions.length > 0) {
-        // Use first selected session for count
-        params.append("session", selectedSessions[0]);
-      }
-    } else {
-      if (selectedCourses.length > 0) {
-        params.append("courses", selectedCourses.join(","));
-      }
-    }
-
-    // Show loading
-    targetCountDiv.style.display = "block";
-    targetNumberSpan.innerHTML =
-      '<span class="spinner-border spinner-border-sm"></span>';
-
-    try {
-      const resp = await guardedFetch(
-        `../API/getPushSubscribersCount.php?${params.toString()}`
-      );
-      const data = await resp.json();
-
-      if (data.success) {
-        const count = data.filtered_students ?? data.students ?? 0;
-        targetNumberSpan.textContent = toPersianDigits(count);
-
-        // Update description
-        let desc = "";
-        if (isSessionMode) {
-          if (selectedSessions.length > 0) {
-            desc = ` (جلسه انتخابی)`;
-          } else if (selectedDates.length > 0) {
-            desc = ` (همه جلسات ${toPersianDigits(
-              selectedDates.length
-            )} تاریخ)`;
-          } else {
-            desc = ` (همه دانشجویان)`;
-          }
-        } else {
-          if (selectedCourses.length > 0) {
-            desc = ` (${toPersianDigits(selectedCourses.length)} درس انتخابی)`;
-          } else {
-            desc = ` (همه دانشجویان)`;
-          }
-        }
-        targetNumberSpan.textContent = toPersianDigits(count) + desc;
-      }
-    } catch (e) {
-      targetNumberSpan.textContent = "خطا در دریافت";
-    }
-  }
-
-  // Listen for checkbox changes
-  if (studentsCheckbox) {
-    studentsCheckbox.addEventListener("change", updateTargetingVisibility);
-  }
-  if (proctorsCheckbox) {
-    proctorsCheckbox.addEventListener("change", updateTargetingVisibility);
-  }
-
-  // Listen for filter mode changes
-  if (filterModeSession) {
-    filterModeSession.addEventListener("change", updateFilterMode);
-  }
-  if (filterModeCourse) {
-    filterModeCourse.addEventListener("change", updateFilterMode);
-  }
-
-  // Clear filters button
-  if (clearFiltersBtn) {
-    clearFiltersBtn.addEventListener("click", clearAllFilters);
-  }
-
-  // Date selection changes -> update sessions dropdown
-  if (filterDatesSelect) {
-    filterDatesSelect.addEventListener("change", () => {
-      updateSessionsForSelectedDates();
-      updateTargetCount();
-    });
-  }
-
-  // Session selection changes -> update target count
-  if (filterSessionsSelect) {
-    filterSessionsSelect.addEventListener("change", updateTargetCount);
-  }
-
-  // Course selection changes -> update target count
-  if (filterCoursesSelect) {
-    filterCoursesSelect.addEventListener("change", updateTargetCount);
   }
 
   // Initialize JalaliDatePicker
@@ -5785,47 +5488,6 @@ function renderInsightCards(stats) {
       return;
     }
 
-    // Collect filter data if targeting students only
-    let studentFilters = null;
-    const isStudentTargeted =
-      sendToStudents &&
-      !sendToProctors &&
-      studentTargetingContainer?.style.display !== "none";
-
-    if (isStudentTargeted) {
-      const isSessionMode = filterModeSession?.checked ?? true;
-      const selectedDates = filterDatesSelect
-        ? Array.from(filterDatesSelect.selectedOptions).map((o) => o.value)
-        : [];
-      const selectedSessions = filterSessionsSelect
-        ? Array.from(filterSessionsSelect.selectedOptions).map((o) => o.value)
-        : [];
-      const selectedCourses = filterCoursesSelect
-        ? Array.from(filterCoursesSelect.selectedOptions).map((o) => o.value)
-        : [];
-
-      // Only add filters if something is selected
-      if (isSessionMode) {
-        if (selectedDates.length > 0 || selectedSessions.length > 0) {
-          studentFilters = {
-            mode: "session",
-            dates: selectedDates,
-            sessions: selectedSessions.map((s) => {
-              const [date, time] = s.split("|");
-              return { exam_date: date, exam_time: time };
-            }),
-          };
-        }
-      } else {
-        if (selectedCourses.length > 0) {
-          studentFilters = {
-            mode: "course",
-            courses: selectedCourses,
-          };
-        }
-      }
-    }
-
     // Determine recipients text and type
     let recipientsText = "";
     let userTypes = [];
@@ -5835,31 +5497,6 @@ function renderInsightCards(stats) {
     } else if (sendToStudents) {
       recipientsText = "فقط دانشجویان";
       userTypes = ["student"];
-
-      // Add filter info to recipients text
-      if (studentFilters) {
-        const filterParts = [];
-        if (studentFilters.mode === "session") {
-          if (studentFilters.sessions?.length > 0) {
-            filterParts.push(
-              `${toPersianDigits(studentFilters.sessions.length)} جلسه`
-            );
-          } else if (studentFilters.dates?.length > 0) {
-            filterParts.push(
-              `همه جلسات ${toPersianDigits(studentFilters.dates.length)} تاریخ`
-            );
-          }
-        } else if (studentFilters.mode === "course") {
-          if (studentFilters.courses?.length > 0) {
-            filterParts.push(
-              `${toPersianDigits(studentFilters.courses.length)} درس`
-            );
-          }
-        }
-        if (filterParts.length > 0) {
-          recipientsText += ` (فیلتر: ${filterParts.join("، ")})`;
-        }
-      }
     } else {
       recipientsText = "فقط مراقبین";
       userTypes = ["proctor"];
@@ -5914,11 +5551,6 @@ function renderInsightCards(stats) {
           user_types: userTypes,
           scheduled_at: scheduleDateTime,
         };
-        
-        // Add student filters if targeting students with filters
-        if (userTypes.includes("student") && studentFilters) {
-          payload.filters = studentFilters;
-        }
 
         const response = await guardedFetch("/API/push/schedule.php", {
           method: "POST",
@@ -5940,8 +5572,6 @@ function renderInsightCards(stats) {
           if (scheduledCheckbox) scheduledCheckbox.checked = false;
           if (scheduledContainer) scheduledContainer.classList.add("d-none");
           if (sendBtnText) sendBtnText.textContent = "ارسال اعلان";
-          // Clear filters
-          if (clearFiltersBtn) clearFiltersBtn.click();
         } else {
           showPushResult("danger", result.error || "خطا در زمان‌بندی اعلان");
         }
@@ -5960,11 +5590,6 @@ function renderInsightCards(stats) {
             tag: "admin-broadcast-" + Date.now(),
             user_type: userType,
           };
-
-          // Add student filters if targeting students with filters
-          if (userType === "student" && studentFilters) {
-            payload.filters = studentFilters;
-          }
 
           const response = await guardedFetch("/API/push/send.php", {
             method: "POST",

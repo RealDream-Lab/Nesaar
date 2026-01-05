@@ -83,7 +83,7 @@ if (preg_match('/^(\d{4})\/(\d{1,2})\/(\d{1,2})\s+(\d{1,2}):(\d{2})(:\d{2})?$/',
     exit;
 }
 
-// Ensure scheduled_push_notifications table exists (with filters column)
+// Ensure scheduled_push_notifications table exists
 try {
     $pdo->exec("
         CREATE TABLE IF NOT EXISTS scheduled_push_notifications (
@@ -92,7 +92,6 @@ try {
             body TEXT NOT NULL,
             icon VARCHAR(255) DEFAULT '/pwa-icons/icon-192.png',
             user_types VARCHAR(100) NOT NULL,
-            filters TEXT DEFAULT NULL,
             scheduled_at DATETIME NOT NULL,
             status ENUM('pending', 'sent', 'failed') DEFAULT 'pending',
             created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
@@ -102,30 +101,23 @@ try {
             INDEX idx_status_scheduled (status, scheduled_at)
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
     ");
-    
-    // Add filters column if it doesn't exist (for existing tables)
-    $pdo->exec("ALTER TABLE scheduled_push_notifications ADD COLUMN IF NOT EXISTS filters TEXT DEFAULT NULL AFTER user_types");
 } catch (Exception $e) {
-    error_log('Failed to create/update scheduled_push_notifications table: ' . $e->getMessage());
+    error_log('Failed to create scheduled_push_notifications table: ' . $e->getMessage());
 }
-
-// Get filters if provided
-$filters    = isset($input['filters']) ? $input['filters'] : null;
-$filtersJson = $filters ? json_encode($filters, JSON_UNESCAPED_UNICODE) : null;
 
 // Insert scheduled notification
 try {
     $stmt = $pdo->prepare("
-        INSERT INTO scheduled_push_notifications (title, body, icon, user_types, filters, scheduled_at)
-        VALUES (?, ?, ?, ?, ?, ?)
+        INSERT INTO scheduled_push_notifications (title, body, icon, user_types, scheduled_at)
+        VALUES (?, ?, ?, ?, ?)
     ");
 
     $userTypesStr = implode(',', $userTypes);
-    $stmt->execute([$title, $body, $icon, $userTypesStr, $filtersJson, $scheduledDatetime]);
+    $stmt->execute([$title, $body, $icon, $userTypesStr, $scheduledDatetime]);
 
     echo json_encode([
-        'success'      => true,
-        'message'      => 'اعلان با موفقیت زمان‌بندی شد',
+        'success' => true,
+        'message' => 'اعلان با موفقیت زمان‌بندی شد',
         'scheduled_id' => $pdo->lastInsertId(),
         'scheduled_at' => $scheduledAt
     ]);
