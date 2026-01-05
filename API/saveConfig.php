@@ -47,6 +47,8 @@ $allowed = [
     'SeatReportSortBy',
     // SeatReportSeparateBuilding: YES/NO - separate pages per building in seat report
     'SeatReportSeparateBuilding',
+    // Separate seat report by exam type (electronic / written)
+    'SeatReportSeparateExamType',
     // SeatReportGroupByCourse: YES/NO - group by course before applying sort
     'SeatReportGroupByCourse'
 ];
