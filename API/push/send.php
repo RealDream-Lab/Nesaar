@@ -88,19 +88,48 @@ try {
     $webPush = new WebPush($auth);
 
     // Build query for subscriptions
-    $query  = "SELECT * FROM push_subscriptions WHERE is_active = 1";
+    $query  = "SELECT ps.* FROM push_subscriptions ps WHERE ps.is_active = 1";
     $params = [];
 
     // Filter by user type if specified
     if (!empty($input['user_type'])) {
-        $query    .= " AND user_type = ?";
+        $query    .= " AND ps.user_type = ?";
         $params[]  = $input['user_type'];
     }
 
     // Filter by specific user if specified
     if (!empty($input['user_id'])) {
-        $query    .= " AND user_id = ?";
+        $query    .= " AND ps.user_id = ?";
         $params[]  = $input['user_id'];
+    }
+
+    // Filter students by date/session/course if specified
+    if (!empty($input['filters']) && $input['user_type'] === 'student') {
+        $filters = $input['filters'];
+        $hasFilter = !empty($filters['date']) || !empty($filters['session']) || !empty($filters['course']);
+        
+        if ($hasFilter) {
+            // Join with exam_seats to filter by exam criteria
+            $query = "SELECT DISTINCT ps.* FROM push_subscriptions ps
+                      INNER JOIN exam_seats es ON ps.user_id = es.student_number
+                      WHERE ps.is_active = 1 AND ps.user_type = 'student'";
+            $params = [];
+            
+            if (!empty($filters['date'])) {
+                $query .= " AND es.date = ?";
+                $params[] = $filters['date'];
+            }
+            
+            if (!empty($filters['session'])) {
+                $query .= " AND es.session = ?";
+                $params[] = $filters['session'];
+            }
+            
+            if (!empty($filters['course'])) {
+                $query .= " AND es.course_code = ?";
+                $params[] = $filters['course'];
+            }
+        }
     }
 
     $stmt = $pdo->prepare($query);

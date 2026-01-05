@@ -47,6 +47,16 @@ function toEnglishDigits($str)
     return str_replace($persian, $english, (string)$str);
 }
 
+// Helper to truncate text to a maximum character length for consistent table widths
+function truncateText($text, $maxLength = 30)
+{
+    $text = trim($text);
+    if (mb_strlen($text, 'UTF-8') <= $maxLength) {
+        return $text;
+    }
+    return mb_substr($text, 0, $maxLength - 2, 'UTF-8') . '…';
+}
+
 // Fetch Config
 $config = [];
 try {
@@ -753,6 +763,7 @@ function generateSeatNumbersReport($pdo, $mpdf, $examDate, $examTime, $config)
     $seatReportSortBy           = isset($config['SeatReportSortBy']) ? strtolower(trim($config['SeatReportSortBy'])) : 'last_name';
     $seatReportSeparateBuilding = isset($config['SeatReportSeparateBuilding']) && strtoupper($config['SeatReportSeparateBuilding']) === 'YES';
     $seatReportGroupByCourse    = isset($config['SeatReportGroupByCourse']) && strtoupper($config['SeatReportGroupByCourse']) === 'YES';
+    $seatReportSeparateExamType = isset($config['SeatReportSeparateExamType']) && strtoupper($config['SeatReportSeparateExamType']) === 'YES';
 
     // Legacy fallback: if old GroupByCourse is set and new settings are not, use old setting
     if (!isset($config['SeatReportGroupByCourse']) && isset($config['GroupByCourse']) && strtoupper($config['GroupByCourse']) === 'YES') {
@@ -777,8 +788,12 @@ function generateSeatNumbersReport($pdo, $mpdf, $examDate, $examTime, $config)
     $placeholders = str_repeat('?,', count($courses) - 1) . '?';
 
     // Build ORDER BY clause based on settings
-    // Priority: 1. Building (if separate), 2. Course (if group by course), 3. Sort field
+    // Priority: 1. Exam Type (if separate), 2. Building (if separate), 3. Course (if group by course), 4. Sort field
     $orderParts = [];
+    if ($seatReportSeparateExamType) {
+        // الکترونیکی comes before کتبی alphabetically, so we reverse with DESC
+        $orderParts[] = "CASE WHEN es.exam_type = 'الکترونیکی' THEN 0 ELSE 1 END";
+    }
     if ($seatReportSeparateBuilding) {
         $orderParts[] = 'es.building';
     }
@@ -809,6 +824,7 @@ function generateSeatNumbersReport($pdo, $mpdf, $examDate, $examTime, $config)
             es.seat_number,
             es.building,
             es.class_name,
+            es.exam_type,
             c.course_name
         FROM exam_seats es
         JOIN students s ON es.student_id = s.student_id
@@ -946,8 +962,8 @@ function generateSeatNumbersReport($pdo, $mpdf, $examDate, $examTime, $config)
             font-size: 9pt; 
             white-space: nowrap; 
             overflow: hidden; 
-            text-overflow: ellipsis; 
             vertical-align: middle;
+            max-width: 0;
         }
         .col-table tr:nth-child(even) td {
             background-color: #f5f5f5;
@@ -963,38 +979,145 @@ function generateSeatNumbersReport($pdo, $mpdf, $examDate, $examTime, $config)
         .col-table th.id-col, .col-table td.id-col { text-align: center; vertical-align: middle; }
         .name-col { width: 33%; }
         .course-col { width: 37%; }
+        .exam-type-header {
+            text-align: center;
+            font-size: 14pt;
+            font-weight: bold;
+            margin-bottom: 8px;
+            color: #fff;
+            background: #1976d2;
+            padding: 8px;
+            border-radius: 6px;
+        }
+        .exam-type-header.written {
+            background: #388e3c;
+        }
     </style>';
 
-    // If separate by building, group students and render each building separately
-    if ($seatReportSeparateBuilding) {
-        // Group students by building
-        $buildingGroups = [];
-        foreach ($students as $s) {
-            $building = trim($s['building'] ?? '') ?: 'بدون ساختمان';
-            if (!isset($buildingGroups[$building])) {
-                $buildingGroups[$building] = [];
+    // Helper function to render students (used for both exam type separated and non-separated modes)
+    $renderStudentsPages = function ($studentsToRender, $mpdf, $htmlStyle, $examDate, $examTime, $getDisplaySeat, $seatReportSeparateBuilding, $examTypeLabel = null, &$isFirstPage, &$globalPageNum, $totalGlobalPages) {
+        $perPage = 44;
+
+        if ($seatReportSeparateBuilding) {
+            // Group students by building
+            $buildingGroups = [];
+            foreach ($studentsToRender as $s) {
+                $building = trim($s['building'] ?? '') ?: 'بدون ساختمان';
+                if (!isset($buildingGroups[$building])) {
+                    $buildingGroups[$building] = [];
+                }
+                $buildingGroups[$building][] = $s;
             }
-            $buildingGroups[$building][] = $s;
-        }
 
-        $perPage          = 44;
-        $isFirstPage      = true;
-        $globalPageNum    = 0;
-        $totalGlobalPages = 0;
+            foreach ($buildingGroups as $building => $buildingStudents) {
+                $chunks                = array_chunk($buildingStudents, $perPage);
+                $buildingTotalPages    = count($chunks);
+                $buildingTotalStudents = count($buildingStudents);
 
-        // Calculate total pages across all buildings
-        foreach ($buildingGroups as $buildingStudents) {
-            $totalGlobalPages += count(array_chunk($buildingStudents, $perPage));
-        }
-        // Add 1 for Kroki page
-        $totalGlobalPages += 1;
+                foreach ($chunks as $pageIndex => $chunk) {
+                    $globalPageNum++;
 
-        foreach ($buildingGroups as $building => $buildingStudents) {
-            $chunks                = array_chunk($buildingStudents, $perPage);
-            $buildingTotalPages    = count($chunks);
-            $buildingTotalStudents = count($buildingStudents);
+                    if (!$isFirstPage) {
+                        $mpdf->AddPage('L');
+                    }
+                    $isFirstPage = false;
 
-            foreach ($chunks as $pageIndex => $chunk) {
+                    // Set footer for this page (building-specific)
+                    $startNum = ($pageIndex * $perPage) + 1;
+                    $endNum   = min(($pageIndex + 1) * $perPage, $buildingTotalStudents);
+                    // Collect unique class names present on this page
+                    $pageClasses = [];
+                    foreach ($chunk as $stu) {
+                        $cn = trim($stu['class_name'] ?? '');
+                        if ($cn !== '') {
+                            $pageClasses[$cn] = true;
+                        }
+                    }
+                    $classList = array_keys($pageClasses);
+                    $classStr  = '';
+                    if (!empty($classList)) {
+                        $classStr = implode('، ', array_map('htmlspecialchars', $classList));
+                    }
+
+                    $footerHtml = '<div style="text-align:center;font-size:9pt;color:#333;border-top:1px solid #999;padding-top:3px;">';
+                    if ($examTypeLabel) {
+                        $footerHtml .= '<strong style="color:#1976d2;">' . htmlspecialchars($examTypeLabel) . '</strong> | ';
+                    }
+                    $footerHtml .= '<strong>' . htmlspecialchars($building) . '</strong>';
+                    if ($classStr !== '') {
+                        $footerHtml .= ' | ' . $classStr;
+                    }
+                    $footerHtml .= ' | ';
+                    $footerHtml .= 'ردیف ' . toPersianDigits($startNum) . ' تا ' . toPersianDigits($endNum);
+                    $footerHtml .= ' از ' . toPersianDigits($buildingTotalStudents) . ' نفر';
+                    $footerHtml .= ' | صفحه ' . toPersianDigits($pageIndex + 1) . ' از ' . toPersianDigits($buildingTotalPages);
+                    $footerHtml .= ' (کل: ' . toPersianDigits($globalPageNum) . ' از ' . toPersianDigits($totalGlobalPages) . ')';
+                    $footerHtml .= '</div>';
+                    $mpdf->SetHTMLFooter($footerHtml);
+
+                    $half = ceil(count($chunk) / 2);
+                    $col1 = array_slice($chunk, 0, $half);
+                    $col2 = array_slice($chunk, $half);
+
+                    $html  = $htmlStyle;
+                    $html .= '<div class="page-header">فهرست شماره صندلی دانشجویان</div>';
+                    $html .= '<div class="session-info">تاریخ: ' . toPersianDigits($examDate) . ' | ساعت: ' . toPersianDigits($examTime) . '</div>';
+                    if ($examTypeLabel && $pageIndex === 0) {
+                        $typeClass  = ($examTypeLabel === 'کتبی') ? 'written' : '';
+                        $html      .= '<div class="exam-type-header ' . $typeClass . '">' . htmlspecialchars($examTypeLabel) . '</div>';
+                    }
+                    $html .= '<div class="building-header">ساختمان: ' . $building . '</div>';
+
+                    $html .= '<div class="main-container">';
+                    $html .= '<table class="two-col-table"><tr>';
+
+                    // Column 1
+                    $html .= '<td style="vertical-align: top;">';
+                    $html .= '<table class="col-table">';
+                    $html .= '<thead><tr><th class="id-col">شماره دانشجویی</th><th class="name-col">نام و نام خانوادگی</th><th class="course-col">نام درس</th><th class="seat-col">صندلی</th></tr></thead>';
+                    $html .= '<tbody>';
+                    foreach ($col1 as $s) {
+                        $displaySeat  = $getDisplaySeat($s);
+                        $studentName  = truncateText($s['last_name'] . ' ' . $s['first_name'], 22);
+                        $courseName   = truncateText($s['course_name'], 28);
+                        $html        .= '<tr>';
+                        $html        .= '<td class="id-col" style="white-space: nowrap;">' . toPersianDigits($s['student_id']) . '</td>';
+                        $html        .= '<td class="name-col" style="white-space: nowrap;">' . htmlspecialchars($studentName) . '</td>';
+                        $html        .= '<td class="course-col">' . htmlspecialchars($courseName) . '</td>';
+                        $html        .= '<td class="seat-col">' . toPersianDigits($displaySeat) . '</td>';
+                        $html        .= '</tr>';
+                    }
+                    $html .= '</tbody></table></td>';
+
+                    // Column 2
+                    $html .= '<td style="vertical-align: top;">';
+                    $html .= '<table class="col-table">';
+                    $html .= '<thead><tr><th class="id-col">شماره دانشجویی</th><th class="name-col">نام و نام خانوادگی</th><th class="course-col">نام درس</th><th class="seat-col">صندلی</th></tr></thead>';
+                    $html .= '<tbody>';
+                    foreach ($col2 as $s) {
+                        $displaySeat  = $getDisplaySeat($s);
+                        $studentName  = truncateText($s['last_name'] . ' ' . $s['first_name'], 22);
+                        $courseName   = truncateText($s['course_name'], 28);
+                        $html        .= '<tr>';
+                        $html        .= '<td class="id-col" style="white-space: nowrap;">' . toPersianDigits($s['student_id']) . '</td>';
+                        $html        .= '<td class="name-col" style="white-space: nowrap;">' . htmlspecialchars($studentName) . '</td>';
+                        $html        .= '<td class="course-col">' . htmlspecialchars($courseName) . '</td>';
+                        $html        .= '<td class="seat-col">' . toPersianDigits($displaySeat) . '</td>';
+                        $html        .= '</tr>';
+                    }
+                    $html .= '</tbody></table></td>';
+
+                    $html .= '</tr></table></div>';
+                    $mpdf->WriteHTML($html);
+                }
+            }
+        } else {
+            // Original behavior - all students together
+            $chunks        = array_chunk($studentsToRender, $perPage);
+            $totalPages    = count($chunks);
+            $totalStudents = count($studentsToRender);
+
+            foreach ($chunks as $index => $chunk) {
                 $globalPageNum++;
 
                 if (!$isFirstPage) {
@@ -1002,9 +1125,8 @@ function generateSeatNumbersReport($pdo, $mpdf, $examDate, $examTime, $config)
                 }
                 $isFirstPage = false;
 
-                // Set footer for this page (building-specific)
-                $startNum = ($pageIndex * $perPage) + 1;
-                $endNum   = min(($pageIndex + 1) * $perPage, $buildingTotalStudents);
+                $startNum = ($index * $perPage) + 1;
+                $endNum   = min(($index + 1) * $perPage, $totalStudents);
                 // Collect unique class names present on this page
                 $pageClasses = [];
                 foreach ($chunk as $stu) {
@@ -1020,16 +1142,22 @@ function generateSeatNumbersReport($pdo, $mpdf, $examDate, $examTime, $config)
                 }
 
                 $footerHtml = '<div style="text-align:center;font-size:9pt;color:#333;border-top:1px solid #999;padding-top:3px;">';
-                // Building first, then class list (no prefix)
-                $footerHtml .= '<strong>' . htmlspecialchars($building) . '</strong>';
-                if ($classStr !== '') {
-                    $footerHtml .= ' | ' . $classStr;
+                if ($examTypeLabel) {
+                    $footerHtml .= '<strong style="color:#1976d2;">' . htmlspecialchars($examTypeLabel) . '</strong> | ';
                 }
-                $footerHtml .= ' | ';
+                $parts = [];
+                if ($classStr !== '') {
+                    $parts[] = $classStr;
+                }
+                if (!empty($parts)) {
+                    $footerHtml .= implode(' | ', $parts) . ' | ';
+                }
                 $footerHtml .= 'ردیف ' . toPersianDigits($startNum) . ' تا ' . toPersianDigits($endNum);
-                $footerHtml .= ' از ' . toPersianDigits($buildingTotalStudents) . ' نفر';
-                $footerHtml .= ' | صفحه ' . toPersianDigits($pageIndex + 1) . ' از ' . toPersianDigits($buildingTotalPages);
-                $footerHtml .= ' (کل: ' . toPersianDigits($globalPageNum) . ' از ' . toPersianDigits($totalGlobalPages) . ')';
+                $footerHtml .= ' از مجموع ' . toPersianDigits($totalStudents) . ' نفر';
+                $footerHtml .= ' | صفحه ' . toPersianDigits($index + 1) . ' از ' . toPersianDigits($totalPages);
+                if ($totalGlobalPages > $totalPages) {
+                    $footerHtml .= ' (کل: ' . toPersianDigits($globalPageNum) . ' از ' . toPersianDigits($totalGlobalPages) . ')';
+                }
                 $footerHtml .= '</div>';
                 $mpdf->SetHTMLFooter($footerHtml);
 
@@ -1040,7 +1168,10 @@ function generateSeatNumbersReport($pdo, $mpdf, $examDate, $examTime, $config)
                 $html  = $htmlStyle;
                 $html .= '<div class="page-header">فهرست شماره صندلی دانشجویان</div>';
                 $html .= '<div class="session-info">تاریخ: ' . toPersianDigits($examDate) . ' | ساعت: ' . toPersianDigits($examTime) . '</div>';
-                $html .= '<div class="building-header">ساختمان: ' . $building . '</div>';
+                if ($examTypeLabel && $index === 0) {
+                    $typeClass  = ($examTypeLabel === 'کتبی') ? 'written' : '';
+                    $html      .= '<div class="exam-type-header ' . $typeClass . '">' . htmlspecialchars($examTypeLabel) . '</div>';
+                }
 
                 $html .= '<div class="main-container">';
                 $html .= '<table class="two-col-table"><tr>';
@@ -1052,10 +1183,12 @@ function generateSeatNumbersReport($pdo, $mpdf, $examDate, $examTime, $config)
                 $html .= '<tbody>';
                 foreach ($col1 as $s) {
                     $displaySeat  = $getDisplaySeat($s);
+                    $studentName  = truncateText($s['last_name'] . ' ' . $s['first_name'], 22);
+                    $courseName   = truncateText($s['course_name'], 28);
                     $html        .= '<tr>';
-                    $html        .= '<td class="id-col" style="white-space: nowrap;">' . toPersianDigits($s['student_id']) . '</td>';
-                    $html        .= '<td class="name-col" style="white-space: nowrap;">' . htmlspecialchars($s['last_name'] . ' ' . $s['first_name']) . '</td>';
-                    $html        .= '<td class="course-col">' . htmlspecialchars($s['course_name']) . '</td>';
+                    $html        .= '<td class="id-col">' . toPersianDigits($s['student_id']) . '</td>';
+                    $html        .= '<td class="name-col">' . htmlspecialchars($studentName) . '</td>';
+                    $html        .= '<td class="course-col">' . htmlspecialchars($courseName) . '</td>';
                     $html        .= '<td class="seat-col">' . toPersianDigits($displaySeat) . '</td>';
                     $html        .= '</tr>';
                 }
@@ -1068,10 +1201,12 @@ function generateSeatNumbersReport($pdo, $mpdf, $examDate, $examTime, $config)
                 $html .= '<tbody>';
                 foreach ($col2 as $s) {
                     $displaySeat  = $getDisplaySeat($s);
+                    $studentName  = truncateText($s['last_name'] . ' ' . $s['first_name'], 22);
+                    $courseName   = truncateText($s['course_name'], 28);
                     $html        .= '<tr>';
-                    $html        .= '<td class="id-col" style="white-space: nowrap;">' . toPersianDigits($s['student_id']) . '</td>';
-                    $html        .= '<td class="name-col" style="white-space: nowrap;">' . htmlspecialchars($s['last_name'] . ' ' . $s['first_name']) . '</td>';
-                    $html        .= '<td class="course-col">' . htmlspecialchars($s['course_name']) . '</td>';
+                    $html        .= '<td class="id-col">' . toPersianDigits($s['student_id']) . '</td>';
+                    $html        .= '<td class="name-col">' . htmlspecialchars($studentName) . '</td>';
+                    $html        .= '<td class="course-col">' . htmlspecialchars($courseName) . '</td>';
                     $html        .= '<td class="seat-col">' . toPersianDigits($displaySeat) . '</td>';
                     $html        .= '</tr>';
                 }
@@ -1081,98 +1216,80 @@ function generateSeatNumbersReport($pdo, $mpdf, $examDate, $examTime, $config)
                 $mpdf->WriteHTML($html);
             }
         }
-    } else {
-        // Original behavior - all students together
-        $perPage       = 44;
-        $chunks        = array_chunk($students, $perPage);
-        $totalPages    = count($chunks);
-        $totalStudents = count($students);
+    };
 
-        foreach ($chunks as $index => $chunk) {
-            if ($index > 0) {
-                $mpdf->AddPage('L');
+    // Calculate total pages for footer
+    $perPage          = 44;
+    $isFirstPage      = true;
+    $globalPageNum    = 0;
+    $totalGlobalPages = 1; // Start with 1 for Kroki page
+
+    if ($seatReportSeparateExamType) {
+        // Split students by exam type
+        $electronicStudents = array_filter($students, function ($s) {
+            return ($s['exam_type'] ?? '') === 'الکترونیکی';
+        });
+        $writtenStudents    = array_filter($students, function ($s) {
+            return ($s['exam_type'] ?? '') !== 'الکترونیکی';
+        });
+
+        // Calculate total pages
+        if ($seatReportSeparateBuilding) {
+            // Group by building for each type
+            $elecBuildings = [];
+            foreach ($electronicStudents as $s) {
+                $building = trim($s['building'] ?? '') ?: 'بدون ساختمان';
+                if (!isset($elecBuildings[$building]))
+                    $elecBuildings[$building] = [];
+                $elecBuildings[$building][] = $s;
+            }
+            foreach ($elecBuildings as $bs) {
+                $totalGlobalPages += count(array_chunk($bs, $perPage));
             }
 
-            $startNum = ($index * $perPage) + 1;
-            $endNum   = min(($index + 1) * $perPage, $totalStudents);
-            // Collect unique class names present on this page
-            $pageClasses = [];
-            foreach ($chunk as $stu) {
-                $cn = trim($stu['class_name'] ?? '');
-                if ($cn !== '') {
-                    $pageClasses[$cn] = true;
-                }
+            $writtenBuildings = [];
+            foreach ($writtenStudents as $s) {
+                $building = trim($s['building'] ?? '') ?: 'بدون ساختمان';
+                if (!isset($writtenBuildings[$building]))
+                    $writtenBuildings[$building] = [];
+                $writtenBuildings[$building][] = $s;
             }
-            $classList = array_keys($pageClasses);
-            $classStr  = '';
-            if (!empty($classList)) {
-                $classStr = implode('، ', array_map('htmlspecialchars', $classList));
+            foreach ($writtenBuildings as $bs) {
+                $totalGlobalPages += count(array_chunk($bs, $perPage));
             }
-
-            $footerHtml = '<div style="text-align:center;font-size:9pt;color:#333;border-top:1px solid #999;padding-top:3px;">';
-            // Building name followed by class list (only include parts that are non-empty)
-            $parts = [];
-            if (!empty($building)) {
-                $parts[] = htmlspecialchars($building);
-            }
-            if ($classStr !== '') {
-                $parts[] = $classStr;
-            }
-            if (!empty($parts)) {
-                $footerHtml .= implode(' | ', $parts) . ' | ';
-            }
-            $footerHtml .= 'ردیف ' . toPersianDigits($startNum) . ' تا ' . toPersianDigits($endNum);
-            $footerHtml .= ' از مجموع ' . toPersianDigits($totalStudents) . ' نفر';
-            $footerHtml .= ' | صفحه ' . toPersianDigits($index + 1) . ' از ' . toPersianDigits($totalPages);
-            $footerHtml .= '</div>';
-            $mpdf->SetHTMLFooter($footerHtml);
-
-            $half = ceil(count($chunk) / 2);
-            $col1 = array_slice($chunk, 0, $half);
-            $col2 = array_slice($chunk, $half);
-
-            $html  = $htmlStyle;
-            $html .= '<div class="page-header">فهرست شماره صندلی دانشجویان</div>';
-            $html .= '<div class="session-info">تاریخ: ' . toPersianDigits($examDate) . ' | ساعت: ' . toPersianDigits($examTime) . '</div>';
-
-            $html .= '<div class="main-container">';
-            $html .= '<table class="two-col-table"><tr>';
-
-            // Column 1
-            $html .= '<td style="vertical-align: top;">';
-            $html .= '<table class="col-table">';
-            $html .= '<thead><tr><th class="id-col">شماره دانشجویی</th><th class="name-col">نام و نام خانوادگی</th><th class="course-col">نام درس</th><th class="seat-col">صندلی</th></tr></thead>';
-            $html .= '<tbody>';
-            foreach ($col1 as $s) {
-                $displaySeat  = $getDisplaySeat($s);
-                $html        .= '<tr>';
-                $html        .= '<td class="id-col">' . toPersianDigits($s['student_id']) . '</td>';
-                $html        .= '<td class="name-col">' . htmlspecialchars($s['last_name'] . ' ' . $s['first_name']) . '</td>';
-                $html        .= '<td class="course-col">' . htmlspecialchars($s['course_name']) . '</td>';
-                $html        .= '<td class="seat-col">' . toPersianDigits($displaySeat) . '</td>';
-                $html        .= '</tr>';
-            }
-            $html .= '</tbody></table></td>';
-
-            // Column 2
-            $html .= '<td style="vertical-align: top;">';
-            $html .= '<table class="col-table">';
-            $html .= '<thead><tr><th class="id-col">شماره دانشجویی</th><th class="name-col">نام و نام خانوادگی</th><th class="course-col">نام درس</th><th class="seat-col">صندلی</th></tr></thead>';
-            $html .= '<tbody>';
-            foreach ($col2 as $s) {
-                $displaySeat  = $getDisplaySeat($s);
-                $html        .= '<tr>';
-                $html        .= '<td class="id-col">' . toPersianDigits($s['student_id']) . '</td>';
-                $html        .= '<td class="name-col">' . htmlspecialchars($s['last_name'] . ' ' . $s['first_name']) . '</td>';
-                $html        .= '<td class="course-col">' . htmlspecialchars($s['course_name']) . '</td>';
-                $html        .= '<td class="seat-col">' . toPersianDigits($displaySeat) . '</td>';
-                $html        .= '</tr>';
-            }
-            $html .= '</tbody></table></td>';
-
-            $html .= '</tr></table></div>';
-            $mpdf->WriteHTML($html);
+        } else {
+            $totalGlobalPages += count(array_chunk($electronicStudents, $perPage));
+            $totalGlobalPages += count(array_chunk($writtenStudents, $perPage));
         }
+
+        // Render electronic students first
+        if (!empty($electronicStudents)) {
+            $renderStudentsPages(array_values($electronicStudents), $mpdf, $htmlStyle, $examDate, $examTime, $getDisplaySeat, $seatReportSeparateBuilding, 'الکترونیکی', $isFirstPage, $globalPageNum, $totalGlobalPages);
+        }
+
+        // Render written students with page break
+        if (!empty($writtenStudents)) {
+            $renderStudentsPages(array_values($writtenStudents), $mpdf, $htmlStyle, $examDate, $examTime, $getDisplaySeat, $seatReportSeparateBuilding, 'کتبی', $isFirstPage, $globalPageNum, $totalGlobalPages);
+        }
+    } else {
+        // Original logic without exam type separation
+        if ($seatReportSeparateBuilding) {
+            $buildingGroups = [];
+            foreach ($students as $s) {
+                $building = trim($s['building'] ?? '') ?: 'بدون ساختمان';
+                if (!isset($buildingGroups[$building])) {
+                    $buildingGroups[$building] = [];
+                }
+                $buildingGroups[$building][] = $s;
+            }
+            foreach ($buildingGroups as $bs) {
+                $totalGlobalPages += count(array_chunk($bs, $perPage));
+            }
+        } else {
+            $totalGlobalPages += count(array_chunk($students, $perPage));
+        }
+
+        $renderStudentsPages($students, $mpdf, $htmlStyle, $examDate, $examTime, $getDisplaySeat, $seatReportSeparateBuilding, null, $isFirstPage, $globalPageNum, $totalGlobalPages);
     }
 
     // Kroki Page (Seat Map) - Add new page first, then clear footer

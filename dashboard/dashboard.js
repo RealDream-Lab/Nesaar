@@ -900,6 +900,8 @@ try {
         String(
           cfg.SeatReportGroupByCourse || cfg.GroupByCourse || "NO"
         ).toUpperCase() === "YES";
+      const seatReportSeparateExamTypeChecked =
+        String(cfg.SeatReportSeparateExamType || "NO").toUpperCase() === "YES";
       const groupAttendanceByCourseChecked =
         String(cfg.GroupAttendanceByCourse || "NO").toUpperCase() === "YES";
       const paperSavingChecked =
@@ -1052,7 +1054,14 @@ try {
                                 } style="width:1rem;height:1rem;">
                                 <label for="er_seatReportGroupByCourse" style="margin:0;cursor:pointer;font-size:0.8rem;" data-tooltip="دانشجویان در گزارش بر اساس درس گروه‌بندی می‌شوند">دسته بندی دروس</label>
                             </div>
-                            <div></div>
+                            <div style="display:flex;align-items:center;gap:4px;">
+                                <input id="er_seatReportSeparateExamType" type="checkbox" ${
+                                  seatReportSeparateExamTypeChecked
+                                    ? "checked"
+                                    : ""
+                                } style="width:1rem;height:1rem;">
+                                <label for="er_seatReportSeparateExamType" style="margin:0;cursor:pointer;font-size:0.8rem;" data-tooltip="گزارش شماره صندلی اول آزمون‌های الکترونیکی و سپس کتبی را با جداکننده صفحه نمایش می‌دهد">تفکیک کتبی و الکترونیکی</label>
+                            </div>
                         </div>
                         <hr style="border:0;border-top:1px solid rgba(255,255,255,0.15);margin:10px 0;">
                         <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:10px;">
@@ -1143,6 +1152,11 @@ try {
           )?.checked
             ? "YES"
             : "NO";
+          const seatReportSeparateExamType = document.getElementById(
+            "er_seatReportSeparateExamType"
+          )?.checked
+            ? "YES"
+            : "NO";
           const groupAttendanceByCourse = document.getElementById(
             "er_groupAttendanceByCourse"
           )?.checked
@@ -1183,6 +1197,7 @@ try {
             SeatReportSortBy: seatReportSortBy,
             SeatReportSeparateBuilding: seatReportSeparateBuilding,
             SeatReportGroupByCourse: seatReportGroupByCourse,
+            SeatReportSeparateExamType: seatReportSeparateExamType,
             GroupAttendanceByCourse: groupAttendanceByCourse,
             PaperSaving: paperSaving,
             QuickSessionView: quickSessionView,
@@ -1502,7 +1517,7 @@ try {
   if (absentBtn) {
     absentBtn.addEventListener("click", () => {
       try {
-        SwalFlip({
+        Swal.fire({
           icon: "info",
           title: "قرائت پاسخنامه تستی غایبین",
           html: `
@@ -5369,6 +5384,16 @@ function renderInsightCards(stats) {
   const scheduledContainer = document.getElementById("scheduledPushContainer");
   const scheduleDateTimeInput = document.getElementById("pushScheduleDateTime");
 
+  // Student targeting elements
+  const studentTargetingContainer = document.getElementById(
+    "studentTargetingContainer"
+  );
+  const filterDatesSelect = document.getElementById("pushFilterDates");
+  const filterSessionsSelect = document.getElementById("pushFilterSessions");
+  const filterCoursesSelect = document.getElementById("pushFilterCourses");
+  const clearFiltersBtn = document.getElementById("clearPushFilters");
+  const filterCountSpan = document.getElementById("pushFilterCount");
+
   if (
     !sendBtn ||
     !titleInput ||
@@ -5378,6 +5403,198 @@ function renderInsightCards(stats) {
   ) {
     return; // Not on admin dashboard
   }
+
+  // Cache for filter data
+  let filterData = { dates: [], sessions: [], courses: [] };
+
+  // Load filter options when students checkbox changes
+  async function loadFilterOptions() {
+    try {
+      const response = await guardedFetch("../API/getSessionCalendarData.php", {
+        cache: "no-store",
+      });
+      const data = await response.json();
+
+      if (!data.success || !data.sessions) {
+        return;
+      }
+
+      // Extract unique dates
+      const datesSet = new Set();
+      const sessionsSet = new Set();
+      const coursesMap = new Map();
+
+      data.sessions.forEach((session) => {
+        if (session.exam_date) datesSet.add(session.exam_date);
+        if (session.exam_date && session.exam_time) {
+          sessionsSet.add(`${session.exam_date}|${session.exam_time}`);
+        }
+      });
+
+      // Load courses from a separate API or extract from sessions if available
+      try {
+        const coursesResp = await guardedFetch(
+          "../API/getCourseReport.php?all=1",
+          {
+            cache: "no-store",
+          }
+        );
+        const coursesData = await coursesResp.json();
+        if (coursesData.success && coursesData.courses) {
+          coursesData.courses.forEach((c) => {
+            if (c.course_code && c.course_name) {
+              coursesMap.set(c.course_code, c.course_name);
+            }
+          });
+        }
+      } catch (e) {
+        console.warn("Could not load courses for push filter", e);
+      }
+
+      // Sort dates
+      filterData.dates = Array.from(datesSet).sort();
+      filterData.sessions = Array.from(sessionsSet).sort();
+      filterData.courses = Array.from(coursesMap.entries()).map(
+        ([code, name]) => ({
+          code,
+          name,
+        })
+      );
+
+      // Populate selects
+      if (filterDatesSelect) {
+        filterDatesSelect.innerHTML = filterData.dates
+          .map(
+            (d) =>
+              `<option value="${escapeHtml(d)}">${toPersianDigits(d)}</option>`
+          )
+          .join("");
+      }
+
+      if (filterSessionsSelect) {
+        filterSessionsSelect.innerHTML = filterData.sessions
+          .map((s) => {
+            const [date, time] = s.split("|");
+            return `<option value="${escapeHtml(s)}">${toPersianDigits(
+              date
+            )} - ${toPersianDigits(time)}</option>`;
+          })
+          .join("");
+      }
+
+      if (filterCoursesSelect) {
+        filterCoursesSelect.innerHTML = filterData.courses
+          .map(
+            (c) =>
+              `<option value="${escapeHtml(c.code)}">${toPersianDigits(
+                c.code
+              )} - ${escapeHtml(c.name)}</option>`
+          )
+          .join("");
+      }
+    } catch (e) {
+      console.warn("Failed to load push filter options", e);
+    }
+  }
+
+  // Show/hide student targeting based on checkbox state
+  function updateTargetingVisibility() {
+    const showTargeting = studentsCheckbox.checked && !proctorsCheckbox.checked;
+    if (studentTargetingContainer) {
+      studentTargetingContainer.style.display = showTargeting
+        ? "block"
+        : "none";
+      if (showTargeting && filterData.dates.length === 0) {
+        loadFilterOptions();
+      }
+    }
+  }
+
+  // Listen for checkbox changes
+  if (studentsCheckbox) {
+    studentsCheckbox.addEventListener("change", updateTargetingVisibility);
+  }
+  if (proctorsCheckbox) {
+    proctorsCheckbox.addEventListener("change", updateTargetingVisibility);
+  }
+
+  // Clear filters button
+  if (clearFiltersBtn) {
+    clearFiltersBtn.addEventListener("click", () => {
+      if (filterDatesSelect) {
+        Array.from(filterDatesSelect.options).forEach(
+          (o) => (o.selected = false)
+        );
+      }
+      if (filterSessionsSelect) {
+        Array.from(filterSessionsSelect.options).forEach(
+          (o) => (o.selected = false)
+        );
+      }
+      if (filterCoursesSelect) {
+        Array.from(filterCoursesSelect.options).forEach(
+          (o) => (o.selected = false)
+        );
+      }
+      if (filterCountSpan) filterCountSpan.textContent = "";
+    });
+  }
+
+  // Update filter count display and fetch filtered subscriber count
+  async function updateFilterCount() {
+    const selectedDates = filterDatesSelect
+      ? Array.from(filterDatesSelect.selectedOptions).map((o) => o.value)
+      : [];
+    const selectedSessions = filterSessionsSelect
+      ? Array.from(filterSessionsSelect.selectedOptions).map((o) => o.value)
+      : [];
+    const selectedCourses = filterCoursesSelect
+      ? Array.from(filterCoursesSelect.selectedOptions).map((o) => o.value)
+      : [];
+
+    const total =
+      selectedDates.length + selectedSessions.length + selectedCourses.length;
+    if (filterCountSpan) {
+      if (total > 0) {
+        filterCountSpan.innerHTML = `<span class="spinner-border spinner-border-sm me-1" role="status"></span>`;
+        
+        // Build query params for API
+        const params = new URLSearchParams();
+        if (selectedDates.length === 1) {
+          params.append('date', selectedDates[0]);
+        }
+        if (selectedSessions.length === 1) {
+          const [date, time] = selectedSessions[0].split('|');
+          params.append('date', date);
+          params.append('session', time);
+        }
+        if (selectedCourses.length === 1) {
+          params.append('course', selectedCourses[0]);
+        }
+        
+        try {
+          const resp = await guardedFetch(`../API/getPushSubscribersCount.php?${params.toString()}`);
+          const data = await resp.json();
+          if (data.success && data.filtered_students !== undefined) {
+            filterCountSpan.innerHTML = `${toPersianDigits(total)} فیلتر انتخاب شده - <strong>${toPersianDigits(data.filtered_students)}</strong> مشترک`;
+          } else {
+            filterCountSpan.textContent = `${toPersianDigits(total)} فیلتر انتخاب شده`;
+          }
+        } catch (e) {
+          filterCountSpan.textContent = `${toPersianDigits(total)} فیلتر انتخاب شده`;
+        }
+      } else {
+        filterCountSpan.textContent = "";
+      }
+    }
+  }
+
+  if (filterDatesSelect)
+    filterDatesSelect.addEventListener("change", updateFilterCount);
+  if (filterSessionsSelect)
+    filterSessionsSelect.addEventListener("change", updateFilterCount);
+  if (filterCoursesSelect)
+    filterCoursesSelect.addEventListener("change", updateFilterCount);
 
   // Initialize JalaliDatePicker
   if (typeof jalaliDatepicker !== "undefined" && scheduleDateTimeInput) {
@@ -5473,6 +5690,40 @@ function renderInsightCards(stats) {
       return;
     }
 
+    // Collect filter data if targeting students only
+    let studentFilters = null;
+    const isStudentTargeted =
+      sendToStudents &&
+      !sendToProctors &&
+      studentTargetingContainer?.style.display !== "none";
+
+    if (isStudentTargeted) {
+      const selectedDates = filterDatesSelect
+        ? Array.from(filterDatesSelect.selectedOptions).map((o) => o.value)
+        : [];
+      const selectedSessions = filterSessionsSelect
+        ? Array.from(filterSessionsSelect.selectedOptions).map((o) => o.value)
+        : [];
+      const selectedCourses = filterCoursesSelect
+        ? Array.from(filterCoursesSelect.selectedOptions).map((o) => o.value)
+        : [];
+
+      if (
+        selectedDates.length > 0 ||
+        selectedSessions.length > 0 ||
+        selectedCourses.length > 0
+      ) {
+        studentFilters = {
+          dates: selectedDates,
+          sessions: selectedSessions.map((s) => {
+            const [date, time] = s.split("|");
+            return { exam_date: date, exam_time: time };
+          }),
+          courses: selectedCourses,
+        };
+      }
+    }
+
     // Determine recipients text and type
     let recipientsText = "";
     let userTypes = [];
@@ -5482,6 +5733,29 @@ function renderInsightCards(stats) {
     } else if (sendToStudents) {
       recipientsText = "فقط دانشجویان";
       userTypes = ["student"];
+
+      // Add filter info to recipients text
+      if (studentFilters) {
+        const filterParts = [];
+        if (studentFilters.dates.length > 0) {
+          filterParts.push(
+            `${toPersianDigits(studentFilters.dates.length)} تاریخ`
+          );
+        }
+        if (studentFilters.sessions.length > 0) {
+          filterParts.push(
+            `${toPersianDigits(studentFilters.sessions.length)} جلسه`
+          );
+        }
+        if (studentFilters.courses.length > 0) {
+          filterParts.push(
+            `${toPersianDigits(studentFilters.courses.length)} درس`
+          );
+        }
+        if (filterParts.length > 0) {
+          recipientsText += ` (فیلتر: ${filterParts.join("، ")})`;
+        }
+      }
     } else {
       recipientsText = "فقط مراقبین";
       userTypes = ["proctor"];
@@ -5557,6 +5831,8 @@ function renderInsightCards(stats) {
           if (scheduledCheckbox) scheduledCheckbox.checked = false;
           if (scheduledContainer) scheduledContainer.classList.add("d-none");
           if (sendBtnText) sendBtnText.textContent = "ارسال اعلان";
+          // Clear filters
+          if (clearFiltersBtn) clearFiltersBtn.click();
         } else {
           showPushResult("danger", result.error || "خطا در زمان‌بندی اعلان");
         }
@@ -5576,6 +5852,11 @@ function renderInsightCards(stats) {
             user_type: userType,
           };
 
+          // Add student filters if targeting students with filters
+          if (userType === "student" && studentFilters) {
+            payload.filters = studentFilters;
+          }
+
           const response = await guardedFetch("/API/push/send.php", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
@@ -5593,11 +5874,17 @@ function renderInsightCards(stats) {
 
         showPushResult(
           "success",
-          `اعلان با موفقیت ارسال شد! ارسال: ${totalSent}، ناموفق: ${totalFailed}، منقضی: ${totalExpired}`
+          `اعلان با موفقیت ارسال شد! ارسال: ${toPersianDigits(
+            totalSent
+          )}، ناموفق: ${toPersianDigits(totalFailed)}، منقضی: ${toPersianDigits(
+            totalExpired
+          )}`
         );
         // Clear form
         titleInput.value = "";
         bodyInput.value = "";
+        // Clear filters
+        if (clearFiltersBtn) clearFiltersBtn.click();
       }
     } catch (error) {
       console.error("Push send error:", error);
@@ -7436,12 +7723,101 @@ document.addEventListener("DOMContentLoaded", function () {
     });
   }
 
-  // Seat Numbers Card
+  // Seat Numbers Card - check for assignments first
   const seatNumbersCard = document.getElementById("seatNumbersCard");
   if (seatNumbersCard) {
-    seatNumbersCard.addEventListener("click", function () {
+    // Check assignment status on page load
+    (async function checkSeatCardAvailability() {
+      try {
+        const response = await guardedFetch(
+          "../API/getAssignmentsPresence.php",
+          {
+            cache: "no-store",
+          }
+        );
+        const data = await response.json();
+        if (!data.success || !data.has_assignments) {
+          seatNumbersCard.classList.add("disabled");
+          seatNumbersCard.setAttribute(
+            "data-tooltip",
+            "ابتدا باید چینش مراقبین انجام شود"
+          );
+        }
+      } catch (e) {
+        console.warn("Failed to check assignment status for seat card", e);
+      }
+    })();
+
+    seatNumbersCard.addEventListener("click", async function () {
+      // Re-check assignments before generating report
+      try {
+        const response = await guardedFetch(
+          "../API/getAssignmentsPresence.php",
+          {
+            cache: "no-store",
+          }
+        );
+        const data = await response.json();
+        if (!data.success || !data.has_assignments) {
+          seatNumbersCard.classList.add("disabled");
+          return Swal.fire({
+            icon: "warning",
+            title: "عملیات غیرممکن",
+            text: "ابتدا باید چینش مراقبین انجام شود. لطفاً از بخش «مدیریت مراقبین» اقدام نمایید.",
+            confirmButtonText: "متوجه شدم",
+            customClass: {
+              popup: "swal2-rtl swal2-glass",
+              confirmButton: "btn btn-primary",
+            },
+          });
+        }
+      } catch (e) {
+        console.warn("Failed to verify assignment status", e);
+      }
+
       const url = `../API/generatePDF.php?report_type=seat_labels&_t=${new Date().getTime()}`;
       showReportModal(url, "برچسب شماره صندلی‌ها");
+    });
+  }
+
+  // Manage Locations Card
+  const manageLocationsCard = document.getElementById("manageLocationsCard");
+  if (manageLocationsCard) {
+    manageLocationsCard.addEventListener("click", function () {
+      try {
+        showAnswerSheetGeneratorComingSoon("locations");
+      } catch (e) {
+        console.error("manageLocationsCard click failed:", e);
+      }
+    });
+  }
+
+  // Absent Card (Answer Sheet Reading for Absents)
+  const absentCard = document.getElementById("absentCard");
+  if (absentCard) {
+    absentCard.addEventListener("click", function () {
+      try {
+        Swal.fire({
+          icon: "info",
+          title: "قرائت پاسخنامه تستی غایبین",
+          html: `
+      <div style="text-align:justify;direction:rtl;line-height:2.2;font-size:1rem;color:#e0e0e0;">
+        <p style="margin-bottom:1rem;">
+          این قابلیت امکان خواندن پاسخنامه‌های تستی اسکن‌شده را فراهم کرده 
+          و خروجی مناسب برای ثبت در سامانه گلستان تولید می‌نماید.
+        </p>
+        <p style="color:#f8d775;">
+          در حال حاضر این امکان در انتظار هماهنگی و مذاکره با تیم توسعه سامانه گلستان است 
+          و پس از نهایی شدن توافقات، فعال خواهد شد.
+        </p>
+      </div>
+    `,
+          confirmButtonText: "متوجه شدم",
+          customClass: { popup: "swal2-rtl swal2-glass" },
+        });
+      } catch (err) {
+        console.warn("Failed to show absent modal", err);
+      }
     });
   }
 });

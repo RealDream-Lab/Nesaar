@@ -83,24 +83,11 @@ $bodyClass = $wavesAnimationDisabled ? 'class="no-waves-animation"' : '';
                                 style="width:40px;height:40px;object-fit:contain;display:block;">
                         </button>
 
-                        <button id="absentBtn" class="btn btn-icon p-0" type="button" data-tooltip="ثبت غیبت"
-                            aria-label="ثبت غیبت"
-                            style="background:transparent;border:none;margin-inline-end:8px;padding:0;">
-                            <img src="/assets/app/absent.png" alt="ثبت غیبت"
-                                style="width:40px;height:40px;object-fit:contain;display:block;padding-bottom: 2px;padding-top: 3px;">
-                        </button>
                         <button id="proctorProfilesBtn" class="btn btn-icon p-0" type="button"
                             data-tooltip="ماژول مراقبین و عوامل اجرائی" aria-label="ماژول مراقبین و عوامل اجرائی"
                             style="background:transparent;border:none;margin-inline-end:8px;padding:0;">
                             <img src="/dashboard/observers/users.png" alt="مشخصات مراقبین"
                                 style="width:40px;height:40px;object-fit:contain;display:block;margin-bottom: 5px;">
-                        </button>
-                        <button id="manageLocationsBtn" class="btn btn-icon p-0" type="button"
-                            data-tooltip="معرفی و ویرایش مکان‌های برگزاری آزمون"
-                            aria-label="معرفی و ویرایش مکان‌های برگزاری آزمون"
-                            style="background:transparent;border:none;margin-inline-end:8px;padding:0;">
-                            <img src="/assets/app/building.png" alt="معرفی و ویرایش مکان‌ها"
-                                style="width:40px;height:40px;object-fit:contain;display:block; margin-top: 3px !important ;padding-top: 2px;padding-bottom: 2px;">
                         </button>
                         <button id="proctorNoticeBtn" class="btn btn-icon p-0" type="button"
                             data-tooltip="ابلاغ مراقبین" aria-label="ابلاغ مراقبین"
@@ -244,21 +231,21 @@ $bodyClass = $wavesAnimationDisabled ? 'class="no-waves-animation"' : '';
                     <div class="quick-action-title">چاپ شماره‌ صندلی‌</div>
                     <div class="quick-action-desc">برچسب شماره صندلی برای الصاق روی صندلی‌ها</div>
                 </div>
-            </div><!--
+            </div>
             <div class="col-md-3 mb-3">
-                <div class="quick-action-card disabled" id="card3" data-action="card3">
-                    <div class="quick-action-icon">📊</div>
-                    <div class="quick-action-title">کارت شماره سه</div>
-                    <div class="quick-action-desc">به زودی...</div>
+                <div class="quick-action-card" id="manageLocationsCard" data-action="manage-locations">
+                    <div class="quick-action-icon">🏢</div>
+                    <div class="quick-action-title">مدیریت مکان‌ها</div>
+                    <div class="quick-action-desc">معرفی و ویرایش مکان‌های برگزاری آزمون</div>
                 </div>
             </div>
             <div class="col-md-3 mb-3">
-                <div class="quick-action-card disabled" id="card4" data-action="card4">
-                    <div class="quick-action-icon">📈</div>
-                    <div class="quick-action-title">کارت شماره چهار</div>
-                    <div class="quick-action-desc">به زودی...</div>
+                <div class="quick-action-card" id="absentCard" data-action="absent">
+                    <div class="quick-action-icon">📝</div>
+                    <div class="quick-action-title">ثبت غیبت</div>
+                    <div class="quick-action-desc">قرائت پاسخنامه تستی غایبین</div>
                 </div>
-            </div>-->
+            </div>
         </div>
 
         <!-- Push Notification Management Card -->
@@ -298,6 +285,43 @@ $bodyClass = $wavesAnimationDisabled ? 'class="no-waves-animation"' : '';
                             </div>
                         </div>
                     </div>
+                    
+                    <!-- Student Targeting Options -->
+                    <div class="col-12" id="studentTargetingContainer" style="display:none;">
+                        <div class="card" style="background:rgba(25,118,210,0.08);border:1px solid rgba(25,118,210,0.2);border-radius:8px;">
+                            <div class="card-body p-3">
+                                <div class="d-flex align-items-center gap-2 mb-3">
+                                    <span style="font-weight:600;color:#1976d2;">🎯 فیلتر دانشجویان</span>
+                                    <small style="color:#666;">(انتخاب کنید که پیام به کدام گروه از دانشجویان ارسال شود)</small>
+                                </div>
+                                <div class="row g-2">
+                                    <div class="col-12 col-md-4">
+                                        <label class="form-label" style="font-size:0.85rem;">تاریخ آزمون</label>
+                                        <select class="form-select form-select-sm" id="pushFilterDates" multiple style="height:100px;">
+                                        </select>
+                                        <small class="text-muted">Ctrl+Click برای انتخاب چندتایی</small>
+                                    </div>
+                                    <div class="col-12 col-md-4">
+                                        <label class="form-label" style="font-size:0.85rem;">جلسه آزمون</label>
+                                        <select class="form-select form-select-sm" id="pushFilterSessions" multiple style="height:100px;">
+                                        </select>
+                                        <small class="text-muted">Ctrl+Click برای انتخاب چندتایی</small>
+                                    </div>
+                                    <div class="col-12 col-md-4">
+                                        <label class="form-label" style="font-size:0.85rem;">درس</label>
+                                        <select class="form-select form-select-sm" id="pushFilterCourses" multiple style="height:100px;">
+                                        </select>
+                                        <small class="text-muted">Ctrl+Click برای انتخاب چندتایی</small>
+                                    </div>
+                                </div>
+                                <div class="mt-2">
+                                    <button type="button" class="btn btn-sm btn-outline-secondary" id="clearPushFilters">پاک کردن فیلترها</button>
+                                    <span id="pushFilterCount" class="ms-2" style="color:#1976d2;font-weight:600;"></span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
                     <div class="col-12">
                         <label class="form-label">متن پیام</label>
                         <textarea class="form-control" id="pushBody" rows="3" placeholder="متن پیام را وارد کنید..."
