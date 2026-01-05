@@ -779,46 +779,6 @@ async function guardedFetch(resource, options = {}) {
   return response;
 }
 
-// ============================================================================
-// TODO: DEAD CODE - REMOVE - SMS functions no longer used
-// ============================================================================
-async function fetchSmsCreditValue() {
-  try {
-    const response = await guardedFetch("../API/getSmsCredit.php", {
-      cache: "no-store",
-    });
-    if (!response.ok) {
-      return null;
-    }
-    const payload = await response.json();
-    if (payload && payload.success) {
-      if (payload.credit !== undefined && payload.credit !== null) {
-        return payload.credit;
-      }
-      if (payload.raw && payload.raw.Data !== undefined) {
-        return payload.raw.Data;
-      }
-    }
-  } catch (err) {
-    console.warn("fetchSmsCreditValue failed", err);
-  }
-  return null;
-}
-
-function formatSmsCreditDisplay(value) {
-  if (value === null || value === undefined || value === "") {
-    return "نامشخص";
-  }
-  const num = Number(value);
-  if (Number.isFinite(num)) {
-    return toPersianDigits(num.toLocaleString("en-US"));
-  }
-  return toPersianDigits(String(value));
-}
-// ============================================================================
-// END DEAD CODE - SMS functions
-// ============================================================================
-
 async function checkAuth() {
   try {
     const response = await guardedFetch(SESSION_ENDPOINT, {
