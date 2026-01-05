@@ -5617,8 +5617,6 @@ function renderInsightCards(stats) {
         // Clear form
         titleInput.value = "";
         bodyInput.value = "";
-        // Clear filters
-        if (clearFiltersBtn) clearFiltersBtn.click();
       }
     } catch (error) {
       console.error("Push send error:", error);
