@@ -920,13 +920,23 @@ try {
         String(cfg.DailyTestLabels || "NO").toUpperCase() === "YES";
 
       // TODO: DEAD CODE - REMOVE - SMS variables no longer used
-      let smsCreditValue = null;
-      try {
-        smsCreditValue = await fetchSmsCreditValue();
-      } catch (e) {
-        /* already logged */
-      }
-      const smsCreditDisplay = formatSmsCreditDisplay(smsCreditValue);
+      // Fetch SMS credit asynchronously so it does not delay opening the modal.
+      (async () => {
+        try {
+          const val = await fetchSmsCreditValue();
+          const display = formatSmsCreditDisplay(val);
+          const el = document.getElementById("er_sms_credit_info");
+          if (el) {
+            el.textContent =
+              display === "نامشخص"
+                ? "اعتبار: نامشخص"
+                : `اعتبار: ${display} پیامک`;
+          }
+        } catch (e) {
+          /* ignore */
+        }
+      })();
+      const smsCreditDisplay = formatSmsCreditDisplay(null);
       const smsCreditParenthetical =
         smsCreditDisplay === "نامشخص"
           ? "اعتبار: نامشخص"
