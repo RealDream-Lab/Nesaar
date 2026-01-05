@@ -66,6 +66,7 @@ try {
         $body      = $notification['body'];
         $icon      = $notification['icon'];
         $userTypes = explode(',', $notification['user_types']);
+        $filters   = !empty($notification['filters']) ? json_decode($notification['filters'], true) : null;
 
         $totalSent   = 0;
         $totalFailed = 0;
@@ -74,13 +75,60 @@ try {
         foreach ($userTypes as $userType) {
             $userType = trim($userType);
 
-            $subStmt = $pdo->prepare("
-                SELECT * FROM push_subscriptions 
-                WHERE user_type = ? 
-                AND is_active = 1
-            ");
-            $subStmt->execute([$userType]);
-            $subscriptions = $subStmt->fetchAll(PDO::FETCH_ASSOC);
+            // Build query based on filters (for students)
+            if ($userType === 'student' && $filters) {
+                $filterMode  = $filters['mode'] ?? 'session';
+                $hasDates    = !empty($filters['dates']) && is_array($filters['dates']);
+                $hasSessions = !empty($filters['sessions']) && is_array($filters['sessions']);
+                $hasCourses  = !empty($filters['courses']) && is_array($filters['courses']);
+                
+                if ($hasDates || $hasSessions || $hasCourses) {
+                    $query  = "SELECT DISTINCT ps.* FROM push_subscriptions ps
+                              INNER JOIN exam_seats es ON ps.user_id = es.student_number
+                              WHERE ps.is_active = 1 AND ps.user_type = 'student'";
+                    $params = [];
+                    
+                    if ($filterMode === 'session') {
+                        if ($hasSessions) {
+                            $sessionConditions = [];
+                            foreach ($filters['sessions'] as $session) {
+                                if (!empty($session['exam_date']) && !empty($session['exam_time'])) {
+                                    $sessionConditions[] = "(es.date = ? AND es.session = ?)";
+                                    $params[]            = $session['exam_date'];
+                                    $params[]            = $session['exam_time'];
+                                }
+                            }
+                            if (!empty($sessionConditions)) {
+                                $query .= " AND (" . implode(' OR ', $sessionConditions) . ")";
+                            }
+                        } elseif ($hasDates) {
+                            $placeholders = implode(',', array_fill(0, count($filters['dates']), '?'));
+                            $query       .= " AND es.date IN ($placeholders)";
+                            $params       = array_merge($params, $filters['dates']);
+                        }
+                    } else {
+                        if ($hasCourses) {
+                            $placeholders = implode(',', array_fill(0, count($filters['courses']), '?'));
+                            $query       .= " AND es.course_code IN ($placeholders)";
+                            $params       = array_merge($params, $filters['courses']);
+                        }
+                    }
+                    
+                    $subStmt = $pdo->prepare($query);
+                    $subStmt->execute($params);
+                    $subscriptions = $subStmt->fetchAll(PDO::FETCH_ASSOC);
+                } else {
+                    // No valid filters, send to all students
+                    $subStmt = $pdo->prepare("SELECT * FROM push_subscriptions WHERE user_type = ? AND is_active = 1");
+                    $subStmt->execute([$userType]);
+                    $subscriptions = $subStmt->fetchAll(PDO::FETCH_ASSOC);
+                }
+            } else {
+                // No filters or not student - get all subscribers for this type
+                $subStmt = $pdo->prepare("SELECT * FROM push_subscriptions WHERE user_type = ? AND is_active = 1");
+                $subStmt->execute([$userType]);
+                $subscriptions = $subStmt->fetchAll(PDO::FETCH_ASSOC);
+            }
 
             foreach ($subscriptions as $sub) {
                 try {

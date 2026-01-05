@@ -5394,6 +5394,18 @@ function renderInsightCards(stats) {
   const clearFiltersBtn = document.getElementById("clearPushFilters");
   const filterCountSpan = document.getElementById("pushFilterCount");
 
+  // New UI elements for filter modes
+  const filterModeSession = document.getElementById("pushFilterModeSession");
+  const filterModeCourse = document.getElementById("pushFilterModeCourse");
+  const sessionModeContainer = document.getElementById(
+    "pushSessionModeContainer"
+  );
+  const courseModeContainer = document.getElementById(
+    "pushCourseModeContainer"
+  );
+  const targetCountDiv = document.getElementById("pushTargetCount");
+  const targetNumberSpan = document.getElementById("pushTargetNumber");
+
   if (
     !sendBtn ||
     !titleInput ||
@@ -5406,10 +5418,13 @@ function renderInsightCards(stats) {
 
   // Cache for filter data
   let filterData = { dates: [], sessions: [], courses: [] };
+  // Map of date -> sessions for that date
+  let dateSessionsMap = {};
 
   // Load filter options when students checkbox changes
   async function loadFilterOptions() {
     try {
+      // Load sessions/dates
       const response = await guardedFetch("../API/getSessionCalendarData.php", {
         cache: "no-store",
       });
@@ -5419,49 +5434,26 @@ function renderInsightCards(stats) {
         return;
       }
 
-      // Extract unique dates
+      // Extract unique dates and build date->sessions map
       const datesSet = new Set();
-      const sessionsSet = new Set();
-      const coursesMap = new Map();
+      dateSessionsMap = {};
 
       data.sessions.forEach((session) => {
-        if (session.exam_date) datesSet.add(session.exam_date);
-        if (session.exam_date && session.exam_time) {
-          sessionsSet.add(`${session.exam_date}|${session.exam_time}`);
+        if (session.exam_date) {
+          datesSet.add(session.exam_date);
+          if (!dateSessionsMap[session.exam_date]) {
+            dateSessionsMap[session.exam_date] = [];
+          }
+          if (session.exam_time) {
+            dateSessionsMap[session.exam_date].push(session.exam_time);
+          }
         }
       });
 
-      // Load courses from a separate API or extract from sessions if available
-      try {
-        const coursesResp = await guardedFetch(
-          "../API/getCourseReport.php?all=1",
-          {
-            cache: "no-store",
-          }
-        );
-        const coursesData = await coursesResp.json();
-        if (coursesData.success && coursesData.courses) {
-          coursesData.courses.forEach((c) => {
-            if (c.course_code && c.course_name) {
-              coursesMap.set(c.course_code, c.course_name);
-            }
-          });
-        }
-      } catch (e) {
-        console.warn("Could not load courses for push filter", e);
-      }
-
       // Sort dates
       filterData.dates = Array.from(datesSet).sort();
-      filterData.sessions = Array.from(sessionsSet).sort();
-      filterData.courses = Array.from(coursesMap.entries()).map(
-        ([code, name]) => ({
-          code,
-          name,
-        })
-      );
 
-      // Populate selects
+      // Populate dates select
       if (filterDatesSelect) {
         filterDatesSelect.innerHTML = filterData.dates
           .map(
@@ -5471,30 +5463,74 @@ function renderInsightCards(stats) {
           .join("");
       }
 
-      if (filterSessionsSelect) {
-        filterSessionsSelect.innerHTML = filterData.sessions
-          .map((s) => {
-            const [date, time] = s.split("|");
-            return `<option value="${escapeHtml(s)}">${toPersianDigits(
-              date
-            )} - ${toPersianDigits(time)}</option>`;
-          })
-          .join("");
+      // Load courses
+      try {
+        const coursesResp = await guardedFetch("../API/getCoursesForPush.php", {
+          cache: "no-store",
+        });
+        const coursesData = await coursesResp.json();
+        if (coursesData.success && coursesData.courses) {
+          filterData.courses = coursesData.courses.map((c) => ({
+            code: c.course_code,
+            name: c.course_name || c.course_code,
+          }));
+
+          // Populate courses select
+          if (filterCoursesSelect) {
+            filterCoursesSelect.innerHTML = filterData.courses
+              .map(
+                (c) =>
+                  `<option value="${escapeHtml(c.code)}">${escapeHtml(
+                    c.name
+                  )} (${toPersianDigits(c.code)})</option>`
+              )
+              .join("");
+          }
+        }
+      } catch (e) {
+        console.warn("Could not load courses for push filter", e);
       }
 
-      if (filterCoursesSelect) {
-        filterCoursesSelect.innerHTML = filterData.courses
-          .map(
-            (c) =>
-              `<option value="${escapeHtml(c.code)}">${toPersianDigits(
-                c.code
-              )} - ${escapeHtml(c.name)}</option>`
-          )
-          .join("");
-      }
+      // Initial target count
+      updateTargetCount();
     } catch (e) {
       console.warn("Failed to load push filter options", e);
     }
+  }
+
+  // Update sessions dropdown based on selected dates
+  function updateSessionsForSelectedDates() {
+    if (!filterSessionsSelect || !filterDatesSelect) return;
+
+    const selectedDates = Array.from(filterDatesSelect.selectedOptions).map(
+      (o) => o.value
+    );
+
+    // Collect all sessions for selected dates
+    const sessions = [];
+    selectedDates.forEach((date) => {
+      if (dateSessionsMap[date]) {
+        dateSessionsMap[date].forEach((time) => {
+          sessions.push({ date, time });
+        });
+      }
+    });
+
+    // Sort by date then time
+    sessions.sort((a, b) => {
+      if (a.date !== b.date) return a.date.localeCompare(b.date);
+      return a.time.localeCompare(b.time);
+    });
+
+    // Populate sessions select
+    filterSessionsSelect.innerHTML = sessions
+      .map(
+        (s) =>
+          `<option value="${escapeHtml(s.date)}|${escapeHtml(
+            s.time
+          )}">${toPersianDigits(s.date)} - ${toPersianDigits(s.time)}</option>`
+      )
+      .join("");
   }
 
   // Show/hide student targeting based on checkbox state
@@ -5510,38 +5546,43 @@ function renderInsightCards(stats) {
     }
   }
 
-  // Listen for checkbox changes
-  if (studentsCheckbox) {
-    studentsCheckbox.addEventListener("change", updateTargetingVisibility);
-  }
-  if (proctorsCheckbox) {
-    proctorsCheckbox.addEventListener("change", updateTargetingVisibility);
-  }
-
-  // Clear filters button
-  if (clearFiltersBtn) {
-    clearFiltersBtn.addEventListener("click", () => {
-      if (filterDatesSelect) {
-        Array.from(filterDatesSelect.options).forEach(
-          (o) => (o.selected = false)
-        );
-      }
-      if (filterSessionsSelect) {
-        Array.from(filterSessionsSelect.options).forEach(
-          (o) => (o.selected = false)
-        );
-      }
-      if (filterCoursesSelect) {
-        Array.from(filterCoursesSelect.options).forEach(
-          (o) => (o.selected = false)
-        );
-      }
-      if (filterCountSpan) filterCountSpan.textContent = "";
-    });
+  // Toggle between session and course filter modes
+  function updateFilterMode() {
+    const isSessionMode = filterModeSession?.checked ?? true;
+    if (sessionModeContainer) {
+      sessionModeContainer.style.display = isSessionMode ? "flex" : "none";
+    }
+    if (courseModeContainer) {
+      courseModeContainer.style.display = isSessionMode ? "none" : "flex";
+    }
+    // Clear selections when switching modes
+    clearAllFilters();
   }
 
-  // Update filter count display and fetch filtered subscriber count
-  async function updateFilterCount() {
+  // Clear all filter selections
+  function clearAllFilters() {
+    if (filterDatesSelect) {
+      Array.from(filterDatesSelect.options).forEach(
+        (o) => (o.selected = false)
+      );
+    }
+    if (filterSessionsSelect) {
+      filterSessionsSelect.innerHTML = "";
+    }
+    if (filterCoursesSelect) {
+      Array.from(filterCoursesSelect.options).forEach(
+        (o) => (o.selected = false)
+      );
+    }
+    if (filterCountSpan) filterCountSpan.textContent = "";
+    updateTargetCount();
+  }
+
+  // Fetch and display target audience count
+  async function updateTargetCount() {
+    if (!targetCountDiv || !targetNumberSpan) return;
+
+    const isSessionMode = filterModeSession?.checked ?? true;
     const selectedDates = filterDatesSelect
       ? Array.from(filterDatesSelect.selectedOptions).map((o) => o.value)
       : [];
@@ -5552,59 +5593,103 @@ function renderInsightCards(stats) {
       ? Array.from(filterCoursesSelect.selectedOptions).map((o) => o.value)
       : [];
 
-    const total =
-      selectedDates.length + selectedSessions.length + selectedCourses.length;
-    if (filterCountSpan) {
-      if (total > 0) {
-        filterCountSpan.innerHTML = `<span class="spinner-border spinner-border-sm me-1" role="status"></span>`;
+    // Build API params
+    const params = new URLSearchParams();
+    params.append("mode", isSessionMode ? "session" : "course");
 
-        // Build query params for API
-        const params = new URLSearchParams();
-        if (selectedDates.length === 1) {
-          params.append("date", selectedDates[0]);
-        }
-        if (selectedSessions.length === 1) {
-          const [date, time] = selectedSessions[0].split("|");
-          params.append("date", date);
-          params.append("session", time);
-        }
-        if (selectedCourses.length === 1) {
-          params.append("course", selectedCourses[0]);
-        }
-
-        try {
-          const resp = await guardedFetch(
-            `../API/getPushSubscribersCount.php?${params.toString()}`
-          );
-          const data = await resp.json();
-          if (data.success && data.filtered_students !== undefined) {
-            filterCountSpan.innerHTML = `${toPersianDigits(
-              total
-            )} فیلتر انتخاب شده - <strong>${toPersianDigits(
-              data.filtered_students
-            )}</strong> مشترک`;
-          } else {
-            filterCountSpan.textContent = `${toPersianDigits(
-              total
-            )} فیلتر انتخاب شده`;
-          }
-        } catch (e) {
-          filterCountSpan.textContent = `${toPersianDigits(
-            total
-          )} فیلتر انتخاب شده`;
-        }
-      } else {
-        filterCountSpan.textContent = "";
+    if (isSessionMode) {
+      if (selectedDates.length > 0) {
+        params.append("dates", selectedDates.join(","));
       }
+      if (selectedSessions.length > 0) {
+        // Use first selected session for count
+        params.append("session", selectedSessions[0]);
+      }
+    } else {
+      if (selectedCourses.length > 0) {
+        params.append("courses", selectedCourses.join(","));
+      }
+    }
+
+    // Show loading
+    targetCountDiv.style.display = "block";
+    targetNumberSpan.innerHTML =
+      '<span class="spinner-border spinner-border-sm"></span>';
+
+    try {
+      const resp = await guardedFetch(
+        `../API/getPushSubscribersCount.php?${params.toString()}`
+      );
+      const data = await resp.json();
+
+      if (data.success) {
+        const count = data.filtered_students ?? data.students ?? 0;
+        targetNumberSpan.textContent = toPersianDigits(count);
+
+        // Update description
+        let desc = "";
+        if (isSessionMode) {
+          if (selectedSessions.length > 0) {
+            desc = ` (جلسه انتخابی)`;
+          } else if (selectedDates.length > 0) {
+            desc = ` (همه جلسات ${toPersianDigits(
+              selectedDates.length
+            )} تاریخ)`;
+          } else {
+            desc = ` (همه دانشجویان)`;
+          }
+        } else {
+          if (selectedCourses.length > 0) {
+            desc = ` (${toPersianDigits(selectedCourses.length)} درس انتخابی)`;
+          } else {
+            desc = ` (همه دانشجویان)`;
+          }
+        }
+        targetNumberSpan.textContent = toPersianDigits(count) + desc;
+      }
+    } catch (e) {
+      targetNumberSpan.textContent = "خطا در دریافت";
     }
   }
 
-  if (filterDatesSelect)
-    filterDatesSelect.addEventListener("change", updateFilterCount);
-  if (filterSessionsSelect)
-    filterSessionsSelect.addEventListener("change", updateFilterCount);
-  if (filterCoursesSelect)
-    filterCoursesSelect.addEventListener("change", updateFilterCount);
+  // Listen for checkbox changes
+  if (studentsCheckbox) {
+    studentsCheckbox.addEventListener("change", updateTargetingVisibility);
+  }
+  if (proctorsCheckbox) {
+    proctorsCheckbox.addEventListener("change", updateTargetingVisibility);
+  }
+
+  // Listen for filter mode changes
+  if (filterModeSession) {
+    filterModeSession.addEventListener("change", updateFilterMode);
+  }
+  if (filterModeCourse) {
+    filterModeCourse.addEventListener("change", updateFilterMode);
+  }
+
+  // Clear filters button
+  if (clearFiltersBtn) {
+    clearFiltersBtn.addEventListener("click", clearAllFilters);
+  }
+
+  // Date selection changes -> update sessions dropdown
+  if (filterDatesSelect) {
+    filterDatesSelect.addEventListener("change", () => {
+      updateSessionsForSelectedDates();
+      updateTargetCount();
+    });
+  }
+
+  // Session selection changes -> update target count
+  if (filterSessionsSelect) {
+    filterSessionsSelect.addEventListener("change", updateTargetCount);
+  }
+
+  // Course selection changes -> update target count
+  if (filterCoursesSelect) {
+    filterCoursesSelect.addEventListener("change", updateTargetCount);
+  }
 
   // Initialize JalaliDatePicker
   if (typeof jalaliDatepicker !== "undefined" && scheduleDateTimeInput) {
@@ -5708,6 +5793,7 @@ function renderInsightCards(stats) {
       studentTargetingContainer?.style.display !== "none";
 
     if (isStudentTargeted) {
+      const isSessionMode = filterModeSession?.checked ?? true;
       const selectedDates = filterDatesSelect
         ? Array.from(filterDatesSelect.selectedOptions).map((o) => o.value)
         : [];
@@ -5718,19 +5804,25 @@ function renderInsightCards(stats) {
         ? Array.from(filterCoursesSelect.selectedOptions).map((o) => o.value)
         : [];
 
-      if (
-        selectedDates.length > 0 ||
-        selectedSessions.length > 0 ||
-        selectedCourses.length > 0
-      ) {
-        studentFilters = {
-          dates: selectedDates,
-          sessions: selectedSessions.map((s) => {
-            const [date, time] = s.split("|");
-            return { exam_date: date, exam_time: time };
-          }),
-          courses: selectedCourses,
-        };
+      // Only add filters if something is selected
+      if (isSessionMode) {
+        if (selectedDates.length > 0 || selectedSessions.length > 0) {
+          studentFilters = {
+            mode: "session",
+            dates: selectedDates,
+            sessions: selectedSessions.map((s) => {
+              const [date, time] = s.split("|");
+              return { exam_date: date, exam_time: time };
+            }),
+          };
+        }
+      } else {
+        if (selectedCourses.length > 0) {
+          studentFilters = {
+            mode: "course",
+            courses: selectedCourses,
+          };
+        }
       }
     }
 
@@ -5747,20 +5839,22 @@ function renderInsightCards(stats) {
       // Add filter info to recipients text
       if (studentFilters) {
         const filterParts = [];
-        if (studentFilters.dates.length > 0) {
-          filterParts.push(
-            `${toPersianDigits(studentFilters.dates.length)} تاریخ`
-          );
-        }
-        if (studentFilters.sessions.length > 0) {
-          filterParts.push(
-            `${toPersianDigits(studentFilters.sessions.length)} جلسه`
-          );
-        }
-        if (studentFilters.courses.length > 0) {
-          filterParts.push(
-            `${toPersianDigits(studentFilters.courses.length)} درس`
-          );
+        if (studentFilters.mode === "session") {
+          if (studentFilters.sessions?.length > 0) {
+            filterParts.push(
+              `${toPersianDigits(studentFilters.sessions.length)} جلسه`
+            );
+          } else if (studentFilters.dates?.length > 0) {
+            filterParts.push(
+              `همه جلسات ${toPersianDigits(studentFilters.dates.length)} تاریخ`
+            );
+          }
+        } else if (studentFilters.mode === "course") {
+          if (studentFilters.courses?.length > 0) {
+            filterParts.push(
+              `${toPersianDigits(studentFilters.courses.length)} درس`
+            );
+          }
         }
         if (filterParts.length > 0) {
           recipientsText += ` (فیلتر: ${filterParts.join("، ")})`;
@@ -5820,6 +5914,11 @@ function renderInsightCards(stats) {
           user_types: userTypes,
           scheduled_at: scheduleDateTime,
         };
+        
+        // Add student filters if targeting students with filters
+        if (userTypes.includes("student") && studentFilters) {
+          payload.filters = studentFilters;
+        }
 
         const response = await guardedFetch("/API/push/schedule.php", {
           method: "POST",

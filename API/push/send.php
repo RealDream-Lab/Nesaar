@@ -105,9 +105,10 @@ try {
 
     // Filter students by date/session/course if specified
     if (!empty($input['filters']) && $input['user_type'] === 'student') {
-        $filters = $input['filters'];
+        $filters    = $input['filters'];
+        $filterMode = $filters['mode'] ?? 'session';
 
-        // Support both array format (dates, sessions, courses) and single value format
+        // Check what filters are present
         $hasDates    = !empty($filters['dates']) && is_array($filters['dates']);
         $hasSessions = !empty($filters['sessions']) && is_array($filters['sessions']);
         $hasCourses  = !empty($filters['courses']) && is_array($filters['courses']);
@@ -120,33 +121,34 @@ try {
                       WHERE ps.is_active = 1 AND ps.user_type = 'student'";
             $params = [];
 
-            // Filter by dates (array of date strings)
-            if ($hasDates) {
-                $placeholders  = implode(',', array_fill(0, count($filters['dates']), '?'));
-                $query        .= " AND es.date IN ($placeholders)";
-                $params        = array_merge($params, $filters['dates']);
-            }
-
-            // Filter by sessions (array of {exam_date, exam_time} objects)
-            if ($hasSessions) {
-                $sessionConditions = [];
-                foreach ($filters['sessions'] as $session) {
-                    if (!empty($session['exam_date']) && !empty($session['exam_time'])) {
-                        $sessionConditions[] = "(es.date = ? AND es.session = ?)";
-                        $params[]            = $session['exam_date'];
-                        $params[]            = $session['exam_time'];
+            if ($filterMode === 'session') {
+                // Session mode: filter by dates and optionally specific sessions
+                if ($hasSessions) {
+                    // Filter by specific sessions (date + time)
+                    $sessionConditions = [];
+                    foreach ($filters['sessions'] as $session) {
+                        if (!empty($session['exam_date']) && !empty($session['exam_time'])) {
+                            $sessionConditions[] = "(es.date = ? AND es.session = ?)";
+                            $params[]            = $session['exam_date'];
+                            $params[]            = $session['exam_time'];
+                        }
                     }
+                    if (!empty($sessionConditions)) {
+                        $query .= " AND (" . implode(' OR ', $sessionConditions) . ")";
+                    }
+                } elseif ($hasDates) {
+                    // Filter by dates only (all sessions on those dates)
+                    $placeholders  = implode(',', array_fill(0, count($filters['dates']), '?'));
+                    $query        .= " AND es.date IN ($placeholders)";
+                    $params        = array_merge($params, $filters['dates']);
                 }
-                if (!empty($sessionConditions)) {
-                    $query .= " AND (" . implode(' OR ', $sessionConditions) . ")";
+            } else {
+                // Course mode: filter by course codes
+                if ($hasCourses) {
+                    $placeholders  = implode(',', array_fill(0, count($filters['courses']), '?'));
+                    $query        .= " AND es.course_code IN ($placeholders)";
+                    $params        = array_merge($params, $filters['courses']);
                 }
-            }
-
-            // Filter by courses (array of course codes)
-            if ($hasCourses) {
-                $placeholders  = implode(',', array_fill(0, count($filters['courses']), '?'));
-                $query        .= " AND es.course_code IN ($placeholders)";
-                $params        = array_merge($params, $filters['courses']);
             }
         }
     }
