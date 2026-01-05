@@ -919,30 +919,6 @@ try {
       const dailyTestLabelsChecked =
         String(cfg.DailyTestLabels || "NO").toUpperCase() === "YES";
 
-      // TODO: DEAD CODE - REMOVE - SMS variables no longer used
-      // Fetch SMS credit asynchronously so it does not delay opening the modal.
-      (async () => {
-        try {
-          const val = await fetchSmsCreditValue();
-          const display = formatSmsCreditDisplay(val);
-          const el = document.getElementById("er_sms_credit_info");
-          if (el) {
-            el.textContent =
-              display === "نامشخص"
-                ? "اعتبار: نامشخص"
-                : `اعتبار: ${display} پیامک`;
-          }
-        } catch (e) {
-          /* ignore */
-        }
-      })();
-      const smsCreditDisplay = formatSmsCreditDisplay(null);
-      const smsCreditParenthetical =
-        smsCreditDisplay === "نامشخص"
-          ? "اعتبار: نامشخص"
-          : `اعتبار: ${smsCreditDisplay} پیامک`;
-      // END DEAD CODE - SMS variables
-
       // Form HTML: two-column rows for text inputs, toggles under a divider
       const sharedInputStyle =
         "margin-bottom:6px;border:1px solid rgba(255,255,255,0.12);background:transparent;color:inherit;box-shadow:none;";
