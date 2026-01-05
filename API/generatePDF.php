@@ -378,7 +378,7 @@ function generateSessionReport($pdo, $mpdf, $examDate, $examTime, $config)
                 <td>' . toPersianDigits($course['course_code']) . '</td>
                 <td class="name">' . ($course['course_name']) . '</td>
                 <td>' . toPersianDigits($count) . '</td>
-                <td> ___ / ___ </td>
+                        <td>...... / ......</td>
             </tr>';
         }
         $pageHtml .= '</tbody></table>';
@@ -399,12 +399,12 @@ function generateSessionReport($pdo, $mpdf, $examDate, $examTime, $config)
                     <tr>
                         <td>پاسخنامه‌های تستی</td>
                         <td>' . toPersianDigits($totalTestSheets) . '</td>
-                        <td>___________ / ___________</td>
+                        <td>.......... / ..........</td>
                     </tr>
                     <tr>
                         <td>پاسخنامه‌های تشریحی</td>
                         <td>' . toPersianDigits($totalDescriptiveSheets) . '</td>
-                        <td>___________ / ___________</td>
+                        <td>.......... / ..........</td>
                     </tr>
                 </tbody>
             </table>';
@@ -682,7 +682,7 @@ function generateSessionReportByLocation($pdo, $mpdf, $examDate, $examTime, $con
                     <td>' . toPersianDigits($course['course_code']) . '</td>
                     <td class="name">' . ($course['course_name']) . '</td>
                     <td>' . toPersianDigits($count) . '</td>
-                    <td> ___ / ___ </td>
+                        <td>...... / ......</td>
                 </tr>';
             }
             $pageHtml .= '</tbody></table>';
@@ -703,12 +703,12 @@ function generateSessionReportByLocation($pdo, $mpdf, $examDate, $examTime, $con
                         <tr>
                             <td>پاسخنامه‌های تستی</td>
                             <td>' . toPersianDigits($totalTestSheets) . '</td>
-                            <td>___________ / ___________</td>
+                            <td>.......... / ..........</td>
                         </tr>
                         <tr>
                             <td>پاسخنامه‌های تشریحی</td>
                             <td>' . toPersianDigits($totalDescriptiveSheets) . '</td>
-                            <td>___________ / ___________</td>
+                            <td>.......... / ..........</td>
                         </tr>
                     </tbody>
                 </table>';
@@ -4600,7 +4600,7 @@ function generateSessionSummaryReport($pdo, $mpdf, $examDate, $examTime, $config
                 <td>' . toPersianDigits($course['course_code']) . '</td>
                 <td class="name">' . ($course['course_name']) . '</td>
                 <td>' . toPersianDigits($count) . '</td>
-                <td> ___ / ___ </td>
+                        <td>...... / ......</td>
             </tr>';
         }
         $pageHtml .= '</tbody></table>';
@@ -4620,12 +4620,12 @@ function generateSessionSummaryReport($pdo, $mpdf, $examDate, $examTime, $config
                     <tr>
                         <td>پاسخنامه‌های تستی</td>
                         <td>' . toPersianDigits($totalTestSheets) . '</td>
-                        <td>___________ / ___________</td>
+                        <td>.......... / ..........</td>
                     </tr>
                     <tr>
                         <td>پاسخنامه‌های تشریحی</td>
                         <td>' . toPersianDigits($totalDescriptiveSheets) . '</td>
-                        <td>___________ / ___________</td>
+                        <td>.......... / ..........</td>
                     </tr>
                 </tbody>
             </table>';
@@ -4921,7 +4921,7 @@ function generateSessionSummaryReportByLocation($pdo, $mpdf, $examDate, $examTim
                     <td>' . toPersianDigits($course['course_code']) . '</td>
                     <td class="name">' . ($course['course_name']) . '</td>
                     <td>' . toPersianDigits($count) . '</td>
-                    <td> ___ / ___ </td>
+                        <td>...... / ......</td>
                 </tr>';
             }
             $pageHtml .= '</tbody></table>';
@@ -4941,12 +4941,12 @@ function generateSessionSummaryReportByLocation($pdo, $mpdf, $examDate, $examTim
                         <tr>
                             <td>پاسخنامه‌های تستی</td>
                             <td>' . toPersianDigits($totalTestSheets) . '</td>
-                            <td>___________ / ___________</td>
+                            <td>.......... / ..........</td>
                         </tr>
                         <tr>
                             <td>پاسخنامه‌های تشریحی</td>
                             <td>' . toPersianDigits($totalDescriptiveSheets) . '</td>
-                            <td>___________ / ___________</td>
+                            <td>.......... / ..........</td>
                         </tr>
                     </tbody>
                 </table>';
