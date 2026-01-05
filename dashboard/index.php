@@ -244,7 +244,7 @@ $bodyClass = $wavesAnimationDisabled ? 'class="no-waves-animation"' : '';
                     <div class="quick-action-title">چاپ شماره‌ صندلی‌</div>
                     <div class="quick-action-desc">برچسب شماره صندلی برای الصاق روی صندلی‌ها</div>
                 </div>
-            </div>
+            </div><!--
             <div class="col-md-3 mb-3">
                 <div class="quick-action-card disabled" id="card3" data-action="card3">
                     <div class="quick-action-icon">📊</div>
@@ -258,7 +258,7 @@ $bodyClass = $wavesAnimationDisabled ? 'class="no-waves-animation"' : '';
                     <div class="quick-action-title">کارت شماره چهار</div>
                     <div class="quick-action-desc">به زودی...</div>
                 </div>
-            </div>
+            </div>-->
         </div>
 
         <!-- Push Notification Management Card -->
