@@ -292,6 +292,7 @@ function showReportModal(url, title) {
       title: "در حال آماده‌سازی گزارش...",
       html: createSpinnerHtml(),
       allowOutsideClick: false,
+      autoFocus: false,
       showConfirmButton: false,
       customClass: {
         popup: "swal2-rtl swal2-glass",
@@ -317,6 +318,7 @@ function showReportModal(url, title) {
       title: "در حال آماده‌سازی گزارش...",
       html: createSpinnerHtml(),
       allowOutsideClick: false,
+      autoFocus: false,
       showConfirmButton: false,
       customClass: {
         popup: "swal2-rtl swal2-glass",
@@ -333,13 +335,20 @@ function showReportModal(url, title) {
           // Show the actual report modal
           Swal.fire({
             title: title || "پیش‌نمایش گزارش",
-            html: `<iframe src="${url}" style="width:100%; height:85vh; border:none;"></iframe>`,
+            html: `<iframe src="${url}" tabindex="0" style="width:100%; height:85vh; border:none;"></iframe>`,
             width: "95%",
             padding: "0",
             showCloseButton: true,
             showConfirmButton: false,
+            autoFocus: false,
             customClass: {
               popup: "swal2-rtl swal2-glass",
+            },
+            didOpen: (popup) => {
+              try {
+                const iframeEl = popup.querySelector("iframe");
+                if (iframeEl) iframeEl.focus();
+              } catch (e) {}
             },
             didClose: () => {
               reopenEssentialsMenuIfRequested();
@@ -352,6 +361,7 @@ function showReportModal(url, title) {
             icon: "error",
             title: "خطا",
             text: "خطا در بارگذاری گزارش",
+            autoFocus: false,
             customClass: { popup: "swal2-rtl" },
           });
         };
