@@ -57,6 +57,25 @@ function truncateText($text, $maxLength = 30)
     return mb_substr($text, 0, $maxLength - 2, 'UTF-8') . '…';
 }
 
+// Helper to convert dot-pair placeholders or similar "left / right" strings
+// into gray spans while stripping HTML. Examples:
+//   "...... / ......" -> "<span style=\"color:#ccc;\">......</span> / <span style=\"color:#ccc;\">......</span>"
+function formatGreyDotPair($s)
+{
+    $s = trim(strip_tags((string)$s));
+    // Exact dot / dot pattern
+    if (preg_match('/^\s*(\.+)\s*\/\s*(\.+)\s*$/u', $s, $m)) {
+        return '<span style="color:#ccc;">' . htmlspecialchars($m[1], ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') . '</span> / <span style="color:#ccc;">' . htmlspecialchars($m[2], ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') . '</span>';
+    }
+    // Fallback: split on slash and wrap each part
+    $parts   = preg_split('/\s*\/\s*/u', $s);
+    $parts   = array_map('trim', $parts);
+    $wrapped = array_map(function ($p) {
+        return '<span style="color:#ccc;">' . htmlspecialchars($p, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') . '</span>';
+    }, $parts);
+    return implode(' / ', $wrapped);
+}
+
 // Fetch Config
 $config = [];
 try {
@@ -378,7 +397,7 @@ function generateSessionReport($pdo, $mpdf, $examDate, $examTime, $config)
                 <td>' . toPersianDigits($course['course_code']) . '</td>
                 <td class="name">' . ($course['course_name']) . '</td>
                 <td>' . toPersianDigits($count) . '</td>
-                        <td>...... / ......</td>
+                    <td>' . formatGreyDotPair('...... / ......') . '</td>
             </tr>';
         }
         $pageHtml .= '</tbody></table>';
@@ -399,12 +418,12 @@ function generateSessionReport($pdo, $mpdf, $examDate, $examTime, $config)
                     <tr>
                         <td>پاسخنامه‌های تستی</td>
                         <td>' . toPersianDigits($totalTestSheets) . '</td>
-                        <td>.......... / ..........</td>
+                        <td>' . formatGreyDotPair('.......... / ..........') . '</td>
                     </tr>
                     <tr>
                         <td>پاسخنامه‌های تشریحی</td>
                         <td>' . toPersianDigits($totalDescriptiveSheets) . '</td>
-                        <td>.......... / ..........</td>
+                        <td>' . formatGreyDotPair('.......... / ..........') . '</td>
                     </tr>
                 </tbody>
             </table>';
@@ -682,7 +701,7 @@ function generateSessionReportByLocation($pdo, $mpdf, $examDate, $examTime, $con
                     <td>' . toPersianDigits($course['course_code']) . '</td>
                     <td class="name">' . ($course['course_name']) . '</td>
                     <td>' . toPersianDigits($count) . '</td>
-                        <td>...... / ......</td>
+                        <td>' . formatGreyDotPair('...... / ......') . '</td>
                 </tr>';
             }
             $pageHtml .= '</tbody></table>';
@@ -703,12 +722,12 @@ function generateSessionReportByLocation($pdo, $mpdf, $examDate, $examTime, $con
                         <tr>
                             <td>پاسخنامه‌های تستی</td>
                             <td>' . toPersianDigits($totalTestSheets) . '</td>
-                            <td>.......... / ..........</td>
+                            <td>' . formatGreyDotPair('.......... / ..........') . '</td>
                         </tr>
                         <tr>
                             <td>پاسخنامه‌های تشریحی</td>
                             <td>' . toPersianDigits($totalDescriptiveSheets) . '</td>
-                            <td>.......... / ..........</td>
+                            <td>' . formatGreyDotPair('.......... / ..........') . '</td>
                         </tr>
                     </tbody>
                 </table>';
@@ -3133,7 +3152,7 @@ function generateLocationLabels($pdo, $mpdf, $examDate, $examTime, $config)
                         <td>' . toPersianDigits($row['course_code']) . '</td>
                         <td class="course-name">' . $row['course_name'] . '</td>
                         <td>' . $row['course_type_label'] . '</td>
-                        <td>...... / ......</td>
+                        <td>' . formatGreyDotPair('...... / ......') . '</td>
                     </tr>';
                 } elseif ($row['type'] === 'green') {
                     $html .= '<tr style="background-color: #d4edda;">
@@ -3142,7 +3161,7 @@ function generateLocationLabels($pdo, $mpdf, $examDate, $examTime, $config)
                         <td>' . toPersianDigits($row['course_code']) . '</td>
                         <td class="course-name">' . $row['course_name'] . '</td>
                         <td>' . $row['course_type_label'] . '</td>
-                        <td>...... / ......</td>
+                        <td>' . formatGreyDotPair('...... / ......') . '</td>
                     </tr>';
                 } elseif ($row['type'] === 'red') {
                     $html .= '<tr style="background-color: #f8d7da;">
@@ -3433,7 +3452,7 @@ function generateTestLabels($pdo, $mpdf, $examDate, $examTime, $config)
                 <td>' . toPersianDigits($c['course_code']) . '</td>
                 <td class="name">' . ($c['course_name']) . '</td>
                 <td>' . toPersianDigits($count) . '</td>
-                <td>...... / ......</td>
+                <td>' . formatGreyDotPair('...... / ......') . '</td>
             </tr>';
         }
 
@@ -3629,7 +3648,7 @@ function generateDailyTestLabels($pdo, $mpdf, $examDate, $examTime, $config)
                 <td>' . toPersianDigits($c['course_code']) . '</td>
                 <td class="name">' . ($c['course_name']) . '</td>
                 <td>' . toPersianDigits($count) . '</td>
-                <td>...... / ......</td>
+                    <td>' . formatGreyDotPair('...... / ......') . '</td>
             </tr>';
         }
 
@@ -4600,7 +4619,7 @@ function generateSessionSummaryReport($pdo, $mpdf, $examDate, $examTime, $config
                 <td>' . toPersianDigits($course['course_code']) . '</td>
                 <td class="name">' . ($course['course_name']) . '</td>
                 <td>' . toPersianDigits($count) . '</td>
-                        <td>...... / ......</td>
+                        <td>' . formatGreyDotPair('...... / ......') . '</td>
             </tr>';
         }
         $pageHtml .= '</tbody></table>';
@@ -4620,12 +4639,12 @@ function generateSessionSummaryReport($pdo, $mpdf, $examDate, $examTime, $config
                     <tr>
                         <td>پاسخنامه‌های تستی</td>
                         <td>' . toPersianDigits($totalTestSheets) . '</td>
-                        <td>.......... / ..........</td>
+                        <td>' . formatGreyDotPair('.......... / ..........') . '</td>
                     </tr>
                     <tr>
                         <td>پاسخنامه‌های تشریحی</td>
                         <td>' . toPersianDigits($totalDescriptiveSheets) . '</td>
-                        <td>.......... / ..........</td>
+                        <td>' . formatGreyDotPair('.......... / ..........') . '</td>
                     </tr>
                 </tbody>
             </table>';
@@ -4921,7 +4940,7 @@ function generateSessionSummaryReportByLocation($pdo, $mpdf, $examDate, $examTim
                     <td>' . toPersianDigits($course['course_code']) . '</td>
                     <td class="name">' . ($course['course_name']) . '</td>
                     <td>' . toPersianDigits($count) . '</td>
-                        <td>...... / ......</td>
+                        <td>' . formatGreyDotPair('...... / ......') . '</td>
                 </tr>';
             }
             $pageHtml .= '</tbody></table>';
@@ -4941,12 +4960,12 @@ function generateSessionSummaryReportByLocation($pdo, $mpdf, $examDate, $examTim
                         <tr>
                             <td>پاسخنامه‌های تستی</td>
                             <td>' . toPersianDigits($totalTestSheets) . '</td>
-                            <td>.......... / ..........</td>
+                            <td>' . formatGreyDotPair('.......... / ..........') . '</td>
                         </tr>
                         <tr>
                             <td>پاسخنامه‌های تشریحی</td>
                             <td>' . toPersianDigits($totalDescriptiveSheets) . '</td>
-                            <td>.......... / ..........</td>
+                            <td>' . formatGreyDotPair('.......... / ..........') . '</td>
                         </tr>
                     </tbody>
                 </table>';
