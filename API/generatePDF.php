@@ -3372,6 +3372,18 @@ function generateTestLabels($pdo, $mpdf, $examDate, $examTime, $config)
     }
     $buildingStatsStr = implode(' | ', $buildingParts);
 
+    // Calculate dynamic rows per page based on building stats length
+    // When building stats is long (wraps to multiple lines), reduce rows per page
+    // Each building entry is ~15-20 characters, A5 landscape fits ~60 chars per line in 9pt
+    $buildingCount = count($buildingStats);
+    if ($buildingCount >= 6) {
+        $perPage = 10; // Many buildings - 3+ lines of stats
+    } elseif ($buildingCount >= 4) {
+        $perPage = 11; // Medium buildings - 2 lines of stats
+    } else {
+        $perPage = 12; // Few buildings - 1 line of stats
+    }
+
     // A5 Landscape
     $mpdf = new \Mpdf\Mpdf([
         'mode' => 'utf-8',
@@ -3406,13 +3418,11 @@ function generateTestLabels($pdo, $mpdf, $examDate, $examTime, $config)
         .info { font-size: 10pt; text-align: center; margin-bottom: 8px; }
         .courses-table { width: 100%; border-collapse: collapse; font-size: 9pt; }
         .courses-table th { background-color: #efefef; border: 1px solid #666; padding: 5px; font-weight: bold; }
-        .courses-table td { border: 1px solid #666; padding: 4px; text-align: center; }
-        .courses-table td.name { text-align: right; }
-        .footer { text-align: center; font-size: 8pt; margin-top: 5px; }
+        .courses-table td { border: 1px solid #666; padding: 4px; text-align: center; white-space: nowrap; overflow: hidden; }
+        .courses-table td.name { text-align: right; max-width: 180px; overflow: hidden; text-overflow: ellipsis; }
     </style>';
 
-    // Pagination
-    $perPage    = 12;
+    // Pagination - use dynamically calculated perPage based on building count
     $chunks     = array_chunk($courses, $perPage);
     $totalPages = count($chunks);
 
@@ -3420,16 +3430,19 @@ function generateTestLabels($pdo, $mpdf, $examDate, $examTime, $config)
         if ($pageIndex > 0)
             $mpdf->AddPage('L');
 
+        // Build page number string - always show when multiple pages
+        $pageNumStr = $totalPages > 1 ? ' | صفحه ' . toPersianDigits($pageIndex + 1) . ' از ' . toPersianDigits($totalPages) : '';
+
         $html = $htmlStyle . '
         <div class="page">
             <div class="title">برچسب پاکت اوراق تستی اسکن شده</div>
             <div class="subtitle">' . $university . '</div>
-            <div class="info">
+            <div class="info" style="margin-bottom: 3px;">
                 تاریخ: <strong>' . toPersianDigits($examDate) . '</strong> &nbsp;&nbsp;&nbsp;
                 ساعت: <strong>' . toPersianDigits($examTime) . '</strong> &nbsp;&nbsp;&nbsp;
                 کل پاسخنامه‌های تستی این جلسه: <strong>' . toPersianDigits($totalTestSeats) . '</strong>
             </div>
-            <div class="info" style="font-size: 9pt;">آمار به تفکیک ساختمان‌ها: ' . $buildingStatsStr . '</div>
+            <div class="info" style="font-size: 9pt;">آمار به تفکیک ساختمان‌ها: ' . $buildingStatsStr . $pageNumStr . '</div>
 
             <table class="courses-table">
                 <thead>
@@ -3458,11 +3471,6 @@ function generateTestLabels($pdo, $mpdf, $examDate, $examTime, $config)
 
         $html .= '</tbody></table>';
         $html .= '</div>';
-
-        // Set page footer for page numbers (sticks to bottom)
-        if ($totalPages > 1) {
-            $mpdf->SetHTMLFooter('<div style="text-align: center; font-size: 8pt; font-family: vazir;">صفحه ' . toPersianDigits($pageIndex + 1) . ' از ' . toPersianDigits($totalPages) . '</div>');
-        }
 
         $mpdf->WriteHTML($html);
     }
