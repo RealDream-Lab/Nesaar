@@ -668,7 +668,7 @@ document.addEventListener("DOMContentLoaded", () => {
                     <div style="line-height:1.9;font-size:1.05rem;text-align:justify;">
                         نِسار (نسخه ${VERSION}) یک وب‌اپلیکیشن پیشرفته و مدرن است که با بهره‌گیری از طراحی مبتنی بر تجربه کاربری نوین و سبک گلس‌مورفیسم، به دانشجویان دانشگاه پیام نور این امکان را می‌دهد تا برنامه امتحانات، شماره صندلی، محل برگزاری و وضعیت آزمون‌های خود را به‌صورت یکپارچه و متمرکز مشاهده کنند.
                         <br>
-                        این برنامه به سفارش <span style="color: lime; font-weight: bold;">${escapeHtml(
+                        این وب اپلیکیشن به سفارش <span style="color: lime; font-weight: bold;">${escapeHtml(
                           university
                         )}</span> و توسط <a href="https://t.me/RealDream" target="_blank" style="color: gold; font-weight: bold; text-decoration: none; border: none; outline: none;">مهدی حسنی</a> توسعه یافته است
                     </div>
