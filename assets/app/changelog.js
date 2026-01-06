@@ -3,6 +3,13 @@
  * Each version should have a changes array with the list of changes
  */
 window.CHANGELOG = {
+  "1.5.1": {
+    date: "۱۴۰۴/۱۰/۱۶",
+    changes: [
+      "کاهش رنگ نقطه‌ها در جای‌نماهای حاضر / غایب و حفظ رنگ اسلش برای خوانایی بهتر",
+      "هماهنگ‌سازی نسخهٔ کلاینت و سرویس‌ورکر جهت به‌روزرسانی کش‌ها"
+    ],
+  },
   "1.5.0": {
     date: "۱۴۰۴/۱۰/۱۴",
     changes: [
