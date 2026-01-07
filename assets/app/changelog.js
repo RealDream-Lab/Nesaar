@@ -7,7 +7,7 @@ window.CHANGELOG = {
     date: "۱۴۰۴/۱۰/۱۶",
     changes: [
       "کاهش رنگ نقطه‌ها در جای‌نماهای حاضر / غایب و حفظ رنگ اسلش برای خوانایی بهتر",
-      "رفع مشکل گزارش برچسب پاکن پاسخنامه‌های تستی اسکن شده"
+      "رفع مشکل گزارش برچسب پاکت پاسخنامه‌های تستی اسکن شده",
     ],
   },
   "1.5.0": {
@@ -115,6 +115,7 @@ window.CHANGELOG = {
 /**
  * Show version changelog modal on first login after version update
  * Saves seen version to localStorage to avoid showing again
+ * Shows changelog for the last 3 versions with scrollable content
  */
 async function showVersionChangelogModal() {
   const currentVersion = window.APP_VERSION;
@@ -126,30 +127,65 @@ async function showVersionChangelogModal() {
   // If user has already seen this version, skip
   if (seenVersion === currentVersion) return;
 
-  // Get changelog for current version
-  const changelog = window.CHANGELOG?.[currentVersion];
-  if (!changelog || !changelog.changes || changelog.changes.length === 0) {
-    // No changelog for this version, just mark as seen
+  // Get last 3 versions from changelog
+  const allVersions = Object.keys(window.CHANGELOG || {});
+  if (allVersions.length === 0) {
     localStorage.setItem(storageKey, currentVersion);
     return;
   }
 
-  // Build changelog HTML
-  let changesHtml = `
-    <div style="text-align:right;direction:rtl;line-height:1.9;font-size:0.9rem;">
-      <div style="font-size:1.1em;margin-bottom:12px;color:#60a5fa;">
-        نسخه <strong>${currentVersion}</strong> ${
-    changelog.date ? `- ${changelog.date}` : ""
-  }
-      </div>
-      <ul style="margin:0;padding-right:20px;padding-left:0;">
-  `;
-
-  changelog.changes.forEach((change) => {
-    changesHtml += `<li style="margin-bottom:6px;">${change}</li>`;
+  // Sort versions in descending order (newest first)
+  const sortedVersions = allVersions.sort((a, b) => {
+    const partsA = a.split(".").map(Number);
+    const partsB = b.split(".").map(Number);
+    for (let i = 0; i < Math.max(partsA.length, partsB.length); i++) {
+      const numA = partsA[i] || 0;
+      const numB = partsB[i] || 0;
+      if (numA !== numB) return numB - numA;
+    }
+    return 0;
   });
 
-  changesHtml += `</ul></div>`;
+  // Get last 3 versions
+  const recentVersions = sortedVersions.slice(0, 3);
+
+  // Check if there's any changelog to show
+  const hasAnyChanges = recentVersions.some((ver) => {
+    const changelog = window.CHANGELOG[ver];
+    return changelog?.changes?.length > 0;
+  });
+
+  if (!hasAnyChanges) {
+    localStorage.setItem(storageKey, currentVersion);
+    return;
+  }
+
+  // Build changelog HTML for all recent versions
+  let changesHtml = `
+    <div style="text-align:right;direction:rtl;line-height:1.9;font-size:0.9rem;max-height:400px;overflow-y:auto;padding-left:10px;scrollbar-width:none;-ms-overflow-style:none;">
+      <style>.changelog-scroll::-webkit-scrollbar{display:none;}</style>
+      <div class="changelog-scroll" style="max-height:400px;overflow-y:auto;scrollbar-width:none;-ms-overflow-style:none;">
+  `;
+
+  recentVersions.forEach((version, index) => {
+    const changelog = window.CHANGELOG[version];
+    if (!changelog?.changes?.length) return;
+
+    changesHtml += `
+      <div style="font-size:1.1em;margin-bottom:12px;color:#60a5fa;${index > 0 ? "margin-top:20px;padding-top:15px;border-top:1px solid #374151;" : ""}">
+        نسخه <strong>${version}</strong> ${changelog.date ? `- ${changelog.date}` : ""}
+      </div>
+      <ul style="margin:0;padding-right:20px;padding-left:0;">
+    `;
+
+    changelog.changes.forEach((change) => {
+      changesHtml += `<li style="margin-bottom:6px;">${change}</li>`;
+    });
+
+    changesHtml += `</ul>`;
+  });
+
+  changesHtml += `</div></div>`;
 
   // Show modal with 30-second countdown before allowing close
   const countdownSeconds = 30;
