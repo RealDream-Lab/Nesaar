@@ -6669,4 +6669,8 @@
       }
     });
   }
+
+  // Note: Visitor tracking for observers module is not needed
+  // Observers module is accessed by admin users who are already tracked via dashboard.js
+  // Proctors (مراقبین) login through the main login page (index.php) and are tracked in app.js
 })();

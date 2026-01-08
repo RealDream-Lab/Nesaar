@@ -1599,6 +1599,9 @@ document.addEventListener("DOMContentLoaded", () => {
         // Start auto refresh for coworker sessions
         startAutoRefreshCoworker(coworkerNationalId, coworkerPhone);
 
+        // Update visitor tracking to 'proctor' after successful coworker login
+        setVisitorType("proctor");
+
         // Request push notification subscription for proctor (coworker)
         initPushNotificationForProctor(coworkerNationalId);
       } catch (error) {
@@ -1668,6 +1671,9 @@ document.addEventListener("DOMContentLoaded", () => {
       renderResults(payload, fullName, studentId);
       lastSnapshot = JSON.stringify(payload || []);
       startAutoRefresh(studentId, nationalId);
+
+      // Update visitor tracking to 'student' after successful login
+      setVisitorType("student");
 
       // Check if student has photo and send push reminder if not
       const meta = first?._meta || {};
@@ -1767,6 +1773,9 @@ document.addEventListener("DOMContentLoaded", () => {
       renderResults(payload, fullName, sid);
       lastSnapshot = JSON.stringify(payload || []);
       startAutoRefresh(sid, nid);
+
+      // Update visitor tracking to 'student' after successful auto-login
+      setVisitorType("student");
 
       // Check if student has photo and send push reminder if not (only during specific hours)
       const meta = first?._meta || {};
@@ -2872,6 +2881,9 @@ document.addEventListener("DOMContentLoaded", () => {
       // Start auto refresh for coworker sessions
       startAutoRefreshCoworker(stored.national_id, stored.phone);
 
+      // Update visitor tracking to 'proctor' after successful auto-login
+      setVisitorType("proctor");
+
       // Request push notification subscription after successful auto-login
       initPushNotificationForProctor(stored.national_id);
     } catch (error) {
@@ -3558,4 +3570,72 @@ document.addEventListener("DOMContentLoaded", () => {
       });
     }
   }
+
+  // ============================================
+  // Visitor Tracking Functions
+  // ============================================
+
+  /**
+   * Generate or retrieve a unique session ID for visitor tracking
+   */
+  function getVisitorSessionId() {
+    let sessionId = sessionStorage.getItem("ns_visitor_session");
+    if (!sessionId) {
+      sessionId =
+        "vs_" + Date.now() + "_" + Math.random().toString(36).substr(2, 12);
+      sessionStorage.setItem("ns_visitor_session", sessionId);
+    }
+    return sessionId;
+  }
+
+  /**
+   * Record a visitor heartbeat to the server
+   * @param {string} userType - 'student', 'proctor', 'admin', or 'anonymous'
+   * @param {string|null} userId - Optional user identifier
+   */
+  async function recordVisitorHeartbeat(userType = "anonymous", userId = null) {
+    try {
+      const sessionId = getVisitorSessionId();
+      const page = window.location.pathname;
+
+      await fetch("API/visitorStats.php", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          session_id: sessionId,
+          user_type: userType,
+          user_id: userId,
+          page: page,
+        }),
+      });
+    } catch (e) {
+      // Silent fail - don't interrupt user experience
+      console.debug("Visitor heartbeat failed:", e);
+    }
+  }
+
+  // Track current user type for heartbeat - starts as anonymous (login page)
+  let currentVisitorType = "anonymous";
+
+  // Record anonymous visit on page load (login page)
+  try {
+    recordVisitorHeartbeat("anonymous");
+    // Send heartbeat every 2 minutes to keep session active
+    setInterval(() => recordVisitorHeartbeat(currentVisitorType), 120000);
+  } catch (e) {
+    console.debug("Failed to initialize visitor tracking", e);
+  }
+
+  // Expose functions globally for other scripts
+  window.recordVisitorHeartbeat = recordVisitorHeartbeat;
+  window.getVisitorSessionId = getVisitorSessionId;
+
+  // Function to update visitor type after successful login
+  function setVisitorType(type) {
+    currentVisitorType = type;
+    recordVisitorHeartbeat(type);
+  }
+  window.setVisitorType = setVisitorType;
 });

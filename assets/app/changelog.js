@@ -3,6 +3,15 @@
  * Each version should have a changes array with the list of changes
  */
 window.CHANGELOG = {
+  "1.5.5": {
+    date: "۱۴۰۴/۱۰/۱۸",
+    changes: [
+      "افزودن آیکون به کارت‌های داشبورد برای خوانایی بهتر",
+      "انتقال و بهبود کارت آمار بازدیدکنندگان؛ شامل بازدیدکنندگان ناشناس در مجموع",
+      "ثبت بازدیدکنندگان ناشناس (قبل از احراز هویت) و بهبود ردیابی مراقبین",
+      "بهبود استایل کارت آمار برای کنتراست و خوانایی",
+    ],
+  },
   "1.5.1": {
     date: "۱۴۰۴/۱۰/۱۶",
     changes: [
@@ -172,8 +181,14 @@ async function showVersionChangelogModal() {
     if (!changelog?.changes?.length) return;
 
     changesHtml += `
-      <div style="font-size:1.1em;margin-bottom:12px;color:#60a5fa;${index > 0 ? "margin-top:20px;padding-top:15px;border-top:1px solid #374151;" : ""}">
-        نسخه <strong>${version}</strong> ${changelog.date ? `- ${changelog.date}` : ""}
+      <div style="font-size:1.1em;margin-bottom:12px;color:#60a5fa;${
+        index > 0
+          ? "margin-top:20px;padding-top:15px;border-top:1px solid #374151;"
+          : ""
+      }">
+        نسخه <strong>${version}</strong> ${
+      changelog.date ? `- ${changelog.date}` : ""
+    }
       </div>
       <ul style="margin:0;padding-right:20px;padding-left:0;">
     `;

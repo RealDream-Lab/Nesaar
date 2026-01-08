@@ -4609,6 +4609,7 @@ async function examEssentialsHandler() {
   let hasDescriptive = false;
   let hasLocations = false;
   let hasTest = false;
+  let hasMultiExamStudents = false;
 
   if (examDate && examTime) {
     const cleanDate = toEnglishDigits(String(examDate)).replace(/-/g, "/");
@@ -4639,6 +4640,8 @@ async function examEssentialsHandler() {
         hasTest = courses.some(
           (c) => c.course_type && c.course_type.includes("تستی")
         );
+        // Check for multi-exam students
+        hasMultiExamStudents = (checkData.multiExamStudentCount || 0) > 0;
       }
     } catch (e) {
       console.warn("Failed to check exam types:", e);
@@ -4646,6 +4649,7 @@ async function examEssentialsHandler() {
       hasDescriptive = true;
       hasLocations = true;
       hasTest = true;
+      hasMultiExamStudents = true;
     }
   }
 
@@ -4676,6 +4680,11 @@ async function examEssentialsHandler() {
   );
 
   // Conditional buttons
+  if (hasMultiExamStudents) {
+    allButtons.push(
+      `<button class="btn btn-primary w-100" style="${btnStyle}" onclick="try{ printMultiExamStudentsReport(); }catch(e){ console.error(e); }">دانشجویان چند آزمونی</button>`
+    );
+  }
   if (hasLocations) {
     allButtons.push(
       `<button class="btn btn-primary w-100" style="${btnStyle}" onclick="try{ startEssentialsPrint('locationLabels'); }catch(e){ console.error(e); }">برچسب پاکت سوالات</button>`
@@ -5183,6 +5192,41 @@ async function printEssentialsTest() {
         confirmButton: "btn btn-primary",
       },
     });
+  }
+}
+
+async function printMultiExamStudentsReport() {
+  try {
+    const context = window._lastExamContext || null;
+    let examDate = context?.exam_date;
+    let examTime = context?.exam_time;
+
+    if (examDate && examTime) {
+      examDate = toEnglishDigits(String(examDate)).replace(/-/g, "/");
+      examTime = toEnglishDigits(String(examTime));
+
+      const url = `../API/generatePDF.php?report_type=multi_exam_students&exam_date=${encodeURIComponent(
+        examDate
+      )}&exam_time=${encodeURIComponent(examTime)}&_t=${new Date().getTime()}`;
+      // Ensure the essentials menu reopens after the report modal is closed
+      try {
+        window._reopenEssentialsMenu = true;
+      } catch (e) {}
+      showReportModal(url, "دانشجویان چند آزمونی");
+    } else {
+      Swal.fire({
+        icon: "error",
+        title: "خطا",
+        text: "اطلاعات آزمون یافت نشد",
+        confirmButtonText: "باشه",
+        customClass: {
+          popup: "swal2-rtl swal2-glass",
+          confirmButton: "btn btn-primary",
+        },
+      });
+    }
+  } catch (e) {
+    console.error(e);
   }
 }
 
@@ -7508,4 +7552,144 @@ document.addEventListener("DOMContentLoaded", function () {
       }
     });
   }
+
+  // Load visitor statistics
+  try {
+    loadVisitorStats();
+    // Refresh every 60 seconds
+    setInterval(loadVisitorStats, 60000);
+  } catch (e) {
+    console.warn("Failed to initialize visitor stats", e);
+  }
+
+  // Record admin visit heartbeat
+  try {
+    recordVisitorHeartbeat("admin");
+    // Send heartbeat every 2 minutes to keep session active
+    setInterval(() => recordVisitorHeartbeat("admin"), 120000);
+  } catch (e) {
+    console.warn("Failed to initialize visitor heartbeat", e);
+  }
 });
+
+// ============================================
+// Visitor Statistics Functions
+// ============================================
+
+/**
+ * Generate or retrieve a unique session ID for visitor tracking
+ */
+function getVisitorSessionId() {
+  let sessionId = sessionStorage.getItem("ns_visitor_session");
+  if (!sessionId) {
+    sessionId =
+      "vs_" + Date.now() + "_" + Math.random().toString(36).substr(2, 12);
+    sessionStorage.setItem("ns_visitor_session", sessionId);
+  }
+  return sessionId;
+}
+
+/**
+ * Record a visitor heartbeat to the server
+ * @param {string} userType - 'student', 'proctor', or 'admin'
+ * @param {string|null} userId - Optional user identifier
+ */
+async function recordVisitorHeartbeat(userType = "admin", userId = null) {
+  try {
+    const sessionId = getVisitorSessionId();
+    const page = window.location.pathname;
+
+    await fetch("../API/visitorStats.php", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        session_id: sessionId,
+        user_type: userType,
+        user_id: userId,
+        page: page,
+      }),
+    });
+  } catch (e) {
+    // Silent fail - don't interrupt user experience
+    console.debug("Visitor heartbeat failed:", e);
+  }
+}
+
+/**
+ * Load and display visitor statistics
+ */
+async function loadVisitorStats() {
+  try {
+    const response = await fetch("../API/visitorStats.php", {
+      method: "GET",
+      cache: "no-store",
+    });
+    const data = await response.json();
+
+    if (data.success) {
+      // Online now
+      const onlineStudents = document.getElementById("onlineStudents");
+      const onlineProctors = document.getElementById("onlineProctors");
+      const onlineTotal = document.getElementById("onlineTotal");
+      if (onlineStudents)
+        onlineStudents.textContent = toPersianDigits(data.online?.student || 0);
+      if (onlineProctors)
+        onlineProctors.textContent = toPersianDigits(data.online?.proctor || 0);
+      if (onlineTotal)
+        onlineTotal.textContent = toPersianDigits(data.online?.total || 0);
+
+      // Last 24 hours
+      const last24Students = document.getElementById("last24Students");
+      const last24Proctors = document.getElementById("last24Proctors");
+      const last24Total = document.getElementById("last24Total");
+      if (last24Students)
+        last24Students.textContent = toPersianDigits(
+          data.last24h?.student || 0
+        );
+      if (last24Proctors)
+        last24Proctors.textContent = toPersianDigits(
+          data.last24h?.proctor || 0
+        );
+      if (last24Total)
+        last24Total.textContent = toPersianDigits(data.last24h?.total || 0);
+
+      // All time totals
+      const totalVisitorStudents = document.getElementById(
+        "totalVisitorStudents"
+      );
+      const totalVisitorProctors = document.getElementById(
+        "totalVisitorProctors"
+      );
+      const totalVisitors = document.getElementById("totalVisitors");
+      if (totalVisitorStudents)
+        totalVisitorStudents.textContent = toPersianDigits(
+          data.allTime?.student || 0
+        );
+      if (totalVisitorProctors)
+        totalVisitorProctors.textContent = toPersianDigits(
+          data.allTime?.proctor || 0
+        );
+      if (totalVisitors)
+        totalVisitors.textContent = toPersianDigits(data.allTime?.total || 0);
+
+      // Update last refresh time
+      const lastUpdateEl = document.getElementById("visitorStatsLastUpdate");
+      if (lastUpdateEl) {
+        const now = new Date();
+        const timeStr = now.toLocaleTimeString("fa-IR", {
+          hour: "2-digit",
+          minute: "2-digit",
+        });
+        lastUpdateEl.textContent = timeStr;
+      }
+    }
+  } catch (e) {
+    console.warn("Failed to load visitor stats:", e);
+  }
+}
+
+// Export for use in other modules
+window.recordVisitorHeartbeat = recordVisitorHeartbeat;
+window.getVisitorSessionId = getVisitorSessionId;

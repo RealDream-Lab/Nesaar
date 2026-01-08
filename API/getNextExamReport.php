@@ -133,6 +133,27 @@ try {
         error_log('getNextExamReport: failed to compute exam type counts: ' . $e->getMessage());
     }
 
+    // Check for multi-exam students (students with more than one course in this session)
+    $multiExamStudentCount = 0;
+    try {
+        $multiStmt = $pdo->prepare("
+            SELECT COUNT(DISTINCT student_id) as cnt
+            FROM (
+                SELECT es.student_id
+                FROM exam_seats es
+                JOIN courses c ON es.course_code = c.course_code
+                WHERE c.exam_date = ? AND c.exam_time = ?
+                GROUP BY es.student_id
+                HAVING COUNT(es.course_code) > 1
+            ) multi
+        ");
+        $multiStmt->execute([$examDate, $examTime]);
+        $multiRow              = $multiStmt->fetch(PDO::FETCH_ASSOC);
+        $multiExamStudentCount = (int)($multiRow['cnt'] ?? 0);
+    } catch (Exception $e) {
+        error_log('getNextExamReport: failed to compute multi-exam student count: ' . $e->getMessage());
+    }
+
     echo json_encode([
         'success' => true,
         'exam_date' => $examDate,
@@ -140,7 +161,8 @@ try {
         'courses' => $courses,
         'students' => $students,
         'courseTypeCounts' => $courseTypeCounts,
-        'examTypeCounts' => $examTypeCounts
+        'examTypeCounts' => $examTypeCounts,
+        'multiExamStudentCount' => $multiExamStudentCount
     ], JSON_UNESCAPED_UNICODE);
 
 } catch (PDOException $e) {

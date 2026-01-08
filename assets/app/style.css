@@ -2455,6 +2455,156 @@ body.swal2-toast-shown {
 }
 
 /* ============================================
+   Visitor Statistics Card Styles
+   ============================================ */
+.visitor-stat-box {
+  background: rgba(255, 255, 255, 0.85);
+  border-radius: 12px;
+  padding: 1rem;
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+}
+
+.visitor-stat-box:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+}
+
+.visitor-stat-box.online-now {
+  border-color: rgba(40, 167, 69, 0.5);
+  background: linear-gradient(
+    135deg,
+    rgba(40, 167, 69, 0.15),
+    rgba(255, 255, 255, 0.95)
+  );
+}
+
+.visitor-stat-box.last-24h {
+  border-color: rgba(0, 123, 255, 0.5);
+  background: linear-gradient(
+    135deg,
+    rgba(0, 123, 255, 0.15),
+    rgba(255, 255, 255, 0.95)
+  );
+}
+
+.visitor-stat-box.all-time {
+  border-color: rgba(108, 117, 125, 0.5);
+  background: linear-gradient(
+    135deg,
+    rgba(108, 117, 125, 0.15),
+    rgba(255, 255, 255, 0.95)
+  );
+}
+
+.visitor-stat-header {
+  font-size: 1rem;
+  font-weight: 600;
+  margin-bottom: 0.75rem;
+  color: #1e293b;
+  display: flex;
+  align-items: center;
+}
+
+.online-indicator {
+  width: 10px;
+  height: 10px;
+  background: #28a745;
+  border-radius: 50%;
+  margin-left: 8px;
+  animation: pulse-green 2s infinite;
+}
+
+@keyframes pulse-green {
+  0%,
+  100% {
+    box-shadow: 0 0 0 0 rgba(40, 167, 69, 0.7);
+  }
+  50% {
+    box-shadow: 0 0 0 8px rgba(40, 167, 69, 0);
+  }
+}
+
+.visitor-stat-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.4rem 0;
+  border-bottom: 1px dashed rgba(0, 0, 0, 0.1);
+}
+
+.visitor-stat-row:last-of-type {
+  border-bottom: none;
+}
+
+.visitor-label {
+  font-size: 0.9rem;
+  color: #475569;
+  font-weight: 500;
+}
+
+.visitor-value {
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: #1e293b;
+}
+
+.visitor-stat-total {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 0.75rem;
+  padding-top: 0.75rem;
+  border-top: 1px solid rgba(0, 0, 0, 0.1);
+  font-weight: 700;
+  font-size: 1rem;
+  color: #0c72ad;
+}
+
+#visitorStatsCard .card-body-collapsible {
+  padding: 1rem;
+}
+
+.visitor-stats-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  margin-top: 1rem;
+  padding-top: 0.75rem;
+  border-top: 1px dashed rgba(0, 0, 0, 0.1);
+}
+
+.visitor-stats-note {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.82rem;
+  color: #64748b;
+  background: rgba(100, 116, 139, 0.08);
+  padding: 0.4rem 0.75rem;
+  border-radius: 8px;
+}
+
+.visitor-stats-note .note-icon {
+  font-size: 1rem;
+}
+
+.visitor-stats-update {
+  font-size: 0.8rem;
+  color: #94a3b8;
+}
+
+@media (max-width: 768px) {
+  .visitor-stats-footer {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+}
+
+/* ============================================
    Session Calendar Styles
    ============================================ */
 .calendar-loading {

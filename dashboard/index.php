@@ -137,7 +137,7 @@ $bodyClass = $wavesAnimationDisabled ? 'class="no-waves-animation"' : '';
                     <div class="dashboard-card stat-card" style="cursor: pointer;" onclick="showStudentReport()">
                         <div class="stat-box">
                             <h3 id="totalStudents">-</h3>
-                            <p>دانشجو</p>
+                            <p>👨‍🎓 دانشجو</p>
                         </div>
                     </div>
                 </div>
@@ -145,7 +145,7 @@ $bodyClass = $wavesAnimationDisabled ? 'class="no-waves-animation"' : '';
                     <div class="dashboard-card stat-card" style="cursor: pointer;" onclick="showCourseReport()">
                         <div class="stat-box">
                             <h3 id="totalCourses">-</h3>
-                            <p>آزمون</p>
+                            <p>📝 آزمون</p>
                         </div>
                     </div>
                 </div>
@@ -153,7 +153,7 @@ $bodyClass = $wavesAnimationDisabled ? 'class="no-waves-animation"' : '';
                     <div class="dashboard-card stat-card" style="cursor: pointer;" onclick="showProctorSearch()">
                         <div class="stat-box">
                             <h3 id="totalProctors">-</h3>
-                            <p>مراقب</p>
+                            <p>👨‍💼 مراقب</p>
                         </div>
                     </div>
                 </div>
@@ -161,13 +161,11 @@ $bodyClass = $wavesAnimationDisabled ? 'class="no-waves-animation"' : '';
                     <div class="dashboard-card stat-card" style="cursor: pointer;" onclick="showNextExamReport()">
                         <div class="stat-box">
                             <h3 id="nextExamStudents">-</h3>
-                            <p id="nextExamDateTime">بارگذاری...</p>
+                            <p><span class="stat-icon">⏳</span> <span id="nextExamDateTime">بارگذاری...</span></p>
                         </div>
                     </div>
                 </div>
             </div>
-
-
 
         </div>
 
@@ -178,7 +176,7 @@ $bodyClass = $wavesAnimationDisabled ? 'class="no-waves-animation"' : '';
         <!-- Session Calendar Card -->
         <div class="dashboard-card no-hover collapsible-card" id="sessionCalendarCard">
             <div class="card-header-collapsible" onclick="toggleCardCollapse(this)">
-                <h4 class="mb-0">تقویم جلسات آزمون</h4>
+                <h4 class="mb-0"><span style="margin-left:8px;">📅</span>تقویم جلسات آزمون</h4>
                 <span class="collapse-icon">▼</span>
             </div>
             <div class="card-body-collapsible">
@@ -190,7 +188,7 @@ $bodyClass = $wavesAnimationDisabled ? 'class="no-waves-animation"' : '';
 
         <!-- Latest Request Report -->
         <div class="dashboard-card no-hover" id="reportCard" style="display: none;">
-            <h4 class="mb-3">آخرین گزارش درخواستی</h4>
+            <h4 class="mb-3"><span style="margin-left:8px;">📝</span>آخرین گزارش درخواستی</h4>
             <div id="reportContent"></div>
             <div class="text-center mt-3">
                 <button class="btn btn-danger" onclick="clearReport()">پاک کردن گزارش</button>
@@ -201,7 +199,7 @@ $bodyClass = $wavesAnimationDisabled ? 'class="no-waves-animation"' : '';
         <!-- Reports Chart Card -->
         <div class="dashboard-card no-hover collapsible-card" id="reportsChartCard">
             <div class="card-header-collapsible" onclick="toggleCardCollapse(this)">
-                <h4 class="mb-0">نمودار جلسات باقی‌مانده آزمون</h4>
+                <h4 class="mb-0"><span style="margin-left:8px;">📈</span>نمودار جلسات باقی‌مانده آزمون</h4>
                 <span class="collapse-icon">▼</span>
             </div>
             <div class="card-body-collapsible">
@@ -251,7 +249,7 @@ $bodyClass = $wavesAnimationDisabled ? 'class="no-waves-animation"' : '';
         <!-- Push Notification Management Card -->
         <div class="dashboard-card no-hover collapsible-card" id="pushNotificationCard">
             <div class="card-header-collapsible" onclick="toggleCardCollapse(this)">
-                <h4 class="mb-0">ارسال اعلان (پوش نوتیفیکیشن)</h4>
+                <h4 class="mb-0"><span style="margin-left:8px;">🔔</span>ارسال اعلان (پوش نوتیفیکیشن)</h4>
                 <span class="collapse-icon">▼</span>
             </div>
             <div class="card-body-collapsible">
@@ -326,7 +324,7 @@ $bodyClass = $wavesAnimationDisabled ? 'class="no-waves-animation"' : '';
         <!-- Database Update (moved here to bottom-most section) -->
         <div class="dashboard-card no-hover collapsible-card" id="databaseCard">
             <div class="card-header-collapsible" onclick="toggleCardCollapse(this)">
-                <h4 class="mb-0">بانک اطلاعاتی آزمون‌ها</h4>
+                <h4 class="mb-0"><span style="margin-left:8px;">🗄️</span>بانک اطلاعاتی آزمون‌ها</h4>
                 <span class="collapse-icon">▼</span>
             </div>
             <div class="card-body-collapsible">
@@ -345,6 +343,93 @@ $bodyClass = $wavesAnimationDisabled ? 'class="no-waves-animation"' : '';
                         <button class="btn btn-upload w-100" id="updateDBBtn">
                             به‌روزرسانی پایگاه داده
                         </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Visitor Statistics Card -->
+        <div class="dashboard-card no-hover collapsible-card" id="visitorStatsCard">
+            <div class="card-header-collapsible" onclick="toggleCardCollapse(this)">
+                <h4 class="mb-0">
+                    <span style="margin-left: 8px;">📊</span>
+                    آمار بازدیدکنندگان
+                </h4>
+                <span class="collapse-icon">▼</span>
+            </div>
+            <div class="card-body-collapsible">
+                <div class="row" id="visitorStatsContainer">
+                    <!-- Online Now -->
+                    <div class="col-md-4 mb-3">
+                        <div class="visitor-stat-box online-now">
+                            <div class="visitor-stat-header">
+                                <span class="online-indicator"></span>
+                                آنلاین
+                            </div>
+                            <div class="visitor-stat-row">
+                                <span class="visitor-label">👨‍🎓 دانشجو:</span>
+                                <span class="visitor-value" id="onlineStudents">-</span>
+                            </div>
+                            <div class="visitor-stat-row">
+                                <span class="visitor-label">👨‍💼 مراقب:</span>
+                                <span class="visitor-value" id="onlineProctors">-</span>
+                            </div>
+                            <div class="visitor-stat-total">
+                                <span>مجموع:</span>
+                                <span id="onlineTotal">-</span>
+                            </div>
+                        </div>
+                    </div>
+                    <!-- Last 24 Hours -->
+                    <div class="col-md-4 mb-3">
+                        <div class="visitor-stat-box last-24h">
+                            <div class="visitor-stat-header">
+                                <span style="margin-left: 6px;">⏱️</span>
+                                ۲۴ ساعت گذشته
+                            </div>
+                            <div class="visitor-stat-row">
+                                <span class="visitor-label">👨‍🎓 دانشجو:</span>
+                                <span class="visitor-value" id="last24Students">-</span>
+                            </div>
+                            <div class="visitor-stat-row">
+                                <span class="visitor-label">👨‍💼 مراقب:</span>
+                                <span class="visitor-value" id="last24Proctors">-</span>
+                            </div>
+                            <div class="visitor-stat-total">
+                                <span>مجموع:</span>
+                                <span id="last24Total">-</span>
+                            </div>
+                        </div>
+                    </div>
+                    <!-- All Time -->
+                    <div class="col-md-4 mb-3">
+                        <div class="visitor-stat-box all-time">
+                            <div class="visitor-stat-header">
+                                <span style="margin-left: 6px;">📈</span>
+                                کل بازدیدها
+                            </div>
+                            <div class="visitor-stat-row">
+                                <span class="visitor-label">👨‍🎓 دانشجو:</span>
+                                <span class="visitor-value" id="totalVisitorStudents">-</span>
+                            </div>
+                            <div class="visitor-stat-row">
+                                <span class="visitor-label">👨‍💼 مراقب:</span>
+                                <span class="visitor-value" id="totalVisitorProctors">-</span>
+                            </div>
+                            <div class="visitor-stat-total">
+                                <span>مجموع:</span>
+                                <span id="totalVisitors">-</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="visitor-stats-footer">
+                    <div class="visitor-stats-note">
+                        <span class="note-icon">💡</span>
+                        <span>مجموع شامل بازدیدکنندگان صفحه ورود (قبل از احراز هویت) نیز می‌باشد</span>
+                    </div>
+                    <div class="visitor-stats-update">
+                        آخرین به‌روزرسانی: <span id="visitorStatsLastUpdate">-</span>
                     </div>
                 </div>
             </div>
