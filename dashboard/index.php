@@ -137,7 +137,7 @@ $bodyClass = $wavesAnimationDisabled ? 'class="no-waves-animation"' : '';
                     <div class="dashboard-card stat-card" style="cursor: pointer;" onclick="showStudentReport()">
                         <div class="stat-box">
                             <h3 id="totalStudents">-</h3>
-                            <p>👨‍🎓 دانشجو</p>
+                            <p>دانشجو</p>
                         </div>
                     </div>
                 </div>
@@ -145,7 +145,7 @@ $bodyClass = $wavesAnimationDisabled ? 'class="no-waves-animation"' : '';
                     <div class="dashboard-card stat-card" style="cursor: pointer;" onclick="showCourseReport()">
                         <div class="stat-box">
                             <h3 id="totalCourses">-</h3>
-                            <p>📝 آزمون</p>
+                            <p>آزمون</p>
                         </div>
                     </div>
                 </div>
@@ -153,7 +153,7 @@ $bodyClass = $wavesAnimationDisabled ? 'class="no-waves-animation"' : '';
                     <div class="dashboard-card stat-card" style="cursor: pointer;" onclick="showProctorSearch()">
                         <div class="stat-box">
                             <h3 id="totalProctors">-</h3>
-                            <p>👨‍💼 مراقب</p>
+                            <p>مراقب</p>
                         </div>
                     </div>
                 </div>
@@ -161,7 +161,7 @@ $bodyClass = $wavesAnimationDisabled ? 'class="no-waves-animation"' : '';
                     <div class="dashboard-card stat-card" style="cursor: pointer;" onclick="showNextExamReport()">
                         <div class="stat-box">
                             <h3 id="nextExamStudents">-</h3>
-                            <p><span class="stat-icon">⏳</span> <span id="nextExamDateTime">بارگذاری...</span></p>
+                            <p><span id="nextExamDateTime">بارگذاری...</span></p>
                         </div>
                     </div>
                 </div>
