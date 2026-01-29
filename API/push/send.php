@@ -176,6 +176,30 @@ try {
         }
     }
 
+    // Log manual push notification
+    if ($sent > 0) {
+        try {
+            $logStmt = $pdo->prepare("
+                INSERT INTO push_manual_log 
+                (title, body, user_type, recipients_count, sent_count, failed_count, expired_count, created_by, batch_id)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+            ");
+            $logStmt->execute([
+                $input['title'],
+                $input['body'] ?? '',
+                $input['user_type'] ?? 'all',
+                count($subscriptions),
+                $sent,
+                $failed,
+                $expired,
+                $sessionData['username'] ?? 'admin',
+                $input['batch_id'] ?? null
+            ]);
+        } catch (Throwable $logError) {
+            error_log('Failed to log push notification: ' . $logError->getMessage());
+        }
+    }
+
     echo json_encode([
         'success' => true,
         'message' => 'ارسال انجام شد',

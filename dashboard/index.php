@@ -434,6 +434,98 @@ $bodyClass = $wavesAnimationDisabled ? 'class="no-waves-animation"' : '';
                 </div>
             </div>
         </div>
+
+        <!-- Push Notification Statistics Card -->
+        <div class="dashboard-card no-hover collapsible-card" id="pushStatsCard">
+            <div class="card-header-collapsible" onclick="toggleCardCollapse(this)">
+                <h4 class="mb-0">
+                    <span style="margin-left: 8px;">📬</span>
+                    آمار پوش نوتیفیکیشن
+                </h4>
+                <span class="collapse-icon">▼</span>
+            </div>
+            <div class="card-body-collapsible">
+                <div class="row" id="pushStatsContainer">
+                    <!-- Manual Pushes -->
+                    <div class="col-md-4 mb-3">
+                        <div class="visitor-stat-box"
+                            style="border-color: rgba(156, 39, 176, 0.5); background: linear-gradient(135deg, rgba(156, 39, 176, 0.15), rgba(255, 255, 255, 0.95));">
+                            <div class="visitor-stat-header">
+                                <span style="margin-left: 6px;">✉️</span>
+                                ارسال دستی
+                            </div>
+                            <div class="visitor-stat-row">
+                                <span class="visitor-label">📤 تعداد ارسال:</span>
+                                <span class="visitor-value" id="pushManualSent">-</span>
+                            </div>
+                            <div class="visitor-stat-row">
+                                <span class="visitor-label">✅ تحویل شده:</span>
+                                <span class="visitor-value" style="color:#28a745;" id="pushManualSuccess">-</span>
+                            </div>
+                            <div class="visitor-stat-row">
+                                <span class="visitor-label">❌ ناموفق:</span>
+                                <span class="visitor-value" style="color:#dc3545;" id="pushManualFailed">-</span>
+                            </div>
+                        </div>
+                    </div>
+                    <!-- Scheduled Pushes -->
+                    <div class="col-md-4 mb-3">
+                        <div class="visitor-stat-box"
+                            style="border-color: rgba(255, 152, 0, 0.5); background: linear-gradient(135deg, rgba(255, 152, 0, 0.15), rgba(255, 255, 255, 0.95));">
+                            <div class="visitor-stat-header">
+                                <span style="margin-left: 6px;">📅</span>
+                                زمان‌بندی شده
+                            </div>
+                            <div class="visitor-stat-row">
+                                <span class="visitor-label">📤 تعداد ارسال:</span>
+                                <span class="visitor-value" id="pushScheduledSent">-</span>
+                            </div>
+                            <div class="visitor-stat-row">
+                                <span class="visitor-label">✅ تحویل شده:</span>
+                                <span class="visitor-value" style="color:#28a745;" id="pushScheduledSuccess">-</span>
+                            </div>
+                            <div class="visitor-stat-row">
+                                <span class="visitor-label">❌ ناموفق:</span>
+                                <span class="visitor-value" style="color:#dc3545;" id="pushScheduledFailed">-</span>
+                            </div>
+                        </div>
+                    </div>
+                    <!-- Auto Pushes -->
+                    <div class="col-md-4 mb-3">
+                        <div class="visitor-stat-box"
+                            style="border-color: rgba(0, 150, 136, 0.5); background: linear-gradient(135deg, rgba(0, 150, 136, 0.15), rgba(255, 255, 255, 0.95));">
+                            <div class="visitor-stat-header">
+                                <span style="margin-left: 6px;">🤖</span>
+                                خودکار (یادآوری)
+                            </div>
+                            <div class="visitor-stat-row">
+                                <span class="visitor-label">📤 تعداد ارسال:</span>
+                                <span class="visitor-value" id="pushAutoSent">-</span>
+                            </div>
+                            <div class="visitor-stat-row">
+                                <span class="visitor-label">✅ تحویل شده:</span>
+                                <span class="visitor-value" style="color:#28a745;" id="pushAutoSuccess">-</span>
+                            </div>
+                            <div class="visitor-stat-row">
+                                <span class="visitor-label">❌ ناموفق:</span>
+                                <span class="visitor-value" style="color:#dc3545;" id="pushAutoFailed">-</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="visitor-stats-footer">
+                    <div class="visitor-stats-note">
+                        <span class="note-icon">📱</span>
+                        <span>مشترکین فعال: <strong id="pushTotalSubscribers">-</strong> (دانشجو: <span
+                                id="pushStudentSubs">-</span> | مراقب: <span id="pushProctorSubs">-</span>)</span>
+                    </div>
+
+                    <div class="visitor-stats-update">
+                        آخرین به‌روزرسانی: <span id="pushStatsLastUpdate">-</span>
+                    </div>
+                </div>
+            </div>
+        </div>
     </div>
     </div>
 

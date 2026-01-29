@@ -4,7 +4,7 @@ function isDesktopDevice() {
   const userAgent = navigator.userAgent.toLowerCase();
   const isMobileUA =
     /android|webos|iphone|ipad|ipod|blackberry|iemobile|opera mini/.test(
-      userAgent
+      userAgent,
     );
   return !isTouch && width > 900 && !isMobileUA;
 }
@@ -73,7 +73,7 @@ try {
                 if (toastOpts.customClass) {
                   toastOpts.customClass = Object.assign(
                     {},
-                    toastOpts.customClass
+                    toastOpts.customClass,
                   );
                   toastOpts.customClass.popup =
                     toastOpts.customClass.popup || "swal2-rtl swal2-toast";
@@ -181,7 +181,7 @@ try {
         reopenEssentialsMenuIfRequested();
       } catch (e) {}
     },
-    false
+    false,
   );
 } catch (e) {}
 
@@ -195,7 +195,7 @@ function closeSwalLoadingHard() {
   } catch (e) {}
   try {
     const nodes = document.querySelectorAll(
-      ".swal2-container, .swal2-popup, .swal2-backdrop-show, .swal2-loading, .swal2-actions.swal2-loading"
+      ".swal2-container, .swal2-popup, .swal2-backdrop-show, .swal2-loading, .swal2-actions.swal2-loading",
     );
     nodes.forEach((el) => {
       try {
@@ -421,7 +421,7 @@ function getVazirFontMeta() {
   const preloadTags = preloadFiles
     .map(
       (file) =>
-        `<link rel="preload" href="${base}/Farsi-Digits/${file}" as="font" type="font/woff2" crossorigin="anonymous">`
+        `<link rel="preload" href="${base}/Farsi-Digits/${file}" as="font" type="font/woff2" crossorigin="anonymous">`,
     )
     .join("");
   cachedVazirFontMeta = {
@@ -543,7 +543,7 @@ async function printSessionReport() {
       setLastExamContext(examDate, examTime);
     }
     const url = `../API/generatePDF.php?report_type=session&exam_date=${encodeURIComponent(
-      examDate
+      examDate,
     )}&exam_time=${encodeURIComponent(examTime)}&_t=${new Date().getTime()}`;
     showReportModal(url, "صورتجلسه آزمون");
   } catch (e) {
@@ -601,7 +601,7 @@ async function printSessionSummaryReport() {
       setLastExamContext(examDate, examTime);
     }
     const url = `../API/generatePDF.php?report_type=session_summary&exam_date=${encodeURIComponent(
-      examDate
+      examDate,
     )}&exam_time=${encodeURIComponent(examTime)}&_t=${new Date().getTime()}`;
     showReportModal(url, "صورتجلسه تفضیلی آزمون");
   } catch (e) {
@@ -635,11 +635,11 @@ async function checkReportDataAvailability(reportType, examDate, examTime) {
   try {
     const resp = await guardedFetch(
       `../API/checkReportData.php?report_type=${encodeURIComponent(
-        reportType
+        reportType,
       )}&exam_date=${encodeURIComponent(
-        examDate
+        examDate,
       )}&exam_time=${encodeURIComponent(examTime)}`,
-      { cache: "no-store" }
+      { cache: "no-store" },
     );
     if (resp && resp.ok) {
       const result = await resp.json();
@@ -713,7 +713,7 @@ document.addEventListener("DOMContentLoaded", function () {
       },
       didOpen: () => {
         const valueEl = Swal.getHtmlContainer()?.querySelector(
-          ".swal2-countdown-value"
+          ".swal2-countdown-value",
         );
         if (!valueEl) return;
         const updateCountdown = () => {
@@ -862,13 +862,13 @@ try {
       const chairVal = cfg.Chairman || "";
       // Legacy GroupByCourse is now split into separate settings
       const seatReportSortByVal = String(
-        cfg.SeatReportSortBy || "last_name"
+        cfg.SeatReportSortBy || "last_name",
       ).toLowerCase();
       const seatReportSeparateBuildingChecked =
         String(cfg.SeatReportSeparateBuilding || "NO").toUpperCase() === "YES";
       const seatReportGroupByCourseChecked =
         String(
-          cfg.SeatReportGroupByCourse || cfg.GroupByCourse || "NO"
+          cfg.SeatReportGroupByCourse || cfg.GroupByCourse || "NO",
         ).toUpperCase() === "YES";
       const seatReportSeparateExamTypeChecked =
         String(cfg.SeatReportSeparateExamType || "NO").toUpperCase() === "YES";
@@ -882,7 +882,7 @@ try {
       const wavesAnimationChecked =
         String(cfg.WavesAnimation || "YES").toUpperCase() !== "NO";
       const reproductionReportModeVal = String(
-        cfg.ReproductionReportMode || "course"
+        cfg.ReproductionReportMode || "course",
       ).toLowerCase();
       const multiExamModeChecked =
         String(cfg.MultiExamMode || "NO").toUpperCase() === "YES";
@@ -901,28 +901,28 @@ try {
                             <div style="${fieldWrapperStyle}">
                                 <label style="font-size:0.92rem;color:inherit;">نام نمایشی کاربر (نمایش در هدر)</label>
                                 <input id="er_admin" class="swal2-input" placeholder="نام نمایشی کاربر" style="${sharedInputStyle}" value="${escapeHtml(
-        adminVal
-      )}">
+                                  adminVal,
+                                )}">
                             </div>
                             <div style="${fieldWrapperStyle}">
                                 <label style="font-size:0.92rem;color:inherit;">نام و نام خانوادگی رئیس مرکز</label>
                                 <input id="er_boss" class="swal2-input" placeholder="رئیس مرکز" style="${sharedInputStyle}" value="${escapeHtml(
-        bossVal
-      )}">
+                                  bossVal,
+                                )}">
                             </div>
                         </div>
                         <div style="display:flex;gap:12px;flex-wrap:wrap;margin-top:8px;">
                             <div style="${fieldWrapperStyle}">
                                 <label style="font-size:0.92rem;color:inherit;">نام و نام خانوادگی رئیس اداره آموزش</label>
                                 <input id="er_head" class="swal2-input" placeholder="رئیس اداره آموزش" style="${sharedInputStyle}" value="${escapeHtml(
-        headVal
-      )}">
+                                  headVal,
+                                )}">
                             </div>
                             <div style="${fieldWrapperStyle}">
                                 <label style="font-size:0.85rem;color:inherit;">نام و نام خانوادگی مسئول جلسه</label>
                                 <input id="er_chair" class="swal2-input" placeholder="مسئول جلسه" style="${sharedInputStyle}" value="${escapeHtml(
-        chairVal
-      )}">
+                                  chairVal,
+                                )}">
                             </div>
                         </div>
                         <hr style="border:0;border-top:1px solid rgba(255,255,255,0.15);margin:10px 0;">
@@ -1099,22 +1099,22 @@ try {
             document.querySelector('input[name="er_seatReportSort"]:checked')
               ?.value || "last_name";
           const seatReportSeparateBuilding = document.getElementById(
-            "er_seatReportSeparateBuilding"
+            "er_seatReportSeparateBuilding",
           )?.checked
             ? "YES"
             : "NO";
           const seatReportGroupByCourse = document.getElementById(
-            "er_seatReportGroupByCourse"
+            "er_seatReportGroupByCourse",
           )?.checked
             ? "YES"
             : "NO";
           const seatReportSeparateExamType = document.getElementById(
-            "er_seatReportSeparateExamType"
+            "er_seatReportSeparateExamType",
           )?.checked
             ? "YES"
             : "NO";
           const groupAttendanceByCourse = document.getElementById(
-            "er_groupAttendanceByCourse"
+            "er_groupAttendanceByCourse",
           )?.checked
             ? "YES"
             : "NO";
@@ -1122,7 +1122,7 @@ try {
             ? "YES"
             : "NO";
           const quickSessionView = document.getElementById(
-            "er_quickSessionView"
+            "er_quickSessionView",
           )?.checked
             ? "YES"
             : "NO";
@@ -1229,7 +1229,9 @@ try {
           });
         } else {
           throw new Error(
-            saveJson && saveJson.error ? saveJson.error : "خطا در ذخیره تنظیمات"
+            saveJson && saveJson.error
+              ? saveJson.error
+              : "خطا در ذخیره تنظیمات",
           );
         }
       } catch (err) {
@@ -1275,7 +1277,7 @@ if (!isRecipientView) {
             "../API/getRecipientCredentials.php",
             {
               cache: "no-store",
-            }
+            },
           );
           const data = await response.json();
 
@@ -1283,7 +1285,7 @@ if (!isRecipientView) {
             throw new Error(
               data && data.error
                 ? data.error
-                : "امکان دریافت رمز کاربر Recipient وجود ندارد"
+                : "امکان دریافت رمز کاربر Recipient وجود ندارد",
             );
           }
 
@@ -1305,7 +1307,7 @@ if (!isRecipientView) {
                   "&": "&amp;",
                   "<": "&lt;",
                   ">": "&gt;",
-                }[ch] || ch)
+                })[ch] || ch,
             );
 
           const modalHtml = `
@@ -1321,13 +1323,13 @@ if (!isRecipientView) {
                 <div class="recipient-credential-row">
                   <span class="recipient-row-label">نام کاربری</span>
                   <span class="recipient-credential-value recipient-row-value">${escapeHtml(
-                    username
+                    username,
                   )}</span>
                 </div>
                 <div class="recipient-credential-row">
                   <span class="recipient-row-label">رمز عبور</span>
                   <span class="recipient-password-value recipient-row-value" role="button" tabindex="0" data-password="${escapeAttr(
-                    password
+                    password,
                   )}">${escapeHtml(password)}</span>
                 </div>
               </div>
@@ -1348,11 +1350,11 @@ if (!isRecipientView) {
             didOpen: (popup) => {
               try {
                 const passwordEl = popup.querySelector(
-                  ".recipient-password-value"
+                  ".recipient-password-value",
                 );
                 if (!passwordEl) return;
                 const feedbackEl = popup.querySelector(
-                  ".recipient-password-feedback"
+                  ".recipient-password-feedback",
                 );
                 const passwordValue =
                   passwordEl.getAttribute("data-password") || "";
@@ -1693,8 +1695,8 @@ try {
         try {
           const resp = await guardedFetch(
             `../API/getProcessProgress.php?filename=${encodeURIComponent(
-              "update"
-            )}`
+              "update",
+            )}`,
           );
           if (!resp.ok) return;
           const payload = await resp.json();
@@ -1707,7 +1709,7 @@ try {
             updServerProgress = true;
             const percent = Math.min(
               99,
-              Math.round((payload.processedRows / payload.totalRows) * 100)
+              Math.round((payload.processedRows / payload.totalRows) * 100),
             );
             const pers =
               typeof toPersianDigits === "function"
@@ -1799,7 +1801,7 @@ try {
                 // Scroll to top of stats cards after chart refresh
                 setTimeout(() => {
                   const statsRow = document.querySelector(
-                    ".dashboard-container .row"
+                    ".dashboard-container .row",
                   );
                   if (statsRow) {
                     statsRow.scrollIntoView({
@@ -2115,7 +2117,7 @@ async function showRemainingSessions() {
       cardsHtml += `
                             <div class="session-mini-card ${whenClass}" data-exam-time="${time}" data-exam-date="${date}">
                                 <div class="line1">${toPersianDigits(
-                                  total
+                                  total,
                                 )}</div>
                                 <div class="line2">${label}</div>
                             </div>`;
@@ -2173,9 +2175,8 @@ async function updateFooterUniversity() {
     });
     const config = await response.json();
     if (config.University) {
-      document.getElementById(
-        "footerText"
-      ).textContent = `نسار - ${config.University}`;
+      document.getElementById("footerText").textContent =
+        `نسار - ${config.University}`;
     }
   } catch (error) {
     if (!error?.isLicenseError) {
@@ -2217,7 +2218,7 @@ if (copyrightFooter) {
         داشبورد نِسار (نسخه ${VERSION}) یک اپلیکیشن تحت‌وب پیشرفته و مدرن است که با استفاده از خروجی‌های نرم‌افزار ساد، به همکاران دانشگاه پیام نور امکان می‌دهد برنامه‌ریزی و مدیریت آزمون‌ها، از جمله زمان‌بندی، تخصیص صندلی و ملزومات اجرایی را به‌صورت یکپارچه و متمرکز انجام داده و در عین حفظ ساختار رسمی در برگزاری، به صرفه‌جویی در زمان و منابع مورد نیاز برای آزمون کمک کند.
             <br>
       این وب اپلیکیشن به سفارش <span style="color: lime; font-weight: bold;">${escapeHtml(
-        university
+        university,
       )}</span> و توسط <a href="https://t.me/RealDream" target="_blank" style="color: gold; font-weight: bold; text-decoration: none; border: none; outline: none;">مهدی حسنی</a> توسعه یافته است.
     </div>
     <div class="swal2-countdown">
@@ -2233,7 +2234,7 @@ if (copyrightFooter) {
       },
       didOpen: () => {
         const valueEl = Swal.getHtmlContainer()?.querySelector(
-          ".swal2-countdown-value"
+          ".swal2-countdown-value",
         );
         if (valueEl) {
           let remaining = 30;
@@ -2326,7 +2327,7 @@ function loadChartJsIfNeeded() {
             return reject(new Error("Chart.js loaded but Chart is undefined"));
           });
           existing.addEventListener("error", () =>
-            reject(new Error("Failed to load Chart.js"))
+            reject(new Error("Failed to load Chart.js")),
           );
           return;
         }
@@ -2436,7 +2437,7 @@ async function renderReportsChart() {
     ];
     const datasets = times.map((time, idx) => {
       const dataArr = labels.map((date) =>
-        dateMap[date] && dateMap[date][time] ? dateMap[date][time] : 0
+        dateMap[date] && dateMap[date][time] ? dateMap[date][time] : 0,
       );
       return {
         // keep original (latin) label if needed, but display Persian digits in legend
@@ -2459,7 +2460,7 @@ async function renderReportsChart() {
       const aggregated = labels.map((_, idx) => {
         return datasets.reduce(
           (sum, ds) => sum + (Number(ds.data[idx]) || 0),
-          0
+          0,
         );
       });
       chartDatasets = [
@@ -2617,8 +2618,8 @@ async function renderReportsChart() {
                   typeof context.raw !== "undefined"
                     ? context.raw
                     : context.parsed && context.parsed.y
-                    ? context.parsed.y
-                    : 0;
+                      ? context.parsed.y
+                      : 0;
                 const v = Number(raw) || 0;
                 return typeof toPersianDigits === "function"
                   ? toPersianDigits(v)
@@ -2785,7 +2786,7 @@ async function showUploadModal(examType) {
 
       if (!fileName.endsWith(".xls") && !fileName.endsWith(".xlsx")) {
         Swal.showValidationMessage(
-          "فقط فایل‌های با پسوند XLS و XLSX مجاز هستند"
+          "فقط فایل‌های با پسوند XLS و XLSX مجاز هستند",
         );
         return false;
       }
@@ -2793,7 +2794,7 @@ async function showUploadModal(examType) {
       // Check file size (use server's max upload size)
       if (file.size > MAX_UPLOAD_SIZE) {
         Swal.showValidationMessage(
-          `حجم فایل نباید بیشتر از ${MAX_UPLOAD_SIZE_FORMATTED} باشد`
+          `حجم فایل نباید بیشتر از ${MAX_UPLOAD_SIZE_FORMATTED} باشد`,
         );
         return false;
       }
@@ -2908,7 +2909,7 @@ async function uploadDatabaseFile(file, examType, examTypeName) {
       if (e.lengthComputable) {
         const percentComplete = Math.round((e.loaded / e.total) * 100);
         const progressDisplay = document.getElementById(
-          "uploadProgressDisplay"
+          "uploadProgressDisplay",
         );
         const progressText = document.getElementById("uploadProgressText");
 
@@ -2935,7 +2936,7 @@ async function uploadDatabaseFile(file, examType, examTypeName) {
           if (response.success) {
             // Update existing modal to show processing status (don't create new Swal)
             const progressDisplay = document.getElementById(
-              "uploadProgressDisplay"
+              "uploadProgressDisplay",
             );
             if (progressDisplay) {
               progressDisplay.innerHTML = `<span class="spinner-border" style="width:2rem;height:2rem;" role="status"></span>`;
@@ -2951,7 +2952,7 @@ async function uploadDatabaseFile(file, examType, examTypeName) {
               examType,
               examTypeName,
               response.filename,
-              true // useExistingModal
+              true, // useExistingModal
             );
           } else {
             throw new Error(response.error || "خطای نامشخص");
@@ -3039,7 +3040,7 @@ async function processUploadedExcel(
   examType,
   examTypeName,
   filename,
-  useExistingModal = false
+  useExistingModal = false,
 ) {
   // Show processing modal only if not using existing one
   if (!useExistingModal) {
@@ -3140,7 +3141,7 @@ async function processUploadedExcel(
   const pollProgress = async () => {
     try {
       const resp = await guardedFetch(
-        `../API/getProcessProgress.php?filename=${encodeURIComponent(filename)}`
+        `../API/getProcessProgress.php?filename=${encodeURIComponent(filename)}`,
       );
       if (!resp.ok) return;
       const payload = await resp.json();
@@ -3150,7 +3151,7 @@ async function processUploadedExcel(
         serverProgressAvailable = true;
         const percent = Math.min(
           99,
-          Math.round((payload.processedRows / payload.totalRows) * 100)
+          Math.round((payload.processedRows / payload.totalRows) * 100),
         );
         const pers =
           typeof toPersianDigits === "function"
@@ -3282,9 +3283,9 @@ async function filterStudentsByCourse(courseCode) {
   try {
     const response = await guardedFetch(
       `../API/getCourseReport.php?course_code=${encodeURIComponent(
-        courseCode
+        courseCode,
       )}`,
-      { cache: "no-store" }
+      { cache: "no-store" },
     );
     const data = await response.json();
 
@@ -3312,7 +3313,7 @@ async function filterStudentsByCourse(courseCode) {
                     }</span></td>
                     <td>${student.class_name}</td>
                     <td><span class="badge ${getExamBadgeClass(
-                      student.exam_type
+                      student.exam_type,
                     )}">${student.exam_type}</span></td>
                 </tr>
             `;
@@ -3389,7 +3390,7 @@ function showAllStudents() {
                 }</span></td>
                 <td>${student.class_name}</td>
                 <td><span class="badge ${getExamBadgeClass(
-                  student.exam_type
+                  student.exam_type,
                 )}">${student.exam_type}</span></td>
             </tr>
         `;
@@ -3492,9 +3493,9 @@ async function showStudentReport() {
       // حذف Swal.fire بارگذاری
       const response = await guardedFetch(
         `../API/getStudentReport.php?student_id=${encodeURIComponent(
-          studentId
+          studentId,
         )}`,
-        { cache: "no-store" }
+        { cache: "no-store" },
       );
       const data = await response.json();
 
@@ -3597,7 +3598,7 @@ async function showStudentReport() {
                 exam.course_type === "کتبی" ? "success" : "info"
               }">${exam.course_type}</span></td>
                             <td><span class="badge ${getExamBadgeClass(
-                              exam.exam_type
+                              exam.exam_type,
                             )}">${exam.exam_type}</span></td>
 						</tr>
 					`;
@@ -3643,9 +3644,9 @@ async function loadCourseReportByCode(courseCode, options = {}) {
   try {
     const response = await guardedFetch(
       `../API/getCourseReport.php?course_code=${encodeURIComponent(
-        courseCode
+        courseCode,
       )}`,
-      { cache: "no-store" }
+      { cache: "no-store" },
     );
     const data = await response.json();
 
@@ -3742,7 +3743,7 @@ async function loadCourseReportByCode(courseCode, options = {}) {
                         }</span></td>
                         <td>${student.class_name}</td>
                             <td><span class="badge ${getExamBadgeClass(
-                              student.exam_type
+                              student.exam_type,
                             )}">${student.exam_type}</span></td>
                     </tr>
                 `;
@@ -3851,7 +3852,7 @@ async function showNextExamReport() {
       ? window._overrideExamContext
       : null;
   const originalLabel = override
-    ? override.previous_text ?? (nextEl ? nextEl.textContent : "")
+    ? (override.previous_text ?? (nextEl ? nextEl.textContent : ""))
     : null;
 
   try {
@@ -3920,9 +3921,9 @@ async function showNextExamReport() {
     // حذف Swal.fire بارگذاری
     const response = await guardedFetch(
       `../API/getNextExamReport.php?exam_date=${encodeURIComponent(
-        examDate
+        examDate,
       )}&exam_time=${encodeURIComponent(examTime)}`,
-      { cache: "no-store" }
+      { cache: "no-store" },
     );
     const data = await response.json();
 
@@ -3960,7 +3961,7 @@ async function showNextExamReport() {
     const courseCountInline = Array.isArray(courses) ? courses.length : 0;
     const studentCountInline = Array.isArray(students) ? students.length : 0;
     const quickStatsInfo = `${toPersianDigits(
-      courseCountInline
+      courseCountInline,
     )} درس | ${toPersianDigits(studentCountInline)} نفر`;
 
     const headerTitle =
@@ -3987,28 +3988,28 @@ async function showNextExamReport() {
       // Exam-type counts (e.g., کتبی / الکترونیکی)
       for (const [type, cnt] of Object.entries(et)) {
         const numBadge = `<span class="badge bg-secondary">${toPersianDigits(
-          cnt
+          cnt,
         )}</span>`;
         // use exam-type color mapping (electronic -> warning, written -> dark)
         const labelBadge = `<span class="badge ${getExamBadgeClass(
-          type
+          type,
         )}">${type}</span>`;
         // show label first then number so they read as "label number" and appear as a single unit
         badgeParts.push(
-          `<span class="badge-pair me-2">${labelBadge}${numBadge}</span>`
+          `<span class="badge-pair me-2">${labelBadge}${numBadge}</span>`,
         );
       }
 
       // Course-type counts (e.g., تستی / تشریحی)
       for (const [type, cnt] of Object.entries(ct)) {
         const numBadge = `<span class="badge bg-secondary">${toPersianDigits(
-          cnt
+          cnt,
         )}</span>`;
         const labelBadge = `<span class="badge bg-${labelColorFor(
-          type
+          type,
         )}">${type}</span>`;
         badgeParts.push(
-          `<span class="badge-pair me-2">${labelBadge}${numBadge}</span>`
+          `<span class="badge-pair me-2">${labelBadge}${numBadge}</span>`,
         );
       }
 
@@ -4053,8 +4054,8 @@ async function showNextExamReport() {
             course.course_code
           }')">
 						<span><span class="text-secondary">${course.course_code}</span> - ${
-          course.course_name
-        }</span>
+              course.course_name
+            }</span>
                         <div>
                             <span class="badge bg-secondary me-2">${
                               course.student_count
@@ -4224,7 +4225,7 @@ function renderMiniPiesFromReport(data) {
             {
               data: courseValues,
               backgroundColor: courseLabels.map(
-                (_, i) => palette[i % palette.length]
+                (_, i) => palette[i % palette.length],
               ),
               borderColor: "rgba(255,255,255,0.6)",
               borderWidth: 4,
@@ -4280,7 +4281,7 @@ function renderMiniPiesFromReport(data) {
             {
               data: examValues,
               backgroundColor: examLabels.map(
-                (_, i) => palette[i % palette.length]
+                (_, i) => palette[i % palette.length],
               ),
               borderColor: "rgba(255,255,255,0.6)",
               borderWidth: 4,
@@ -4336,7 +4337,7 @@ function renderMiniPiesFromReport(data) {
             {
               data: ctValues,
               backgroundColor: ctLabels.map(
-                (_, i) => palette[i % palette.length]
+                (_, i) => palette[i % palette.length],
               ),
               borderColor: "rgba(255,255,255,0.6)",
               borderWidth: 4,
@@ -4445,7 +4446,7 @@ function showLargePie(title, labels, values, palette) {
               {
                 data: values,
                 backgroundColor: labels.map(
-                  (_, i) => palette[i % palette.length]
+                  (_, i) => palette[i % palette.length],
                 ),
                 borderColor: "rgba(255,255,255,0.85)",
                 borderWidth: 6,
@@ -4527,7 +4528,7 @@ async function printSeatNumbersReport() {
       const checkResult = await checkReportDataAvailability(
         "seat",
         examDate,
-        examTime
+        examTime,
       );
       if (!checkResult.available) {
         showNoDataWarning(checkResult.message);
@@ -4535,7 +4536,7 @@ async function printSeatNumbersReport() {
       }
 
       const url = `../API/generatePDF.php?report_type=seat&exam_date=${encodeURIComponent(
-        examDate
+        examDate,
       )}&exam_time=${encodeURIComponent(examTime)}&_t=${new Date().getTime()}`;
       showReportModal(url, "شماره صندلی آزمون");
     } else {
@@ -4565,7 +4566,7 @@ async function printProctorNotices() {
 
     if (!response.ok || !payload || payload.success !== true) {
       throw new Error(
-        payload?.message || payload?.error || "خطا در دریافت اطلاعات"
+        payload?.message || payload?.error || "خطا در دریافت اطلاعات",
       );
     }
 
@@ -4618,9 +4619,9 @@ async function examEssentialsHandler() {
     try {
       const checkResp = await guardedFetch(
         `../API/getNextExamReport.php?exam_date=${encodeURIComponent(
-          cleanDate
+          cleanDate,
         )}&exam_time=${encodeURIComponent(cleanTime)}`,
-        { cache: "no-store" }
+        { cache: "no-store" },
       );
       const checkData = await checkResp.json();
 
@@ -4630,15 +4631,15 @@ async function examEssentialsHandler() {
           : [];
         // Check for descriptive (essay) exams
         hasDescriptive = courses.some(
-          (c) => c.course_type && c.course_type.includes("تشریحی")
+          (c) => c.course_type && c.course_type.includes("تشریحی"),
         );
         // Check for locations (written exams have locations)
         hasLocations = courses.some(
-          (c) => c.exam_type === "کتبی" || !c.exam_type
+          (c) => c.exam_type === "کتبی" || !c.exam_type,
         );
         // Check for test exams (تستی or تستی و تشریحی)
         hasTest = courses.some(
-          (c) => c.course_type && c.course_type.includes("تستی")
+          (c) => c.course_type && c.course_type.includes("تستی"),
         );
         // Check for multi-exam students
         hasMultiExamStudents = (checkData.multiExamStudentCount || 0) > 0;
@@ -4661,43 +4662,43 @@ async function examEssentialsHandler() {
 
   // Fixed buttons (always shown)
   allButtons.push(
-    `<button class="btn btn-primary w-100" style="${btnStyle}" onclick="try{ startEssentialsPrint('session'); }catch(e){ console.error(e); }">صورتجلسه آزمون</button>`
+    `<button class="btn btn-primary w-100" style="${btnStyle}" onclick="try{ startEssentialsPrint('session'); }catch(e){ console.error(e); }">صورتجلسه آزمون</button>`,
   );
   allButtons.push(
-    `<button class="btn btn-primary w-100" style="${btnStyle}" onclick="try{ startEssentialsPrint('sessionSummary'); }catch(e){ console.error(e); }">صورتجلسه تفضیلی آزمون</button>`
+    `<button class="btn btn-primary w-100" style="${btnStyle}" onclick="try{ startEssentialsPrint('sessionSummary'); }catch(e){ console.error(e); }">صورتجلسه تفضیلی آزمون</button>`,
   );
   allButtons.push(
-    `<button class="btn btn-primary w-100" style="${btnStyle}" onclick="try{ startEssentialsPrint('attendance'); }catch(e){ console.error(e); }">فهرست حضور و غیاب</button>`
+    `<button class="btn btn-primary w-100" style="${btnStyle}" onclick="try{ startEssentialsPrint('attendance'); }catch(e){ console.error(e); }">فهرست حضور و غیاب</button>`,
   );
   allButtons.push(
-    `<button class="btn btn-primary w-100" style="${btnStyle}" onclick="try{ startEssentialsPrint('seat'); }catch(e){ console.error(e); }">شماره‌ صندلی‌ آزمون</button>`
+    `<button class="btn btn-primary w-100" style="${btnStyle}" onclick="try{ startEssentialsPrint('seat'); }catch(e){ console.error(e); }">شماره‌ صندلی‌ آزمون</button>`,
   );
   allButtons.push(
-    `<button class="btn btn-primary w-100" style="${btnStyle}" onclick="try{ startEssentialsPrint('secretary'); }catch(e){ console.error(e); }">ملزومات منشی جلسه</button>`
+    `<button class="btn btn-primary w-100" style="${btnStyle}" onclick="try{ startEssentialsPrint('secretary'); }catch(e){ console.error(e); }">ملزومات منشی جلسه</button>`,
   );
   allButtons.push(
-    `<button class="btn btn-primary w-100" style="${btnStyle}" onclick="try{ startEssentialsPrint('reproduction'); }catch(e){ console.error(e); }">ملزومات اتاق تکثیر</button>`
+    `<button class="btn btn-primary w-100" style="${btnStyle}" onclick="try{ startEssentialsPrint('reproduction'); }catch(e){ console.error(e); }">ملزومات اتاق تکثیر</button>`,
   );
 
   // Conditional buttons
   if (hasMultiExamStudents) {
     allButtons.push(
-      `<button class="btn btn-primary w-100" style="${btnStyle}" onclick="try{ printMultiExamStudentsReport(); }catch(e){ console.error(e); }">دانشجویان چند آزمونی</button>`
+      `<button class="btn btn-primary w-100" style="${btnStyle}" onclick="try{ printMultiExamStudentsReport(); }catch(e){ console.error(e); }">دانشجویان چند آزمونی</button>`,
     );
   }
   if (hasLocations) {
     allButtons.push(
-      `<button class="btn btn-primary w-100" style="${btnStyle}" onclick="try{ startEssentialsPrint('locationLabels'); }catch(e){ console.error(e); }">برچسب پاکت سوالات</button>`
+      `<button class="btn btn-primary w-100" style="${btnStyle}" onclick="try{ startEssentialsPrint('locationLabels'); }catch(e){ console.error(e); }">برچسب پاکت سوالات</button>`,
     );
   }
   if (hasDescriptive) {
     allButtons.push(
-      `<button class="btn btn-primary w-100" style="${btnStyle}" onclick="try{ startEssentialsPrint('descriptive'); }catch(e){ console.error(e); }">برچسب پاکت‌های تشریحی</button>`
+      `<button class="btn btn-primary w-100" style="${btnStyle}" onclick="try{ startEssentialsPrint('descriptive'); }catch(e){ console.error(e); }">برچسب پاکت‌های تشریحی</button>`,
     );
   }
   if (hasTest) {
     allButtons.push(
-      `<button class="btn btn-primary w-100" style="${btnStyle}" onclick="try{ startEssentialsPrint('testLabels'); }catch(e){ console.error(e); }">برچسب پاکت اوراق تستی</button>`
+      `<button class="btn btn-primary w-100" style="${btnStyle}" onclick="try{ startEssentialsPrint('testLabels'); }catch(e){ console.error(e); }">برچسب پاکت اوراق تستی</button>`,
     );
   }
 
@@ -4830,7 +4831,7 @@ async function printEssentialsSecretary() {
       examDate = toEnglishDigits(String(examDate)).replace(/-/g, "/");
       examTime = toEnglishDigits(String(examTime));
       const url = `../API/generatePDF.php?report_type=secretary&exam_date=${encodeURIComponent(
-        examDate
+        examDate,
       )}&exam_time=${encodeURIComponent(examTime)}&_t=${new Date().getTime()}`;
       showReportModal(url, "ملزومات منشی جلسه");
     } else {
@@ -4882,7 +4883,7 @@ async function printEssentialsReproduction() {
       }
 
       const url = `../API/generatePDF.php?report_type=${reportType}&exam_date=${encodeURIComponent(
-        examDate
+        examDate,
       )}&exam_time=${encodeURIComponent(examTime)}&_t=${new Date().getTime()}`;
       showReportModal(url, reportTitle);
     } else {
@@ -4916,7 +4917,7 @@ async function printAttendanceSheet() {
       const checkResult = await checkReportDataAvailability(
         "attendance",
         examDate,
-        examTime
+        examTime,
       );
       if (!checkResult.available) {
         showNoDataWarning(checkResult.message);
@@ -4924,7 +4925,7 @@ async function printAttendanceSheet() {
       }
 
       const url = `../API/generatePDF.php?report_type=attendance_sheet&exam_date=${encodeURIComponent(
-        examDate
+        examDate,
       )}&exam_time=${encodeURIComponent(examTime)}&_t=${new Date().getTime()}`;
       showReportModal(url, "فهرست حضور و غیاب");
     } else {
@@ -4958,7 +4959,7 @@ async function printEssentialsDescriptive() {
       const checkResult = await checkReportDataAvailability(
         "descriptive",
         examDate,
-        examTime
+        examTime,
       );
       if (!checkResult.available) {
         showNoDataWarning(checkResult.message);
@@ -4966,7 +4967,7 @@ async function printEssentialsDescriptive() {
       }
 
       const url = `../API/generatePDF.php?report_type=descriptive&exam_date=${encodeURIComponent(
-        examDate
+        examDate,
       )}&exam_time=${encodeURIComponent(examTime)}&_t=${new Date().getTime()}`;
       showReportModal(url, "برچسب پاکت‌های تشریحی");
     } else {
@@ -5000,7 +5001,7 @@ async function printLocationLabels() {
       const checkResult = await checkReportDataAvailability(
         "location_labels",
         examDate,
-        examTime
+        examTime,
       );
       if (!checkResult.available) {
         showNoDataWarning(checkResult.message);
@@ -5008,7 +5009,7 @@ async function printLocationLabels() {
       }
 
       const url = `../API/generatePDF.php?report_type=location_labels&exam_date=${encodeURIComponent(
-        examDate
+        examDate,
       )}&exam_time=${encodeURIComponent(examTime)}&_t=${new Date().getTime()}`;
       showReportModal(url, "برچسب پاکت سوالات مکان‌ها");
     } else {
@@ -5060,7 +5061,7 @@ async function printEssentialsTestLabels() {
       const checkResult = await checkReportDataAvailability(
         reportType,
         examDate,
-        examTime
+        examTime,
       );
       if (!checkResult.available) {
         showNoDataWarning(checkResult.message);
@@ -5068,7 +5069,7 @@ async function printEssentialsTestLabels() {
       }
 
       const url = `../API/generatePDF.php?report_type=${reportType}&exam_date=${encodeURIComponent(
-        examDate
+        examDate,
       )}&exam_time=${encodeURIComponent(examTime)}&_t=${new Date().getTime()}`;
       showReportModal(url, reportTitle);
     } else {
@@ -5206,7 +5207,7 @@ async function printMultiExamStudentsReport() {
       examTime = toEnglishDigits(String(examTime));
 
       const url = `../API/generatePDF.php?report_type=multi_exam_students&exam_date=${encodeURIComponent(
-        examDate
+        examDate,
       )}&exam_time=${encodeURIComponent(examTime)}&_t=${new Date().getTime()}`;
       // Ensure the essentials menu reopens after the report modal is closed
       try {
@@ -5289,7 +5290,7 @@ function renderInsightCards(stats) {
 
     const rawValue = def.valueKey
       ? entry[def.valueKey]
-      : entry.student_count ?? entry.count ?? entry.value ?? 0;
+      : (entry.student_count ?? entry.count ?? entry.value ?? 0);
     const count = Number(rawValue ?? 0);
     if (!Number.isFinite(count) || count < 0) return;
 
@@ -5429,26 +5430,26 @@ function renderInsightCards(stats) {
         "../API/getPushSubscribersCount.php",
         {
           cache: "no-store",
-        }
+        },
       );
       if (response.ok) {
         const data = await response.json();
         if (data.success) {
           const studentLabel = document.querySelector(
-            'label[for="pushStudents"]'
+            'label[for="pushStudents"]',
           );
           const proctorLabel = document.querySelector(
-            'label[for="pushProctors"]'
+            'label[for="pushProctors"]',
           );
 
           if (studentLabel) {
             studentLabel.textContent = `دانشجویان (${toPersianDigits(
-              data.students || 0
+              data.students || 0,
             )})`;
           }
           if (proctorLabel) {
             proctorLabel.textContent = `مراقبین (${toPersianDigits(
-              data.proctors || 0
+              data.proctors || 0,
             )})`;
           }
         }
@@ -5510,7 +5511,7 @@ function renderInsightCards(stats) {
 
     if (isScheduled) {
       confirmHtml += `<p><strong>زمان ارسال:</strong> ${escapeHtml(
-        scheduleDateTime
+        scheduleDateTime,
       )}</p>`;
     }
     confirmHtml += `</div>`;
@@ -5563,7 +5564,7 @@ function renderInsightCards(stats) {
         if (result.success) {
           showPushResult(
             "success",
-            `اعلان با موفقیت زمان‌بندی شد برای ${escapeHtml(scheduleDateTime)}`
+            `اعلان با موفقیت زمان‌بندی شد برای ${escapeHtml(scheduleDateTime)}`,
           );
           // Clear form
           titleInput.value = "";
@@ -5581,6 +5582,10 @@ function renderInsightCards(stats) {
         let totalFailed = 0;
         let totalExpired = 0;
 
+        // Generate a unique batch_id for this broadcast (groups multiple user_type sends)
+        const batchId =
+          "batch-" + Date.now() + "-" + Math.random().toString(36).substr(2, 9);
+
         // Send to each user type
         for (const userType of userTypes) {
           const payload = {
@@ -5589,6 +5594,7 @@ function renderInsightCards(stats) {
             icon: "/pwa-icons/icon-192.png",
             tag: "admin-broadcast-" + Date.now(),
             user_type: userType,
+            batch_id: batchId,
           };
 
           const response = await guardedFetch("/API/push/send.php", {
@@ -5609,10 +5615,10 @@ function renderInsightCards(stats) {
         showPushResult(
           "success",
           `اعلان با موفقیت ارسال شد! ارسال: ${toPersianDigits(
-            totalSent
+            totalSent,
           )}، ناموفق: ${toPersianDigits(totalFailed)}، منقضی: ${toPersianDigits(
-            totalExpired
-          )}`
+            totalExpired,
+          )}`,
         );
         // Clear form
         titleInput.value = "";
@@ -5695,7 +5701,7 @@ function renderInsightCards(stats) {
         <div style="background:rgba(255,193,7,0.15);padding:0.75rem;border-radius:8px;margin-bottom:1rem;border-right:3px solid #ffc107;">
           <strong style="color:#f59e0b;">⏰ در حال حاضر:</strong>
           <span style="color:inherit;margin-right:0.5rem;">${toPersianDigits(
-            currentMinutes
+            currentMinutes,
           )} دقیقه قبل از آزمون</span>
         </div>
         <div class="reminder-btns-grid">
@@ -5752,7 +5758,7 @@ function renderInsightCards(stats) {
           icon: "success",
           title: "ذخیره شد",
           text: `زمان یادآوری به ${toPersianDigits(
-            selectedMinutes
+            selectedMinutes,
           )} دقیقه قبل از آزمون تغییر یافت.`,
           timer: 2500,
           showConfirmButton: false,
@@ -5825,7 +5831,7 @@ if (navigator.serviceWorker) {
         "../API/getStudentsWithoutPhoto.php",
         {
           cache: "no-store",
-        }
+        },
       );
       if (response.ok) {
         return await response.json();
@@ -5847,13 +5853,13 @@ if (navigator.serviceWorker) {
         <div class="photo-upload-stats" style="display:flex;gap:20px;margin-bottom:20px;justify-content:center;">
           <div class="stat-box-mini" style="background:rgba(255,255,255,0.1);padding:15px 25px;border-radius:12px;text-align:center;">
             <div style="font-size:24px;font-weight:bold;color:#4ade80;">${toPersianDigits(
-              totalStudents
+              totalStudents,
             )}</div>
             <div style="font-size:12px;color:#94a3b8;">کل دانشجویان</div>
           </div>
           <div class="stat-box-mini" id="withoutPhotoStat" style="background:rgba(255,255,255,0.1);padding:15px 25px;border-radius:12px;text-align:center;cursor:pointer;" title="کلیک برای مشاهده لیست">
             <div style="font-size:24px;font-weight:bold;color:#f87171;" id="withoutPhotoCount">${toPersianDigits(
-              withoutPhoto
+              withoutPhoto,
             )}</div>
             <div style="font-size:12px;color:#94a3b8;">بدون عکس</div>
           </div>
@@ -6052,7 +6058,7 @@ if (navigator.serviceWorker) {
         const status = await getStudentsWithoutPhoto();
         if (status && withoutPhotoCountEl) {
           withoutPhotoCountEl.textContent = toPersianDigits(
-            status.withoutPhoto
+            status.withoutPhoto,
           );
         }
       } catch (e) {}
@@ -6070,7 +6076,7 @@ if (navigator.serviceWorker) {
       ignoredInfo.style.cssText =
         "margin-top:10px;text-align:center;font-size:12px;color:#94a3b8;";
       ignoredInfo.textContent = `${toPersianDigits(
-        ignoredCount
+        ignoredCount,
       )} فایل نامعتبر نادیده گرفته شد`;
       resultSection.appendChild(ignoredInfo);
     }
@@ -6109,7 +6115,7 @@ if (navigator.serviceWorker) {
         "../API/getStudentsWithoutPhoto.php?full=true",
         {
           cache: "no-store",
-        }
+        },
       );
       const data = await response.json();
 
@@ -6153,13 +6159,13 @@ if (navigator.serviceWorker) {
         tableHtml += `
           <tr style="border-bottom:1px solid #334155;">
             <td style="padding:8px;text-align:right;">${toPersianDigits(
-              index + 1
+              index + 1,
             )}</td>
             <td style="padding:8px;text-align:right;font-family:monospace;">${escapeHtml(
-              student.student_id
+              student.student_id,
             )}</td>
             <td style="padding:8px;text-align:right;">${escapeHtml(
-              student.first_name
+              student.first_name,
             )} ${escapeHtml(student.last_name)}</td>
           </tr>
         `;
@@ -6189,12 +6195,12 @@ if (navigator.serviceWorker) {
         didOpen: () => {
           // Add click handler for download button
           const downloadBtn = document.getElementById(
-            "downloadWithoutPhotoExcel"
+            "downloadWithoutPhotoExcel",
           );
           if (downloadBtn) {
             downloadBtn.addEventListener(
               "click",
-              downloadStudentsWithoutPhotoExcel
+              downloadStudentsWithoutPhotoExcel,
             );
           }
         },
@@ -6370,14 +6376,14 @@ if (navigator.serviceWorker) {
         }">
           <td style="padding:8px;text-align:right;">
             <div>${escapeHtml(req.first_name)} ${escapeHtml(
-        req.last_name
-      )}</div>
+              req.last_name,
+            )}</div>
             <div style="font-size:11px;color:#94a3b8;font-family:monospace;">${escapeHtml(
-              req.student_id
+              req.student_id,
             )}</div>
           </td>
           <td style="padding:8px;text-align:right;font-size:12px;">${escapeHtml(
-            req.created_at_formatted
+            req.created_at_formatted,
           )}</td>
           <td style="padding:8px;text-align:center;">
             <button class="btn btn-sm btn-primary review-photo-btn" data-request-id="${
@@ -6392,7 +6398,7 @@ if (navigator.serviceWorker) {
 
     const result = await Swal.fire({
       title: `درخواست‌های تغییر عکس (${toPersianDigits(
-        pendingRequests.length
+        pendingRequests.length,
       )})`,
       html: listHtml,
       width: "600px",
@@ -6422,7 +6428,7 @@ if (navigator.serviceWorker) {
   async function showPhotoReviewModal(request) {
     const currentPhotoHtml = request.has_current_photo
       ? `<img src="${escapeHtml(
-          request.current_photo_url
+          request.current_photo_url,
         )}?t=${Date.now()}" style="max-width:180px;max-height:220px;border-radius:8px;border:2px solid #475569;" onerror="this.parentElement.innerHTML='<div style=\\'padding:40px;color:#94a3b8;\\'>خطا در بارگذاری</div>'">`
       : `<div style="padding:40px 20px;color:#f87171;background:rgba(248,113,113,0.1);border-radius:8px;border:1px dashed #f87171;">فاقد عکس در آرشیو</div>`;
 
@@ -6430,10 +6436,10 @@ if (navigator.serviceWorker) {
       <div style="text-align:right;direction:rtl;">
         <div style="margin-bottom:15px;padding:10px;background:rgba(255,255,255,0.05);border-radius:8px;">
           <strong>${escapeHtml(request.first_name)} ${escapeHtml(
-      request.last_name
-    )}</strong>
+            request.last_name,
+          )}</strong>
           <span style="margin-right:10px;font-family:monospace;color:#94a3b8;">${escapeHtml(
-            request.student_id
+            request.student_id,
           )}</span>
         </div>
         
@@ -6445,7 +6451,7 @@ if (navigator.serviceWorker) {
           <div style="text-align:center;">
             <div style="font-size:12px;color:#94a3b8;margin-bottom:8px;">عکس جدید</div>
             <img src="${escapeHtml(
-              request.new_photo_url
+              request.new_photo_url,
             )}?t=${Date.now()}" style="max-width:180px;max-height:220px;border-radius:8px;border:2px solid #4ade80;" onerror="this.parentElement.innerHTML='<div style=\\'padding:40px;color:#94a3b8;\\'>خطا در بارگذاری</div>'">
           </div>
         </div>
@@ -6522,7 +6528,7 @@ if (navigator.serviceWorker) {
 
     try {
       const csrfToken = document.querySelector(
-        'meta[name="csrf-token"]'
+        'meta[name="csrf-token"]',
       )?.content;
       const response = await guardedFetch(
         "../API/reviewPhotoUpdateRequest.php",
@@ -6533,7 +6539,7 @@ if (navigator.serviceWorker) {
             "X-CSRF-Token": csrfToken || "",
           },
           body: JSON.stringify({ request_id: requestId, action: action }),
-        }
+        },
       );
 
       const data = await response.json();
@@ -6586,7 +6592,7 @@ function toggleCardCollapse(headerElement) {
       const collapsed = card.classList.contains("collapsed");
       try {
         const states = JSON.parse(
-          localStorage.getItem("collapsedCards") || "{}"
+          localStorage.getItem("collapsedCards") || "{}",
         );
         states[cardId] = collapsed;
         localStorage.setItem("collapsedCards", JSON.stringify(states));
@@ -6675,7 +6681,7 @@ async function loadSessionCalendar() {
 
     if (data.error) {
       container.innerHTML = `<div class="calendar-loading" style="color:#ef4444;">${escapeHtml(
-        data.error
+        data.error,
       )}</div>`;
       return;
     }
@@ -6795,7 +6801,7 @@ function renderSessionCalendar() {
     // Find the first date in this week to calculate missing dates
     const firstDateInWeek = weekDates.reduce(
       (min, d) => (d.dayOfWeek < min.dayOfWeek ? d : min),
-      weekDates[0]
+      weekDates[0],
     );
 
     // Build cells for 5 days (Saturday to Wednesday)
@@ -6877,7 +6883,7 @@ async function showSessionDetail(examDate, examTime) {
   if (!sessionCalendarData) return;
 
   const session = sessionCalendarData.sessions.find(
-    (s) => s.exam_date === examDate && s.exam_time === examTime
+    (s) => s.exam_date === examDate && s.exam_time === examTime,
   );
 
   if (!session) {
@@ -6953,7 +6959,7 @@ async function showSessionDetail(examDate, examTime) {
     detailHtml += `
       <div class="session-detail-item">
         <div class="detail-value">${toPersianDigits(
-          session.proctor_count
+          session.proctor_count,
         )}</div>
         <div class="detail-label">نفر مراقب</div>
       </div>
@@ -6965,7 +6971,7 @@ async function showSessionDetail(examDate, examTime) {
     detailHtml += `
       <div class="session-detail-item">
         <div class="detail-value">${toPersianDigits(
-          session.multi_exam_students
+          session.multi_exam_students,
         )}</div>
         <div class="detail-label">دانشجو با چند آزمون</div>
       </div>
@@ -6990,7 +6996,7 @@ async function showSessionDetail(examDate, examTime) {
       detailHtml += `
         <div class="session-detail-item">
           <div class="detail-value">${toPersianDigits(
-            electronic.students
+            electronic.students,
           )}</div>
           <div class="detail-label">صندلی آزمون الکترونیکی</div>
         </div>
@@ -7094,7 +7100,7 @@ async function showProctorSearch() {
           if (currentResults.length > 0) {
             selectedIndex = Math.min(
               selectedIndex + 1,
-              currentResults.length - 1
+              currentResults.length - 1,
             );
             updateSelection();
           }
@@ -7114,7 +7120,7 @@ async function showProctorSearch() {
 
       function updateSelection() {
         const items = resultsContainer.querySelectorAll(
-          ".spotlight-result-item"
+          ".spotlight-result-item",
         );
         items.forEach((item, idx) => {
           if (idx === selectedIndex) {
@@ -7141,7 +7147,7 @@ async function showProctorSearch() {
         try {
           const response = await guardedFetch(
             `../API/searchProctor.php?q=${encodeURIComponent(query.trim())}`,
-            { cache: "no-store" }
+            { cache: "no-store" },
           );
           const data = await response.json();
 
@@ -7170,13 +7176,13 @@ async function showProctorSearch() {
             resultsHtml += `
               <div class="spotlight-result-item ${isSelected}" data-index="${idx}">
                 <div class="spotlight-result-name">${escapeHtml(
-                  proctor.full_name
+                  proctor.full_name,
                 )}</div>
                 <div class="spotlight-result-details">
                   ${
                     proctor.national_id
                       ? `<span>کد ملی: ${toPersianDigits(
-                          proctor.national_id
+                          proctor.national_id,
                         )}</span>`
                       : ""
                   }
@@ -7230,7 +7236,7 @@ async function showProctorSearch() {
           // Fetch full proctor data with sessions
           const response = await guardedFetch(
             `../API/searchProctor.php?id=${encodeURIComponent(proctor.id)}`,
-            { cache: "no-store" }
+            { cache: "no-store" },
           );
           const data = await response.json();
 
@@ -7281,20 +7287,20 @@ function showProctorReport(proctor, sessions, summary) {
   let html = `
     <div class="proctor-report-header" style="margin-bottom: 1.5rem; padding: 1rem; background: rgba(26, 111, 166, 0.08); border-radius: 12px;">
       <h5 style="color: #1a6fa6; margin-bottom: 0.75rem; font-weight: 700;">${escapeHtml(
-        proctor.full_name
+        proctor.full_name,
       )}</h5>
       <div style="display: flex; flex-wrap: wrap; gap: 1.5rem; font-size: 0.95rem; color: #475569;">
         ${
           proctor.national_id
             ? `<span><strong>کد ملی:</strong> ${toPersianDigits(
-                proctor.national_id
+                proctor.national_id,
               )}</span>`
             : ""
         }
         ${
           proctor.phone
             ? `<span><strong>شماره همراه:</strong> ${toPersianDigits(
-                proctor.phone
+                proctor.phone,
               )}</span>`
             : ""
         }
@@ -7465,14 +7471,14 @@ document.addEventListener("DOMContentLoaded", function () {
           "../API/getAssignmentsPresence.php",
           {
             cache: "no-store",
-          }
+          },
         );
         const data = await response.json();
         if (!data.success || !data.has_assignments) {
           seatNumbersCard.classList.add("disabled");
           seatNumbersCard.setAttribute(
             "data-tooltip",
-            "ابتدا باید چینش مراقبین انجام شود"
+            "ابتدا باید چینش مراقبین انجام شود",
           );
         }
       } catch (e) {
@@ -7487,7 +7493,7 @@ document.addEventListener("DOMContentLoaded", function () {
           "../API/getAssignmentsPresence.php",
           {
             cache: "no-store",
-          }
+          },
         );
         const data = await response.json();
         if (!data.success || !data.has_assignments) {
@@ -7560,6 +7566,15 @@ document.addEventListener("DOMContentLoaded", function () {
     setInterval(loadVisitorStats, 60000);
   } catch (e) {
     console.warn("Failed to initialize visitor stats", e);
+  }
+
+  // Load push notification statistics
+  try {
+    loadPushStats();
+    // Refresh every 60 seconds
+    setInterval(loadPushStats, 60000);
+  } catch (e) {
+    console.warn("Failed to initialize push stats", e);
   }
 
   // Record admin visit heartbeat
@@ -7646,30 +7661,30 @@ async function loadVisitorStats() {
       const last24Total = document.getElementById("last24Total");
       if (last24Students)
         last24Students.textContent = toPersianDigits(
-          data.last24h?.student || 0
+          data.last24h?.student || 0,
         );
       if (last24Proctors)
         last24Proctors.textContent = toPersianDigits(
-          data.last24h?.proctor || 0
+          data.last24h?.proctor || 0,
         );
       if (last24Total)
         last24Total.textContent = toPersianDigits(data.last24h?.total || 0);
 
       // All time totals
       const totalVisitorStudents = document.getElementById(
-        "totalVisitorStudents"
+        "totalVisitorStudents",
       );
       const totalVisitorProctors = document.getElementById(
-        "totalVisitorProctors"
+        "totalVisitorProctors",
       );
       const totalVisitors = document.getElementById("totalVisitors");
       if (totalVisitorStudents)
         totalVisitorStudents.textContent = toPersianDigits(
-          data.allTime?.student || 0
+          data.allTime?.student || 0,
         );
       if (totalVisitorProctors)
         totalVisitorProctors.textContent = toPersianDigits(
-          data.allTime?.proctor || 0
+          data.allTime?.proctor || 0,
         );
       if (totalVisitors)
         totalVisitors.textContent = toPersianDigits(data.allTime?.total || 0);
@@ -7687,6 +7702,90 @@ async function loadVisitorStats() {
     }
   } catch (e) {
     console.warn("Failed to load visitor stats:", e);
+  }
+}
+
+/**
+ * Load and display push notification statistics
+ */
+async function loadPushStats() {
+  try {
+    const response = await fetch("../API/getPushStats.php", {
+      method: "GET",
+      cache: "no-store",
+    });
+    const data = await response.json();
+
+    if (data.success && data.stats) {
+      const stats = data.stats;
+
+      // Manual pushes
+      const manualSent = document.getElementById("pushManualSent");
+      const manualSuccess = document.getElementById("pushManualSuccess");
+      const manualFailed = document.getElementById("pushManualFailed");
+      if (manualSent)
+        manualSent.textContent = toPersianDigits(stats.manual?.sent || 0);
+      if (manualSuccess)
+        manualSuccess.textContent = toPersianDigits(stats.manual?.success || 0);
+      if (manualFailed)
+        manualFailed.textContent = toPersianDigits(stats.manual?.failed || 0);
+
+      // Scheduled pushes
+      const schedSent = document.getElementById("pushScheduledSent");
+      const schedSuccess = document.getElementById("pushScheduledSuccess");
+      const schedFailed = document.getElementById("pushScheduledFailed");
+      if (schedSent)
+        schedSent.textContent = toPersianDigits(stats.scheduled?.sent || 0);
+      if (schedSuccess)
+        schedSuccess.textContent = toPersianDigits(
+          stats.scheduled?.success || 0,
+        );
+      if (schedFailed)
+        schedFailed.textContent = toPersianDigits(stats.scheduled?.failed || 0);
+
+      // Auto pushes
+      const autoSent = document.getElementById("pushAutoSent");
+      const autoSuccess = document.getElementById("pushAutoSuccess");
+      const autoFailed = document.getElementById("pushAutoFailed");
+      if (autoSent)
+        autoSent.textContent = toPersianDigits(stats.auto?.sent || 0);
+      if (autoSuccess)
+        autoSuccess.textContent = toPersianDigits(stats.auto?.success || 0);
+      if (autoFailed)
+        autoFailed.textContent = toPersianDigits(stats.auto?.failed || 0);
+
+      // Totals and subscribers
+      const totalSent = document.getElementById("pushTotalSent");
+      const totalSubs = document.getElementById("pushTotalSubscribers");
+      const studentSubs = document.getElementById("pushStudentSubs");
+      const proctorSubs = document.getElementById("pushProctorSubs");
+      if (totalSent)
+        totalSent.textContent = toPersianDigits(stats.total?.sent || 0);
+      if (totalSubs)
+        totalSubs.textContent = toPersianDigits(stats.subscribers?.total || 0);
+      if (studentSubs)
+        studentSubs.textContent = toPersianDigits(
+          stats.subscribers?.student || 0,
+        );
+      if (proctorSubs)
+        proctorSubs.textContent = toPersianDigits(
+          stats.subscribers?.proctor || 0,
+        );
+
+      // Update last refresh time
+      const lastUpdateEl = document.getElementById("pushStatsLastUpdate");
+      if (lastUpdateEl) {
+        const now = new Date();
+        const timeStr = now.toLocaleTimeString("fa-IR", {
+          hour: "2-digit",
+          minute: "2-digit",
+          second: "2-digit",
+        });
+        lastUpdateEl.textContent = timeStr;
+      }
+    }
+  } catch (e) {
+    console.warn("Failed to load push stats:", e);
   }
 }
 

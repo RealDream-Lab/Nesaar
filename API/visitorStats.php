@@ -73,13 +73,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
         $userAgent = substr($_SERVER['HTTP_USER_AGENT'] ?? '', 0, 512);
 
-        // Upsert visitor record
+        // Upsert visitor record - also update user_type when session logs in as different type
         $stmt = $pdo->prepare("
             INSERT INTO visitor_logs (session_id, user_type, user_id, ip_address, user_agent, page, first_visit, last_activity, visit_count)
             VALUES (?, ?, ?, ?, ?, ?, NOW(), NOW(), 1)
             ON DUPLICATE KEY UPDATE 
                 last_activity = NOW(),
                 visit_count = visit_count + 1,
+                user_type = VALUES(user_type),
                 page = COALESCE(VALUES(page), page),
                 user_id = COALESCE(VALUES(user_id), user_id)
         ");

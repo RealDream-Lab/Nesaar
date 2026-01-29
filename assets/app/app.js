@@ -37,7 +37,7 @@ document.addEventListener("DOMContentLoaded", () => {
                   if (toastOpts.customClass) {
                     toastOpts.customClass = Object.assign(
                       {},
-                      toastOpts.customClass
+                      toastOpts.customClass,
                     );
                     toastOpts.customClass.popup =
                       toastOpts.customClass.popup || "swal2-rtl swal2-toast";
@@ -442,7 +442,7 @@ document.addEventListener("DOMContentLoaded", () => {
             icon: "success",
             title: "ذخیره شد",
             html: `<div style="text-align:right;">${escapeHtml(
-              result.message || "تنظیمات آپدیت شد."
+              result.message || "تنظیمات آپدیت شد.",
             )}</div>`,
             confirmButtonText: "باشه",
             customClass: {
@@ -466,7 +466,7 @@ document.addEventListener("DOMContentLoaded", () => {
               icon: "error",
               title: "کد ساد تکراری",
               html: `<div style="text-align:right;line-height:2">${escapeHtml(
-                result.error || "این کد ساد قبلاً ثبت شده است."
+                result.error || "این کد ساد قبلاً ثبت شده است.",
               )}</div>`,
               confirmButtonText: "تلاش مجدد",
               customClass: {
@@ -669,12 +669,12 @@ document.addEventListener("DOMContentLoaded", () => {
                         نِسار (نسخه ${VERSION}) یک وب‌اپلیکیشن پیشرفته و مدرن است که با بهره‌گیری از طراحی مبتنی بر تجربه کاربری نوین و سبک گلس‌مورفیسم، به دانشجویان دانشگاه پیام نور این امکان را می‌دهد تا برنامه امتحانات، شماره صندلی، محل برگزاری و وضعیت آزمون‌های خود را به‌صورت یکپارچه و متمرکز مشاهده کنند.
                         <br>
                         این وب اپلیکیشن به سفارش <span style="color: lime; font-weight: bold;">${escapeHtml(
-                          university
+                          university,
                         )}</span> و توسط <a href="https://t.me/RealDream" target="_blank" style="color: gold; font-weight: bold; text-decoration: none; border: none; outline: none;">مهدی حسنی</a> توسعه یافته است
                     </div>
                     <div class="swal2-countdown">
                         <span class="swal2-countdown-value">${toPersianDigits(
-                          30
+                          30,
                         )}</span>
                     </div>
                 `,
@@ -687,7 +687,7 @@ document.addEventListener("DOMContentLoaded", () => {
         },
         didOpen: () => {
           const valueEl = Swal.getHtmlContainer()?.querySelector(
-            ".swal2-countdown-value"
+            ".swal2-countdown-value",
           );
           if (!valueEl) return;
           const updateCountdown = () => {
@@ -906,7 +906,7 @@ document.addEventListener("DOMContentLoaded", () => {
         return await handleLicenseServerError(
           lastSuccessCheck,
           GRACE_PERIOD_MS,
-          "عدم دسترسی به توکن لایسنس"
+          "عدم دسترسی به توکن لایسنس",
         );
       }
 
@@ -916,7 +916,7 @@ document.addEventListener("DOMContentLoaded", () => {
         return await handleLicenseServerError(
           lastSuccessCheck,
           GRACE_PERIOD_MS,
-          "توکن لایسنس یافت نشد"
+          "توکن لایسنس یافت نشد",
         );
       }
 
@@ -932,26 +932,26 @@ document.addEventListener("DOMContentLoaded", () => {
             headers: { Accept: "application/json" },
             cache: "no-store",
             signal: AbortSignal.timeout(5000),
-          }
+          },
         );
       } catch (fetchError) {
         console.warn("[License] ⚠ Webhook request failed:", fetchError.message);
         return await handleLicenseServerError(
           lastSuccessCheck,
           GRACE_PERIOD_MS,
-          "عدم دسترسی به سرور لایسنس"
+          "عدم دسترسی به سرور لایسنس",
         );
       }
 
       if (!webhookResponse.ok) {
         console.warn(
           "[License] ⚠ Webhook returned error:",
-          webhookResponse.status
+          webhookResponse.status,
         );
         return await handleLicenseServerError(
           lastSuccessCheck,
           GRACE_PERIOD_MS,
-          "سرور لایسنس پاسخ نداد"
+          "سرور لایسنس پاسخ نداد",
         );
       }
 
@@ -961,7 +961,7 @@ document.addEventListener("DOMContentLoaded", () => {
         return await handleLicenseServerError(
           lastSuccessCheck,
           GRACE_PERIOD_MS,
-          "پاسخ نامعتبر از سرور لایسنس"
+          "پاسخ نامعتبر از سرور لایسنس",
         );
       }
 
@@ -999,10 +999,10 @@ document.addEventListener("DOMContentLoaded", () => {
           await updateLicenseStatus("valid");
 
           const hoursRemaining = Math.floor(
-            (expTimestamp - currentTimestamp) / (1000 * 60 * 60)
+            (expTimestamp - currentTimestamp) / (1000 * 60 * 60),
           );
           console.log(
-            `[License] ✓ Trial license active (${hoursRemaining}h remaining)`
+            `[License] ✓ Trial license active (${hoursRemaining}h remaining)`,
           );
 
           return {
@@ -1031,7 +1031,7 @@ document.addEventListener("DOMContentLoaded", () => {
       return await handleLicenseServerError(
         lastSuccessCheck,
         GRACE_PERIOD_MS,
-        "خطا در بررسی لایسنس"
+        "خطا در بررسی لایسنس",
       );
     }
   }
@@ -1040,7 +1040,7 @@ document.addEventListener("DOMContentLoaded", () => {
   async function handleLicenseServerError(
     lastSuccessCheck,
     graceWindowMs,
-    errorMessage
+    errorMessage,
   ) {
     const now = Date.now();
     await updateLicenseStatus("error");
@@ -1051,10 +1051,10 @@ document.addEventListener("DOMContentLoaded", () => {
         const timeSinceSuccess = now - lastSuccessDate.getTime();
         if (timeSinceSuccess < graceWindowMs) {
           const hoursRemaining = Math.floor(
-            (graceWindowMs - timeSinceSuccess) / (1000 * 60 * 60)
+            (graceWindowMs - timeSinceSuccess) / (1000 * 60 * 60),
           );
           console.log(
-            `[License] ⚡ Grace Period active (${hoursRemaining}h remaining)`
+            `[License] ⚡ Grace Period active (${hoursRemaining}h remaining)`,
           );
           return {
             valid: true,
@@ -1112,7 +1112,7 @@ document.addEventListener("DOMContentLoaded", () => {
       if (trimmedMessage && trimmedMessage !== lastLicenseAlertMessage) {
         console.warn(
           "[License] Duplicate alert suppressed with new message:",
-          trimmedMessage
+          trimmedMessage,
         );
       }
       return;
@@ -1126,8 +1126,8 @@ document.addEventListener("DOMContentLoaded", () => {
       combined.indexOf("،") > -1
         ? "،"
         : combined.indexOf(".") > -1
-        ? "."
-        : null;
+          ? "."
+          : null;
     let titleText = combined;
     let bodyText = "";
 
@@ -1142,7 +1142,7 @@ document.addEventListener("DOMContentLoaded", () => {
       title: escapeHtml(titleText || "دسترسی محدود شد"),
       html: bodyText
         ? `<div style="text-align:justify;line-height:1.9;direction:rtl">${escapeHtml(
-            bodyText
+            bodyText,
           )}</div>`
         : "",
       allowOutsideClick: false,
@@ -1203,12 +1203,12 @@ document.addEventListener("DOMContentLoaded", () => {
   function formatWithSeconds(ms) {
     const d = new Date(ms);
     const datePart = `${toPersianDigits(d.getFullYear())}/${toPersianDigits(
-      String(d.getMonth() + 1).padStart(2, "0")
+      String(d.getMonth() + 1).padStart(2, "0"),
     )}/${toPersianDigits(String(d.getDate()).padStart(2, "0"))}`;
     const timePart = `${toPersianDigits(
-      String(d.getHours()).padStart(2, "0")
+      String(d.getHours()).padStart(2, "0"),
     )}:${toPersianDigits(
-      String(d.getMinutes()).padStart(2, "0")
+      String(d.getMinutes()).padStart(2, "0"),
     )}:${toPersianDigits(String(d.getSeconds()).padStart(2, "0"))}`;
     return `${datePart} | ${timePart}`;
   }
@@ -1291,7 +1291,7 @@ document.addEventListener("DOMContentLoaded", () => {
         try {
           const payload = await fetchExamPayload(
             currentCredentials.studentId,
-            currentCredentials.nationalId
+            currentCredentials.nationalId,
           );
           const snapshot = JSON.stringify(payload || []);
           if (snapshot === lastSnapshot) {
@@ -1305,7 +1305,7 @@ document.addEventListener("DOMContentLoaded", () => {
               renderResults(
                 payload,
                 lastFullName,
-                currentCredentials.studentId
+                currentCredentials.studentId,
               );
             }
             return;
@@ -1417,7 +1417,7 @@ document.addEventListener("DOMContentLoaded", () => {
         showAlert(
           "warning",
           "خطا!",
-          "وارد کردن نام کاربری و رمز عبور الزامی است."
+          "وارد کردن نام کاربری و رمز عبور الزامی است.",
         );
         return;
       }
@@ -1473,22 +1473,22 @@ document.addEventListener("DOMContentLoaded", () => {
                                 <div style="text-align:right;direction:rtl;">
                                     <label style="font-weight:600;">نام نمایشی شما (نمایش در داشبورد)</label>
                                     <input id="swal-adminnick" class="swal2-input" value="${escapeHtml(
-                                      config.AdminNickName || ""
+                                      config.AdminNickName || "",
                                     )}" placeholder="مثال: آرتین حسنی">
 
                                     <label style="font-weight:600;">نام و نام خانوادگی رئیس مرکز</label>
                                     <input id="swal-boss" class="swal2-input" value="${escapeHtml(
-                                      config.BossNickName || ""
+                                      config.BossNickName || "",
                                     )}" placeholder="مثال: دكتر الهام قاسمي فر">
 
                                     <label style="font-weight:600;">نام و نام خانوادگی رئیس اداره آموزش</label>
                                     <input id="swal-headofedu" class="swal2-input" value="${escapeHtml(
-                                      config.HeadOfEDU || ""
+                                      config.HeadOfEDU || "",
                                     )}" placeholder="مثال: مهدی حسنی">
 
                                     <label style="font-weight:600;">نام و نام خانوادگی مسئول جلسه</label>
                                     <input id="swal-chairman" class="swal2-input" value="${escapeHtml(
-                                      config.Chairman || ""
+                                      config.Chairman || "",
                                     )}" placeholder="مثال: سید احمد موسوی">
                                 </div>
                             `,
@@ -1530,7 +1530,7 @@ document.addEventListener("DOMContentLoaded", () => {
               const saveResult = await saveResponse.json();
               if (!saveResult.success) {
                 throw new Error(
-                  saveResult.error || "Failed to save configuration"
+                  saveResult.error || "Failed to save configuration",
                 );
               }
 
@@ -1558,7 +1558,7 @@ document.addEventListener("DOMContentLoaded", () => {
         showAlert(
           "warning",
           "خطا!",
-          "وارد کردن نام کاربری و رمز عبور الزامی است."
+          "وارد کردن نام کاربری و رمز عبور الزامی است.",
         );
         return;
       }
@@ -1585,7 +1585,7 @@ document.addEventListener("DOMContentLoaded", () => {
       try {
         const payload = await fetchCoworkerSessionsPayload(
           coworkerNationalId,
-          coworkerPhone
+          coworkerPhone,
         );
         persistCoworkerSession({
           national_id: coworkerNationalId,
@@ -1624,7 +1624,7 @@ document.addEventListener("DOMContentLoaded", () => {
       showAlert(
         "warning",
         "خطا!",
-        "وارد کردن نام کاربری و رمز عبور الزامی است."
+        "وارد کردن نام کاربری و رمز عبور الزامی است.",
       );
       return;
     }
@@ -1645,7 +1645,7 @@ document.addEventListener("DOMContentLoaded", () => {
         showAlert(
           "info",
           "توجه",
-          "هیچ امتحانی برای اطلاعات وارد شده یافت نشد."
+          "هیچ امتحانی برای اطلاعات وارد شده یافت نشد.",
         );
         return;
       }
@@ -1690,13 +1690,13 @@ document.addEventListener("DOMContentLoaded", () => {
         showAlert(
           "warning",
           "ورود ناموفق",
-          "رمز عبور و شماره دانشجویی صحیح نیست یا اطلاعاتی برای این شماره وجود ندارد."
+          "رمز عبور و شماره دانشجویی صحیح نیست یا اطلاعاتی برای این شماره وجود ندارد.",
         );
       } else {
         showAlert(
           "error",
           "خطا در اتصال!",
-          "مشکلی در ارتباط با سرور رخ داده است. لطفاً بعداً تلاش کنید."
+          "مشکلی در ارتباط با سرور رخ داده است. لطفاً بعداً تلاش کنید.",
         );
       }
     } finally {
@@ -1809,7 +1809,7 @@ document.addEventListener("DOMContentLoaded", () => {
         showAlert(
           "error",
           "خطا در اتصال!",
-          "مشکلی در ارتباط با سرور رخ داده است. لطفاً بعداً تلاش کنید."
+          "مشکلی در ارتباط با سرور رخ داده است. لطفاً بعداً تلاش کنید.",
         );
       }
       if (!e?.isLicenseError) {
@@ -1883,19 +1883,19 @@ document.addEventListener("DOMContentLoaded", () => {
                 <div class="session-card" data-role="session-card">
                     <div class="session-info">
                         <div class="session-name">${escapeHtml(
-                          resolvedName || "کاربر نسار"
+                          resolvedName || "کاربر نسار",
                         )}</div>
                         ${
                           resolvedStudentId
                             ? `<div class="session-id">${toPersianDigits(
-                                resolvedStudentId
+                                resolvedStudentId,
                               )}</div>`
                             : ""
                         }
                     </div>
                     <div class="session-actions">
                         <button type="button" class="session-photo-btn" data-student-id="${escapeHtml(
-                          resolvedStudentId
+                          resolvedStudentId,
                         )}" title="آپلود/تغییر عکس">
                             ${(() => {
                               const saadCode =
@@ -1925,7 +1925,7 @@ document.addEventListener("DOMContentLoaded", () => {
           const seatClass = isNumericSeat ? "seat-available" : "seat-hidden";
           const countdownText = getCountdownText(
             exam.exam_date,
-            exam.exam_time
+            exam.exam_time,
           );
           const countdownMarkup = countdownText
             ? `<div class="exam-countdown">${countdownText}</div>`
@@ -1936,7 +1936,7 @@ document.addEventListener("DOMContentLoaded", () => {
                         <span>${escapeHtml(exam.course_name)}</span>
                     </div>
                     <div class="exam-meta">${toPersianDigits(
-                      exam.exam_date
+                      exam.exam_date,
                     )} | ${toPersianDigits(exam.exam_time)}</div>
                     ${countdownMarkup}
                 </div>
@@ -1970,15 +1970,15 @@ document.addEventListener("DOMContentLoaded", () => {
           let locationText = "";
           if (buildingName && className) {
             locationText = `<div class="exam-location" style="font-size:0.85em;color:#6b7280;margin-top:2px;">${classPrefix}${escapeHtml(
-              className
+              className,
             )} - ${buildingPrefix}${escapeHtml(buildingName)}</div>`;
           } else if (className) {
             locationText = `<div class="exam-location" style="font-size:0.85em;color:#6b7280;margin-top:2px;">${classPrefix}${escapeHtml(
-              className
+              className,
             )}</div>`;
           } else if (buildingName) {
             locationText = `<div class="exam-location" style="font-size:0.85em;color:#6b7280;margin-top:2px;">${buildingPrefix}${escapeHtml(
-              buildingName
+              buildingName,
             )}</div>`;
           }
           return `
@@ -2058,7 +2058,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
     const maxScroll = Math.max(
       0,
-      document.body.scrollHeight - window.innerHeight
+      document.body.scrollHeight - window.innerHeight,
     );
     const targetScroll = Math.min(previousScroll, maxScroll);
     if (Math.abs(window.scrollY - targetScroll) > 1) {
@@ -2076,13 +2076,13 @@ document.addEventListener("DOMContentLoaded", () => {
             ? ` به صورت ${typeParts.join(" و ")}`
             : "";
           let message = `آزمون درس ${escapeHtml(
-            exam.course_name
+            exam.course_name,
           )} در تاریخ ${toPersianDigits(exam.exam_date)} ساعت ${toPersianDigits(
-            exam.exam_time
+            exam.exam_time,
           )}${typeSentence} برگزار گردیده`;
           if (seatValue) {
             message += ` و شماره صندلی شما در این آزمون ${toPersianDigits(
-              seatValue
+              seatValue,
             )} بوده است.`;
           } else {
             message += " است.";
@@ -2096,7 +2096,7 @@ document.addEventListener("DOMContentLoaded", () => {
                                 </div>
                                 <div class="swal2-countdown">
                                     <span class="swal2-countdown-value">${toPersianDigits(
-                                      15
+                                      15,
                                     )}</span>
                                 </div>
                             `,
@@ -2111,7 +2111,7 @@ document.addEventListener("DOMContentLoaded", () => {
             },
             didOpen: () => {
               const valueEl = Swal.getHtmlContainer()?.querySelector(
-                ".swal2-countdown-value"
+                ".swal2-countdown-value",
               );
               if (!valueEl) return;
               const updateCountdown = () => {
@@ -2134,7 +2134,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
         const parts = exam.exam_date.split("/");
         const formattedDate = `${toPersianDigits(
-          parts[2]
+          parts[2],
         )} ${getPersianMonthName(exam.exam_date)} ${toPersianDigits(parts[0])}`;
 
         // Build seat location sentence
@@ -2164,7 +2164,7 @@ document.addEventListener("DOMContentLoaded", () => {
         } else if (seatValue) {
           // Show the hidden seat message from server (e.g., "شماره صندلی شما تا ساعت 08:00 همان روز مخفی می‌باشد.")
           seatLocationSentence = `<br><br><strong style="color: #ff7043;">${escapeHtml(
-            seatValue
+            seatValue,
           )}</strong>`;
         }
 
@@ -2176,12 +2176,12 @@ document.addEventListener("DOMContentLoaded", () => {
                         </div>
                         <div lang="fa" style="text-align:justify;direction:rtl;line-height:1.9;font-size:1.05em; hyphens: auto; -webkit-hyphens: auto; -moz-hyphens: auto;">
                             آزمون ${escapeHtml(exam.course_type)} ${escapeHtml(
-            exam.course_name
-          )} راس ساعت ${toPersianDigits(exam.exam_time)} روز ${
-            exam.exam_day
-          } ${formattedDate} به شیوه ${escapeHtml(
-            exam.exam_type
-          )} برگزار خواهد شد.${seatLocationSentence}
+                              exam.course_name,
+                            )} راس ساعت ${toPersianDigits(exam.exam_time)} روز ${
+                              exam.exam_day
+                            } ${formattedDate} به شیوه ${escapeHtml(
+                              exam.exam_type,
+                            )} برگزار خواهد شد.${seatLocationSentence}
                         </div>
                     `,
           confirmButtonText: "بستن",
@@ -2265,9 +2265,9 @@ document.addEventListener("DOMContentLoaded", () => {
       coworkerProfile?.national_id || coworkerCredentials?.nationalId || "";
     const statsLine = coworkerStats
       ? `${toPersianDigits(
-          coworkerStats.total_sessions || 0
+          coworkerStats.total_sessions || 0,
         )} جلسه · ${toPersianDigits(
-          coworkerStats.upcoming_sessions || 0
+          coworkerStats.upcoming_sessions || 0,
         )} باقی مانده`
       : "";
 
@@ -2278,7 +2278,7 @@ document.addEventListener("DOMContentLoaded", () => {
                     ${
                       nationalIdValue
                         ? `<div class="session-id">کد ملی: ${toPersianDigits(
-                            nationalIdValue
+                            nationalIdValue,
                           )}</div>`
                         : ""
                     }
@@ -2313,10 +2313,10 @@ document.addEventListener("DOMContentLoaded", () => {
         session.status === "past" ? "seat-hidden" : "seat-available";
       return `
                 <div class="exam-card coworker-session-card ${seatClass} ${
-        session.status
-      }" tabindex="0" data-session-origin="${idx}">
+                  session.status
+                }" tabindex="0" data-session-origin="${idx}">
                     <div class="exam-title text-center">${toPersianDigits(
-                      session.exam_time
+                      session.exam_time,
                     )} | ${toPersianDigits(session.exam_date)}</div>
                     ${
                       badge
@@ -2374,7 +2374,7 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     const searchSeatButton = examCards.querySelector(
-      '[data-role="coworker-search-seat"]'
+      '[data-role="coworker-search-seat"]',
     );
     if (searchSeatButton) {
       searchSeatButton.addEventListener("click", async (event) => {
@@ -2474,9 +2474,9 @@ document.addEventListener("DOMContentLoaded", () => {
     try {
       const resp = await secureFetch(
         `/API/searchStudentSeat.php?student_id=${encodeURIComponent(
-          studentId
+          studentId,
         )}`,
-        { cache: "no-store" }
+        { cache: "no-store" },
       );
       const data = await resp.json();
 
@@ -2485,7 +2485,7 @@ document.addEventListener("DOMContentLoaded", () => {
           icon: "warning",
           title: "نتیجه‌ای یافت نشد",
           html: `<div style="text-align: center; line-height: 1.8;">${escapeHtml(
-            data.error || "خطا در جستجو"
+            data.error || "خطا در جستجو",
           )}</div>`,
           customClass: { popup: "swal2-rtl swal2-glass" },
         });
@@ -2506,12 +2506,12 @@ document.addEventListener("DOMContentLoaded", () => {
           </div>
           <div style="font-size: 0.9rem; color: #1a1a1a;">
             <span style="margin-left: 15px;">🕐 ساعت: ${toPersianDigits(
-              exam.exam_time
+              exam.exam_time,
             )}</span>
             <span>📍 ${escapeHtml(exam.location)}</span>
           </div>
         </div>
-      `
+      `,
         )
         .join("");
 
@@ -2595,7 +2595,7 @@ document.addEventListener("DOMContentLoaded", () => {
       showAlert(
         "info",
         "آماری در دسترس نیست",
-        "داده‌ای برای نمایش وجود ندارد."
+        "داده‌ای برای نمایش وجود ندارد.",
       );
       return;
     }
@@ -2614,7 +2614,7 @@ document.addEventListener("DOMContentLoaded", () => {
                     <span>${row.label}</span>
                     <strong>${toPersianDigits(row.value ?? 0)}</strong>
                 </div>
-            `
+            `,
       )
       .join("");
 
@@ -2651,7 +2651,7 @@ document.addEventListener("DOMContentLoaded", () => {
     const countdown =
       session.status !== "past" && typeof session.minutes_until === "number"
         ? `<div style="margin-top:0.8rem;color:#16a34a;">حدود ${toPersianDigits(
-            Math.max(session.minutes_until, 0)
+            Math.max(session.minutes_until, 0),
           )} دقیقه تا شروع جلسه</div>`
         : "";
     Swal.fire({
@@ -2659,10 +2659,10 @@ document.addEventListener("DOMContentLoaded", () => {
       html: `
                 <div style="text-align:right;line-height:1.9;">
                     <div><strong>تاریخ:</strong> ${toPersianDigits(
-                      session.exam_date || "-"
+                      session.exam_date || "-",
                     )}</div>
                     <div><strong>ساعت:</strong> ${toPersianDigits(
-                      session.exam_time || "-"
+                      session.exam_time || "-",
                     )}</div>
                     <div style="margin-top:0.8rem;">${escapeHtml(badge)}</div>
                     ${countdown}
@@ -2685,7 +2685,7 @@ document.addEventListener("DOMContentLoaded", () => {
     const GRACE_PERIOD_MS = 20 * 60 * 1000;
     coworkerSessions.forEach((session, idx) => {
       const card = examCards?.querySelector(
-        `.exam-card[data-session-origin='${idx}']`
+        `.exam-card[data-session-origin='${idx}']`,
       );
       if (!card) return;
       const target = createExamDateTime(session.exam_date, session.exam_time);
@@ -2741,7 +2741,7 @@ document.addEventListener("DOMContentLoaded", () => {
         try {
           const payload = await fetchCoworkerSessionsPayload(
             coworkerCredentials.nationalId,
-            coworkerCredentials.phone
+            coworkerCredentials.phone,
           );
           const newSessions = Array.isArray(payload.sessions)
             ? payload.sessions
@@ -2871,7 +2871,7 @@ document.addEventListener("DOMContentLoaded", () => {
     try {
       const payload = await fetchCoworkerSessionsPayload(
         stored.national_id,
-        stored.phone
+        stored.phone,
       );
       renderCoworkerSessions(payload, {
         nationalId: stored.national_id,
@@ -2903,7 +2903,7 @@ document.addEventListener("DOMContentLoaded", () => {
     const now = Date.now();
     payload.forEach((exam, idx) => {
       const card = examCards?.querySelector(
-        `.exam-card[data-exam-origin='${idx}']`
+        `.exam-card[data-exam-origin='${idx}']`,
       );
       if (!card) return;
       const status = card.getAttribute("data-exam-status");
@@ -3019,7 +3019,7 @@ document.addEventListener("DOMContentLoaded", () => {
     if (!examDateStr) return null;
     const normalizedDate = toEnglishDigits(String(examDateStr).trim()).replace(
       /-/g,
-      "/"
+      "/",
     );
     const segments = normalizedDate
       .split("/")
@@ -3120,7 +3120,7 @@ document.addEventListener("DOMContentLoaded", () => {
   async function initPushNotificationForStudent(studentId) {
     console.log(
       "[Push] initPushNotificationForStudent called with:",
-      studentId
+      studentId,
     );
 
     // Check if we've already asked this session
@@ -3199,7 +3199,7 @@ document.addEventListener("DOMContentLoaded", () => {
       if (result.isConfirmed) {
         const subscribed = await window.nesaarPushManager.subscribe(
           "student",
-          studentId
+          studentId,
         );
         if (subscribed) {
           Swal.fire({
@@ -3232,7 +3232,7 @@ document.addEventListener("DOMContentLoaded", () => {
   async function initPushNotificationForProctor(proctorNationalId) {
     console.log(
       "[Push] initPushNotificationForProctor called with:",
-      proctorNationalId
+      proctorNationalId,
     );
 
     // Check if we've already asked this session
@@ -3311,7 +3311,7 @@ document.addEventListener("DOMContentLoaded", () => {
       if (result.isConfirmed) {
         const subscribed = await window.nesaarPushManager.subscribe(
           "proctor",
-          proctorNationalId
+          proctorNationalId,
         );
         if (subscribed) {
           Swal.fire({
@@ -3460,7 +3460,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
           if (file.size > 512 * 1024) {
             Swal.showValidationMessage(
-              "حجم فایل نباید بیش از ۵۱۲ کیلوبایت باشد"
+              "حجم فایل نباید بیش از ۵۱۲ کیلوبایت باشد",
             );
             return;
           }
@@ -3577,10 +3577,11 @@ document.addEventListener("DOMContentLoaded", () => {
 
   /**
    * Generate or retrieve a unique session ID for visitor tracking
+   * @param {boolean} forceNew - If true, generates a new session ID (use when user type changes)
    */
-  function getVisitorSessionId() {
+  function getVisitorSessionId(forceNew = false) {
     let sessionId = sessionStorage.getItem("ns_visitor_session");
-    if (!sessionId) {
+    if (!sessionId || forceNew) {
       sessionId =
         "vs_" + Date.now() + "_" + Math.random().toString(36).substr(2, 12);
       sessionStorage.setItem("ns_visitor_session", sessionId);
@@ -3592,10 +3593,15 @@ document.addEventListener("DOMContentLoaded", () => {
    * Record a visitor heartbeat to the server
    * @param {string} userType - 'student', 'proctor', 'admin', or 'anonymous'
    * @param {string|null} userId - Optional user identifier
+   * @param {boolean} forceNewSession - If true, generates new session ID
    */
-  async function recordVisitorHeartbeat(userType = "anonymous", userId = null) {
+  async function recordVisitorHeartbeat(
+    userType = "anonymous",
+    userId = null,
+    forceNewSession = false,
+  ) {
     try {
-      const sessionId = getVisitorSessionId();
+      const sessionId = getVisitorSessionId(forceNewSession);
       const page = window.location.pathname;
 
       await fetch("API/visitorStats.php", {
@@ -3633,9 +3639,16 @@ document.addEventListener("DOMContentLoaded", () => {
   window.getVisitorSessionId = getVisitorSessionId;
 
   // Function to update visitor type after successful login
-  function setVisitorType(type) {
+  // Creates new session when switching user types to avoid counting same session as multiple types
+  function setVisitorType(type, userId = null) {
+    const previousType = currentVisitorType;
     currentVisitorType = type;
-    recordVisitorHeartbeat(type);
+    // Force new session if switching from one authenticated type to another
+    const forceNew =
+      previousType !== "anonymous" &&
+      previousType !== type &&
+      type !== "anonymous";
+    recordVisitorHeartbeat(type, userId, forceNew);
   }
   window.setVisitorType = setVisitorType;
 });
