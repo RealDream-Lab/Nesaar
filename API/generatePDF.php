@@ -197,21 +197,21 @@ function generateSessionReport($pdo, $mpdf, $examDate, $examTime, $config)
     }
 
     // Default: course-based report (original logic)
-    // Fetch Courses
+    // Fetch Courses - GROUP BY exam_type to separate electronic/written for same course
     $stmt = $pdo->prepare("
         SELECT 
             c.course_code, 
             c.course_name, 
             c.exam_date, 
             c.exam_time, 
-            MAX(es.exam_type) AS exam_type, 
+            COALESCE(es.exam_type, 'کتبی') AS exam_type, 
             c.course_type,
             COUNT(es.student_id) as student_count
         FROM courses c
         LEFT JOIN exam_seats es ON c.course_code = es.course_code
         WHERE c.exam_date = ? AND c.exam_time = ?
-        GROUP BY c.course_code, c.course_name, c.exam_date, c.exam_time, c.course_type
-        ORDER BY c.course_code
+        GROUP BY c.course_code, c.course_name, c.exam_date, c.exam_time, c.course_type, es.exam_type
+        ORDER BY c.course_code, es.exam_type
     ");
     $stmt->execute([$examDate, $examTime]);
     $courses = $stmt->fetchAll(PDO::FETCH_ASSOC);
@@ -494,6 +494,7 @@ function generateSessionReportByLocation($pdo, $mpdf, $examDate, $examTime, $con
     }
 
     // Group by building only (not by class)
+    // Use course_code + exam_type as key to separate electronic/written for same course
     $buildings = [];
     foreach ($allSeats as $seat) {
         $building = trim($seat['building'] ?? '') ?: 'بدون ساختمان';
@@ -506,16 +507,19 @@ function generateSessionReportByLocation($pdo, $mpdf, $examDate, $examTime, $con
         }
 
         $courseCode = $seat['course_code'];
-        if (!isset($buildings[$building]['courses'][$courseCode])) {
-            $buildings[$building]['courses'][$courseCode] = [
+        $examType   = $seat['exam_type'] ?? 'کتبی';
+        $courseKey  = $courseCode . '_' . $examType; // Key includes exam_type
+
+        if (!isset($buildings[$building]['courses'][$courseKey])) {
+            $buildings[$building]['courses'][$courseKey] = [
                 'course_code' => $courseCode,
                 'course_name' => $seat['course_name'],
                 'course_type' => $seat['course_type'],
-                'exam_type' => $seat['exam_type'],
+                'exam_type' => $examType,
                 'student_count' => 0
             ];
         }
-        $buildings[$building]['courses'][$courseCode]['student_count']++;
+        $buildings[$building]['courses'][$courseKey]['student_count']++;
     }
 
     // Sort buildings by name
@@ -4431,22 +4435,22 @@ function generateSessionSummaryReport($pdo, $mpdf, $examDate, $examTime, $config
     }
 
     // Default: course-based report
-    // Fetch Courses with min class (for "شروع از" column)
+    // Fetch Courses with min class (for "شروع از" column) - GROUP BY exam_type to separate electronic/written
     $stmt = $pdo->prepare("
         SELECT 
             c.course_code, 
             c.course_name, 
             c.exam_date, 
             c.exam_time, 
-            MAX(es.exam_type) AS exam_type, 
+            COALESCE(es.exam_type, 'کتبی') AS exam_type, 
             c.course_type,
             COUNT(es.student_id) as student_count,
             MIN(es.class_name) as min_class
         FROM courses c
         LEFT JOIN exam_seats es ON c.course_code = es.course_code
         WHERE c.exam_date = ? AND c.exam_time = ?
-        GROUP BY c.course_code, c.course_name, c.exam_date, c.exam_time, c.course_type
-        ORDER BY c.course_code
+        GROUP BY c.course_code, c.course_name, c.exam_date, c.exam_time, c.course_type, es.exam_type
+        ORDER BY c.course_code, es.exam_type
     ");
     $stmt->execute([$examDate, $examTime]);
     $courses = $stmt->fetchAll(PDO::FETCH_ASSOC);
@@ -4722,6 +4726,7 @@ function generateSessionSummaryReportByLocation($pdo, $mpdf, $examDate, $examTim
     }
 
     // Group by building
+    // Use course_code + exam_type as key to separate electronic/written for same course
     $buildings = [];
     foreach ($allSeats as $seat) {
         $building = trim($seat['building'] ?? '') ?: 'بدون ساختمان';
@@ -4735,22 +4740,25 @@ function generateSessionSummaryReportByLocation($pdo, $mpdf, $examDate, $examTim
         }
 
         $courseCode = $seat['course_code'];
-        if (!isset($buildings[$building]['courses'][$courseCode])) {
-            $buildings[$building]['courses'][$courseCode] = [
+        $examType   = $seat['exam_type'] ?? 'کتبی';
+        $courseKey  = $courseCode . '_' . $examType; // Key includes exam_type
+
+        if (!isset($buildings[$building]['courses'][$courseKey])) {
+            $buildings[$building]['courses'][$courseKey] = [
                 'course_code' => $courseCode,
                 'course_name' => $seat['course_name'],
                 'course_type' => $seat['course_type'],
-                'exam_type' => $seat['exam_type'],
+                'exam_type' => $examType,
                 'student_count' => 0,
                 'classes' => []
             ];
         }
-        $buildings[$building]['courses'][$courseCode]['student_count']++;
+        $buildings[$building]['courses'][$courseKey]['student_count']++;
 
         // Track classes for this course
         $className = $seat['class_name'] ?? '';
-        if ($className && !in_array($className, $buildings[$building]['courses'][$courseCode]['classes'])) {
-            $buildings[$building]['courses'][$courseCode]['classes'][] = $className;
+        if ($className && !in_array($className, $buildings[$building]['courses'][$courseKey]['classes'])) {
+            $buildings[$building]['courses'][$courseKey]['classes'][] = $className;
         }
     }
 
