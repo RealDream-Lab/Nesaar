@@ -197,8 +197,8 @@ async function showVersionChangelogModal() {
           : ""
       }">
         نسخه <strong>${version}</strong> ${
-      changelog.date ? `- ${changelog.date}` : ""
-    }
+          changelog.date ? `- ${changelog.date}` : ""
+        }
       </div>
       <ul style="margin:0;padding-right:20px;padding-left:0;">
     `;

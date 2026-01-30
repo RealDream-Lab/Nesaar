@@ -38,7 +38,7 @@ self.addEventListener("install", (event) => {
           console.warn("[SW] Skipping cache for", url, error);
         }
       }
-    })
+    }),
   );
 });
 
@@ -76,8 +76,8 @@ self.addEventListener("activate", (event) => {
         Promise.all(
           keys
             .filter((key) => key !== CACHE_NAME)
-            .map((key) => caches.delete(key))
-        )
+            .map((key) => caches.delete(key)),
+        ),
       )
       .then(() => {
         self.clients.claim();
@@ -92,7 +92,7 @@ self.addEventListener("activate", (event) => {
             });
           });
         });
-      })
+      }),
   );
 });
 
@@ -151,7 +151,7 @@ async function handleApiRequest(request) {
       {
         status: 503,
         headers: { "Content-Type": "application/json; charset=utf-8" },
-      }
+      },
     );
   }
 }
@@ -239,7 +239,7 @@ self.addEventListener("push", (event) => {
         console.log("[SW] Posting to client:", client.url);
         client.postMessage(alertData);
       }
-    })()
+    })(),
   );
 });
 
@@ -285,7 +285,7 @@ self.addEventListener("notificationclick", (event) => {
             }, 2000);
           });
         }
-      })
+      }),
   );
 });
 
@@ -317,6 +317,6 @@ self.addEventListener("pushsubscriptionchange", (event) => {
       })
       .catch((err) => {
         console.error("[SW] Failed to resubscribe:", err);
-      })
+      }),
   );
 });
