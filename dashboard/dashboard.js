@@ -6875,7 +6875,7 @@ document.addEventListener("DOMContentLoaded", restoreCollapsedStates);
 // =====================================================
 let sessionCalendarData = null;
 
-const JALALI_WEEKDAYS = ["شنبه", "یکشنبه", "دوشنبه", "سه‌شنبه", "چهارشنبه"];
+const JALALI_WEEKDAYS = ["شنبه", "یکشنبه", "دوشنبه", "سه‌شنبه", "چهارشنبه", "پنجشنبه", "جمعه"];
 
 // Convert Gregorian Date to Jalali string (YYYY/MM/DD)
 function gregorianToJalaliString(gDate) {
@@ -6963,7 +6963,7 @@ function renderSessionCalendar() {
     sessionsByDate[s.exam_date].push(s);
   });
 
-  // Get all unique dates sorted by timestamp (exclude Thursday=5 and Friday=6)
+  // Get all unique dates sorted by timestamp
   const allDates = [...new Set(sessions.map((s) => s.exam_date))]
     .map((d) => {
       const session = sessions.find((s) => s.exam_date === d);
@@ -6973,8 +6973,14 @@ function renderSessionCalendar() {
         dayOfWeek: session?.day_of_week,
       };
     })
-    .filter((d) => d.dayOfWeek !== 5 && d.dayOfWeek !== 6) // Exclude Thursday and Friday
     .sort((a, b) => a.timestamp - b.timestamp);
+
+  // Determine which weekday columns to show:
+  // Sat-Wed (0-4) always shown; Thu (5) and Fri (6) only if they have sessions
+  const daysWithSessions = new Set(allDates.map((d) => d.dayOfWeek));
+  const visibleDays = [0, 1, 2, 3, 4];
+  if (daysWithSessions.has(5)) visibleDays.push(5);
+  if (daysWithSessions.has(6)) visibleDays.push(6);
 
   if (allDates.length === 0) {
     container.innerHTML =
@@ -7024,14 +7030,15 @@ function renderSessionCalendar() {
   let tableHtml =
     '<div class="session-calendar"><table class="calendar-table"><thead><tr>';
 
-  // Header row with weekday names (5 days only)
-  for (let i = 0; i < 5; i++) {
-    tableHtml += `<th>${JALALI_WEEKDAYS[i]}</th>`;
-  }
+  // Header row with weekday names (dynamic columns)
+  visibleDays.forEach((dayIdx) => {
+    tableHtml += `<th>${JALALI_WEEKDAYS[dayIdx]}</th>`;
+  });
   tableHtml += "</tr></thead><tbody>";
 
   // Build rows for each week
-  weeks.forEach((weekDates) => {
+  sortedWeekKeys.forEach((weekStartDay, weekIdx) => {
+    const weekDates = weeks[weekIdx];
     tableHtml += "<tr>";
 
     // Create a map of dayOfWeek -> dateObj for this week
@@ -7040,20 +7047,13 @@ function renderSessionCalendar() {
       weekDayMap[d.dayOfWeek] = d;
     });
 
-    // Find the first date in this week to calculate missing dates
-    const firstDateInWeek = weekDates.reduce(
-      (min, d) => (d.dayOfWeek < min.dayOfWeek ? d : min),
-      weekDates[0],
-    );
-
-    // Build cells for 5 days (Saturday to Wednesday)
-    for (let dayIdx = 0; dayIdx < 5; dayIdx++) {
+    // Build cells for visible days
+    for (const dayIdx of visibleDays) {
       const dateObj = weekDayMap[dayIdx];
 
       if (!dateObj) {
-        // Calculate the date for this empty cell
-        const dayDiff = dayIdx - firstDateInWeek.dayOfWeek;
-        const emptyDateTimestamp = firstDateInWeek.timestamp + dayDiff * 86400;
+        // Calculate the date for this empty cell using the week's Saturday as reference
+        const emptyDateTimestamp = (weekStartDay + dayIdx) * 86400;
 
         // Convert timestamp to Jalali date
         const emptyJsDate = new Date(emptyDateTimestamp * 1000);
