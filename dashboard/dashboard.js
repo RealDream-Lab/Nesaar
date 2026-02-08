@@ -4702,6 +4702,11 @@ async function examEssentialsHandler() {
     );
   }
 
+  // دکمه انتقال تاریخ آزمون
+  allButtons.push(
+    `<button class="btn btn-primary w-100" style="${btnStyle}" onclick="try{ transferExamDateHandler(); }catch(e){ console.error(e); }">انتقال تاریخ آزمون</button>`,
+  );
+
   // دو گزینه جدید برای پاسخنامه‌های تستی
   //allButtons.push(
   //`<button class="btn btn-primary w-100" style="${btnStyle}" onclick="try{ showAnswerSheetGeneratorComingSoon('mcq'); }catch(e){ console.error(e); }">تولید پاسخنامه تستی</button>`
@@ -4819,6 +4824,248 @@ function showAnswerSheetGeneratorComingSoon(type) {
       }, 100);
     }
   });
+}
+
+/**
+ * Handler for transferring an exam session to a new date using Jalali date picker.
+ * Times remain unchanged; only the date is moved.
+ */
+async function transferExamDateHandler() {
+  const context = window._lastExamContext || null;
+  const examDate = context?.exam_date;
+  const examTime = context?.exam_time;
+
+  if (!examDate || !examTime) {
+    Swal.fire({
+      icon: "warning",
+      title: "خطا",
+      text: "ابتدا یک جلسه آزمون را انتخاب کنید.",
+      confirmButtonText: "باشه",
+      customClass: { popup: "swal2-rtl swal2-glass" },
+    });
+    return;
+  }
+
+  // Generate a unique ID for this datepicker input
+  const dpId = "transferDatePicker_" + Date.now();
+
+  const { value: formResult } = await Swal.fire({
+    icon: "question",
+    title: "انتقال تاریخ آزمون",
+    html: `
+      <div style="direction:rtl;text-align:right;line-height:2.2;font-size:0.95rem;">
+        <p style="margin-bottom:12px;color:#e0e0e0;">جلسه آزمون
+          <strong style="color:#f8d775;">${toPersianDigits(examTime)}</strong>
+          مورخ
+          <strong style="color:#f8d775;">${toPersianDigits(examDate)}</strong>
+          به چه تاریخی منتقل شود؟
+        </p>
+        <label for="${dpId}" class="form-label" style="font-size:0.9rem;">تاریخ جدید آزمون:</label>
+        <input type="text" class="form-control" id="${dpId}" data-jdp
+          placeholder="انتخاب تاریخ جدید" readonly
+          style="text-align:center;font-size:1.05rem;font-weight:600;cursor:pointer;">
+      </div>
+    `,
+    showCancelButton: true,
+    confirmButtonText: "انتقال",
+    cancelButtonText: "لغو",
+    reverseButtons: true,
+    width: 480,
+    scrollbarPadding: false,
+    customClass: { popup: "swal2-rtl swal2-glass" },
+    didOpen: () => {
+      // Raise z-index of Jalali date picker so it renders above the Swal modal
+      const swalContainer = document.querySelector(".swal2-container");
+      const swalZIndex = swalContainer
+        ? parseInt(getComputedStyle(swalContainer).zIndex || "10000", 10)
+        : 10000;
+      const styleTag = document.createElement("style");
+      styleTag.id = "jdp-zindex-fix";
+      styleTag.textContent = `jdp-container { z-index: ${swalZIndex + 10} !important; }`;
+      document.head.appendChild(styleTag);
+
+      // Initialize Jalali date picker on the input inside the modal
+      if (typeof jalaliDatepicker !== "undefined") {
+        jalaliDatepicker.startWatch({
+          minDate: "today",
+          time: false,
+          autoHide: true,
+          showTodayBtn: true,
+          showEmptyBtn: false,
+          persianDigits: true,
+          autoReadOnlyInput: true,
+        });
+      }
+      // Blur active element to avoid accidental confirm
+      try {
+        if (
+          document.activeElement &&
+          typeof document.activeElement.blur === "function"
+        ) {
+          document.activeElement.blur();
+        }
+      } catch (e) {}
+    },
+    didClose: () => {
+      // Remove the z-index fix style tag
+      const fix = document.getElementById("jdp-zindex-fix");
+      if (fix) fix.remove();
+    },
+    preConfirm: () => {
+      const inputEl = document.getElementById(dpId);
+      const rawVal = inputEl ? inputEl.value.trim() : "";
+      if (!rawVal) {
+        Swal.showValidationMessage("لطفاً تاریخ جدید آزمون را انتخاب کنید.");
+        return false;
+      }
+      // Convert Persian digits to English for API
+      const newDate = toEnglishDigits(rawVal).replace(/-/g, "/");
+      return newDate;
+    },
+  });
+
+  if (!formResult) {
+    // User cancelled - reopen essentials menu
+    setTimeout(() => {
+      try {
+        examEssentialsHandler();
+      } catch (e) {
+        console.error(e);
+      }
+    }, 200);
+    return;
+  }
+
+  const newDate = formResult;
+
+  // Confirm the transfer
+  const confirmResult = await Swal.fire({
+    icon: "warning",
+    title: "تأیید انتقال",
+    html: `<div style="direction:rtl;text-align:justify;line-height:2.2;font-size:0.95rem;color:#e0e0e0;">
+      <p>آیا مطمئن هستید که می‌خواهید جلسه آزمون ساعت
+        <strong style="color:#f8d775;">${toPersianDigits(examTime)}</strong>
+        را از تاریخ
+        <strong style="color:#f8d775;">${toPersianDigits(examDate)}</strong>
+        به تاریخ
+        <strong style="color:#90ee90;">${toPersianDigits(newDate)}</strong>
+        منتقل کنید؟
+      </p>
+      <p style="color:#ff9800;font-size:0.88rem;text-align:justify;">⚠️ این عملیات قابل بازگشت نیست و ساعت آزمون تغییر نخواهد کرد.</p>
+    </div>`,
+    showCancelButton: true,
+    confirmButtonText: "بله، انتقال بده",
+    cancelButtonText: "لغو",
+    reverseButtons: true,
+    scrollbarPadding: false,
+    customClass: { popup: "swal2-rtl swal2-glass" },
+  });
+
+  if (!confirmResult.isConfirmed) {
+    // User cancelled confirmation - reopen essentials menu
+    setTimeout(() => {
+      try {
+        examEssentialsHandler();
+      } catch (e) {
+        console.error(e);
+      }
+    }, 200);
+    return;
+  }
+
+  // Show loading
+  Swal.fire({
+    title: "در حال انتقال...",
+    text: "لطفاً صبر کنید.",
+    allowOutsideClick: false,
+    allowEscapeKey: false,
+    didOpen: () => Swal.showLoading(),
+    customClass: { popup: "swal2-rtl swal2-glass" },
+  });
+
+  try {
+    const resp = await guardedFetch("../API/transferExamDate.php", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        old_date: examDate,
+        exam_time: examTime,
+        new_date: newDate,
+      }),
+    });
+
+    const data = await resp.json();
+
+    if (data.success) {
+      // Update the context to the new date
+      setLastExamContext(newDate, examTime);
+
+      await Swal.fire({
+        icon: "success",
+        title: "انتقال موفق",
+        html: `<div style="direction:rtl;text-align:right;line-height:2.2;font-size:0.95rem;color:#e0e0e0;">
+          <p>${escapeHtml(data.message)}</p>
+          <p style="font-size:0.88rem;">تعداد دروس منتقل‌شده: <strong>${toPersianDigits(data.courses_updated || 0)}</strong></p>
+        </div>`,
+        confirmButtonText: "متوجه شدم",
+        scrollbarPadding: false,
+        customClass: { popup: "swal2-rtl swal2-glass" },
+      });
+
+      // Refresh the calendar/sessions card with new data
+      if (typeof loadSessionCalendar === "function") {
+        try {
+          loadSessionCalendar();
+        } catch (e) {
+          console.warn(e);
+        }
+      }
+
+      // Reopen essentials menu
+      setTimeout(() => {
+        try {
+          examEssentialsHandler();
+        } catch (e) {
+          console.error(e);
+        }
+      }, 200);
+    } else {
+      await Swal.fire({
+        icon: "error",
+        title: "خطا در انتقال",
+        text: data.error || "خطای نامشخص رخ داده است.",
+        confirmButtonText: "باشه",
+        scrollbarPadding: false,
+        customClass: { popup: "swal2-rtl swal2-glass" },
+      });
+      // Reopen essentials menu on error too
+      setTimeout(() => {
+        try {
+          examEssentialsHandler();
+        } catch (e) {
+          console.error(e);
+        }
+      }, 200);
+    }
+  } catch (err) {
+    console.error("Transfer exam date error:", err);
+    await Swal.fire({
+      icon: "error",
+      title: "خطا",
+      text: "خطا در ارتباط با سرور. لطفاً دوباره تلاش کنید.",
+      confirmButtonText: "باشه",
+      scrollbarPadding: false,
+      customClass: { popup: "swal2-rtl swal2-glass" },
+    });
+    // Reopen essentials menu on error too
+    setTimeout(() => {
+      try {
+        examEssentialsHandler();
+      } catch (e) {
+        console.error(e);
+      }
+    }, 200);
+  }
 }
 
 async function printEssentialsSecretary() {
@@ -6735,33 +6982,28 @@ function renderSessionCalendar() {
     return;
   }
 
-  // Calculate weeks - each week starts from Saturday (dayOfWeek = 0)
+  // Calculate weeks - group dates by their actual calendar week
+  // Each week is identified by the Saturday that starts it
   const weeks = [];
-  let currentWeek = [];
+  const weekMap = new Map();
 
-  allDates.forEach((dateObj, idx) => {
+  allDates.forEach((dateObj) => {
     const dayOfWeek = dateObj.dayOfWeek ?? 0;
+    // Normalize timestamp to day boundary and find the Saturday that starts this week
+    const dayNumber = Math.floor(dateObj.timestamp / 86400);
+    const weekStartDay = dayNumber - dayOfWeek;
 
-    // Start new week if this is Saturday and we have items
-    if (dayOfWeek === 0 && currentWeek.length > 0) {
-      weeks.push(currentWeek);
-      currentWeek = [];
+    if (!weekMap.has(weekStartDay)) {
+      weekMap.set(weekStartDay, []);
     }
-
-    currentWeek.push(dateObj);
-
-    // If it's Wednesday (4) or last date, close the week
-    if (dayOfWeek === 4 || idx === allDates.length - 1) {
-      if (currentWeek.length > 0) {
-        weeks.push(currentWeek);
-        currentWeek = [];
-      }
-    }
+    weekMap.get(weekStartDay).push(dateObj);
   });
 
-  if (currentWeek.length > 0) {
-    weeks.push(currentWeek);
-  }
+  // Sort weeks chronologically and collect into array
+  const sortedWeekKeys = [...weekMap.keys()].sort((a, b) => a - b);
+  sortedWeekKeys.forEach((key) => {
+    weeks.push(weekMap.get(key));
+  });
 
   // Build legend
   let legendHtml = '<div class="calendar-legend">';
