@@ -109,11 +109,6 @@ function internal_auth_validate(): bool
         return true;
     }
     
-    // روش ۳: بررسی server-to-server call (same process)
-    if (isset($_SERVER['HTTP_X_INTERNAL_CALL']) && $_SERVER['HTTP_X_INTERNAL_CALL'] === 'true') {
-        return true;
-    }
-    
     return false;
 }
 
